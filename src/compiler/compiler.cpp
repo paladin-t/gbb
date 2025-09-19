@@ -10221,8 +10221,6 @@ public:
 					THROW_TOO_MANY_ARGUMENTS(onError);
 				}
 
-				usingExtensionFeature(ctx, onError); // Check for feature compatibility.
-
 				break;
 			case EventTypes::TOUCH:      // Fall through.
 			case EventTypes::TOUCH_DOWN: // Fall through.
@@ -10232,6 +10230,8 @@ public:
 				} else {
 					THROW_TOO_MANY_ARGUMENTS(onError);
 				}
+
+				usingExtensionFeature(ctx, onError); // Check for feature compatibility.
 
 				break;
 			default:
