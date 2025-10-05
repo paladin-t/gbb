@@ -28,7 +28,7 @@
 */
 
 #ifndef WIDGETS_ABOUT_REVISION
-#	define WIDGETS_ABOUT_REVISION "r20"
+#	define WIDGETS_ABOUT_REVISION "r24"
 #endif /* WIDGETS_ABOUT_REVISION */
 
 /* ===========================================================================} */
@@ -4536,7 +4536,7 @@ AboutPopupBox::AboutPopupBox(
 #endif /* GBBASIC_OS_HTML */
 
 	_specs += "Kernel and Toolchain:\n";
-	_specs += "      GBBVM v1.1\n";
+	_specs += "      GBBVM v1.2\n";
 	_specs += "  GBDK-2020 v4.4\n";
 
 	if (licenses)

@@ -19,7 +19,7 @@ BANKREF(BUILTIN)
 
 #ifndef GBBVM_VERSION
 #   define GBBVM_VER_MAJOR 1
-#   define GBBVM_VER_MINOR 1
+#   define GBBVM_VER_MINOR 2
 #   define GBBVM_VER_REVISION 0
 #endif /* GBBVM_VERSION */
 
