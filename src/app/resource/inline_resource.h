@@ -14,6 +14,7 @@
 ** Inline resources
 */
 
+#include "inline_code.h"
 #include "inline_font.h"
 #include "inline_icon.h"
 #include "inline_image.h"

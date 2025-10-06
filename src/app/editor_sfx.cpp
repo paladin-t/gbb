@@ -11,6 +11,7 @@
 #include "editor_sfx.h"
 #include "theme.h"
 #include "workspace.h"
+#include "resource/inline_resource.h"
 #include "../utils/datetime.h"
 #include "../utils/encoding.h"
 #include "../utils/file_sandbox.h"
@@ -2846,8 +2847,7 @@ private:
 		// Compile.
 		AssetsBundle::Ptr assets(new AssetsBundle());
 		std::string src;
-		src += "sound on\n";
-		src += "sound #0\n";
+		src += RES_CODE_PLAY_SFX;
 		assets->code.add(src);
 		assets->sfx.add(entry_);
 

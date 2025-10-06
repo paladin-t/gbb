@@ -10,6 +10,7 @@
 #include "editor_music.h"
 #include "theme.h"
 #include "workspace.h"
+#include "resource/inline_resource.h"
 #include "../compiler/compiler.h"
 #include "../utils/datetime.h"
 #include "../utils/encoding.h"
@@ -5493,14 +5494,9 @@ private:
 		// Compile.
 		AssetsBundle::Ptr assets(new AssetsBundle());
 		std::string src;
-		src += "sound on\n";
-		src += "play #0\n";
+		src += RES_CODE_PLAY_MUSIC;
 		if (sequence > 0) {
-			src += "start set_pos\n";
-			src += "end\n";
-			src += "set_pos:\n";
-			src += "  wait 3\n"; // A few ticks later.
-			src += "  option MUSIC_POSITION, " + Text::toString(sequence) + "\n";
+			src += RES_CODE_SET_MUSIC_POSITION(Text::toString(sequence));
 		}
 		assets->code.add(src);
 		assets->music.add(entry_);

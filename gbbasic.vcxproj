@@ -1047,6 +1047,7 @@
     <ClInclude Include="src\app\activities.h" />
     <ClInclude Include="src\app\operations.h" />
     <ClInclude Include="src\app\project.h" />
+    <ClInclude Include="src\app\resource\inline_code.h" />
     <ClInclude Include="src\app\resource\inline_font.h" />
     <ClInclude Include="src\app\resource\inline_image.h" />
     <ClInclude Include="src\app\resource\inline_resource.h" />

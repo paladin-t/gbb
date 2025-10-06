@@ -639,6 +639,7 @@
 		689DD6012E2F3FA1001D2B86 /* inline_toast.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inline_toast.h; path = src/app/resource/inline_toast.h; sourceTree = "<group>"; };
 		689DD6022E2F3FA1001D2B86 /* inline_font.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inline_font.h; path = src/app/resource/inline_font.h; sourceTree = "<group>"; };
 		689DD6032E2F3FA2001D2B86 /* inline_text.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inline_text.h; path = src/app/resource/inline_text.h; sourceTree = "<group>"; };
+		68C4B4312E93ACA300AC1D3F /* inline_code.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = inline_code.h; path = src/app/resource/inline_code.h; sourceTree = "<group>"; };
 		68F810F62E2F494700A859D1 /* image_.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = image_.cpp; path = lib/clip/image_.cpp; sourceTree = "<group>"; };
 		68F810F92E2F4BF700A859D1 /* libSDL2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libSDL2.dylib; path = lib/sdl/lib/mac/libSDL2.dylib; sourceTree = "<group>"; };
 		68F810FD2E2F70C600A859D1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = src/app/mac/Assets.xcassets; sourceTree = "<group>"; };
@@ -1316,6 +1317,7 @@
 		689DD4092E2F396C001D2B86 /* resource */ = {
 			isa = PBXGroup;
 			children = (
+				68C4B4312E93ACA300AC1D3F /* inline_code.h */,
 				689DD6022E2F3FA1001D2B86 /* inline_font.h */,
 				689DD5FE2E2F3FA1001D2B86 /* inline_icon.h */,
 				689DD5FD2E2F3FA1001D2B86 /* inline_image.h */,

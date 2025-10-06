@@ -1591,6 +1591,9 @@
     <ClInclude Include="src\app\activities.h">
       <Filter>app</Filter>
     </ClInclude>
+    <ClInclude Include="src\app\resource\inline_code.h">
+      <Filter>app\resource</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\utils\platform_ios.mm">
