@@ -43,6 +43,7 @@ struct Settings {
 	Math::Vec2i applicationWindowPosition;
 	Math::Vec2i applicationWindowSize;
 	bool applicationFirstRun = true;
+	unsigned applicationLoadedExampleRevision = 0;
 
 	int kernelActiveIndex = -1;
 

@@ -1268,7 +1268,6 @@ bool Workspace::load(Window* wnd, Renderer* rnd, const int* wndWidth, const int*
 
 		int index = 0;
 		std::string path;
-		unsigned revision = 0;
 
 		ProjectInfo() {
 		}
@@ -1329,9 +1328,8 @@ bool Workspace::load(Window* wnd, Renderer* rnd, const int* wndWidth, const int*
 		activities().fromFile(path.c_str());
 	} while (false);
 
-	// Validate the example projects.
+	// Validate the projects.
 	ProjectInfo::Array regularProjects;
-	ProjectInfo::Array oldExampleProjects;
 	const std::string egDir = Path::absoluteOf(WORKSPACE_EXAMPLE_PROJECTS_DIR);
 	do {
 		if (!loadEg)
@@ -1343,24 +1341,14 @@ bool Workspace::load(Window* wnd, Renderer* rnd, const int* wndWidth, const int*
 			if (!Jpath::get(doc, path_, "projects", i, "path"))
 				continue;
 
-			unsigned revision = 0;
-			if (!Jpath::get(doc, revision, "projects", i, "revision"))
-				revision = 0;
-
 			const std::string abspath = Path::absoluteOf(path_);
 			const bool isEg = Path::isParentOf(egDir.c_str(), abspath.c_str());
-			const bool isOld = revision < exampleRevision();
 
 			ProjectInfo info;
 			info.index = i;
 			info.path = path_;
-			info.revision = revision;
-			if (isEg) {
-				if (isOld)
-					oldExampleProjects.push_back(info);
-			} else {
+			if (!isEg)
 				regularProjects.push_back(info);
-			}
 		}
 	} while (false);
 
@@ -1371,7 +1359,7 @@ bool Workspace::load(Window* wnd, Renderer* rnd, const int* wndWidth, const int*
 			reloadExamples = true;
 		} else if (Jpath::count(doc, "projects") == 0) {
 			// Do nothing.
-		} else if (!oldExampleProjects.empty()) {
+		} else if (settings().applicationLoadedExampleRevision < exampleRevision()) {
 			reloadExamples = true;
 		}
 	}
@@ -1385,7 +1373,6 @@ bool Workspace::load(Window* wnd, Renderer* rnd, const int* wndWidth, const int*
 		for (int i = 0; i < (int)regularProjects.size(); ++i) {
 			const ProjectInfo &info = regularProjects[i];
 			Jpath::set(doc, doc, info.path, "projects", i, "path");
-			Jpath::set(doc, doc, 0, "projects", i, "revision");
 		}
 
 		// Reload the example projects.
@@ -1398,8 +1385,10 @@ bool Workspace::load(Window* wnd, Renderer* rnd, const int* wndWidth, const int*
 			path = Path::absoluteOf(path);
 			const int i_ = i + (int)regularProjects.size();
 			Jpath::set(doc, doc, path, "projects", i_, "path");
-			Jpath::set(doc, doc, exampleRevision(), "projects", i_, "revision"); // Assign the latest example revision of the current distribution.
 		}
+
+		// Set the example revision.
+		settings().applicationLoadedExampleRevision = exampleRevision();
 	}
 
 	// Parse the projects.
@@ -1416,10 +1405,6 @@ bool Workspace::load(Window* wnd, Renderer* rnd, const int* wndWidth, const int*
 			std::string path_;
 			if (!Jpath::get(doc, path_, "projects", i, "path"))
 				continue;
-
-			unsigned revision = 0;
-			if (!Jpath::get(doc, revision, "projects", i, "revision"))
-				revision = 0;
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 			int majorCodeIndex = 0;
@@ -1448,12 +1433,8 @@ bool Workspace::load(Window* wnd, Renderer* rnd, const int* wndWidth, const int*
 			const std::string abspath = Path::absoluteOf(path_);
 			const bool isEg = Path::isParentOf(egDir.c_str(), abspath.c_str());
 			Project::Ptr &prj = projects()[i];
-			if (isEg) {
+			if (isEg)
 				prj->isExample(true);
-				prj->exampleRevision(revision);
-			} else {
-				prj->exampleRevision(0);
-			}
 			prj->contentType(contentType);
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 			prj->activeMajorCodeIndex(majorCodeIndex);
@@ -1529,11 +1510,6 @@ bool Workspace::save(Window* wnd, Renderer* rnd) {
 			Jpath::set(doc, doc, ct, "projects", i, "content_type");
 
 			Jpath::set(doc, doc, prj->path(), "projects", i, "path");
-
-			if (prj->exampleRevision() > 0) {
-				if (exampleRevision() >= prj->exampleRevision())
-					Jpath::set(doc, doc, prj->exampleRevision(), "projects", i, "revision");
-			}
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 			Jpath::set(doc, doc, prj->activeMajorCodeIndex(), "projects", i, "major_code_index");
@@ -5588,6 +5564,7 @@ bool Workspace::loadConfig(Window*, Renderer*, const rapidjson::Document &doc) {
 	Jpath::get(doc, settings().applicationWindowSize.x, "application", "window", "size", 0);
 	Jpath::get(doc, settings().applicationWindowSize.y, "application", "window", "size", 1);
 	Jpath::get(doc, settings().applicationFirstRun, "application", "first_run");
+	Jpath::get(doc, settings().applicationLoadedExampleRevision, "application", "loaded_example_revision");
 
 	Jpath::get(doc, settings().kernelActiveIndex, "kernel", "active_index");
 
@@ -5687,6 +5664,7 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 	Jpath::set(doc, doc, settings().applicationWindowSize.x, "application", "window", "size", 0);
 	Jpath::set(doc, doc, settings().applicationWindowSize.y, "application", "window", "size", 1);
 	Jpath::set(doc, doc, settings().applicationFirstRun, "application", "first_run");
+	Jpath::set(doc, doc, settings().applicationLoadedExampleRevision, "application", "loaded_example_revision");
 
 	Jpath::set(doc, doc, settings().kernelActiveIndex, "kernel", "active_index");
 

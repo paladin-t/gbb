@@ -53,6 +53,7 @@ Settings &Settings::operator = (const Settings &other) {
 	applicationWindowPosition = other.applicationWindowPosition;
 	applicationWindowSize = other.applicationWindowSize;
 	applicationFirstRun = other.applicationFirstRun;
+	applicationLoadedExampleRevision = other.applicationLoadedExampleRevision;
 
 	kernelActiveIndex = other.kernelActiveIndex;
 
@@ -105,7 +106,8 @@ bool Settings::operator != (const Settings &other) const {
 		applicationWindowMaximized != other.applicationWindowMaximized ||
 		applicationWindowPosition != other.applicationWindowPosition ||
 		applicationWindowSize != other.applicationWindowSize ||
-		applicationFirstRun != other.applicationFirstRun
+		applicationFirstRun != other.applicationFirstRun ||
+		applicationLoadedExampleRevision != other.applicationLoadedExampleRevision
 	) {
 		return true;
 	}

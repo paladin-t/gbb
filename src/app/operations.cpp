@@ -1823,7 +1823,6 @@ promise::Promise Operations::fileDragAndDropFile(Window* wnd, Renderer* rnd, Wor
 
 			if (ws->isUnderExamplesDirectory(path.c_str())) {
 				prj->isExample(true);
-				prj->exampleRevision(ws->exampleRevision());
 			}
 
 			ws->projects().push_back(prj);
@@ -1912,7 +1911,6 @@ promise::Promise Operations::fileDragAndDropFileForNotepad(Window* wnd, Renderer
 
 			if (ws->isUnderExamplesDirectory(path.c_str())) {
 				prj->isExample(true);
-				prj->exampleRevision(ws->exampleRevision());
 			}
 
 			ws->bubble(ws->theme()->dialogPrompt_OpenedProject(), nullptr);
@@ -2008,7 +2006,6 @@ promise::Promise Operations::fileImport(Window* wnd, Renderer* rnd, Workspace* w
 
 			if (ws->isUnderExamplesDirectory(path.c_str())) {
 				prj->isExample(true);
-				prj->exampleRevision(ws->exampleRevision());
 			}
 
 			ws->projects().push_back(prj);
@@ -2201,7 +2198,6 @@ promise::Promise Operations::fileImportForNotepad(Window* wnd, Renderer* rnd, Wo
 
 			if (ws->isUnderExamplesDirectory(path.c_str())) {
 				prj->isExample(true);
-				prj->exampleRevision(ws->exampleRevision());
 			}
 
 			ws->bubble(ws->theme()->dialogPrompt_OpenedProject(), nullptr);
@@ -2299,7 +2295,6 @@ promise::Promise Operations::fileImportExamples(Window* wnd, Renderer* rnd, Work
 
 			if (ws->isUnderExamplesDirectory(path.c_str())) {
 				prj->isExample(true);
-				prj->exampleRevision(ws->exampleRevision());
 			}
 
 			if (ws->showRecentProjects()) {
@@ -2482,7 +2477,6 @@ promise::Promise Operations::fileImportExampleForNotepad(Window* wnd, Renderer* 
 
 			if (ws->isUnderExamplesDirectory(path.c_str())) {
 				prj->isExample(true);
-				prj->exampleRevision(ws->exampleRevision());
 			}
 
 			ws->bubble(ws->theme()->dialogPrompt_OpenedProject(), nullptr);
@@ -2640,7 +2634,6 @@ promise::Promise Operations::fileDuplicate(Window* wnd, Renderer* rnd, Workspace
 		prj_->title(name);
 		prj_->order(PROJECT_DEFAULT_ORDER);
 		prj_->hasDirtyInformation(true);
-		prj_->exampleRevision(0);
 		prj_->save(path.c_str(), true, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2));
 		prj_->unload();
 

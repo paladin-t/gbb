@@ -109,7 +109,6 @@ Project::Project(class Window* wnd, Renderer* rnd, class Workspace* ws) {
 	isPlain(false);
 	preferPlain(false);
 	isExample(false);
-	exampleRevision(0);
 	activeMajorCodeIndex(0);
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 	isMajorCodeEditorActive(true);
@@ -227,7 +226,6 @@ Project &Project::operator = (const Project &other) {
 	isPlain(other.isPlain());
 	preferPlain(other.preferPlain());
 	isExample(other.isExample());
-	exampleRevision(other.exampleRevision());
 	activeMajorCodeIndex(other.activeMajorCodeIndex());
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 	isMajorCodeEditorActive(other.isMajorCodeEditorActive());

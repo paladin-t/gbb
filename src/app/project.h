@@ -137,7 +137,6 @@ public:
 	GBBASIC_PROPERTY             (bool,                          isPlain                                          ) // Non-serialized.
 	GBBASIC_PROPERTY             (bool,                          preferPlain                                      ) // Non-serialized.
 	GBBASIC_PROPERTY             (bool,                          isExample                                        ) // Non-serialized.
-	GBBASIC_PROPERTY             (unsigned,                      exampleRevision                                  ) // Non-serialized.
 	GBBASIC_PROPERTY             (int,                           activeMajorCodeIndex                             ) // Serialized in workspace.
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 	GBBASIC_PROPERTY             (bool,                          isMajorCodeEditorActive                          ) // Non-serialized.
