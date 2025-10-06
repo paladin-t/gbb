@@ -611,6 +611,7 @@ private:
 	Mutex _lock;
 
 	bool _toUpgrade = false;
+	std::string _toUpgradeToVersion;
 	bool _toCompile = false;
 	CompilingParameters _compilingParameters;
 	CompilingErrors::Ptr _compilingErrors = nullptr;
@@ -628,7 +629,7 @@ public:
 	Workspace();
 	~Workspace();
 
-	bool open(Window* wnd, Renderer* rnd, const char* font, unsigned fps, bool showRecent, bool hideSplashImage, bool forceWritable, bool toUpgrade, bool toCompile);
+	bool open(Window* wnd, Renderer* rnd, const char* font, unsigned fps, bool showRecent, bool hideSplashImage, bool forceWritable, const char* toUpgrade /* nullable */, bool toCompile);
 	bool close(Window* wnd, Renderer* rnd);
 
 	States state(void) const;

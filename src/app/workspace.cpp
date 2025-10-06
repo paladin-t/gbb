@@ -429,7 +429,7 @@ Workspace::~Workspace() {
 	input(nullptr);
 }
 
-bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps, bool showRecent, bool hideSplashImage, bool forceWritable_, bool toUpgrade, bool toCompile) {
+bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps, bool showRecent, bool hideSplashImage, bool forceWritable_, const char* toUpgrade, bool toCompile) {
 	// Prepare.
 	if (_opened)
 		return false;
@@ -437,7 +437,9 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 
 	Platform::threadName("GB BASIC");
 
-	_toUpgrade = toUpgrade;
+	_toUpgrade = !!toUpgrade;
+	if (toUpgrade)
+		_toUpgradeToVersion = toUpgrade;
 	_toCompile = toCompile;
 
 	// Begin the splash.
@@ -4825,6 +4827,10 @@ void Workspace::upgrade(
 
 	// Upgrade the project.
 	if (prj) {
+		// Set version.
+		if (!_toUpgradeToVersion.empty() && _toUpgradeToVersion != "*")
+			prj->version(_toUpgradeToVersion);
+
 		// Tidy.
 		prj->preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
 		prj->preferencesFontOffset(GBBASIC_FONT_DEFAULT_OFFSET);

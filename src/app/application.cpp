@@ -286,7 +286,14 @@ public:
 
 		// Parse the options.
 		applicationGetArgValue(_options, WORKSPACE_OPTION_APPLICATION_COMMANDLINE_ONLY_KEY, _commandlineOnly, true);
-		applicationGetArgValue(_options, WORKSPACE_OPTION_APPLICATION_UPGRADE_ONLY_KEY, _toUpgrade, true);
+		std::string toUpgradeToVersion;
+		applicationGetArgValue(
+			_options, WORKSPACE_OPTION_APPLICATION_UPGRADE_ONLY_KEY,
+			[&] (Text::Dictionary::const_iterator opt) -> void {
+				_toUpgrade = true;
+				toUpgradeToVersion = opt->second;
+			}
+		);
 		applicationGetArgValue(_options, COMPILER_OUTPUT_OPTION_KEY, _toCompile, true);
 
 		// Initialize the platform.
@@ -511,7 +518,7 @@ public:
 				}
 			);
 
-			_workspace->open(_window, _renderer, font.empty() ? nullptr : font.c_str(), fps, showRecent, hideSplash, forceWritable, _toUpgrade, _toCompile);
+			_workspace->open(_window, _renderer, font.empty() ? nullptr : font.c_str(), fps, showRecent, hideSplash, forceWritable, _toUpgrade ? toUpgradeToVersion.c_str() : nullptr, _toCompile);
 			if (explicitWndSize)
 				_workspace->load(_window, _renderer, &wndWidth, &wndHeight);
 			else
