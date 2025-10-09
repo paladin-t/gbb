@@ -182,8 +182,8 @@ Project &Project::operator = (const Project &other) {
 	renderer(other.renderer());
 	workspace(other.workspace());
 	engine(other.engine());
-	assets(AssetsBundle::Ptr(new AssetsBundle()));
-	{
+	if (other.assets()) {
+		assets(AssetsBundle::Ptr(new AssetsBundle()));
 		assets()->palette = other.assets()->palette;
 		assets()->fonts = other.assets()->fonts;
 		assets()->code = other.assets()->code;
@@ -215,6 +215,14 @@ Project &Project::operator = (const Project &other) {
 			entry->getMap = mapGetter();
 			entry->getActor = actorGetter();
 		}
+	} else {
+		assets(nullptr);
+	}
+	if (other.rom()) {
+		rom(Bytes::Ptr(Bytes::create()));
+		rom()->writeBytes(other.rom().get());
+	} else {
+		rom(nullptr);
 	}
 	attributesTexture(other.attributesTexture());
 	propertiesTexture(other.propertiesTexture());
@@ -289,7 +297,7 @@ void Project::iconCode(const std::string &val) {
 	_iconTexture2BppDirty = true;
 }
 
-Texture::Ptr &Project::iconTexture(void) {
+Texture::Ptr &Project::touchIconTexture(void) {
 	if (_iconTextureIsBeingGenerated.working())
 		return _iconTexture;
 
@@ -383,7 +391,7 @@ Texture::Ptr &Project::iconTexture(void) {
 	return _iconTexture;
 }
 
-Texture::Ptr &Project::iconTexture2Bpp(void) {
+Texture::Ptr &Project::touchIconTexture2Bpp(void) {
 	if (_iconTexture2BppDirtyIsBeingGenerated.working())
 		return _iconTexture2Bpp;
 
@@ -458,7 +466,7 @@ Texture::Ptr &Project::iconTexture2Bpp(void) {
 	return _iconTexture2Bpp;
 }
 
-Image::Ptr Project::iconImage2Bpp(Bytes::Ptr tiles) {
+Image::Ptr Project::touchIconImage2Bpp(Bytes::Ptr tiles) {
 	if (tiles)
 		tiles->clear();
 
@@ -549,12 +557,18 @@ void Project::modified(const long long &val) {
 }
 
 int Project::palettePageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const PaletteAssets &assets_ = assets()->palette;
 
 	return assets_.count();
 }
 
 bool Project::addGlobalPalettePages(WarningOrErrorHandler onWarningOrError) {
+	if (!assets())
+		return false;
+
 	PaletteAssets palette;
 	assets()->palette = palette;
 
@@ -562,12 +576,18 @@ bool Project::addGlobalPalettePages(WarningOrErrorHandler onWarningOrError) {
 }
 
 const PaletteAssets::Entry* Project::getPalette(int index) const {
+	if (!assets())
+		return nullptr;
+
 	PaletteAssets &assets_ = assets()->palette;
 
 	return assets_.get(index);
 }
 
 PaletteAssets::Entry* Project::getPalette(int index) {
+	if (!assets())
+		return nullptr;
+
 	PaletteAssets &assets_ = assets()->palette;
 
 	return assets_.get(index);
@@ -645,6 +665,9 @@ Bytes::Ptr Project::spritePalettes(void) {
 }
 
 int Project::fontPageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const FontAssets &assets_ = assets()->fonts;
 
 	return assets_.count();
@@ -826,6 +849,9 @@ std::string Project::getUsableFontName(int index) const {
 }
 
 int Project::codePageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const CodeAssets &assets_ = assets()->code;
 
 	return assets_.count();
@@ -873,6 +899,9 @@ CodeAssets::Entry* Project::getCode(int index) {
 }
 
 int Project::tilesPageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const TilesAssets &assets_ = assets()->tiles;
 
 	return assets_.count();
@@ -967,6 +996,9 @@ std::string Project::getUsableTilesName(int index) const {
 }
 
 int Project::mapPageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const MapAssets &assets_ = assets()->maps;
 
 	return assets_.count();
@@ -1077,6 +1109,9 @@ Project::Indices Project::getMapsRefToTiles(int tilesIndex) const {
 }
 
 int Project::musicPageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const MusicAssets &assets_ = assets()->music;
 
 	return assets_.count();
@@ -1252,6 +1287,9 @@ std::string Project::getUsableMusicInstrumentName(int index, int instIndex) cons
 }
 
 int Project::sfxPageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const SfxAssets &assets_ = assets()->sfx;
 
 	return assets_.count();
@@ -1386,6 +1424,9 @@ void Project::destroySharedSfxEditor(void) {
 }
 
 int Project::actorPageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const ActorAssets &assets_ = assets()->actors;
 
 	return assets_.count();
@@ -1480,6 +1521,9 @@ std::string Project::getUsableActorName(int index) const {
 }
 
 int Project::scenePageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const SceneAssets &assets_ = assets()->scenes;
 
 	return assets_.count();
@@ -1775,8 +1819,15 @@ bool Project::open(const char* path_) {
 			return false;
 
 		if (isZip) {
-			if (!extractRom(bytes.get()))
+			Bytes::Ptr icon(Bytes::create());
+			if (!extractRom(bytes.get(), icon.get()))
 				return false;
+
+			std::string txt;
+			if (!Base64::fromBytes(txt, icon.get()))
+				return false;
+
+			iconCode(txt);
 		}
 
 		const long long now = DateTime::now();
@@ -2005,6 +2056,7 @@ bool Project::close(bool deep) {
 
 	// Destroy the assets.
 	assets(nullptr);
+	rom(nullptr);
 
 	attributesTexture(nullptr);
 	propertiesTexture(nullptr);
@@ -2038,6 +2090,7 @@ bool Project::loaded(void) const {
 
 void Project::unload(void) {
 	assets(nullptr);
+	rom(nullptr);
 }
 
 bool Project::load(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError) {
@@ -2053,7 +2106,7 @@ bool Project::load(const char* fontConfigPath, WarningOrErrorHandler onWarningOr
 
 	// Load.
 	if (isBin)
-		return loadRom(fontConfigPath, onWarningOrError);
+		return loadRom(onWarningOrError);
 
 	return loadBasic(fontConfigPath, onWarningOrError);
 }
@@ -2207,11 +2260,13 @@ void Project::transfer(void) {
 	}
 }
 
-bool Project::extractRom(Bytes* data) const {
+bool Project::extractRom(Bytes* data, Bytes* icon) const {
+	// Prepare.
 	Archive::Ptr arc(Archive::create(Archive::ZIP));
 	if (!arc->open(path().c_str(), Stream::Accesses::READ))
 		return false;
 
+	// Read all entries in the archive.
 	Text::Array entries;
 	if (!arc->all(entries)) {
 		arc->close();
@@ -2219,6 +2274,7 @@ bool Project::extractRom(Bytes* data) const {
 		return false;
 	}
 
+	// Parse ROM data.
 	Text::Array::iterator it = std::find_if(
 		entries.begin(), entries.end(),
 		[] (const std::string &entry) -> bool {
@@ -2230,23 +2286,73 @@ bool Project::extractRom(Bytes* data) const {
 
 		return false;
 	}
+
 	if (data) {
-		const std::string innerPath = *it;
-		if (!arc->toBytes(data, innerPath.c_str())) {
+		if (!arc->toBytes(data, it->c_str())) {
 			arc->close();
 
 			return false;
 		}
 	}
 
+	// Parse icon.
+	it = std::find_if(
+		entries.begin(), entries.end(),
+		[] (const std::string &entry) -> bool {
+			return
+				Text::endsWith(entry, ".png", true) ||
+				Text::endsWith(entry, ".jpg", true) ||
+				Text::endsWith(entry, ".bmp", true) ||
+				Text::endsWith(entry, ".tga", true);
+		}
+	);
+	do {
+		if (it == entries.end())
+			break;
+
+		if (!icon)
+			break;
+
+		if (!arc->toBytes(icon, it->c_str()))
+			break;
+	} while (false);
+
+	// Finish.
 	arc->close();
 
 	return true;
 }
 
-bool Project::loadRom(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError) {
-	// TODO
-	return false;
+bool Project::loadRom(WarningOrErrorHandler onWarningOrError) {
+	std::string ext;
+	Path::split(path(), nullptr, &ext, nullptr);
+	Text::toLowerCase(ext);
+
+	const bool isZip = ext == "zip";
+
+	Bytes::Ptr bytes(Bytes::create());
+	const bool ret = read(
+		path().c_str(),
+		[&] (File::Ptr file) -> bool {
+			if (!file->readBytes(bytes.get()))
+				return false;
+
+			return true;
+		}
+	);
+	if (!ret)
+		return false;
+
+	if (isZip) {
+		if (!extractRom(bytes.get(), nullptr))
+			return false;
+	}
+
+	if (!rom())
+		rom(Bytes::Ptr(Bytes::create()));
+	rom()->writeBytes(bytes.get());
+
+	return true;
 }
 
 bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError) {
@@ -2494,6 +2600,13 @@ bool Project::saveBasic(const char* path_, bool redirect, WarningOrErrorHandler 
 }
 
 bool Project::loadInformation(const std::string &content, WarningOrErrorHandler onWarningOrError) {
+	if (contentType() != ContentTypes::BASIC) {
+		if (onWarningOrError)
+			onWarningOrError("Loading non-BASIC assets is not supported.", true);
+
+		return false;
+	}
+
 	auto report = [onWarningOrError] (const char* msg, bool isWarning) -> void {
 		if (onWarningOrError)
 			onWarningOrError(msg, isWarning);
@@ -2828,6 +2941,12 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 }
 
 bool Project::saveInformation(std::string &content) {
+	if (contentType() != ContentTypes::BASIC) {
+		fprintf(stderr, "Saving non-BASIC project is not supported.\n");
+
+		return false;
+	}
+
 	rapidjson::Document doc;
 	doc.SetObject();
 	std::string txt;
@@ -2925,6 +3044,14 @@ bool Project::saveInformation(std::string &content) {
 }
 
 bool Project::loadAssets(const char* fontConfigPath, const std::string &content, WarningOrErrorHandler onWarningOrError) {
+	// Only allow saving BASIC projects.
+	if (contentType() != ContentTypes::BASIC) {
+		if (onWarningOrError)
+			onWarningOrError("Loading non-BASIC assets is not supported.", true);
+
+		return false;
+	}
+
 	// Prepare.
 	assets(AssetsBundle::Ptr(new AssetsBundle()));
 
@@ -3126,6 +3253,14 @@ bool Project::loadAssets(const char* fontConfigPath, const std::string &content,
 }
 
 bool Project::saveAssets(std::string &content, WarningOrErrorHandler onWarningOrError) {
+	// Only allow saving BASIC projects.
+	if (contentType() != ContentTypes::BASIC) {
+		if (onWarningOrError)
+			onWarningOrError("Saving non-BASIC project is not supported.", true);
+
+		return false;
+	}
+
 	// Save palette.
 	do {
 		std::string txt_;

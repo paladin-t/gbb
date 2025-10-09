@@ -5017,7 +5017,7 @@ void Workspace::compile(
 		// Initialize the cartridge options.
 		if (project) {
 			Bytes::Ptr iconTiles(Bytes::create());
-			if (!!project->iconImage2Bpp(iconTiles))
+			if (!!project->touchIconImage2Bpp(iconTiles))
 				options.icon = iconTiles;
 
 			options.backgroundPalettes = project->backgroundPalettes();
@@ -6913,46 +6913,54 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 	// Edit view operations.
 	if (opened) {
 		if (modifier && !io.KeyShift && !io.KeyAlt) {
-			if (grave && canvasDevice()) {
-				category(Workspace::Categories::EMULATOR);
-			} else if (num1) {
-				category(Workspace::Categories::CODE);
-			} else if (num2) {
-				category(Workspace::Categories::TILES);
-			} else if (num3) {
-				category(Workspace::Categories::MAP);
-			} else if (num4) {
-				category(Workspace::Categories::SCENE);
-			} else if (num5) {
-				category(Workspace::Categories::ACTOR);
-			} else if (num6) {
-				category(Workspace::Categories::FONT);
-			} else if (num7) {
-				category(Workspace::Categories::MUSIC);
-			} else if (num8) {
-				category(Workspace::Categories::SFX);
-			} else if (num9) {
-				category(Workspace::Categories::CONSOLE);
-			} else if (num0) {
-				Project::Ptr &prj = currentProject();
+			Project::Ptr &prj = currentProject();
 
-				showPaletteEditor(
-					rnd,
-					-1,
-					[prj] (const std::initializer_list<Variant> &args) -> void { // Color or group has been changed.
-						(void)args;
+			if (prj->contentType() == Project::ContentTypes::BASIC) {
+				if (grave && canvasDevice()) {
+					category(Workspace::Categories::EMULATOR);
+				} else if (num1) {
+					category(Workspace::Categories::CODE);
+				} else if (num2) {
+					category(Workspace::Categories::TILES);
+				} else if (num3) {
+					category(Workspace::Categories::MAP);
+				} else if (num4) {
+					category(Workspace::Categories::SCENE);
+				} else if (num5) {
+					category(Workspace::Categories::ACTOR);
+				} else if (num6) {
+					category(Workspace::Categories::FONT);
+				} else if (num7) {
+					category(Workspace::Categories::MUSIC);
+				} else if (num8) {
+					category(Workspace::Categories::SFX);
+				} else if (num9) {
+					category(Workspace::Categories::CONSOLE);
+				} else if (num0) {
+					Project::Ptr &prj = currentProject();
 
-						prj->hasDirtyAsset(true);
-					}
-				);
+					showPaletteEditor(
+						rnd,
+						-1,
+						[prj] (const std::initializer_list<Variant> &args) -> void { // Color or group has been changed.
+							(void)args;
+
+							prj->hasDirtyAsset(true);
+						}
+					);
+				}
+			} else {
+				if (grave && canvasDevice()) {
+					category(Workspace::Categories::EMULATOR);
+				} else if (num9) {
+					category(Workspace::Categories::CONSOLE);
+				}
 			}
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 			if (backSlash) {
 				switch (category()) {
 				case Workspace::Categories::CODE: {
-						Project::Ptr &prj = currentProject();
-
 						const int majorIdx = prj->activeMajorCodeIndex();
 						const int minorIdx = prj->activeMinorCodeIndex();
 						if (prj->isMinorCodeEditorEnabled()) {
@@ -9262,6 +9270,9 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 	case Categories::CONSOLE: // Fall through.
 	case Categories::EMULATOR: {
 			const bool busy = _state == States::COMPILING || analyzing();
+			const Project::Ptr &prj = currentProject();
+			const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+
 			if (category() == Categories::EMULATOR) {
 				if (docOpened) {
 					if (ImGui::MenuBarImageButton(theme()->iconEmulator()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Emulator().c_str())) {
@@ -9287,170 +9298,172 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 				}
 			}
 
-			if (category() == Categories::CODE) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str())) {
-						// Do nothing.
-					}
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(Workspace::Categories::CODE);
-				}
-			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
-
-			if (category() == Categories::TILES) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str())) {
-						// Do nothing.
-					}
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(Workspace::Categories::TILES);
-				}
-			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
-
-			if (category() == Categories::MAP) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str())) {
-						// Do nothing.
-					}
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(Workspace::Categories::MAP);
-				}
-			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
-
-			if (category() == Categories::SCENE) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str())) {
-						// Do nothing.
-					}
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(Workspace::Categories::SCENE);
-				}
-			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
-
-			if (category() == Categories::ACTOR) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str())) {
-						// Do nothing.
-					}
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(Workspace::Categories::ACTOR);
-				}
-			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
-
-			if (category() == Categories::FONT) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
-						// Do nothing.
-					}
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(Workspace::Categories::FONT);
-				}
-			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
-
-			if (category() == Categories::MUSIC || category() == Categories::SFX) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconAudioMore()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str())) {
-						ImGui::OpenPopup("@Aud");
-
-						bubble(nullptr);
-					}
-				}
-
-				do {
-					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
-					VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
-
-					if (ImGui::BeginPopup("@Aud")) {
-						if (ImGui::MenuItem(theme()->menu_Music(), GBBASIC_MODIFIER_KEY_NAME "+7", category() == Workspace::Categories::MUSIC)) {
-							category(Workspace::Categories::MUSIC);
+			if (isEditable) {
+				if (category() == Categories::CODE) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str())) {
+							toggleDocument(nullptr);
 						}
-						if (ImGui::MenuItem(theme()->menu_Sfx(), GBBASIC_MODIFIER_KEY_NAME "+8", category() == Workspace::Categories::SFX)) {
-							category(Workspace::Categories::SFX);
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str())) {
+							// Do nothing.
 						}
-
-						ImGui::EndPopup();
 					}
-				} while (false);
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(categoryOfAudio());
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(Workspace::Categories::CODE);
+					}
 				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
+
+				if (category() == Categories::TILES) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str())) {
+							toggleDocument(nullptr);
+						}
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str())) {
+							// Do nothing.
+						}
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(Workspace::Categories::TILES);
+					}
+				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
+
+				if (category() == Categories::MAP) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str())) {
+							toggleDocument(nullptr);
+						}
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str())) {
+							// Do nothing.
+						}
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(Workspace::Categories::MAP);
+					}
+				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
+
+				if (category() == Categories::SCENE) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str())) {
+							toggleDocument(nullptr);
+						}
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str())) {
+							// Do nothing.
+						}
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(Workspace::Categories::SCENE);
+					}
+				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
+
+				if (category() == Categories::ACTOR) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str())) {
+							toggleDocument(nullptr);
+						}
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str())) {
+							// Do nothing.
+						}
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(Workspace::Categories::ACTOR);
+					}
+				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
+
+				if (category() == Categories::FONT) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
+							toggleDocument(nullptr);
+						}
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
+							// Do nothing.
+						}
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(Workspace::Categories::FONT);
+					}
+				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
+
+				if (category() == Categories::MUSIC || category() == Categories::SFX) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str())) {
+							toggleDocument(nullptr);
+						}
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconAudioMore()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str())) {
+							ImGui::OpenPopup("@Aud");
+
+							bubble(nullptr);
+						}
+					}
+
+					do {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+						VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+						if (ImGui::BeginPopup("@Aud")) {
+							if (ImGui::MenuItem(theme()->menu_Music(), GBBASIC_MODIFIER_KEY_NAME "+7", category() == Workspace::Categories::MUSIC)) {
+								category(Workspace::Categories::MUSIC);
+							}
+							if (ImGui::MenuItem(theme()->menu_Sfx(), GBBASIC_MODIFIER_KEY_NAME "+8", category() == Workspace::Categories::SFX)) {
+								category(Workspace::Categories::SFX);
+							}
+
+							ImGui::EndPopup();
+						}
+					} while (false);
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(categoryOfAudio());
+					}
+				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
 			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
 
 			if (category() == Categories::CONSOLE) {
 				if (docOpened) {
@@ -9869,12 +9882,16 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 			// Render the sticker.
 			auto getBuiltinIcon = [rnd, this] (Project::Ptr &prj) -> void* {
 				void* iconTex = nullptr;
-				if (prj->isExample())
-					iconTex = theme()->iconExample()->pointer(rnd);
-				else if (prj->isPlain())
-					iconTex = theme()->iconPlainCode()->pointer(rnd);
-				else
-					iconTex = theme()->iconProjectOmitted()->pointer(rnd);
+				if (prj->contentType() == Project::ContentTypes::BASIC) {
+					if (prj->isExample())
+						iconTex = theme()->iconExample()->pointer(rnd);
+					else if (prj->isPlain())
+						iconTex = theme()->iconPlainCode()->pointer(rnd);
+					else
+						iconTex = theme()->iconProjectOmitted()->pointer(rnd);
+				} else {
+					iconTex = theme()->iconRom()->pointer(rnd);
+				}
 
 				return iconTex;
 			};
@@ -9886,7 +9903,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 			}
 			oldX = ImGui::GetCursorPosX();
 			if (iconView) {
-				Texture::Ptr &icon = prj->iconTexture();
+				Texture::Ptr &icon = prj->touchIconTexture();
 				if (icon) {
 					ImGui::Image(
 						icon->pointer(rnd),
@@ -9900,7 +9917,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 					);
 				}
 			} else {
-				Texture::Ptr &icon = prj->iconTexture();
+				Texture::Ptr &icon = prj->touchIconTexture();
 				if (icon) {
 					ImGui::Image(
 						icon->pointer(rnd),

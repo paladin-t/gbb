@@ -1142,7 +1142,11 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 				}
 
 				ws->currentProject(prj);
-				ws->category(Workspace::Categories::CODE);
+				if (prj->contentType() == Project::ContentTypes::BASIC) {
+					ws->category(Workspace::Categories::CODE);
+				} else {
+					ws->category(Workspace::Categories::CONSOLE);
+				}
 				ws->tabsWidth(0.0f);
 
 				ws->refreshWindowTitle(wnd);
