@@ -51,7 +51,8 @@ public:
 	static promise::Promise fileSave(Window* wnd, Renderer* rnd, Workspace* ws, bool saveAs);                                              // Shows save file dialog if necessary.
 	static promise::Promise fileSaveForNotepad(Window* wnd, Renderer* rnd, Workspace* ws, bool saveAs);                                    // Shows save file dialog if necessary.
 	static promise::Promise fileRename(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj, const char* fontConfigPath);
-	static promise::Promise fileRemove(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj);
+	static promise::Promise fileRemove(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj);
+	static promise::Promise fileRemoveReference(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj);
 	static promise::Promise fileClear(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise fileAdd(Window* wnd, Renderer* rnd, Workspace* ws, const char* path);
 	static promise::Promise fileDragAndDropFile(Window* wnd, Renderer* rnd, Workspace* ws, const char* path);

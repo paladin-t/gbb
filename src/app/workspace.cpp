@@ -1400,9 +1400,9 @@ bool Workspace::load(Window* wnd, Renderer* rnd, const int* wndWidth, const int*
 			Project::ContentTypes contentType;
 			std::string ct;
 			Jpath::get(doc, ct, "projects", i, "content_type");
-			if (ct == "basic")    contentType = Project::ContentTypes::BASIC;
-			else if (ct == "rom") contentType = Project::ContentTypes::ROM;
-			else                  contentType = Project::ContentTypes::BASIC;
+			if      (ct == "basic") contentType = Project::ContentTypes::BASIC;
+			else if (ct == "rom")   contentType = Project::ContentTypes::ROM;
+			else                    contentType = Project::ContentTypes::BASIC;
 
 			std::string path_;
 			if (!Jpath::get(doc, path_, "projects", i, "path"))
@@ -1898,6 +1898,11 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 
 										validateProject(prj.get());
 									}
+								)
+								.fail(
+									[wnd, rnd, this, prj] (void) -> void {
+										Operations::fileRemoveReference(wnd, rnd, this, prj);
+									}
 								);
 						}
 					);
@@ -1964,6 +1969,11 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 											return;
 
 										validateProject(prj.get());
+									}
+								)
+								.fail(
+									[wnd, rnd, this, prj] (void) -> void {
+										Operations::fileRemoveReference(wnd, rnd, this, prj);
 									}
 								);
 						}
@@ -6699,6 +6709,11 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 
 									validateProject(prj.get());
 								}
+							)
+							.fail(
+								[wnd, rnd, this, prj] (void) -> void {
+									Operations::fileRemoveReference(wnd, rnd, this, prj);
+								}
 							);
 					}
 				);
@@ -7333,6 +7348,11 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 
 											validateProject(prj.get());
 										}
+									)
+									.fail(
+										[wnd, rnd, this, prj] (void) -> void {
+											Operations::fileRemoveReference(wnd, rnd, this, prj);
+										}
 									);
 							}
 						);
@@ -7598,6 +7618,11 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 
 												validateProject(prj.get());
 											}
+										)
+										.fail(
+											[wnd, rnd, this, prj] (void) -> void {
+												Operations::fileRemoveReference(wnd, rnd, this, prj);
+											}
 										);
 								}
 							);
@@ -7633,6 +7658,11 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 													return;
 
 												validateProject(prj.get());
+											}
+										)
+										.fail(
+											[wnd, rnd, this, prj] (void) -> void {
+												Operations::fileRemoveReference(wnd, rnd, this, prj);
 											}
 										);
 								}
@@ -8340,6 +8370,11 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 											return;
 
 										validateProject(prj.get());
+									}
+								)
+								.fail(
+									[wnd, rnd, this, prj] (void) -> void {
+										Operations::fileRemoveReference(wnd, rnd, this, prj);
 									}
 								);
 						}

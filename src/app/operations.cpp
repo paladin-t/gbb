@@ -1610,7 +1610,7 @@ promise::Promise Operations::fileRename(Window* wnd, Renderer* rnd, Workspace* w
 		);
 }
 
-promise::Promise Operations::fileRemove(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj) {
+promise::Promise Operations::fileRemove(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
 			const std::string &path = prj->path();
@@ -1728,6 +1728,42 @@ promise::Promise Operations::fileRemove(Window* wnd, Renderer* rnd, Workspace* w
 						df.reject();
 					}
 				);
+		}
+	);
+}
+
+promise::Promise Operations::fileRemoveReference(Window*, Renderer*, Workspace* ws, const Project::Ptr &prj) {
+	return promise::newPromise(
+		[&] (promise::Defer df) -> void {
+			for (int i = 0; i < (int)ws->projects().size(); ++i) {
+				const Project::Ptr &prj_ = ws->projects()[i];
+				if (prj == prj_) {
+					ws->projects().erase(ws->projects().begin() + i);
+					ws->recentProjectFocusableCount(ws->recentProjectFocusableCount() - 1);
+					if (ws->recentProjectSelectedIndex() == i) {
+						if (!ws->projects().empty()) {
+							ws->recentProjectFocusingIndex(
+								Math::clamp(
+									ws->recentProjectFocusedIndex(),
+									0,
+									ws->recentProjectFocusableCount() - 1
+								)
+							);
+						}
+						ws->recentProjectSelectedIndex(
+							Math::clamp(
+								ws->recentProjectSelectedIndex(),
+								0,
+								ws->recentProjectFocusableCount() - 1
+							)
+						);
+					}
+
+					break;
+				}
+			}
+
+			df.resolve(true);
 		}
 	);
 }
