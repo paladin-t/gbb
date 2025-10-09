@@ -292,6 +292,10 @@ public:
 private:
 	void transfer(void);
 
+	bool loadRom(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError);
+	bool loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError);
+	bool saveBasic(const char* path_, bool redirect, WarningOrErrorHandler onWarningOrError);
+
 	bool loadInformation(const std::string &content, WarningOrErrorHandler onWarningOrError);
 	bool saveInformation(std::string &content);
 

@@ -1945,247 +1945,31 @@ bool Project::load(const char* fontConfigPath, WarningOrErrorHandler onWarningOr
 	// Prepare.
 	sharedSfxEditorDisabled(false);
 
-	// Read from the file.
-	std::string source;
-	const bool ret = read(
-		path().c_str(),
-		[&] (File::Ptr file) -> bool {
-			if (!file->readString(source))
-				return false;
+	// Determine the file type.
+	std::string ext;
+	Path::split(path(), nullptr, &ext, nullptr);
 
-			return true;
-		}
-	);
-	if (!ret)
-		return false;
+	Text::toLowerCase(ext);
+	const bool isBin = ext == GBBASIC_CLASSIC_ROM_EXT || ext == GBBASIC_COLORED_ROM_EXT || ext == "zip";
 
-	if (!Unicode::isPrintable(source.c_str(), source.length())) {
-		fprintf(stderr, "Invalid file.\n");
+	// Load.
+	if (isBin)
+		return loadRom(fontConfigPath, onWarningOrError);
 
-		return false;
-	}
-
-	// Determine the source type.
-	std::string content;
-	const std::string sectionBegin = COMPILER_PROGRAM_BEGIN;
-	const std::string sectionEnd = COMPILER_PROGRAM_END;
-	const size_t beginIndex = Text::indexOf(source, sectionBegin);
-	const size_t endIndex = Text::indexOf(source, sectionEnd, beginIndex + sectionBegin.length());
-	if (beginIndex == std::string::npos && endIndex == std::string::npos) { // Is a plain source code file.
-		// Fill the information.
-		std::string title_;
-		std::string ext;
-		Path::split(path(), &title_, &ext, nullptr);
-		title(title_);
-
-		const long long now = DateTime::now();
-		contentType(ContentTypes::BASIC);
-		cartridgeType(PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION);
-		sramType("0");
-		hasRtc(false);
-		caseInsensitive(true);
-		description("");
-		author("");
-		genre("");
-		version("1.0.0");
-		url("");
-		created(now);
-		modified(now);
-		preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
-		preferencesFontOffset(GBBASIC_FONT_DEFAULT_OFFSET);
-		preferencesFontIsTwoBitsPerPixel(GBBASIC_FONT_DEFAULT_IS_2BPP);
-		preferencesFontPreferFullWord(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD);
-		preferencesFontPreferFullWordForNonAscii(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD_FOR_NON_ASCII);
-		preferencesPreviewPaletteBits(true);
-		preferencesUseByteMatrix(false);
-		preferencesShowGrids(true);
-		preferencesCodePageForBindedRoutine(0);
-		preferencesCodeLineForBindedRoutine(Left<int>(0));
-		preferencesMapRef(0);
-		preferencesMusicPreviewStroke(true);
-		preferencesSfxShowSoundShape(true);
-		preferencesActorApplyPropertiesToAllTiles(false);
-		preferencesActorApplyPropertiesToAllFrames(true);
-		preferencesActorUses8x16Sprites(true);
-		preferencesSceneRefMap(0);
-		preferencesSceneShowActors(true);
-		preferencesSceneShowTriggers(true);
-		preferencesSceneShowProperties(true);
-		preferencesSceneShowAttributes(false);
-		preferencesSceneUseGravity(false);
-
-		// Fill the assets.
-		assets(AssetsBundle::Ptr(new AssetsBundle()));
-
-		touchPalette();
-
-		clearFontPages();
-		addGlobalFontPages(fontConfigPath, onWarningOrError);
-		activeFontIndex(0);
-
-		CodeAssets code;
-		code.add(source);
-		assets()->code = code;
-		isPlain(true);
-		preferPlain(ext == GBBASIC_PLAIN_PROJECT_EXT);
-		activeMajorCodeIndex(0);
-#if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
-		isMajorCodeEditorActive(true);
-		isMinorCodeEditorEnabled(false);
-		activeMinorCodeIndex(-1);
-		minorCodeEditorWidth(0.0f);
-#endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
-
-		activePaletteIndex(-1);
-
-		activeFontIndex(-1);
-
-		fontPreviewHeight(0.0f);
-
-		activeTilesIndex(-1);
-
-		activeMapIndex(-1);
-
-		activeMusicIndex(-1);
-
-		activeSfxIndex(-1);
-
-		activeActorIndex(-1);
-
-		activeSceneIndex(-1);
-
-		// Finish.
-		return true;
-	} else { // Is a rich project file.
-		content = Text::trim(source);
-		isPlain(false);
-		preferPlain(false);
-	}
-
-	// Parse the information.
-	loadInformation(content, onWarningOrError);
-
-	// Parse the assets.
-	loadAssets(fontConfigPath, content, onWarningOrError);
-
-	// Finish.
-	return true;
+	return loadBasic(fontConfigPath, onWarningOrError);
 }
 
 bool Project::save(const char* path_, bool redirect, WarningOrErrorHandler onWarningOrError) {
-	// Prepare.
-	if (path().empty() || redirect)
-		path(path_);
+	// Only allow saving BASIC projects.
+	if (contentType() != ContentTypes::BASIC) {
+		if (onWarningOrError)
+			onWarningOrError("Saving non-BASIC project is not supported.", true);
 
-	// Determine the source type.
-	const bool saveAsPlain = isPlain() && preferPlain();
-	if (saveAsPlain) { // Save as plain source code file.
-		// Prepare.
-		std::string source;
-
-		// Check the assets.
-		if (assets()->fonts.count() > 1) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored font assets after page 1.", true);
-		}
-		if (assets()->code.count() > 1) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored code after page 1.", true);
-		}
-		if (assets()->tiles.count() > 0) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored tiles assets.", true);
-		}
-		if (assets()->maps.count() > 0) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored map assets.", true);
-		}
-		if (assets()->music.count() > 0) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored music assets.", true);
-		}
-		if (assets()->sfx.count() > 0) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored SFX assets.", true);
-		}
-		if (assets()->actors.count() > 0) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored actor assets.", true);
-		}
-		if (assets()->scenes.count() > 0) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored scene assets.", true);
-		}
-
-		// Serialize the code.
-		CodeAssets::Entry* entry = assets()->code.get(0);
-		if (entry->editor && entry->editor->hasUnsavedChanges()) {
-			entry->editor->flush();
-			entry->editor->markChangesSaved();
-		}
-		if (!entry->toString(source, onWarningOrError))
-			return false;
-
-		// Write to the file.
-		const bool ret = write(
-			path().c_str(),
-			[&] (File::Ptr file) -> bool {
-				if (source.empty())
-					return true;
-
-				if (!file->writeString(source))
-					return false;
-
-				return true;
-			}
-		);
-		if (!ret)
-			return false;
-
-		// Finish.
-		hasDirtyAsset(false);
-		hasDirtyEditor(false);
-		toPollEditor(false);
-
-		return true;
-	} else { // Save as rich project file.
-		// Prepare.
-		std::string source;
-		std::string content;
-
-		// Transfer external stuff that is pending.
-		transfer();
-
-		// Update the modification timestamp.
-		const long long now = DateTime::now();
-		modified(now);
-
-		// Serialize the information.
-		saveInformation(content);
-
-		// Serialize the assets.
-		if (!saveAssets(content, onWarningOrError))
-			return false;
-
-		// Write to the file.
-		content = Text::trim(content);
-		put(source, COMPILER_PROGRAM_BEGIN, COMPILER_PROGRAM_END, content);
-
-		const bool ret = write(
-			path().c_str(),
-			[&] (File::Ptr file) -> bool {
-				if (!file->writeString(source))
-					return false;
-
-				return true;
-			}
-		);
-		if (!ret)
-			return false;
-
-		// Finish.
-		return true;
+		return false;
 	}
+
+	// Save.
+	return saveBasic(path_, redirect, onWarningOrError);
 }
 
 bool Project::rename(const char* name) {
@@ -2321,6 +2105,255 @@ void Project::transfer(void) {
 				entry->directory = dir;
 			}
 		}
+	}
+}
+
+bool Project::loadRom(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError) {
+	// TODO
+	return false;
+}
+
+bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError) {
+	// Read from the file.
+	std::string source;
+	const bool ret = read(
+		path().c_str(),
+		[&] (File::Ptr file) -> bool {
+			if (!file->readString(source))
+				return false;
+
+			return true;
+		}
+	);
+	if (!ret)
+		return false;
+
+	if (!Unicode::isPrintable(source.c_str(), source.length())) {
+		fprintf(stderr, "Invalid file.\n");
+
+		return false;
+	}
+
+	// Determine the source type.
+	std::string content;
+	const std::string sectionBegin = COMPILER_PROGRAM_BEGIN;
+	const std::string sectionEnd = COMPILER_PROGRAM_END;
+	const size_t beginIndex = Text::indexOf(source, sectionBegin);
+	const size_t endIndex = Text::indexOf(source, sectionEnd, beginIndex + sectionBegin.length());
+	if (beginIndex == std::string::npos && endIndex == std::string::npos) { // Is a plain source code file.
+		// Fill the information.
+		std::string title_;
+		std::string ext;
+		Path::split(path(), &title_, &ext, nullptr);
+		title(title_);
+
+		const long long now = DateTime::now();
+		contentType(ContentTypes::BASIC);
+		cartridgeType(PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION);
+		sramType("0");
+		hasRtc(false);
+		caseInsensitive(true);
+		description("");
+		author("");
+		genre("");
+		version("1.0.0");
+		url("");
+		created(now);
+		modified(now);
+		preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
+		preferencesFontOffset(GBBASIC_FONT_DEFAULT_OFFSET);
+		preferencesFontIsTwoBitsPerPixel(GBBASIC_FONT_DEFAULT_IS_2BPP);
+		preferencesFontPreferFullWord(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD);
+		preferencesFontPreferFullWordForNonAscii(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD_FOR_NON_ASCII);
+		preferencesPreviewPaletteBits(true);
+		preferencesUseByteMatrix(false);
+		preferencesShowGrids(true);
+		preferencesCodePageForBindedRoutine(0);
+		preferencesCodeLineForBindedRoutine(Left<int>(0));
+		preferencesMapRef(0);
+		preferencesMusicPreviewStroke(true);
+		preferencesSfxShowSoundShape(true);
+		preferencesActorApplyPropertiesToAllTiles(false);
+		preferencesActorApplyPropertiesToAllFrames(true);
+		preferencesActorUses8x16Sprites(true);
+		preferencesSceneRefMap(0);
+		preferencesSceneShowActors(true);
+		preferencesSceneShowTriggers(true);
+		preferencesSceneShowProperties(true);
+		preferencesSceneShowAttributes(false);
+		preferencesSceneUseGravity(false);
+
+		// Fill the assets.
+		assets(AssetsBundle::Ptr(new AssetsBundle()));
+
+		touchPalette();
+
+		clearFontPages();
+		addGlobalFontPages(fontConfigPath, onWarningOrError);
+		activeFontIndex(0);
+
+		CodeAssets code;
+		code.add(source);
+		assets()->code = code;
+		isPlain(true);
+		preferPlain(ext == GBBASIC_PLAIN_PROJECT_EXT);
+		activeMajorCodeIndex(0);
+#if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
+		isMajorCodeEditorActive(true);
+		isMinorCodeEditorEnabled(false);
+		activeMinorCodeIndex(-1);
+		minorCodeEditorWidth(0.0f);
+#endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
+
+		activePaletteIndex(-1);
+
+		activeFontIndex(-1);
+
+		fontPreviewHeight(0.0f);
+
+		activeTilesIndex(-1);
+
+		activeMapIndex(-1);
+
+		activeMusicIndex(-1);
+
+		activeSfxIndex(-1);
+
+		activeActorIndex(-1);
+
+		activeSceneIndex(-1);
+
+		// Finish.
+		return true;
+	} else { // Is a rich project file.
+		content = Text::trim(source);
+		isPlain(false);
+		preferPlain(false);
+	}
+
+	// Parse the information.
+	loadInformation(content, onWarningOrError);
+
+	// Parse the assets.
+	loadAssets(fontConfigPath, content, onWarningOrError);
+
+	// Finish.
+	return true;
+}
+
+bool Project::saveBasic(const char* path_, bool redirect, WarningOrErrorHandler onWarningOrError) {
+	// Prepare.
+	if (path().empty() || redirect)
+		path(path_);
+
+	// Determine the source type.
+	const bool saveAsPlain = isPlain() && preferPlain();
+	if (saveAsPlain) { // Save as plain source code file.
+		// Prepare.
+		std::string source;
+
+		// Check the assets.
+		if (assets()->fonts.count() > 1) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored font assets after page 1.", true);
+		}
+		if (assets()->code.count() > 1) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored code after page 1.", true);
+		}
+		if (assets()->tiles.count() > 0) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored tiles assets.", true);
+		}
+		if (assets()->maps.count() > 0) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored map assets.", true);
+		}
+		if (assets()->music.count() > 0) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored music assets.", true);
+		}
+		if (assets()->sfx.count() > 0) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored SFX assets.", true);
+		}
+		if (assets()->actors.count() > 0) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored actor assets.", true);
+		}
+		if (assets()->scenes.count() > 0) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored scene assets.", true);
+		}
+
+		// Serialize the code.
+		CodeAssets::Entry* entry = assets()->code.get(0);
+		if (entry->editor && entry->editor->hasUnsavedChanges()) {
+			entry->editor->flush();
+			entry->editor->markChangesSaved();
+		}
+		if (!entry->toString(source, onWarningOrError))
+			return false;
+
+		// Write to the file.
+		const bool ret = write(
+			path().c_str(),
+			[&] (File::Ptr file) -> bool {
+				if (source.empty())
+					return true;
+
+				if (!file->writeString(source))
+					return false;
+
+				return true;
+			}
+		);
+		if (!ret)
+			return false;
+
+		// Finish.
+		hasDirtyAsset(false);
+		hasDirtyEditor(false);
+		toPollEditor(false);
+
+		return true;
+	} else { // Save as rich project file.
+		// Prepare.
+		std::string source;
+		std::string content;
+
+		// Transfer external stuff that is pending.
+		transfer();
+
+		// Update the modification timestamp.
+		const long long now = DateTime::now();
+		modified(now);
+
+		// Serialize the information.
+		saveInformation(content);
+
+		// Serialize the assets.
+		if (!saveAssets(content, onWarningOrError))
+			return false;
+
+		// Write to the file.
+		content = Text::trim(content);
+		put(source, COMPILER_PROGRAM_BEGIN, COMPILER_PROGRAM_END, content);
+
+		const bool ret = write(
+			path().c_str(),
+			[&] (File::Ptr file) -> bool {
+				if (!file->writeString(source))
+					return false;
+
+				return true;
+			}
+		);
+		if (!ret)
+			return false;
+
+		// Finish.
+		return true;
 	}
 }
 
