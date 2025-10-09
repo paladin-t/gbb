@@ -77,6 +77,16 @@ bool RomInspector::setManufacturerCode(const std::string &manufacturerCode) {
 	return writeBytes(0x13f, stringToBytes(hexValue));
 }
 
+std::string RomInspector::getCartridgeCompatibilityCode(void) const {
+	const std::string hexString = readHexString(0x143, 0x01);
+
+	return hexString;
+}
+
+bool RomInspector::setCartridgeCompatibilityCode(const std::string &newCompatibilityCode) {
+	return writeBytes(0x143, stringToBytes(newCompatibilityCode));
+}
+
 bool RomInspector::hasClassicSupport(void) const {
 	const std::string hexString = readHexString(0x143, 0x01);
 

@@ -17,9 +17,11 @@
 #include "project.h"
 #include "workspace.h"
 #include "../compiler/compiler.h"
+#include "../utils/archive.h"
 #include "../utils/datetime.h"
 #include "../utils/encoding.h"
 #include "../utils/filesystem.h"
+#include "../utils/rom_inspector.h"
 #include "../../lib/jpath/jpath.hpp"
 #if defined GBBASIC_OS_HTML
 #	include <emscripten.h>
@@ -1745,6 +1747,103 @@ bool Project::open(const char* path_) {
 	// Prepare.
 	path(path_);
 
+	// Determine the file type.
+	std::string ext;
+	Path::split(path(), nullptr, &ext, nullptr);
+	Text::toLowerCase(ext);
+
+	const bool isBin = ext == GBBASIC_CLASSIC_ROM_EXT || ext == GBBASIC_COLORED_ROM_EXT || ext == "zip";
+	const bool isZip = ext == "zip";
+
+	// For binary (ROM).
+	if (isBin) {
+		std::string title_;
+		Path::split(path(), &title_, nullptr, nullptr);
+		title(title_);
+
+		Bytes::Ptr bytes(Bytes::create());
+		const bool ret = read(
+			path().c_str(),
+			[&] (File::Ptr file) -> bool {
+				if (!file->readBytes(bytes.get()))
+					return false;
+
+				return true;
+			}
+		);
+		if (!ret)
+			return false;
+
+		if (isZip) {
+			if (!extractRom(bytes.get()))
+				return false;
+		}
+
+		const long long now = DateTime::now();
+		contentType(ContentTypes::ROM);
+		RomInspector header;
+		header.load(bytes);
+		{
+			std::string compCode = header.getCartridgeCompatibilityCode();
+			compCode = "0x" + compCode;
+			unsigned cartComp = 0;
+			Text::Array cartTypes;
+			if (Text::fromString(compCode, cartComp)) {
+				if (cartComp == 0x00 || (cartComp & 0x80))
+					cartTypes.push_back(PROJECT_CARTRIDGE_TYPE_CLASSIC);
+				if ((cartComp & 0x80) || (cartComp & 0xc0))
+					cartTypes.push_back(PROJECT_CARTRIDGE_TYPE_COLORED);
+				if (cartComp & 0x20)
+					cartTypes.push_back(PROJECT_CARTRIDGE_TYPE_EXTENSION);
+			} else {
+				cartTypes.push_back(PROJECT_CARTRIDGE_TYPE_CLASSIC);
+				cartTypes.push_back(PROJECT_CARTRIDGE_TYPE_COLORED);
+				cartTypes.push_back(PROJECT_CARTRIDGE_TYPE_EXTENSION);
+			}
+			cartridgeType(Text::join(cartTypes, PROJECT_CARTRIDGE_TYPE_SEPARATOR));
+
+			std::string ramCode = header.getRamSizeCode();
+			if (ramCode.length() > 1)
+				ramCode = ramCode.substr(ramCode.length() - 1);
+			sramType(ramCode);
+
+			const std::string cartCode = header.getCartridgeTypeCode();
+			hasRtc(cartCode == "0f" || cartCode == "10");
+		}
+		header.unload();
+		caseInsensitive(true);
+		description("");
+		author("");
+		genre("");
+		version("1.0.0");
+		url("");
+		created(now);
+		modified(now);
+		preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
+		preferencesFontOffset(GBBASIC_FONT_DEFAULT_OFFSET);
+		preferencesFontIsTwoBitsPerPixel(GBBASIC_FONT_DEFAULT_IS_2BPP);
+		preferencesFontPreferFullWord(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD);
+		preferencesFontPreferFullWordForNonAscii(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD_FOR_NON_ASCII);
+		preferencesMapRef(0);
+		preferencesMusicPreviewStroke(true);
+		preferencesSfxShowSoundShape(true);
+		preferencesActorApplyPropertiesToAllTiles(false);
+		preferencesActorApplyPropertiesToAllFrames(true);
+		preferencesActorUses8x16Sprites(true);
+		preferencesSceneRefMap(0);
+		preferencesSceneShowActors(true);
+		preferencesSceneShowTriggers(true);
+		preferencesSceneShowProperties(true);
+		preferencesSceneShowAttributes(false);
+		preferencesSceneUseGravity(false);
+
+		isPlain(true);
+		preferPlain(true);
+
+		// Finish.
+		return true;
+	}
+
 	// Read from the file.
 	std::string source;
 	const bool ret = read(
@@ -2106,6 +2205,43 @@ void Project::transfer(void) {
 			}
 		}
 	}
+}
+
+bool Project::extractRom(Bytes* data) const {
+	Archive::Ptr arc(Archive::create(Archive::ZIP));
+	if (!arc->open(path().c_str(), Stream::Accesses::READ))
+		return false;
+
+	Text::Array entries;
+	if (!arc->all(entries)) {
+		arc->close();
+
+		return false;
+	}
+
+	Text::Array::iterator it = std::find_if(
+		entries.begin(), entries.end(),
+		[] (const std::string &entry) -> bool {
+			return Text::endsWith(entry, "." GBBASIC_CLASSIC_ROM_EXT, true) || Text::endsWith(entry, "." GBBASIC_COLORED_ROM_EXT, true);
+		}
+	);
+	if (it == entries.end()) {
+		arc->close();
+
+		return false;
+	}
+	if (data) {
+		const std::string innerPath = *it;
+		if (!arc->toBytes(data, innerPath.c_str())) {
+			arc->close();
+
+			return false;
+		}
+	}
+
+	arc->close();
+
+	return true;
 }
 
 bool Project::loadRom(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError) {

@@ -292,6 +292,7 @@ public:
 private:
 	void transfer(void);
 
+	bool extractRom(Bytes* data) const;
 	bool loadRom(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError);
 	bool loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError);
 	bool saveBasic(const char* path_, bool redirect, WarningOrErrorHandler onWarningOrError);
