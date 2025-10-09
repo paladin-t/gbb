@@ -36569,9 +36569,9 @@ bool load(Program &program, Options &options) {
 		std::string path = sym;
 		if (path.empty()) {
 			path = rom;
-			if (Text::endsWith(path, ".gb", true))
+			if (Text::endsWith(path, "." GBBASIC_CLASSIC_ROM_EXT, true))
 				path = path.substr(0, path.length() - 3);
-			else if (Text::endsWith(path, ".gbc", true))
+			else if (Text::endsWith(path, "." GBBASIC_COLORED_ROM_EXT, true))
 				path = path.substr(0, path.length() - 4);
 			path += ".sym";
 			if (!Path::existsFile(path.c_str()))
@@ -36609,9 +36609,9 @@ bool load(Program &program, Options &options) {
 		std::string path = aliases;
 		if (path.empty()) {
 			path = rom;
-			if (Text::endsWith(path, ".gb", true))
+			if (Text::endsWith(path, "." GBBASIC_CLASSIC_ROM_EXT, true))
 				path = path.substr(0, path.length() - 3);
-			else if (Text::endsWith(path, ".gbc", true))
+			else if (Text::endsWith(path, "." GBBASIC_COLORED_ROM_EXT, true))
 				path = path.substr(0, path.length() - 4);
 			path += ".aliases.json";
 			if (!Path::existsFile(path.c_str()))
