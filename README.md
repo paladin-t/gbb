@@ -208,6 +208,7 @@ The "platform_*" files contain most platform dependent code, you'll probably mak
 
 ## Documentation
 
+- [Tutorials](https://paladin-t.github.io/kits/gbb/learn/index.html)
 - [Manual](https://paladin-t.github.io/kits/gbb/manual.html)
 - [Extensions](https://paladin-t.github.io/kits/gbb/extensions.html)
 - [Launching](https://paladin-t.github.io/kits/gbb/launching.html)
