@@ -1272,6 +1272,7 @@ private:
 		case FileSync::Filters::PROJECT: {
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || ext != GBBASIC_RICH_PROJECT_EXT) {
 					path += "." GBBASIC_RICH_PROJECT_EXT;
 
@@ -1283,6 +1284,7 @@ private:
 		case FileSync::Filters::CODE: {
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || (ext != "bas" && ext != "gbb")) {
 					path += ".bas";
 
@@ -1294,6 +1296,7 @@ private:
 		case FileSync::Filters::C: {
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || (ext != "c" && ext != "h")) {
 					path += ".c";
 
@@ -1305,6 +1308,7 @@ private:
 		case FileSync::Filters::JSON: {
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || ext != "json") {
 					path += ".json";
 
@@ -1316,6 +1320,7 @@ private:
 		case FileSync::Filters::IMAGE: {
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || (ext != "png" && ext != "jpg" && ext != "bmp" && ext != "tga")) {
 					path += ".png";
 
@@ -1327,6 +1332,7 @@ private:
 		case FileSync::Filters::FONT: {
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || ext != "ttf") {
 					path += ".ttf";
 
@@ -1338,6 +1344,7 @@ private:
 		case FileSync::Filters::VGM: {
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || ext != "vgm") {
 					path += ".vgm";
 
@@ -1349,6 +1356,7 @@ private:
 		case FileSync::Filters::WAV: {
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || ext != "wav") {
 					path += ".wav";
 
@@ -1360,6 +1368,7 @@ private:
 		case FileSync::Filters::FX_HAMMER: {
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || ext != "sav") {
 					path += ".sav";
 

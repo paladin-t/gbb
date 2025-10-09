@@ -3606,6 +3606,7 @@ private:
 		if (ext.empty() || std::find(exts.begin(), exts.end(), ext) == exts.end())
 			path += ".png";
 		Path::split(path, nullptr, &ext, nullptr);
+		Text::toLowerCase(ext);
 		const char* y = ext.c_str();
 
 		const int ref = entry()->ref;

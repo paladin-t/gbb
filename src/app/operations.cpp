@@ -1358,6 +1358,7 @@ promise::Promise Operations::fileSave(Window* wnd, Renderer* rnd, Workspace* ws,
 				}
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || ext != GBBASIC_RICH_PROJECT_EXT) {
 					path += "." GBBASIC_RICH_PROJECT_EXT;
 				}
@@ -2589,6 +2590,7 @@ promise::Promise Operations::fileExportForNotepad(Window* wnd, Renderer* rnd, Wo
 			}
 			std::string ext;
 			Path::split(path, nullptr, &ext, nullptr);
+			Text::toLowerCase(ext);
 			if (ext.empty() || ext != GBBASIC_RICH_PROJECT_EXT) {
 				path += "." GBBASIC_RICH_PROJECT_EXT;
 			}
@@ -2722,6 +2724,7 @@ promise::Promise Operations::fileDuplicate(Window* wnd, Renderer* rnd, Workspace
 						}
 						std::string ext;
 						Path::split(path, nullptr, &ext, nullptr);
+						Text::toLowerCase(ext);
 						if (ext.empty() || ext != GBBASIC_RICH_PROJECT_EXT) {
 							path += "." GBBASIC_RICH_PROJECT_EXT;
 						}
@@ -4048,6 +4051,7 @@ promise::Promise Operations::projectBuild(Window* wnd, Renderer* rnd, Workspace*
 
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || !(ext == ext0 || ext == ext1)) {
 					if (isClassic)
 						path += "." + ext0;

@@ -1948,8 +1948,8 @@ bool Project::load(const char* fontConfigPath, WarningOrErrorHandler onWarningOr
 	// Determine the file type.
 	std::string ext;
 	Path::split(path(), nullptr, &ext, nullptr);
-
 	Text::toLowerCase(ext);
+
 	const bool isBin = ext == GBBASIC_CLASSIC_ROM_EXT || ext == GBBASIC_COLORED_ROM_EXT || ext == "zip";
 
 	// Load.

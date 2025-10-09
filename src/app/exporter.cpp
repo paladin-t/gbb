@@ -605,6 +605,7 @@ void Exporter::gotoWeb(const char* path_, Bytes::Ptr /* rom */, std::string* hos
 				std::string name;
 				std::string ext;
 				Path::split(uri_, &name, &ext, nullptr);
+				Text::toLowerCase(ext);
 
 				if (uri_ == "/") {
 					const std::string entry = getFullPath(hostEntry, "index.html");
