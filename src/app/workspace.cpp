@@ -1048,35 +1048,35 @@ void Workspace::pageAdded(Window* wnd, Renderer* rnd, Project* prj, Categories c
 
 			break;
 		case Categories::FONT:
-			changePage(wnd, rnd, prj, Workspace::Categories::FONT, prj->fontPageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::FONT, prj->fontPageCount() - 1);
 
 			break;
 		case Categories::CODE:
-			changePage(wnd, rnd, prj, Workspace::Categories::CODE, prj->codePageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::CODE, prj->codePageCount() - 1);
 
 			break;
 		case Categories::TILES:
-			changePage(wnd, rnd, prj, Workspace::Categories::TILES, prj->tilesPageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::TILES, prj->tilesPageCount() - 1);
 
 			break;
 		case Categories::MAP:
-			changePage(wnd, rnd, prj, Workspace::Categories::MAP, prj->mapPageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::MAP, prj->mapPageCount() - 1);
 
 			break;
 		case Categories::MUSIC:
-			changePage(wnd, rnd, prj, Workspace::Categories::MUSIC, prj->musicPageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::MUSIC, prj->musicPageCount() - 1);
 
 			break;
 		case Categories::SFX:
-			changePage(wnd, rnd, prj, Workspace::Categories::SFX, prj->sfxPageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::SFX, prj->sfxPageCount() - 1);
 
 			break;
 		case Categories::ACTOR:
-			changePage(wnd, rnd, prj, Workspace::Categories::ACTOR, prj->actorPageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::ACTOR, prj->actorPageCount() - 1);
 
 			break;
 		case Categories::SCENE:
-			changePage(wnd, rnd, prj, Workspace::Categories::SCENE, prj->scenePageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::SCENE, prj->scenePageCount() - 1);
 
 			break;
 		default: // Do nothing.
@@ -1109,7 +1109,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->fontPageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::FONT, page_);
+				changePage(wnd, rnd, prj, Categories::FONT, page_);
 			}
 
 			break;
@@ -1123,7 +1123,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->codePageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::CODE, page_);
+				changePage(wnd, rnd, prj, Categories::CODE, page_);
 			}
 
 			break;
@@ -1137,7 +1137,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->tilesPageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::TILES, page_);
+				changePage(wnd, rnd, prj, Categories::TILES, page_);
 			}
 
 			for (int i = 0; i < prj->mapPageCount(); ++i) {
@@ -1166,7 +1166,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->mapPageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::MAP, page_);
+				changePage(wnd, rnd, prj, Categories::MAP, page_);
 			}
 
 			for (int i = 0; i < prj->scenePageCount(); ++i) {
@@ -1195,7 +1195,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->musicPageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::MUSIC, page_);
+				changePage(wnd, rnd, prj, Categories::MUSIC, page_);
 			}
 
 			break;
@@ -1207,7 +1207,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 					editor->post(Editable::UPDATE_INDEX, (Variant::Int)index_);
 
 				const int page_ = Math::clamp(index, 0, prj->sfxPageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::SFX, page_);
+				changePage(wnd, rnd, prj, Categories::SFX, page_);
 			}
 
 			break;
@@ -1221,7 +1221,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->actorPageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::ACTOR, page_);
+				changePage(wnd, rnd, prj, Categories::ACTOR, page_);
 			}
 
 			for (int i = 0; i < prj->scenePageCount(); ++i) {
@@ -1249,7 +1249,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->scenePageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::SCENE, page_);
+				changePage(wnd, rnd, prj, Categories::SCENE, page_);
 			}
 
 			break;
@@ -1890,13 +1890,16 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
-									[this, prj] (bool ok) -> void {
+									[wnd, rnd, this, prj] (bool ok) -> void {
 										if (!ok)
 											return;
 
 										validateProject(prj.get());
+
+										if (prj->contentType() != Project::ContentTypes::BASIC)
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 									}
 								)
 								.fail(
@@ -1962,7 +1965,7 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
 									[this, prj] (bool ok) -> void {
 										if (!ok)
@@ -2168,7 +2171,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 								return;
 							}
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
 									[wnd, rnd, this, cat, page, sub, prj, toCompile, toRun] (bool ok) -> void {
 										if (!ok) {
@@ -2179,8 +2182,8 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 
 										validateProject(prj.get());
 
-										category((Workspace::Categories)cat);
-										switch ((Workspace::Categories)cat) {
+										category((Categories)cat);
+										switch ((Categories)cat) {
 										case Categories::CODE: {
 												fprintf(stdout, "SDL: TO CODE.\n");
 
@@ -2255,13 +2258,13 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 											}
 
 											break;
-										case Workspace::Categories::CONSOLE:
+										case Categories::CONSOLE:
 											fprintf(stdout, "SDL: TO COMPILE.\n");
 
 											toCompile(wnd, rnd);
 
 											break;
-										case Workspace::Categories::EMULATOR:
+										case Categories::EMULATOR:
 											fprintf(stdout, "SDL: TO RUN.\n");
 
 											toRun(wnd, rnd);
@@ -2342,7 +2345,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 				break;
 			}
 
-			if ((Workspace::Categories)cat != Workspace::Categories::CODE) { // Supports code only.
+			if ((Categories)cat != Categories::CODE) { // Supports code only.
 				messagePopupBox(theme()->dialogPrompt_UnsupportedOperation(), nullptr, nullptr, nullptr);
 
 				fprintf(stderr, "Unsupported operation.\n");
@@ -2352,7 +2355,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 
 			Project::Ptr &prj = currentProject();
 
-			category((Workspace::Categories)cat);
+			category((Categories)cat);
 			changePage(wnd, rnd, prj.get(), category(), page);
 
 			CodeAssets::Entry* entry = prj->getCode(page);
@@ -2386,7 +2389,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 				break;
 			}
 
-			category((Workspace::Categories)cat);
+			category((Categories)cat);
 		}
 
 		break;
@@ -3192,8 +3195,8 @@ void Workspace::showCodeBindingEditor(
 		);
 		EditorCodeBinding::GotoHandler goto_(
 			[wnd, rnd, this] (int pg, int ln) -> void {
-				category(Workspace::Categories::CODE);
-				changePage(nullptr, rnd, currentProject().get(), Workspace::Categories::CODE, pg);
+				category(Categories::CODE);
+				changePage(nullptr, rnd, currentProject().get(), Categories::CODE, pg);
 
 				CodeAssets::Entry* entry = currentProject()->getCode(pg);
 				Editable* editor = entry->editor;
@@ -4363,6 +4366,8 @@ bool Workspace::analyze(bool force) {
 	const Project::Ptr &prj = currentProject();
 	if (!prj)
 		return true;
+	if (prj->contentType() != Project::ContentTypes::BASIC)
+		return true;
 
 	if (!force) {
 		if (popupBox() || menuOpened())
@@ -4810,9 +4815,9 @@ void Workspace::upgrade(
 			break;
 		}
 
-		Texture::Ptr attribtex(theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-		Texture::Ptr propstex(theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-		Texture::Ptr actorstex(theme()->textureActors(), [] (Texture*) { /* Do nothing. */ });
+		Texture::Ptr attribtex(theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+		Texture::Ptr propstex(theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+		Texture::Ptr actorstex(theme()->textureActors(), [] (Texture*) -> void { /* Do nothing. */ });
 		prj->attributesTexture(attribtex);
 		prj->propertiesTexture(propstex);
 		prj->actorsTexture(actorstex);
@@ -4826,7 +4831,7 @@ void Workspace::upgrade(
 			fontConfigPath = fntOpt->second;
 		else
 			fontConfigPath = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
-		if (!prj->load(fontConfigPath.c_str(), nullptr)) {
+		if (!prj->load(false, fontConfigPath.c_str(), nullptr)) {
 			prj->close(true);
 
 			onError("Cannot load the project.", false);
@@ -5334,9 +5339,9 @@ void Workspace::compile(
 		if (!tmpPrj->open(path.c_str()))
 			break;
 
-		Texture::Ptr attribtex(theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-		Texture::Ptr propstex(theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-		Texture::Ptr actorstex(theme()->textureActors(), [] (Texture*) { /* Do nothing. */ });
+		Texture::Ptr attribtex(theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+		Texture::Ptr propstex(theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+		Texture::Ptr actorstex(theme()->textureActors(), [] (Texture*) -> void { /* Do nothing. */ });
 		tmpPrj->attributesTexture(attribtex);
 		tmpPrj->propertiesTexture(propstex);
 		tmpPrj->actorsTexture(actorstex);
@@ -5350,7 +5355,7 @@ void Workspace::compile(
 			fontConfigPath = fntOpt->second;
 		else
 			fontConfigPath = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
-		if (!tmpPrj->load(fontConfigPath.c_str(), nullptr)) {
+		if (!tmpPrj->load(false, fontConfigPath.c_str(), nullptr)) {
 			tmpPrj->close(true);
 
 			break;
@@ -6215,8 +6220,8 @@ void Workspace::finish(Window* wnd, Renderer* rnd) {
 						if (err->isWarning)
 							continue;
 
-						category(Workspace::Categories::CODE);
-						changePage(wnd, rnd, prj.get(), Workspace::Categories::CODE, err->page);
+						category(Categories::CODE);
+						changePage(wnd, rnd, prj.get(), Categories::CODE, err->page);
 
 						delay(
 							std::bind(
@@ -6660,7 +6665,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 						if (io.KeyCtrl)
 							return;
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[this, prj] (bool ok) -> void {
 									if (!ok)
@@ -6686,7 +6691,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 						if (io.KeyCtrl)
 							return;
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[this, prj] (bool ok) -> void {
 									if (!ok)
@@ -6716,13 +6721,16 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 						if (io.KeyCtrl)
 							return;
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
-								[this, prj] (bool ok) -> void {
+								[wnd, rnd, this, prj] (bool ok) -> void {
 									if (!ok)
 										return;
 
 									validateProject(prj.get());
+
+									if (prj->contentType() != Project::ContentTypes::BASIC)
+										launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 								}
 							)
 							.fail(
@@ -6746,7 +6754,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 						if (io.KeyCtrl)
 							return;
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[this, prj] (bool ok) -> void {
 									if (!ok)
@@ -6936,25 +6944,25 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 
 			if (!prj || prj->contentType() == Project::ContentTypes::BASIC) {
 				if (grave && canvasDevice()) {
-					category(Workspace::Categories::EMULATOR);
+					category(Categories::EMULATOR);
 				} else if (num1) {
-					category(Workspace::Categories::CODE);
+					category(Categories::CODE);
 				} else if (num2) {
-					category(Workspace::Categories::TILES);
+					category(Categories::TILES);
 				} else if (num3) {
-					category(Workspace::Categories::MAP);
+					category(Categories::MAP);
 				} else if (num4) {
-					category(Workspace::Categories::SCENE);
+					category(Categories::SCENE);
 				} else if (num5) {
-					category(Workspace::Categories::ACTOR);
+					category(Categories::ACTOR);
 				} else if (num6) {
-					category(Workspace::Categories::FONT);
+					category(Categories::FONT);
 				} else if (num7) {
-					category(Workspace::Categories::MUSIC);
+					category(Categories::MUSIC);
 				} else if (num8) {
-					category(Workspace::Categories::SFX);
+					category(Categories::SFX);
 				} else if (num9) {
-					category(Workspace::Categories::CONSOLE);
+					category(Categories::CONSOLE);
 				} else if (num0) {
 					Project::Ptr &prj = currentProject();
 
@@ -6970,16 +6978,16 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 				}
 			} else {
 				if (grave && canvasDevice()) {
-					category(Workspace::Categories::EMULATOR);
+					category(Categories::EMULATOR);
 				} else if (num9) {
-					category(Workspace::Categories::CONSOLE);
+					category(Categories::CONSOLE);
 				}
 			}
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 			if (backSlash) {
 				switch (category()) {
-				case Workspace::Categories::CODE: {
+				case Categories::CODE: {
 						const int majorIdx = prj->activeMajorCodeIndex();
 						const int minorIdx = prj->activeMinorCodeIndex();
 						if (prj->isMinorCodeEditorEnabled()) {
@@ -7207,13 +7215,16 @@ void Workspace::navigate(Window* wnd, Renderer* rnd, int dx, int dy, int fully, 
 
 			closeFilter();
 
-			Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+			Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 				.then(
-					[this, prj] (bool ok) -> void {
+					[wnd, rnd, this, prj] (bool ok) -> void {
 						if (!ok)
 							return;
 
 						validateProject(prj.get());
+
+						if (prj->contentType() != Project::ContentTypes::BASIC)
+							launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 					}
 				);
 		}
@@ -7339,7 +7350,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 		if (ImGui::BeginMenu(theme()->menu_Project())) {
 			Project::Ptr &prj = currentProject();
 			const bool sel = recentProjectSelectedIndex() >= 0 && recentProjectSelectedIndex() < (int)projects().size();
-			const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+			const bool isEditable = !prj || prj->contentType() == Project::ContentTypes::BASIC;
 
 			if (showRecentProjects()) {
 				if (isEditable) {
@@ -7356,7 +7367,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 									if (io.KeyCtrl)
 										return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 										.then(
 											[this, prj] (bool ok) -> void {
 												if (!ok)
@@ -7392,13 +7403,16 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 									if (io.KeyCtrl)
 										return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 										.then(
-											[this, prj] (bool ok) -> void {
+											[wnd, rnd, this, prj] (bool ok) -> void {
 												if (!ok)
 													return;
 
 												validateProject(prj.get());
+
+												if (prj->contentType() != Project::ContentTypes::BASIC)
+													launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 											}
 										)
 										.fail(
@@ -7443,7 +7457,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 								if (io.KeyCtrl)
 									return;
 
-								Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+								Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 									.then(
 										[this, prj] (bool ok) -> void {
 											if (!ok)
@@ -7473,7 +7487,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 								if (io.KeyCtrl)
 									return;
 
-								Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+								Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 									.then(
 										[this, prj] (bool ok) -> void {
 											if (!ok)
@@ -7542,17 +7556,33 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			} else if (recentProjectSelectedIndex() >= 0) {
 				if (showRecentProjects()) {
 					Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
+					const bool isEditable_ = !prj || prj->contentType() == Project::ContentTypes::BASIC;
 					ImGui::Separator();
-					if (ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
+					if (isEditable_ && ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
 						closeFilter();
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[this, prj] (bool ok) -> void {
 									if (!ok)
 										return;
 
 									validateProject(prj.get());
+								}
+							);
+					}
+					if (ImGui::MenuItem(theme()->menu_Run(), nullptr, nullptr, sel)) {
+						closeFilter();
+
+						Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							.then(
+								[wnd, rnd, this, prj] (bool ok) -> void {
+									if (!ok)
+										return;
+
+									validateProject(prj.get());
+
+									launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 								}
 							);
 					}
@@ -7565,7 +7595,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuItem(theme()->menu_RemoveSramState(), nullptr, nullptr, prj->sramExists(this))) {
 						Operations::projectRemoveSram(wnd, rnd, this, prj, false);
 					}
-					if (ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
+					if (isEditable_ && ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
 						Operations::fileDuplicate(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str());
 					}
 #if !defined GBBASIC_OS_HTML
@@ -7667,13 +7697,16 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 									if (io.KeyCtrl)
 										return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 										.then(
-											[this, prj] (bool ok) -> void {
+											[wnd, rnd, this, prj] (bool ok) -> void {
 												if (!ok)
 													return;
 
 												validateProject(prj.get());
+
+												if (prj->contentType() != Project::ContentTypes::BASIC)
+													launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 											}
 										)
 										.fail(
@@ -7708,13 +7741,16 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 									if (io.KeyCtrl)
 										return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 										.then(
-											[this, prj] (bool ok) -> void {
+											[wnd, rnd, this, prj] (bool ok) -> void {
 												if (!ok)
 													return;
 
 												validateProject(prj.get());
+
+												if (prj->contentType() != Project::ContentTypes::BASIC)
+													launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 											}
 										)
 										.fail(
@@ -7741,7 +7777,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 									if (io.KeyCtrl)
 										return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 										.then(
 											[this, prj] (bool ok) -> void {
 												if (!ok)
@@ -8420,13 +8456,16 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
-									[this, prj] (bool ok) -> void {
+									[wnd, rnd, this, prj] (bool ok) -> void {
 										if (!ok)
 											return;
 
 										validateProject(prj.get());
+
+										if (prj->contentType() != Project::ContentTypes::BASIC)
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 									}
 								)
 								.fail(
@@ -8544,7 +8583,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
 									[this, prj] (bool ok) -> void {
 										if (!ok)
@@ -9340,7 +9379,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuBarImageButton(theme()->iconEmulator()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Emulator().c_str()) && !busy) {
 						if (docOpened)
 							toggleDocument(nullptr);
-						category(Workspace::Categories::EMULATOR);
+						category(Categories::EMULATOR);
 					}
 					ImGui::SameLine();
 					width += ImGui::GetItemRectSize().x;
@@ -9363,7 +9402,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str()) && !busy) {
 						if (docOpened)
 							toggleDocument(nullptr);
-						category(Workspace::Categories::CODE);
+						category(Categories::CODE);
 					}
 				}
 				ImGui::SameLine();
@@ -9384,7 +9423,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str()) && !busy) {
 						if (docOpened)
 							toggleDocument(nullptr);
-						category(Workspace::Categories::TILES);
+						category(Categories::TILES);
 					}
 				}
 				ImGui::SameLine();
@@ -9405,7 +9444,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str()) && !busy) {
 						if (docOpened)
 							toggleDocument(nullptr);
-						category(Workspace::Categories::MAP);
+						category(Categories::MAP);
 					}
 				}
 				ImGui::SameLine();
@@ -9426,7 +9465,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str()) && !busy) {
 						if (docOpened)
 							toggleDocument(nullptr);
-						category(Workspace::Categories::SCENE);
+						category(Categories::SCENE);
 					}
 				}
 				ImGui::SameLine();
@@ -9447,7 +9486,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str()) && !busy) {
 						if (docOpened)
 							toggleDocument(nullptr);
-						category(Workspace::Categories::ACTOR);
+						category(Categories::ACTOR);
 					}
 				}
 				ImGui::SameLine();
@@ -9468,7 +9507,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str()) && !busy) {
 						if (docOpened)
 							toggleDocument(nullptr);
-						category(Workspace::Categories::FONT);
+						category(Categories::FONT);
 					}
 				}
 				ImGui::SameLine();
@@ -9493,11 +9532,11 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 						VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
 
 						if (ImGui::BeginPopup("@Aud")) {
-							if (ImGui::MenuItem(theme()->menu_Music(), GBBASIC_MODIFIER_KEY_NAME "+7", category() == Workspace::Categories::MUSIC)) {
-								category(Workspace::Categories::MUSIC);
+							if (ImGui::MenuItem(theme()->menu_Music(), GBBASIC_MODIFIER_KEY_NAME "+7", category() == Categories::MUSIC)) {
+								category(Categories::MUSIC);
 							}
-							if (ImGui::MenuItem(theme()->menu_Sfx(), GBBASIC_MODIFIER_KEY_NAME "+8", category() == Workspace::Categories::SFX)) {
-								category(Workspace::Categories::SFX);
+							if (ImGui::MenuItem(theme()->menu_Sfx(), GBBASIC_MODIFIER_KEY_NAME "+8", category() == Categories::SFX)) {
+								category(Categories::SFX);
 							}
 
 							ImGui::EndPopup();
@@ -9539,7 +9578,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 				if (ImGui::MenuBarImageButton(theme()->iconConsole()->pointer(rnd), ImVec2(13, 13), consoleCol, theme()->tooltipEdit_Console().c_str()) && !busy) {
 					if (docOpened)
 						toggleDocument(nullptr);
-					category(Workspace::Categories::CONSOLE);
+					category(Categories::CONSOLE);
 				}
 			}
 			ImGui::SameLine();
@@ -9832,13 +9871,16 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 					if (now - recentProjectSelectedTimestamp() < 0.5) { // Double clicked.
 						closeFilter();
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
-								[this, prj] (bool ok) -> void {
+								[wnd, rnd, this, prj] (bool ok) -> void {
 									if (!ok)
 										return;
 
 									validateProject(prj.get());
+
+									if (prj->contentType() != Project::ContentTypes::BASIC)
+										launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 								}
 							);
 					} else { // The interval between two clicks is too short, perform single click.
@@ -9876,11 +9918,12 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 					const bool sel = recentProjectSelectedIndex() >= 0 && recentProjectSelectedIndex() < (int)projects().size();
 
 					Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
+					const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
 
-					if (ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
+					if (isEditable && ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
 						closeFilter();
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[this, prj] (bool ok) -> void {
 									if (!ok)
@@ -9890,7 +9933,22 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 								}
 							);
 					}
-					if (ImGui::MenuItem(theme()->menu_Rename(), nullptr, nullptr, sel)) {
+					if (ImGui::MenuItem(theme()->menu_Run(), nullptr, nullptr, sel)) {
+						closeFilter();
+
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							.then(
+								[wnd, rnd, this, prj] (bool ok) -> void {
+									if (!ok)
+										return;
+
+									validateProject(prj.get());
+
+									launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+								}
+							);
+					}
+					if (isEditable && ImGui::MenuItem(theme()->menu_Rename(), nullptr, nullptr, sel)) {
 						Operations::fileRename(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str());
 
 						polluted = true;
@@ -9903,7 +9961,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 					if (!polluted && ImGui::MenuItem(theme()->menu_RemoveSramState(), nullptr, nullptr, prj->sramExists(this))) {
 						Operations::projectRemoveSram(wnd, rnd, this, prj, false);
 					}
-					if (!polluted && ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
+					if (!polluted && isEditable && ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
 						Operations::fileDuplicate(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str());
 
 						polluted = true;
@@ -10099,7 +10157,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 						if (io.KeyCtrl)
 							return;
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[this, prj] (bool ok) -> void {
 									if (!ok)
@@ -10171,7 +10229,7 @@ void Workspace::notepad(Window* wnd, Renderer* rnd, float marginTop, float margi
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
 									[this, prj] (bool ok) -> void {
 										if (!ok)
@@ -10195,7 +10253,7 @@ void Workspace::notepad(Window* wnd, Renderer* rnd, float marginTop, float margi
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
 									[this, prj] (bool ok) -> void {
 										if (!ok)
@@ -11047,7 +11105,7 @@ void Workspace::blank(Window* wnd, Renderer* rnd, float marginTop, float marginB
 			width_ += ImGui::GetItemRectSize().x;
 			ImGui::SameLine();
 			if (ImGui::ImageButton(theme()->iconSfx()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme()->tooltipAudio_Sfx().c_str())) {
-				category(Workspace::Categories::SFX);
+				category(Categories::SFX);
 			}
 			width_ += ImGui::GetItemRectSize().x;
 			width_ += style.FramePadding.x;
@@ -11061,7 +11119,7 @@ void Workspace::blank(Window* wnd, Renderer* rnd, float marginTop, float marginB
 			const float wndWidth = ImGui::GetWindowWidth();
 			ImGui::SetCursorPosX(wndWidth - statusWidth());
 			if (ImGui::ImageButton(theme()->iconMusic()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme()->tooltipAudio_Music().c_str())) {
-				category(Workspace::Categories::MUSIC);
+				category(Categories::MUSIC);
 			}
 			width_ += ImGui::GetItemRectSize().x;
 			ImGui::SameLine();

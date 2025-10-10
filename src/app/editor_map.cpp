@@ -3258,7 +3258,7 @@ private:
 
 			return false;
 		}
-		Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
+		Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
 		TilesAssets::Entry tiles(rnd, _project->paletteGetter());
 		MapAssets::Entry map("", _project->tilesGetter(), attribtex);
 		std::string error;

@@ -45,7 +45,7 @@ public:
 	static promise::Promise popupEmulatorBuildSettings(Window* wnd, Renderer* rnd, Workspace* ws, Exporter::Ptr ex, const char* settings, const char* args, bool hasIcon);
 
 	static promise::Promise fileNew(Window* wnd, Renderer* rnd, Workspace* ws, const char* fontConfigPath);
-	static promise::Promise fileOpen(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj, const char* fontConfigPath);
+	static promise::Promise fileOpen(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj, bool allowBin, const char* fontConfigPath);
 	static promise::Promise fileClose(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise fileAskSave(Window* wnd, Renderer* rnd, Workspace* ws, bool deniable);
 	static promise::Promise fileSave(Window* wnd, Renderer* rnd, Workspace* ws, bool saveAs);                                              // Shows save file dialog if necessary.

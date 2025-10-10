@@ -284,7 +284,7 @@ public:
 	bool exists(void) const;
 	bool loaded(void) const;
 	void unload(void);
-	bool load(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError = nullptr);
+	bool load(bool allowBin, const char* fontConfigPath, WarningOrErrorHandler onWarningOrError = nullptr);
 	bool save(const char* path, bool redirect, WarningOrErrorHandler onWarningOrError = nullptr);
 	bool rename(const char* name);
 

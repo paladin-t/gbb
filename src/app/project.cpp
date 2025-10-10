@@ -2093,7 +2093,7 @@ void Project::unload(void) {
 	rom(nullptr);
 }
 
-bool Project::load(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError) {
+bool Project::load(bool allowBin, const char* fontConfigPath, WarningOrErrorHandler onWarningOrError) {
 	// Prepare.
 	sharedSfxEditorDisabled(false);
 
@@ -2105,8 +2105,12 @@ bool Project::load(const char* fontConfigPath, WarningOrErrorHandler onWarningOr
 	const bool isBin = ext == GBBASIC_CLASSIC_ROM_EXT || ext == GBBASIC_COLORED_ROM_EXT || ext == "zip";
 
 	// Load.
-	if (isBin)
+	if (isBin) {
+		if (!allowBin)
+			return false;
+
 		return loadRom(onWarningOrError);
+	}
 
 	return loadBasic(fontConfigPath, onWarningOrError);
 }
