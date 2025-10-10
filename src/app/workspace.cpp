@@ -7558,19 +7558,6 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
 					const bool isEditable_ = !prj || prj->contentType() == Project::ContentTypes::BASIC;
 					ImGui::Separator();
-					if (isEditable_ && ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
-						closeFilter();
-
-						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
-							.then(
-								[this, prj] (bool ok) -> void {
-									if (!ok)
-										return;
-
-									validateProject(prj.get());
-								}
-							);
-					}
 					if (ImGui::MenuItem(theme()->menu_Run(), nullptr, nullptr, sel)) {
 						closeFilter();
 
@@ -7583,6 +7570,19 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 									validateProject(prj.get());
 
 									launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+								}
+							);
+					}
+					if (isEditable_ && ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
+						closeFilter();
+
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							.then(
+								[this, prj] (bool ok) -> void {
+									if (!ok)
+										return;
+
+									validateProject(prj.get());
 								}
 							);
 					}
@@ -9920,19 +9920,6 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 					Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
 					const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
 
-					if (isEditable && ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
-						closeFilter();
-
-						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
-							.then(
-								[this, prj] (bool ok) -> void {
-									if (!ok)
-										return;
-
-									validateProject(prj.get());
-								}
-							);
-					}
 					if (ImGui::MenuItem(theme()->menu_Run(), nullptr, nullptr, sel)) {
 						closeFilter();
 
@@ -9945,6 +9932,19 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 									validateProject(prj.get());
 
 									launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+								}
+							);
+					}
+					if (isEditable && ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
+						closeFilter();
+
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							.then(
+								[this, prj] (bool ok) -> void {
+									if (!ok)
+										return;
+
+									validateProject(prj.get());
 								}
 							);
 					}
