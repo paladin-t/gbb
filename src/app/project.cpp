@@ -2273,28 +2273,20 @@ bool Project::extractRom(Bytes* data, Bytes* icon) const {
 		return false;
 
 	// Read all entries in the archive.
-	Text::Array entries;
-	if (!arc->all(entries)) {
+	Text::Array entries = arc->find(
+		[] (const char* name) -> bool {
+			return Text::endsWith(name, "." GBBASIC_CLASSIC_ROM_EXT, true) || Text::endsWith(name, "." GBBASIC_COLORED_ROM_EXT, true);
+		}
+	);
+	if (entries.empty()) {
 		arc->close();
 
 		return false;
 	}
 
 	// Parse ROM data.
-	Text::Array::iterator it = std::find_if(
-		entries.begin(), entries.end(),
-		[] (const std::string &entry) -> bool {
-			return Text::endsWith(entry, "." GBBASIC_CLASSIC_ROM_EXT, true) || Text::endsWith(entry, "." GBBASIC_COLORED_ROM_EXT, true);
-		}
-	);
-	if (it == entries.end()) {
-		arc->close();
-
-		return false;
-	}
-
 	if (data) {
-		if (!arc->toBytes(data, it->c_str())) {
+		if (!arc->toBytes(data, entries.front().c_str())) {
 			arc->close();
 
 			return false;
@@ -2302,24 +2294,23 @@ bool Project::extractRom(Bytes* data, Bytes* icon) const {
 	}
 
 	// Parse icon.
-	it = std::find_if(
-		entries.begin(), entries.end(),
-		[] (const std::string &entry) -> bool {
+	entries = arc->find(
+		[] (const char* name) -> bool {
 			return
-				Text::endsWith(entry, ".png", true) ||
-				Text::endsWith(entry, ".jpg", true) ||
-				Text::endsWith(entry, ".bmp", true) ||
-				Text::endsWith(entry, ".tga", true);
+				Text::endsWith(name, ".png", true) ||
+				Text::endsWith(name, ".jpg", true) ||
+				Text::endsWith(name, ".bmp", true) ||
+				Text::endsWith(name, ".tga", true);
 		}
 	);
 	do {
-		if (it == entries.end())
+		if (entries.empty())
 			break;
 
 		if (!icon)
 			break;
 
-		if (!arc->toBytes(icon, it->c_str()))
+		if (!arc->toBytes(icon, entries.front().c_str()))
 			break;
 	} while (false);
 

@@ -40,6 +40,8 @@ public:
 		ZIP
 	};
 
+	typedef std::function<bool(const char*)> EntryNameFilter;
+
 public:
 	GBBASIC_CLASS_TYPE('A', 'R', 'C', 'H')
 
@@ -57,6 +59,7 @@ public:
 	 * @param[out] entries
 	 */
 	virtual bool all(Text::Array &entries) const = 0;
+	virtual Text::Array find(EntryNameFilter) const = 0;
 
 	virtual bool exists(const char* nameInArchive) const = 0;
 	virtual bool make(const char* nameInArchive) = 0;

@@ -182,6 +182,46 @@ public:
 
 		return true;
 	}
+	virtual Text::Array find(EntryNameFilter filter) const override {
+		Text::Array result;
+
+		if (_forWriting)
+			return result;
+
+		std::string osstr = Unicode::toOs(_file.c_str());
+
+		unzFile unzf = unzOpen64(osstr.c_str());
+		if (!unzf)
+			return result;
+
+		unz_global_info64 gi;
+
+		int ret = unzGetGlobalInfo64(unzf, &gi);
+		if (ret != UNZ_OK) {
+			unzClose(unzf);
+
+			return result;
+		}
+
+		for (int i = 0; i < gi.number_entry; ++i) {
+			unz_file_info64 unzFileInfo;
+			char fn[GBBASIC_MAX_PATH];
+			memset(fn, 0, sizeof(fn));
+
+			if (unzGetCurrentFileInfo64(unzf, &unzFileInfo, fn, sizeof(fn), nullptr, 0, nullptr, 0) != UNZ_OK)
+				continue;
+
+			if (filter(fn))
+				result.push_back(fn);
+
+			if (i < gi.number_entry - 1 && unzGoToNextFile(unzf) != UNZ_OK)
+				continue;
+		}
+
+		unzClose(unzf);
+
+		return result;
+	}
 
 	virtual bool exists(const char* nameInArchive) const override {
 		if (_forWriting)
