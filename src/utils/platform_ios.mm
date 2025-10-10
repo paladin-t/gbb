@@ -759,6 +759,11 @@ void Platform::useDarkMode(class Window* wnd) {
 	(void)wnd;
 }
 
+void Platform::setWindowTransparentColor(class Window* wnd, const struct Colour* col) {
+	(void)wnd;
+	(void)col;
+}
+
 /* ===========================================================================} */
 
 /*

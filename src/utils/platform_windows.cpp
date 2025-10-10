@@ -930,6 +930,18 @@ void Platform::useDarkMode(class Window* wnd) {
 	::DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
 }
 
+void Platform::setWindowTransparentColor(class Window* wnd, const struct Colour* col) {
+	SDL_SysWMinfo wmInfo;
+	SDL_VERSION(&wmInfo.version);
+	SDL_GetWindowWMInfo((SDL_Window*)wnd->pointer(), &wmInfo);
+
+	HWND hWnd = wmInfo.info.win.window;
+	LONG style = GetWindowLong(hWnd, GWL_EXSTYLE);
+	style |= WS_EX_LAYERED;
+	SetWindowLong(hWnd, GWL_EXSTYLE, style);
+	SetLayeredWindowAttributes(hWnd, RGB(col->r, col->g, col->b), 0, LWA_COLORKEY);
+}
+
 /* ===========================================================================} */
 
 /*
