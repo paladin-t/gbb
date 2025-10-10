@@ -411,6 +411,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_RemoveSramState("Remove SRAM State");
 	menu_Rename("Rename");
 	menu_Restart("Restart");
+	menu_Run("Run");
 	menu_Save("Save");
 	menu_Scene("Scene");
 	menu_SelectAll("Select All");
@@ -577,6 +578,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Name("Name");
 	dialogPrompt_NoData("No data");
 	dialogPrompt_NoInit("No init");
+	dialogPrompt_NoNeedToBuildRom("No need to build ROM");
 	dialogPrompt_NoNr1x("No NR1x");
 	dialogPrompt_NoNr2x("No NR2x");
 	dialogPrompt_NoNr3x("No NR3x");

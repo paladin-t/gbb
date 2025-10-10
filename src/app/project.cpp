@@ -2114,6 +2114,8 @@ bool Project::load(const char* fontConfigPath, WarningOrErrorHandler onWarningOr
 bool Project::save(const char* path_, bool redirect, WarningOrErrorHandler onWarningOrError) {
 	// Only allow saving BASIC projects.
 	if (contentType() != ContentTypes::BASIC) {
+		GBBASIC_ASSERT(false && "Saving non-BASIC project is not supported.");
+
 		if (onWarningOrError)
 			onWarningOrError("Saving non-BASIC project is not supported.", true);
 
@@ -2601,8 +2603,7 @@ bool Project::saveBasic(const char* path_, bool redirect, WarningOrErrorHandler 
 
 bool Project::loadInformation(const std::string &content, WarningOrErrorHandler onWarningOrError) {
 	if (contentType() != ContentTypes::BASIC) {
-		if (onWarningOrError)
-			onWarningOrError("Loading non-BASIC assets is not supported.", true);
+		GBBASIC_ASSERT(false && "Loading non-BASIC assets is not supported.");
 
 		return false;
 	}
@@ -2942,7 +2943,7 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 
 bool Project::saveInformation(std::string &content) {
 	if (contentType() != ContentTypes::BASIC) {
-		fprintf(stderr, "Saving non-BASIC project is not supported.\n");
+		GBBASIC_ASSERT(false && "Saving non-BASIC project is not supported.");
 
 		return false;
 	}
@@ -3046,8 +3047,7 @@ bool Project::saveInformation(std::string &content) {
 bool Project::loadAssets(const char* fontConfigPath, const std::string &content, WarningOrErrorHandler onWarningOrError) {
 	// Only allow saving BASIC projects.
 	if (contentType() != ContentTypes::BASIC) {
-		if (onWarningOrError)
-			onWarningOrError("Loading non-BASIC assets is not supported.", true);
+		GBBASIC_ASSERT(false && "Loading non-BASIC assets is not supported.");
 
 		return false;
 	}
@@ -3255,8 +3255,7 @@ bool Project::loadAssets(const char* fontConfigPath, const std::string &content,
 bool Project::saveAssets(std::string &content, WarningOrErrorHandler onWarningOrError) {
 	// Only allow saving BASIC projects.
 	if (contentType() != ContentTypes::BASIC) {
-		if (onWarningOrError)
-			onWarningOrError("Saving non-BASIC project is not supported.", true);
+		GBBASIC_ASSERT(false && "Saving non-BASIC project is not supported.");
 
 		return false;
 	}
