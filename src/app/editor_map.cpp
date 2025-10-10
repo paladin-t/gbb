@@ -3258,7 +3258,7 @@ private:
 
 			return false;
 		}
-		Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
+		Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
 		TilesAssets::Entry tiles(rnd, _project->paletteGetter());
 		MapAssets::Entry map("", _project->tilesGetter(), attribtex);
 		std::string error;
@@ -3606,6 +3606,7 @@ private:
 		if (ext.empty() || std::find(exts.begin(), exts.end(), ext) == exts.end())
 			path += ".png";
 		Path::split(path, nullptr, &ext, nullptr);
+		Text::toLowerCase(ext);
 		const char* y = ext.c_str();
 
 		const int ref = entry()->ref;

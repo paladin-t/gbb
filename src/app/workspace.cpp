@@ -1048,35 +1048,35 @@ void Workspace::pageAdded(Window* wnd, Renderer* rnd, Project* prj, Categories c
 
 			break;
 		case Categories::FONT:
-			changePage(wnd, rnd, prj, Workspace::Categories::FONT, prj->fontPageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::FONT, prj->fontPageCount() - 1);
 
 			break;
 		case Categories::CODE:
-			changePage(wnd, rnd, prj, Workspace::Categories::CODE, prj->codePageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::CODE, prj->codePageCount() - 1);
 
 			break;
 		case Categories::TILES:
-			changePage(wnd, rnd, prj, Workspace::Categories::TILES, prj->tilesPageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::TILES, prj->tilesPageCount() - 1);
 
 			break;
 		case Categories::MAP:
-			changePage(wnd, rnd, prj, Workspace::Categories::MAP, prj->mapPageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::MAP, prj->mapPageCount() - 1);
 
 			break;
 		case Categories::MUSIC:
-			changePage(wnd, rnd, prj, Workspace::Categories::MUSIC, prj->musicPageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::MUSIC, prj->musicPageCount() - 1);
 
 			break;
 		case Categories::SFX:
-			changePage(wnd, rnd, prj, Workspace::Categories::SFX, prj->sfxPageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::SFX, prj->sfxPageCount() - 1);
 
 			break;
 		case Categories::ACTOR:
-			changePage(wnd, rnd, prj, Workspace::Categories::ACTOR, prj->actorPageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::ACTOR, prj->actorPageCount() - 1);
 
 			break;
 		case Categories::SCENE:
-			changePage(wnd, rnd, prj, Workspace::Categories::SCENE, prj->scenePageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::SCENE, prj->scenePageCount() - 1);
 
 			break;
 		default: // Do nothing.
@@ -1109,7 +1109,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->fontPageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::FONT, page_);
+				changePage(wnd, rnd, prj, Categories::FONT, page_);
 			}
 
 			break;
@@ -1123,7 +1123,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->codePageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::CODE, page_);
+				changePage(wnd, rnd, prj, Categories::CODE, page_);
 			}
 
 			break;
@@ -1137,7 +1137,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->tilesPageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::TILES, page_);
+				changePage(wnd, rnd, prj, Categories::TILES, page_);
 			}
 
 			for (int i = 0; i < prj->mapPageCount(); ++i) {
@@ -1166,7 +1166,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->mapPageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::MAP, page_);
+				changePage(wnd, rnd, prj, Categories::MAP, page_);
 			}
 
 			for (int i = 0; i < prj->scenePageCount(); ++i) {
@@ -1195,7 +1195,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->musicPageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::MUSIC, page_);
+				changePage(wnd, rnd, prj, Categories::MUSIC, page_);
 			}
 
 			break;
@@ -1207,7 +1207,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 					editor->post(Editable::UPDATE_INDEX, (Variant::Int)index_);
 
 				const int page_ = Math::clamp(index, 0, prj->sfxPageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::SFX, page_);
+				changePage(wnd, rnd, prj, Categories::SFX, page_);
 			}
 
 			break;
@@ -1221,7 +1221,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->actorPageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::ACTOR, page_);
+				changePage(wnd, rnd, prj, Categories::ACTOR, page_);
 			}
 
 			for (int i = 0; i < prj->scenePageCount(); ++i) {
@@ -1249,7 +1249,7 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 				}
 
 				const int page_ = Math::clamp(index, 0, prj->scenePageCount() - 1);
-				changePage(wnd, rnd, prj, Workspace::Categories::SCENE, page_);
+				changePage(wnd, rnd, prj, Categories::SCENE, page_);
 			}
 
 			break;
@@ -1400,9 +1400,9 @@ bool Workspace::load(Window* wnd, Renderer* rnd, const int* wndWidth, const int*
 			Project::ContentTypes contentType;
 			std::string ct;
 			Jpath::get(doc, ct, "projects", i, "content_type");
-			if (ct == "basic")    contentType = Project::ContentTypes::BASIC;
-			else if (ct == "rom") contentType = Project::ContentTypes::ROM;
-			else                  contentType = Project::ContentTypes::BASIC;
+			if      (ct == "basic") contentType = Project::ContentTypes::BASIC;
+			else if (ct == "rom")   contentType = Project::ContentTypes::ROM;
+			else                    contentType = Project::ContentTypes::BASIC;
 
 			std::string path_;
 			if (!Jpath::get(doc, path_, "projects", i, "path"))
@@ -1890,13 +1890,21 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
-									[this, prj] (bool ok) -> void {
+									[wnd, rnd, this, prj] (bool ok) -> void {
 										if (!ok)
 											return;
 
 										validateProject(prj.get());
+
+										if (prj->contentType() != Project::ContentTypes::BASIC)
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+									}
+								)
+								.fail(
+									[wnd, rnd, this, prj] (void) -> void {
+										Operations::fileRemoveReference(wnd, rnd, this, prj);
 									}
 								);
 						}
@@ -1957,13 +1965,18 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
 									[this, prj] (bool ok) -> void {
 										if (!ok)
 											return;
 
 										validateProject(prj.get());
+									}
+								)
+								.fail(
+									[wnd, rnd, this, prj] (void) -> void {
+										Operations::fileRemoveReference(wnd, rnd, this, prj);
 									}
 								);
 						}
@@ -2063,7 +2076,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 			return;
 		}
 
-		compileProject(wnd, rnd, nullptr, nullptr, nullptr, false, -1);
+		launchProject(wnd, rnd, nullptr, nullptr, nullptr, false, -1);
 	};
 	auto toRun = [this] (Window* wnd, Renderer* rnd) -> void {
 		if (!currentProject()) {
@@ -2074,7 +2087,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 			return;
 		}
 
-		compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+		launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 	};
 
 	SDL_Event* evt = (SDL_Event*)event;
@@ -2158,7 +2171,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 								return;
 							}
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
 									[wnd, rnd, this, cat, page, sub, prj, toCompile, toRun] (bool ok) -> void {
 										if (!ok) {
@@ -2169,8 +2182,8 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 
 										validateProject(prj.get());
 
-										category((Workspace::Categories)cat);
-										switch ((Workspace::Categories)cat) {
+										category((Categories)cat);
+										switch ((Categories)cat) {
 										case Categories::CODE: {
 												fprintf(stdout, "SDL: TO CODE.\n");
 
@@ -2245,13 +2258,13 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 											}
 
 											break;
-										case Workspace::Categories::CONSOLE:
+										case Categories::CONSOLE:
 											fprintf(stdout, "SDL: TO COMPILE.\n");
 
 											toCompile(wnd, rnd);
 
 											break;
-										case Workspace::Categories::EMULATOR:
+										case Categories::EMULATOR:
 											fprintf(stdout, "SDL: TO RUN.\n");
 
 											toRun(wnd, rnd);
@@ -2332,7 +2345,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 				break;
 			}
 
-			if ((Workspace::Categories)cat != Workspace::Categories::CODE) { // Supports code only.
+			if ((Categories)cat != Categories::CODE) { // Supports code only.
 				messagePopupBox(theme()->dialogPrompt_UnsupportedOperation(), nullptr, nullptr, nullptr);
 
 				fprintf(stderr, "Unsupported operation.\n");
@@ -2342,7 +2355,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 
 			Project::Ptr &prj = currentProject();
 
-			category((Workspace::Categories)cat);
+			category((Categories)cat);
 			changePage(wnd, rnd, prj.get(), category(), page);
 
 			CodeAssets::Entry* entry = prj->getCode(page);
@@ -2376,7 +2389,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 				break;
 			}
 
-			category((Workspace::Categories)cat);
+			category((Categories)cat);
 		}
 
 		break;
@@ -3182,8 +3195,8 @@ void Workspace::showCodeBindingEditor(
 		);
 		EditorCodeBinding::GotoHandler goto_(
 			[wnd, rnd, this] (int pg, int ln) -> void {
-				category(Workspace::Categories::CODE);
-				changePage(nullptr, rnd, currentProject().get(), Workspace::Categories::CODE, pg);
+				category(Categories::CODE);
+				changePage(nullptr, rnd, currentProject().get(), Categories::CODE, pg);
 
 				CodeAssets::Entry* entry = currentProject()->getCode(pg);
 				Editable* editor = entry->editor;
@@ -4353,6 +4366,8 @@ bool Workspace::analyze(bool force) {
 	const Project::Ptr &prj = currentProject();
 	if (!prj)
 		return true;
+	if (prj->contentType() != Project::ContentTypes::BASIC)
+		return true;
 
 	if (!force) {
 		if (popupBox() || menuOpened())
@@ -4800,9 +4815,9 @@ void Workspace::upgrade(
 			break;
 		}
 
-		Texture::Ptr attribtex(theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-		Texture::Ptr propstex(theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-		Texture::Ptr actorstex(theme()->textureActors(), [] (Texture*) { /* Do nothing. */ });
+		Texture::Ptr attribtex(theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+		Texture::Ptr propstex(theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+		Texture::Ptr actorstex(theme()->textureActors(), [] (Texture*) -> void { /* Do nothing. */ });
 		prj->attributesTexture(attribtex);
 		prj->propertiesTexture(propstex);
 		prj->actorsTexture(actorstex);
@@ -4816,7 +4831,7 @@ void Workspace::upgrade(
 			fontConfigPath = fntOpt->second;
 		else
 			fontConfigPath = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
-		if (!prj->load(fontConfigPath.c_str(), nullptr)) {
+		if (!prj->load(false, fontConfigPath.c_str(), nullptr)) {
 			prj->close(true);
 
 			onError("Cannot load the project.", false);
@@ -5007,7 +5022,7 @@ void Workspace::compile(
 		// Initialize the cartridge options.
 		if (project) {
 			Bytes::Ptr iconTiles(Bytes::create());
-			if (!!project->iconImage2Bpp(iconTiles))
+			if (!!project->touchIconImage2Bpp(iconTiles))
 				options.icon = iconTiles;
 
 			options.backgroundPalettes = project->backgroundPalettes();
@@ -5324,9 +5339,9 @@ void Workspace::compile(
 		if (!tmpPrj->open(path.c_str()))
 			break;
 
-		Texture::Ptr attribtex(theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-		Texture::Ptr propstex(theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-		Texture::Ptr actorstex(theme()->textureActors(), [] (Texture*) { /* Do nothing. */ });
+		Texture::Ptr attribtex(theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+		Texture::Ptr propstex(theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+		Texture::Ptr actorstex(theme()->textureActors(), [] (Texture*) -> void { /* Do nothing. */ });
 		tmpPrj->attributesTexture(attribtex);
 		tmpPrj->propertiesTexture(propstex);
 		tmpPrj->actorsTexture(actorstex);
@@ -5340,7 +5355,7 @@ void Workspace::compile(
 			fontConfigPath = fntOpt->second;
 		else
 			fontConfigPath = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
-		if (!tmpPrj->load(fontConfigPath.c_str(), nullptr)) {
+		if (!tmpPrj->load(false, fontConfigPath.c_str(), nullptr)) {
 			tmpPrj->close(true);
 
 			break;
@@ -6205,8 +6220,8 @@ void Workspace::finish(Window* wnd, Renderer* rnd) {
 						if (err->isWarning)
 							continue;
 
-						category(Workspace::Categories::CODE);
-						changePage(wnd, rnd, prj.get(), Workspace::Categories::CODE, err->page);
+						category(Categories::CODE);
+						changePage(wnd, rnd, prj.get(), Categories::CODE, err->page);
 
 						delay(
 							std::bind(
@@ -6246,6 +6261,21 @@ void Workspace::finish(Window* wnd, Renderer* rnd) {
 					toExport(-1);
 				}
 				_compilingOutput = nullptr;
+			}
+
+			_state = States::IDLE;
+		}
+
+		break;
+	case States::LAUNCHED: {
+			LockGuard<decltype(_lock)> guard(_lock);
+
+			const Project::Ptr &prj = currentProject();
+
+			if (toRun()) {
+				Bytes::Ptr rom = prj->rom();
+				runProject(wnd, rnd, rom);
+				toRun(false);
 			}
 
 			_state = States::IDLE;
@@ -6635,7 +6665,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 						if (io.KeyCtrl)
 							return;
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[this, prj] (bool ok) -> void {
 									if (!ok)
@@ -6661,7 +6691,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 						if (io.KeyCtrl)
 							return;
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[this, prj] (bool ok) -> void {
 									if (!ok)
@@ -6691,13 +6721,21 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 						if (io.KeyCtrl)
 							return;
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
-								[this, prj] (bool ok) -> void {
+								[wnd, rnd, this, prj] (bool ok) -> void {
 									if (!ok)
 										return;
 
 									validateProject(prj.get());
+
+									if (prj->contentType() != Project::ContentTypes::BASIC)
+										launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+								}
+							)
+							.fail(
+								[wnd, rnd, this, prj] (void) -> void {
+									Operations::fileRemoveReference(wnd, rnd, this, prj);
 								}
 							);
 					}
@@ -6716,7 +6754,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 						if (io.KeyCtrl)
 							return;
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[this, prj] (bool ok) -> void {
 									if (!ok)
@@ -6857,14 +6895,18 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 #endif /* Platform macro. */
 		} else if (f4 && !modifier && !io.KeyShift && !io.KeyAlt) {
 			if (!canvasDevice()) {
-				compileProject(wnd, rnd, nullptr, nullptr, nullptr, false, -1);
+				const Project::Ptr &prj = currentProject();
+				const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+
+				if (isEditable)
+					launchProject(wnd, rnd, nullptr, nullptr, nullptr, false, -1);
 			}
 		} else if ((f5 && !modifier && !io.KeyShift && !io.KeyAlt) || (r && modifier && !io.KeyShift && !io.KeyAlt)) {
 			if (canvasDevice()) {
 				if (canvasDevice()->paused())
 					canvasDevice()->resume();
 			} else {
-				compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+				launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 			}
 		} else if ((f5 && !modifier && io.KeyShift && !io.KeyAlt) || (period && modifier && !io.KeyShift && !io.KeyAlt)) {
 			if (canvasDevice()) {
@@ -6898,46 +6940,54 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 	// Edit view operations.
 	if (opened) {
 		if (modifier && !io.KeyShift && !io.KeyAlt) {
-			if (grave && canvasDevice()) {
-				category(Workspace::Categories::EMULATOR);
-			} else if (num1) {
-				category(Workspace::Categories::CODE);
-			} else if (num2) {
-				category(Workspace::Categories::TILES);
-			} else if (num3) {
-				category(Workspace::Categories::MAP);
-			} else if (num4) {
-				category(Workspace::Categories::SCENE);
-			} else if (num5) {
-				category(Workspace::Categories::ACTOR);
-			} else if (num6) {
-				category(Workspace::Categories::FONT);
-			} else if (num7) {
-				category(Workspace::Categories::MUSIC);
-			} else if (num8) {
-				category(Workspace::Categories::SFX);
-			} else if (num9) {
-				category(Workspace::Categories::CONSOLE);
-			} else if (num0) {
-				Project::Ptr &prj = currentProject();
+			Project::Ptr &prj = currentProject();
 
-				showPaletteEditor(
-					rnd,
-					-1,
-					[prj] (const std::initializer_list<Variant> &args) -> void { // Color or group has been changed.
-						(void)args;
+			if (!prj || prj->contentType() == Project::ContentTypes::BASIC) {
+				if (grave && canvasDevice()) {
+					category(Categories::EMULATOR);
+				} else if (num1) {
+					category(Categories::CODE);
+				} else if (num2) {
+					category(Categories::TILES);
+				} else if (num3) {
+					category(Categories::MAP);
+				} else if (num4) {
+					category(Categories::SCENE);
+				} else if (num5) {
+					category(Categories::ACTOR);
+				} else if (num6) {
+					category(Categories::FONT);
+				} else if (num7) {
+					category(Categories::MUSIC);
+				} else if (num8) {
+					category(Categories::SFX);
+				} else if (num9) {
+					category(Categories::CONSOLE);
+				} else if (num0) {
+					Project::Ptr &prj = currentProject();
 
-						prj->hasDirtyAsset(true);
-					}
-				);
+					showPaletteEditor(
+						rnd,
+						-1,
+						[prj] (const std::initializer_list<Variant> &args) -> void { // Color or group has been changed.
+							(void)args;
+
+							prj->hasDirtyAsset(true);
+						}
+					);
+				}
+			} else {
+				if (grave && canvasDevice()) {
+					category(Categories::EMULATOR);
+				} else if (num9) {
+					category(Categories::CONSOLE);
+				}
 			}
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 			if (backSlash) {
 				switch (category()) {
-				case Workspace::Categories::CODE: {
-						Project::Ptr &prj = currentProject();
-
+				case Categories::CODE: {
 						const int majorIdx = prj->activeMajorCodeIndex();
 						const int minorIdx = prj->activeMinorCodeIndex();
 						if (prj->isMinorCodeEditorEnabled()) {
@@ -7165,13 +7215,16 @@ void Workspace::navigate(Window* wnd, Renderer* rnd, int dx, int dy, int fully, 
 
 			closeFilter();
 
-			Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+			Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 				.then(
-					[this, prj] (bool ok) -> void {
+					[wnd, rnd, this, prj] (bool ok) -> void {
 						if (!ok)
 							return;
 
 						validateProject(prj.get());
+
+						if (prj->contentType() != Project::ContentTypes::BASIC)
+							launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 					}
 				);
 		}
@@ -7229,25 +7282,48 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 	ImGuiStyle &style = ImGui::GetStyle();
 
 	auto buildMenu = [this] (Window* wnd, Renderer* rnd, bool editing) -> bool {
-		auto compiles = [this, wnd, rnd, editing] (void) -> void {
-			if (editing && !canvasDevice()) {
-				if (ImGui::MenuItem(theme()->menu_Compile(), "F4")) {
-					compileProject(wnd, rnd, nullptr, nullptr, nullptr, false, -1);
+		typedef std::function<void(void)> Launcher;
+
+		const Project::Ptr &prj = currentProject();
+		const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+		Launcher launches = nullptr;
+		if (isEditable) {
+			launches = [this, wnd, rnd, editing] (void) -> void {
+				if (editing && !canvasDevice()) {
+					if (ImGui::MenuItem(theme()->menu_Compile(), "F4")) {
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, false, -1);
+					}
+					if (ImGui::MenuItem(theme()->menu_CompileAndRun(), "F5")) {
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+					}
+				} else {
+					if (ImGui::MenuItem(theme()->menu_StopRunning(), "Shift+F5")) {
+						stopProject(wnd, rnd);
+					}
+					if (ImGui::MenuItem(theme()->menu_Restart())) {
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+					}
 				}
-				if (ImGui::MenuItem(theme()->menu_CompileAndRun(), "F5")) {
-					compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+			};
+		} else {
+			launches = [this, wnd, rnd, editing] (void) -> void {
+				if (editing && !canvasDevice()) {
+					if (ImGui::MenuItem(theme()->menu_Run(), "F5")) {
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+					}
+				} else {
+					if (ImGui::MenuItem(theme()->menu_StopRunning(), "Shift+F5")) {
+						stopProject(wnd, rnd);
+					}
+					if (ImGui::MenuItem(theme()->menu_Restart())) {
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+					}
 				}
-			} else {
-				if (ImGui::MenuItem(theme()->menu_StopRunning(), "Shift+F5")) {
-					stopProject(wnd, rnd);
-				}
-				if (ImGui::MenuItem(theme()->menu_Restart())) {
-					compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
-				}
-			}
-		};
+			};
+		}
+
 		Exporter* ex = nullptr;
-		if (ImGui::ExporterMenu(exporters(), theme()->menu_Build().c_str(), ex, compiles, nullptr)) {
+		if (ImGui::ExporterMenu(exporters(), theme()->menu_Build().c_str(), ex, launches, nullptr)) {
 			int toExport_ = -1;
 			for (int i = 0; i < (int)exporters().size(); ++i) {
 				if (exporters()[i].get() == ex) {
@@ -7274,72 +7350,83 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 		if (ImGui::BeginMenu(theme()->menu_Project())) {
 			Project::Ptr &prj = currentProject();
 			const bool sel = recentProjectSelectedIndex() >= 0 && recentProjectSelectedIndex() < (int)projects().size();
+			const bool isEditable = !prj || prj->contentType() == Project::ContentTypes::BASIC;
 
 			if (showRecentProjects()) {
-				if (ImGui::MenuItem(theme()->menu_New(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+N" : GBBASIC_MODIFIER_KEY_NAME "+N")) {
-					closeFilter();
+				if (isEditable) {
+					if (ImGui::MenuItem(theme()->menu_New(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+N" : GBBASIC_MODIFIER_KEY_NAME "+N")) {
+						closeFilter();
 
-					stopProject(wnd, rnd);
+						stopProject(wnd, rnd);
 
-					Operations::fileNew(wnd, rnd, this, fontConfig().empty() ? nullptr : fontConfig().c_str())
-						.then(
-							[wnd, rnd, this] (Project::Ptr prj) -> void {
-								ImGuiIO &io = ImGui::GetIO();
+						Operations::fileNew(wnd, rnd, this, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							.then(
+								[wnd, rnd, this] (Project::Ptr prj) -> void {
+									ImGuiIO &io = ImGui::GetIO();
 
-								if (io.KeyCtrl)
-									return;
+									if (io.KeyCtrl)
+										return;
 
-								Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
-									.then(
-										[this, prj] (bool ok) -> void {
-											if (!ok)
-												return;
+									Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+										.then(
+											[this, prj] (bool ok) -> void {
+												if (!ok)
+													return;
 
-											validateProject(prj.get());
-										}
-									);
-							}
-						);
+												validateProject(prj.get());
+											}
+										);
+								}
+							);
 
-					projectIndices().clear(); projectIndices().shrink_to_fit();
+						projectIndices().clear(); projectIndices().shrink_to_fit();
 
-					recentProjectSelectedIndex(-1);
+						recentProjectSelectedIndex(-1);
 
-					ImGui::EndMenu();
+						ImGui::EndMenu();
 
-					return true;
-				}
-				if (ImGui::MenuItem(theme()->menu_Import(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+O" : GBBASIC_MODIFIER_KEY_NAME "+O")) {
-					closeFilter();
+						return true;
+					}
+					if (ImGui::MenuItem(theme()->menu_Import(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+O" : GBBASIC_MODIFIER_KEY_NAME "+O")) {
+						closeFilter();
 
-					stopProject(wnd, rnd);
+						stopProject(wnd, rnd);
 
-					Operations::fileImport(wnd, rnd, this)
-						.then(
-							[wnd, rnd, this] (Project::Ptr prj) -> void {
-								if (!prj)
-									return;
+						Operations::fileImport(wnd, rnd, this)
+							.then(
+								[wnd, rnd, this] (Project::Ptr prj) -> void {
+									if (!prj)
+										return;
 
-								ImGuiIO &io = ImGui::GetIO();
+									ImGuiIO &io = ImGui::GetIO();
 
-								if (io.KeyCtrl)
-									return;
+									if (io.KeyCtrl)
+										return;
 
-								Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
-									.then(
-										[this, prj] (bool ok) -> void {
-											if (!ok)
-												return;
+									Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
+										.then(
+											[wnd, rnd, this, prj] (bool ok) -> void {
+												if (!ok)
+													return;
 
-											validateProject(prj.get());
-										}
-									);
-							}
-						);
+												validateProject(prj.get());
 
-					ImGui::EndMenu();
+												if (prj->contentType() != Project::ContentTypes::BASIC)
+													launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+											}
+										)
+										.fail(
+											[wnd, rnd, this, prj] (void) -> void {
+												Operations::fileRemoveReference(wnd, rnd, this, prj);
+											}
+										);
+								}
+							);
 
-					return true;
+						ImGui::EndMenu();
+
+						return true;
+					}
 				}
 				if (!opened) {
 					if (ImGui::MenuItem(theme()->menu_ClearRecent(), nullptr, nullptr, !projects().empty())) {
@@ -7370,7 +7457,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 								if (io.KeyCtrl)
 									return;
 
-								Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+								Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 									.then(
 										[this, prj] (bool ok) -> void {
 											if (!ok)
@@ -7400,7 +7487,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 								if (io.KeyCtrl)
 									return;
 
-								Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+								Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 									.then(
 										[this, prj] (bool ok) -> void {
 											if (!ok)
@@ -7418,23 +7505,25 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 				}
 			}
 			if (opened) {
-				if (ImGui::MenuItem(theme()->menu_Palette(), GBBASIC_MODIFIER_KEY_NAME "+0")) {
-					showPaletteEditor(
-						rnd,
-						-1,
-						[prj] (const std::initializer_list<Variant> &args) -> void { // Color or group has been changed.
-							(void)args;
+				if (isEditable) {
+					if (ImGui::MenuItem(theme()->menu_Palette(), GBBASIC_MODIFIER_KEY_NAME "+0")) {
+						showPaletteEditor(
+							rnd,
+							-1,
+							[prj] (const std::initializer_list<Variant> &args) -> void { // Color or group has been changed.
+								(void)args;
 
-							prj->hasDirtyAsset(true);
+								prj->hasDirtyAsset(true);
+							}
+						);
+					}
+					ImGui::Separator();
+					if (ImGui::MenuItem(theme()->menu_Save(), GBBASIC_MODIFIER_KEY_NAME "+S", nullptr, canSave)) {
+						if (showRecentProjects()) {
+							Operations::fileSave(wnd, rnd, this, false);
+						} else {
+							Operations::fileSaveForNotepad(wnd, rnd, this, false);
 						}
-					);
-				}
-				ImGui::Separator();
-				if (ImGui::MenuItem(theme()->menu_Save(), GBBASIC_MODIFIER_KEY_NAME "+S", nullptr, canSave)) {
-					if (showRecentProjects()) {
-						Operations::fileSave(wnd, rnd, this, false);
-					} else {
-						Operations::fileSaveForNotepad(wnd, rnd, this, false);
 					}
 				}
 				if (ImGui::MenuItem(theme()->menu_RemoveSramState(), nullptr, nullptr, prj->sramExists(this))) {
@@ -7442,8 +7531,10 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 				}
 #if defined GBBASIC_OS_HTML
 				if (!showRecentProjects()) {
-					if (ImGui::MenuItem(theme()->menu_Download())) {
-						Operations::fileExportForNotepad(wnd, rnd, this, prj);
+					if (isEditable) {
+						if (ImGui::MenuItem(theme()->menu_Download())) {
+							Operations::fileExportForNotepad(wnd, rnd, this, prj);
+						}
 					}
 				}
 #endif /* GBBASIC_OS_HTML */
@@ -7465,17 +7556,33 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			} else if (recentProjectSelectedIndex() >= 0) {
 				if (showRecentProjects()) {
 					Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
+					const bool isEditable_ = !prj || prj->contentType() == Project::ContentTypes::BASIC;
 					ImGui::Separator();
-					if (ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
+					if (isEditable_ && ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
 						closeFilter();
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[this, prj] (bool ok) -> void {
 									if (!ok)
 										return;
 
 									validateProject(prj.get());
+								}
+							);
+					}
+					if (ImGui::MenuItem(theme()->menu_Run(), nullptr, nullptr, sel)) {
+						closeFilter();
+
+						Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							.then(
+								[wnd, rnd, this, prj] (bool ok) -> void {
+									if (!ok)
+										return;
+
+									validateProject(prj.get());
+
+									launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 								}
 							);
 					}
@@ -7488,7 +7595,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuItem(theme()->menu_RemoveSramState(), nullptr, nullptr, prj->sramExists(this))) {
 						Operations::projectRemoveSram(wnd, rnd, this, prj, false);
 					}
-					if (ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
+					if (isEditable_ && ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
 						Operations::fileDuplicate(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str());
 					}
 #if !defined GBBASIC_OS_HTML
@@ -7590,13 +7697,21 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 									if (io.KeyCtrl)
 										return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 										.then(
-											[this, prj] (bool ok) -> void {
+											[wnd, rnd, this, prj] (bool ok) -> void {
 												if (!ok)
 													return;
 
 												validateProject(prj.get());
+
+												if (prj->contentType() != Project::ContentTypes::BASIC)
+													launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+											}
+										)
+										.fail(
+											[wnd, rnd, this, prj] (void) -> void {
+												Operations::fileRemoveReference(wnd, rnd, this, prj);
 											}
 										);
 								}
@@ -7626,13 +7741,21 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 									if (io.KeyCtrl)
 										return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 										.then(
-											[this, prj] (bool ok) -> void {
+											[wnd, rnd, this, prj] (bool ok) -> void {
 												if (!ok)
 													return;
 
 												validateProject(prj.get());
+
+												if (prj->contentType() != Project::ContentTypes::BASIC)
+													launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+											}
+										)
+										.fail(
+											[wnd, rnd, this, prj] (void) -> void {
+												Operations::fileRemoveReference(wnd, rnd, this, prj);
 											}
 										);
 								}
@@ -7654,7 +7777,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 									if (io.KeyCtrl)
 										return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 										.then(
 											[this, prj] (bool ok) -> void {
 												if (!ok)
@@ -8333,13 +8456,21 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
-									[this, prj] (bool ok) -> void {
+									[wnd, rnd, this, prj] (bool ok) -> void {
 										if (!ok)
 											return;
 
 										validateProject(prj.get());
+
+										if (prj->contentType() != Project::ContentTypes::BASIC)
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+									}
+								)
+								.fail(
+									[wnd, rnd, this, prj] (void) -> void {
+										Operations::fileRemoveReference(wnd, rnd, this, prj);
 									}
 								);
 						}
@@ -8452,7 +8583,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
 									[this, prj] (bool ok) -> void {
 										if (!ok)
@@ -8492,7 +8623,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -8529,7 +8660,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 						ImGui::MenuBarImageButton(theme()->iconWaiting()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 0.75f), theme()->tooltip_Analyzing().c_str());
 					} else {
 						if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-							compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+							launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 						}
 					}
 				}
@@ -8564,7 +8695,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -8598,7 +8729,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -8632,7 +8763,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -8666,7 +8797,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -8700,7 +8831,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -8730,7 +8861,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -8750,7 +8881,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						compileProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			} else {
@@ -9227,6 +9358,9 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 	case Categories::CONSOLE: // Fall through.
 	case Categories::EMULATOR: {
 			const bool busy = _state == States::COMPILING || analyzing();
+			const Project::Ptr &prj = currentProject();
+			const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+
 			if (category() == Categories::EMULATOR) {
 				if (docOpened) {
 					if (ImGui::MenuBarImageButton(theme()->iconEmulator()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Emulator().c_str())) {
@@ -9245,177 +9379,179 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuBarImageButton(theme()->iconEmulator()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Emulator().c_str()) && !busy) {
 						if (docOpened)
 							toggleDocument(nullptr);
-						category(Workspace::Categories::EMULATOR);
+						category(Categories::EMULATOR);
 					}
 					ImGui::SameLine();
 					width += ImGui::GetItemRectSize().x;
 				}
 			}
 
-			if (category() == Categories::CODE) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str())) {
-						// Do nothing.
-					}
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(Workspace::Categories::CODE);
-				}
-			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
-
-			if (category() == Categories::TILES) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str())) {
-						// Do nothing.
-					}
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(Workspace::Categories::TILES);
-				}
-			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
-
-			if (category() == Categories::MAP) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str())) {
-						// Do nothing.
-					}
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(Workspace::Categories::MAP);
-				}
-			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
-
-			if (category() == Categories::SCENE) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str())) {
-						// Do nothing.
-					}
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(Workspace::Categories::SCENE);
-				}
-			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
-
-			if (category() == Categories::ACTOR) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str())) {
-						// Do nothing.
-					}
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(Workspace::Categories::ACTOR);
-				}
-			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
-
-			if (category() == Categories::FONT) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
-						// Do nothing.
-					}
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(Workspace::Categories::FONT);
-				}
-			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
-
-			if (category() == Categories::MUSIC || category() == Categories::SFX) {
-				if (docOpened) {
-					if (ImGui::MenuBarImageButton(theme()->iconAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str())) {
-						toggleDocument(nullptr);
-					}
-				} else {
-					WIDGETS_SELECTION_GUARD(theme());
-					if (ImGui::MenuBarImageButton(theme()->iconAudioMore()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str())) {
-						ImGui::OpenPopup("@Aud");
-
-						bubble(nullptr);
-					}
-				}
-
-				do {
-					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
-					VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
-
-					if (ImGui::BeginPopup("@Aud")) {
-						if (ImGui::MenuItem(theme()->menu_Music(), GBBASIC_MODIFIER_KEY_NAME "+7", category() == Workspace::Categories::MUSIC)) {
-							category(Workspace::Categories::MUSIC);
+			if (isEditable) {
+				if (category() == Categories::CODE) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str())) {
+							toggleDocument(nullptr);
 						}
-						if (ImGui::MenuItem(theme()->menu_Sfx(), GBBASIC_MODIFIER_KEY_NAME "+8", category() == Workspace::Categories::SFX)) {
-							category(Workspace::Categories::SFX);
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str())) {
+							// Do nothing.
 						}
-
-						ImGui::EndPopup();
 					}
-				} while (false);
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str()) && !busy) {
-					if (docOpened)
-						toggleDocument(nullptr);
-					category(categoryOfAudio());
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(Categories::CODE);
+					}
 				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
+
+				if (category() == Categories::TILES) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str())) {
+							toggleDocument(nullptr);
+						}
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str())) {
+							// Do nothing.
+						}
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(Categories::TILES);
+					}
+				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
+
+				if (category() == Categories::MAP) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str())) {
+							toggleDocument(nullptr);
+						}
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str())) {
+							// Do nothing.
+						}
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(Categories::MAP);
+					}
+				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
+
+				if (category() == Categories::SCENE) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str())) {
+							toggleDocument(nullptr);
+						}
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str())) {
+							// Do nothing.
+						}
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(Categories::SCENE);
+					}
+				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
+
+				if (category() == Categories::ACTOR) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str())) {
+							toggleDocument(nullptr);
+						}
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str())) {
+							// Do nothing.
+						}
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(Categories::ACTOR);
+					}
+				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
+
+				if (category() == Categories::FONT) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
+							toggleDocument(nullptr);
+						}
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
+							// Do nothing.
+						}
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(Categories::FONT);
+					}
+				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
+
+				if (category() == Categories::MUSIC || category() == Categories::SFX) {
+					if (docOpened) {
+						if (ImGui::MenuBarImageButton(theme()->iconAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str())) {
+							toggleDocument(nullptr);
+						}
+					} else {
+						WIDGETS_SELECTION_GUARD(theme());
+						if (ImGui::MenuBarImageButton(theme()->iconAudioMore()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str())) {
+							ImGui::OpenPopup("@Aud");
+
+							bubble(nullptr);
+						}
+					}
+
+					do {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+						VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+						if (ImGui::BeginPopup("@Aud")) {
+							if (ImGui::MenuItem(theme()->menu_Music(), GBBASIC_MODIFIER_KEY_NAME "+7", category() == Categories::MUSIC)) {
+								category(Categories::MUSIC);
+							}
+							if (ImGui::MenuItem(theme()->menu_Sfx(), GBBASIC_MODIFIER_KEY_NAME "+8", category() == Categories::SFX)) {
+								category(Categories::SFX);
+							}
+
+							ImGui::EndPopup();
+						}
+					} while (false);
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str()) && !busy) {
+						if (docOpened)
+							toggleDocument(nullptr);
+						category(categoryOfAudio());
+					}
+				}
+				ImGui::SameLine();
+				width += ImGui::GetItemRectSize().x;
 			}
-			ImGui::SameLine();
-			width += ImGui::GetItemRectSize().x;
 
 			if (category() == Categories::CONSOLE) {
 				if (docOpened) {
@@ -9442,7 +9578,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 				if (ImGui::MenuBarImageButton(theme()->iconConsole()->pointer(rnd), ImVec2(13, 13), consoleCol, theme()->tooltipEdit_Console().c_str()) && !busy) {
 					if (docOpened)
 						toggleDocument(nullptr);
-					category(Workspace::Categories::CONSOLE);
+					category(Categories::CONSOLE);
 				}
 			}
 			ImGui::SameLine();
@@ -9735,13 +9871,16 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 					if (now - recentProjectSelectedTimestamp() < 0.5) { // Double clicked.
 						closeFilter();
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
-								[this, prj] (bool ok) -> void {
+								[wnd, rnd, this, prj] (bool ok) -> void {
 									if (!ok)
 										return;
 
 									validateProject(prj.get());
+
+									if (prj->contentType() != Project::ContentTypes::BASIC)
+										launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 								}
 							);
 					} else { // The interval between two clicks is too short, perform single click.
@@ -9779,11 +9918,12 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 					const bool sel = recentProjectSelectedIndex() >= 0 && recentProjectSelectedIndex() < (int)projects().size();
 
 					Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
+					const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
 
-					if (ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
+					if (isEditable && ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
 						closeFilter();
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[this, prj] (bool ok) -> void {
 									if (!ok)
@@ -9793,7 +9933,22 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 								}
 							);
 					}
-					if (ImGui::MenuItem(theme()->menu_Rename(), nullptr, nullptr, sel)) {
+					if (ImGui::MenuItem(theme()->menu_Run(), nullptr, nullptr, sel)) {
+						closeFilter();
+
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							.then(
+								[wnd, rnd, this, prj] (bool ok) -> void {
+									if (!ok)
+										return;
+
+									validateProject(prj.get());
+
+									launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+								}
+							);
+					}
+					if (isEditable && ImGui::MenuItem(theme()->menu_Rename(), nullptr, nullptr, sel)) {
 						Operations::fileRename(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str());
 
 						polluted = true;
@@ -9806,7 +9961,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 					if (!polluted && ImGui::MenuItem(theme()->menu_RemoveSramState(), nullptr, nullptr, prj->sramExists(this))) {
 						Operations::projectRemoveSram(wnd, rnd, this, prj, false);
 					}
-					if (!polluted && ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
+					if (!polluted && isEditable && ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
 						Operations::fileDuplicate(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str());
 
 						polluted = true;
@@ -9834,12 +9989,16 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 			// Render the sticker.
 			auto getBuiltinIcon = [rnd, this] (Project::Ptr &prj) -> void* {
 				void* iconTex = nullptr;
-				if (prj->isExample())
-					iconTex = theme()->iconExample()->pointer(rnd);
-				else if (prj->isPlain())
-					iconTex = theme()->iconPlainCode()->pointer(rnd);
-				else
-					iconTex = theme()->iconProjectOmitted()->pointer(rnd);
+				if (prj->contentType() == Project::ContentTypes::BASIC) {
+					if (prj->isExample())
+						iconTex = theme()->iconExample()->pointer(rnd);
+					else if (prj->isPlain())
+						iconTex = theme()->iconPlainCode()->pointer(rnd);
+					else
+						iconTex = theme()->iconProjectOmitted()->pointer(rnd);
+				} else {
+					iconTex = theme()->iconRom()->pointer(rnd);
+				}
 
 				return iconTex;
 			};
@@ -9851,7 +10010,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 			}
 			oldX = ImGui::GetCursorPosX();
 			if (iconView) {
-				Texture::Ptr &icon = prj->iconTexture();
+				Texture::Ptr &icon = prj->touchIconTexture();
 				if (icon) {
 					ImGui::Image(
 						icon->pointer(rnd),
@@ -9865,7 +10024,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 					);
 				}
 			} else {
-				Texture::Ptr &icon = prj->iconTexture();
+				Texture::Ptr &icon = prj->touchIconTexture();
 				if (icon) {
 					ImGui::Image(
 						icon->pointer(rnd),
@@ -9998,7 +10157,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 						if (io.KeyCtrl)
 							return;
 
-						Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[this, prj] (bool ok) -> void {
 									if (!ok)
@@ -10070,7 +10229,7 @@ void Workspace::notepad(Window* wnd, Renderer* rnd, float marginTop, float margi
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
 									[this, prj] (bool ok) -> void {
 										if (!ok)
@@ -10094,7 +10253,7 @@ void Workspace::notepad(Window* wnd, Renderer* rnd, float marginTop, float margi
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
 									[this, prj] (bool ok) -> void {
 										if (!ok)
@@ -10946,7 +11105,7 @@ void Workspace::blank(Window* wnd, Renderer* rnd, float marginTop, float marginB
 			width_ += ImGui::GetItemRectSize().x;
 			ImGui::SameLine();
 			if (ImGui::ImageButton(theme()->iconSfx()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme()->tooltipAudio_Sfx().c_str())) {
-				category(Workspace::Categories::SFX);
+				category(Categories::SFX);
 			}
 			width_ += ImGui::GetItemRectSize().x;
 			width_ += style.FramePadding.x;
@@ -10960,7 +11119,7 @@ void Workspace::blank(Window* wnd, Renderer* rnd, float marginTop, float marginB
 			const float wndWidth = ImGui::GetWindowWidth();
 			ImGui::SetCursorPosX(wndWidth - statusWidth());
 			if (ImGui::ImageButton(theme()->iconMusic()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme()->tooltipAudio_Music().c_str())) {
-				category(Workspace::Categories::MUSIC);
+				category(Categories::MUSIC);
 			}
 			width_ += ImGui::GetItemRectSize().x;
 			ImGui::SameLine();
@@ -11821,7 +11980,7 @@ void Workspace::validateProject(const Project* prj) {
 	}
 }
 
-void Workspace::compileProject(
+void Workspace::launchProject(
 	Window* wnd, Renderer* rnd,
 	const char* cartType, const char* sramType, bool* hasRtc,
 	bool toRun_, int toExport_
@@ -11829,9 +11988,19 @@ void Workspace::compileProject(
 	if (settings().consoleClearOnStart)
 		clear();
 
-	toRun(toRun_);
-	toExport(toExport_);
-	Operations::projectCompile(wnd, rnd, this, cartType, sramType, hasRtc, fontConfig().empty() ? nullptr : fontConfig().c_str(), true);
+	const Project::Ptr &prj = currentProject();
+	if (prj->contentType() == Project::ContentTypes::BASIC) {
+		toRun(toRun_);
+		toExport(toExport_);
+		Operations::projectCompile(wnd, rnd, this, cartType, sramType, hasRtc, fontConfig().empty() ? nullptr : fontConfig().c_str(), true);
+	} else {
+		GBBASIC_ASSERT(toRun_ && toExport_ == -1 && "Not supported");
+
+		toRun(toRun_);
+		toExport(toExport_);
+
+		_state = States::LAUNCHED;
+	}
 }
 
 void Workspace::runProject(Window* wnd, Renderer* rnd, Bytes::Ptr rom) {
@@ -11890,11 +12059,22 @@ void Workspace::stopProject(Window* wnd, Renderer* rnd) {
 
 void Workspace::exportProject(Window* wnd, Renderer* rnd, int toExport_) {
 	Exporter::Ptr ex = exporters()[toExport_];
+
+	const Project::Ptr &prj = currentProject();
+	const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+	if (!isEditable) {
+		if (ex->packageArchived() || ex->buildEnabled()) {
+			bubble(theme()->dialogPrompt_NoNeedToBuildRom(), nullptr);
+
+			return;
+		}
+	}
+
 	if (ex->packageArchived()) {
 		Operations::popupEmulatorBuildSettings(wnd, rnd, this, ex, settings().exporterSettings.c_str(), settings().exporterArgs.c_str(), !ex->packageIcon().empty())
 			.then(
 				[wnd, rnd, this, toExport_] (bool /* ok */) -> void {
-					compileProject(wnd, rnd, nullptr, nullptr, nullptr, false, toExport_);
+					launchProject(wnd, rnd, nullptr, nullptr, nullptr, false, toExport_);
 				}
 			);
 	} else if (ex->buildEnabled()) {
@@ -11902,9 +12082,9 @@ void Workspace::exportProject(Window* wnd, Renderer* rnd, int toExport_) {
 			.then(
 				[wnd, rnd, this, toExport_] (bool ok, const char* cartType, const char* sramType, bool hasRtc) -> void {
 					if (ok)
-						compileProject(wnd, rnd, cartType, sramType, &hasRtc, false, toExport_);
+						launchProject(wnd, rnd, cartType, sramType, &hasRtc, false, toExport_);
 					else
-						compileProject(wnd, rnd, nullptr, nullptr, nullptr, false, toExport_);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, false, toExport_);
 				}
 			);
 	} else {

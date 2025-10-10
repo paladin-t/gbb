@@ -400,7 +400,7 @@ public:
 
 private:
 	void changeFrame(void) {
-		Texture::Ptr attribtex(_theme->textureByte(), [] (Texture*) { /* Do nothing. */ });
+		Texture::Ptr attribtex(_theme->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
 		Math::Vec2i attribcount(attribtex->width() / GBBASIC_TILE_SIZE, attribtex->height() / GBBASIC_TILE_SIZE);
 		Map::Tiles tiles(attribtex, attribcount);
 		_shadowMap = Map::Ptr(Map::create(&tiles, true));

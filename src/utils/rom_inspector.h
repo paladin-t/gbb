@@ -39,6 +39,8 @@ public:
 	std::string getManufacturerCode(void) const;
 	bool setManufacturerCode(const std::string &manufacturerCode);
 
+	std::string getCartridgeCompatibilityCode(void) const;
+	bool setCartridgeCompatibilityCode(const std::string &newCompatibilityCode);
 	// DOC: CARTRIDGE SCHEMA.
 	// This is only for the color device:
 	//   0x80 - Game supports CGB functions, but works on DMG also

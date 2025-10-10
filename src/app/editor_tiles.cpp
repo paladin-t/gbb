@@ -1472,6 +1472,7 @@ private:
 					if (ext.empty() || std::find(exts.begin(), exts.end(), ext) == exts.end())
 						path += ".png";
 					Path::split(path, nullptr, &ext, nullptr);
+					Text::toLowerCase(ext);
 					const char* y = ext.c_str();
 
 					Bytes::Ptr bytes(Bytes::create());
@@ -2128,6 +2129,7 @@ private:
 					if (ext.empty() || std::find(exts.begin(), exts.end(), ext) == exts.end())
 						path += ".png";
 					Path::split(path, nullptr, &ext, nullptr);
+					Text::toLowerCase(ext);
 					const char* y = ext.c_str();
 
 					Bytes::Ptr bytes(Bytes::create());

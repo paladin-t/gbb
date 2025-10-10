@@ -28,7 +28,7 @@
 */
 
 #ifndef WIDGETS_ABOUT_REVISION
-#	define WIDGETS_ABOUT_REVISION "r25"
+#	define WIDGETS_ABOUT_REVISION "r26"
 #endif /* WIDGETS_ABOUT_REVISION */
 
 /* ===========================================================================} */
@@ -3751,14 +3751,18 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				BeginChild("@Col", ImVec2(36.0f, 36.0f), true, ImGuiWindowFlags_NoScrollbar);
 				{
 					void* iconTex = nullptr;
-					if (prj->iconTexture())
-						iconTex = prj->iconTexture()->pointer(_renderer);
-					else if (prj->isExample())
-						iconTex = _theme->iconExample()->pointer(_renderer);
-					else if (prj->isPlain())
-						iconTex = _theme->iconPlainCode()->pointer(_renderer);
-					else
-						iconTex = _theme->iconProjectOmitted()->pointer(_renderer);
+					if (prj->contentType() == Project::ContentTypes::BASIC) {
+						if (prj->touchIconTexture())
+							iconTex = prj->touchIconTexture()->pointer(_renderer);
+						else if (prj->isExample())
+							iconTex = _theme->iconExample()->pointer(_renderer);
+						else if (prj->isPlain())
+							iconTex = _theme->iconPlainCode()->pointer(_renderer);
+						else
+							iconTex = _theme->iconProjectOmitted()->pointer(_renderer);
+					} else {
+						iconTex = _theme->iconRom()->pointer(_renderer);
+					}
 					SetCursorPos(GetCursorPos() + ImVec2(2, 2));
 					Image(iconTex, ImVec2(32.0f, 32.0f));
 				}
@@ -3779,14 +3783,14 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				BeginChild("@2Bpp", ImVec2(36.0f, 36.0f), true, ImGuiWindowFlags_NoScrollbar);
 				{
 					void* iconTex = nullptr;
-					if (prj->iconTexture2Bpp()) {
-						iconTex = prj->iconTexture2Bpp()->pointer(_renderer);
+					if (prj->touchIconTexture2Bpp()) {
+						iconTex = prj->touchIconTexture2Bpp()->pointer(_renderer);
 						SetCursorPos(GetCursorPos() + ImVec2(2, 2));
 						Image(iconTex, ImVec2(32.0f, 32.0f));
 						if (IsItemHovered() && IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
 							do {
 								Bytes::Ptr tiles(Bytes::create());
-								if (!prj->iconImage2Bpp(tiles))
+								if (!prj->touchIconImage2Bpp(tiles))
 									break;
 
 								constexpr const size_t SIZE = (GBBASIC_ICON_WIDTH / GBBASIC_TILE_SIZE) * GBBASIC_ICON_HEIGHT * 2;

@@ -323,7 +323,8 @@ public:
 	enum class States {
 		IDLE,
 		COMPILING,
-		COMPILED
+		COMPILED,
+		LAUNCHED
 	};
 
 	typedef std::function<void(const std::string &)> CompilerOutputHandler;
@@ -1077,7 +1078,7 @@ private:
 	void closeFilter(void);
 	void sortProjects(void);
 	void validateProject(const Project* prj);
-	void compileProject(
+	void launchProject(
 		Window* wnd, Renderer* rnd,
 		const char* cartType /* nullable */, const char* sramType /* nullable */, bool* hasRtc /* nullable */,
 		bool toRun_, int toExport_

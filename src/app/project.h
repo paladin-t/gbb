@@ -125,6 +125,7 @@ public:
 	GBBASIC_PROPERTY_READONLY_PTR(class Workspace,               workspace                                        ) // Non-serialized.
 	GBBASIC_PROPERTY             (unsigned,                      engine                                           ) // Non-serialized.
 	GBBASIC_PROPERTY             (AssetsBundle::Ptr,             assets                                           ) // Non-serialized.
+	GBBASIC_PROPERTY             (Bytes::Ptr,                    rom                                              ) // Non-serialized.
 	GBBASIC_PROPERTY             (Texture::Ptr,                  attributesTexture                                ) // Non-serialized.
 	GBBASIC_PROPERTY             (Texture::Ptr,                  propertiesTexture                                ) // Non-serialized.
 	GBBASIC_PROPERTY             (Texture::Ptr,                  actorsTexture                                    ) // Non-serialized.
@@ -180,9 +181,9 @@ public:
 
 	void title(const std::string &val);
 	void iconCode(const std::string &val);
-	Texture::Ptr &iconTexture(void);
-	Texture::Ptr &iconTexture2Bpp(void);
-	Image::Ptr iconImage2Bpp(Bytes::Ptr tiles /* nullable */);
+	Texture::Ptr &touchIconTexture(void);
+	Texture::Ptr &touchIconTexture2Bpp(void);
+	Image::Ptr touchIconImage2Bpp(Bytes::Ptr tiles /* nullable */);
 	void created(const long long &val);
 	void modified(const long long &val);
 
@@ -283,7 +284,7 @@ public:
 	bool exists(void) const;
 	bool loaded(void) const;
 	void unload(void);
-	bool load(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError = nullptr);
+	bool load(bool allowBin, const char* fontConfigPath, WarningOrErrorHandler onWarningOrError = nullptr);
 	bool save(const char* path, bool redirect, WarningOrErrorHandler onWarningOrError = nullptr);
 	bool rename(const char* name);
 
@@ -291,6 +292,11 @@ public:
 
 private:
 	void transfer(void);
+
+	bool extractRom(Bytes* data /* nullable */, Bytes* icon /* nullable */) const;
+	bool loadRom(WarningOrErrorHandler onWarningOrError);
+	bool loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError);
+	bool saveBasic(const char* path_, bool redirect, WarningOrErrorHandler onWarningOrError);
 
 	bool loadInformation(const std::string &content, WarningOrErrorHandler onWarningOrError);
 	bool saveInformation(std::string &content);

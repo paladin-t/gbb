@@ -111,7 +111,7 @@ public:
 					_cursorImage = nullptr;
 				}
 			)
-			.fail([] () -> void { /* Do nothing. */ })
+			.fail([] (void) -> void { /* Do nothing. */ })
 			.always(
 				[&] (void) -> void {
 					clear();

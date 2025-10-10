@@ -17,9 +17,11 @@
 #include "project.h"
 #include "workspace.h"
 #include "../compiler/compiler.h"
+#include "../utils/archive.h"
 #include "../utils/datetime.h"
 #include "../utils/encoding.h"
 #include "../utils/filesystem.h"
+#include "../utils/rom_inspector.h"
 #include "../../lib/jpath/jpath.hpp"
 #if defined GBBASIC_OS_HTML
 #	include <emscripten.h>
@@ -180,8 +182,8 @@ Project &Project::operator = (const Project &other) {
 	renderer(other.renderer());
 	workspace(other.workspace());
 	engine(other.engine());
-	assets(AssetsBundle::Ptr(new AssetsBundle()));
-	{
+	if (other.assets()) {
+		assets(AssetsBundle::Ptr(new AssetsBundle()));
 		assets()->palette = other.assets()->palette;
 		assets()->fonts = other.assets()->fonts;
 		assets()->code = other.assets()->code;
@@ -213,6 +215,14 @@ Project &Project::operator = (const Project &other) {
 			entry->getMap = mapGetter();
 			entry->getActor = actorGetter();
 		}
+	} else {
+		assets(nullptr);
+	}
+	if (other.rom()) {
+		rom(Bytes::Ptr(Bytes::create()));
+		rom()->writeBytes(other.rom().get());
+	} else {
+		rom(nullptr);
 	}
 	attributesTexture(other.attributesTexture());
 	propertiesTexture(other.propertiesTexture());
@@ -287,7 +297,7 @@ void Project::iconCode(const std::string &val) {
 	_iconTexture2BppDirty = true;
 }
 
-Texture::Ptr &Project::iconTexture(void) {
+Texture::Ptr &Project::touchIconTexture(void) {
 	if (_iconTextureIsBeingGenerated.working())
 		return _iconTexture;
 
@@ -381,7 +391,7 @@ Texture::Ptr &Project::iconTexture(void) {
 	return _iconTexture;
 }
 
-Texture::Ptr &Project::iconTexture2Bpp(void) {
+Texture::Ptr &Project::touchIconTexture2Bpp(void) {
 	if (_iconTexture2BppDirtyIsBeingGenerated.working())
 		return _iconTexture2Bpp;
 
@@ -456,7 +466,7 @@ Texture::Ptr &Project::iconTexture2Bpp(void) {
 	return _iconTexture2Bpp;
 }
 
-Image::Ptr Project::iconImage2Bpp(Bytes::Ptr tiles) {
+Image::Ptr Project::touchIconImage2Bpp(Bytes::Ptr tiles) {
 	if (tiles)
 		tiles->clear();
 
@@ -547,12 +557,18 @@ void Project::modified(const long long &val) {
 }
 
 int Project::palettePageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const PaletteAssets &assets_ = assets()->palette;
 
 	return assets_.count();
 }
 
 bool Project::addGlobalPalettePages(WarningOrErrorHandler onWarningOrError) {
+	if (!assets())
+		return false;
+
 	PaletteAssets palette;
 	assets()->palette = palette;
 
@@ -560,12 +576,18 @@ bool Project::addGlobalPalettePages(WarningOrErrorHandler onWarningOrError) {
 }
 
 const PaletteAssets::Entry* Project::getPalette(int index) const {
+	if (!assets())
+		return nullptr;
+
 	PaletteAssets &assets_ = assets()->palette;
 
 	return assets_.get(index);
 }
 
 PaletteAssets::Entry* Project::getPalette(int index) {
+	if (!assets())
+		return nullptr;
+
 	PaletteAssets &assets_ = assets()->palette;
 
 	return assets_.get(index);
@@ -643,6 +665,9 @@ Bytes::Ptr Project::spritePalettes(void) {
 }
 
 int Project::fontPageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const FontAssets &assets_ = assets()->fonts;
 
 	return assets_.count();
@@ -824,6 +849,9 @@ std::string Project::getUsableFontName(int index) const {
 }
 
 int Project::codePageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const CodeAssets &assets_ = assets()->code;
 
 	return assets_.count();
@@ -871,6 +899,9 @@ CodeAssets::Entry* Project::getCode(int index) {
 }
 
 int Project::tilesPageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const TilesAssets &assets_ = assets()->tiles;
 
 	return assets_.count();
@@ -965,6 +996,9 @@ std::string Project::getUsableTilesName(int index) const {
 }
 
 int Project::mapPageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const MapAssets &assets_ = assets()->maps;
 
 	return assets_.count();
@@ -1075,6 +1109,9 @@ Project::Indices Project::getMapsRefToTiles(int tilesIndex) const {
 }
 
 int Project::musicPageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const MusicAssets &assets_ = assets()->music;
 
 	return assets_.count();
@@ -1250,6 +1287,9 @@ std::string Project::getUsableMusicInstrumentName(int index, int instIndex) cons
 }
 
 int Project::sfxPageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const SfxAssets &assets_ = assets()->sfx;
 
 	return assets_.count();
@@ -1384,6 +1424,9 @@ void Project::destroySharedSfxEditor(void) {
 }
 
 int Project::actorPageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const ActorAssets &assets_ = assets()->actors;
 
 	return assets_.count();
@@ -1478,6 +1521,9 @@ std::string Project::getUsableActorName(int index) const {
 }
 
 int Project::scenePageCount(void) const {
+	if (!assets())
+		return 0;
+
 	const SceneAssets &assets_ = assets()->scenes;
 
 	return assets_.count();
@@ -1745,6 +1791,110 @@ bool Project::open(const char* path_) {
 	// Prepare.
 	path(path_);
 
+	// Determine the file type.
+	std::string ext;
+	Path::split(path(), nullptr, &ext, nullptr);
+	Text::toLowerCase(ext);
+
+	const bool isBin = ext == GBBASIC_CLASSIC_ROM_EXT || ext == GBBASIC_COLORED_ROM_EXT || ext == "zip";
+	const bool isZip = ext == "zip";
+
+	// For binary (ROM).
+	if (isBin) {
+		std::string title_;
+		Path::split(path(), &title_, nullptr, nullptr);
+		title(title_);
+
+		Bytes::Ptr bytes(Bytes::create());
+		const bool ret = read(
+			path().c_str(),
+			[&] (File::Ptr file) -> bool {
+				if (!file->readBytes(bytes.get()))
+					return false;
+
+				return true;
+			}
+		);
+		if (!ret)
+			return false;
+
+		if (isZip) {
+			Bytes::Ptr icon(Bytes::create());
+			if (!extractRom(bytes.get(), icon.get()))
+				return false;
+
+			std::string txt;
+			if (!Base64::fromBytes(txt, icon.get()))
+				return false;
+
+			iconCode(txt);
+		}
+
+		const long long now = DateTime::now();
+		contentType(ContentTypes::ROM);
+		RomInspector header;
+		header.load(bytes);
+		{
+			std::string compCode = header.getCartridgeCompatibilityCode();
+			compCode = "0x" + compCode;
+			unsigned cartComp = 0;
+			Text::Array cartTypes;
+			if (Text::fromString(compCode, cartComp)) {
+				if (cartComp == 0x00 || (cartComp & 0x80))
+					cartTypes.push_back(PROJECT_CARTRIDGE_TYPE_CLASSIC);
+				if ((cartComp & 0x80) || (cartComp & 0xc0))
+					cartTypes.push_back(PROJECT_CARTRIDGE_TYPE_COLORED);
+				if (cartComp & 0x20)
+					cartTypes.push_back(PROJECT_CARTRIDGE_TYPE_EXTENSION);
+			} else {
+				cartTypes.push_back(PROJECT_CARTRIDGE_TYPE_CLASSIC);
+				cartTypes.push_back(PROJECT_CARTRIDGE_TYPE_COLORED);
+				cartTypes.push_back(PROJECT_CARTRIDGE_TYPE_EXTENSION);
+			}
+			cartridgeType(Text::join(cartTypes, PROJECT_CARTRIDGE_TYPE_SEPARATOR));
+
+			std::string ramCode = header.getRamSizeCode();
+			if (ramCode.length() > 1)
+				ramCode = ramCode.substr(ramCode.length() - 1);
+			sramType(ramCode);
+
+			const std::string cartCode = header.getCartridgeTypeCode();
+			hasRtc(cartCode == "0f" || cartCode == "10");
+		}
+		header.unload();
+		caseInsensitive(true);
+		description("");
+		author("");
+		genre("");
+		version("1.0.0");
+		url("");
+		created(now);
+		modified(now);
+		preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
+		preferencesFontOffset(GBBASIC_FONT_DEFAULT_OFFSET);
+		preferencesFontIsTwoBitsPerPixel(GBBASIC_FONT_DEFAULT_IS_2BPP);
+		preferencesFontPreferFullWord(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD);
+		preferencesFontPreferFullWordForNonAscii(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD_FOR_NON_ASCII);
+		preferencesMapRef(0);
+		preferencesMusicPreviewStroke(true);
+		preferencesSfxShowSoundShape(true);
+		preferencesActorApplyPropertiesToAllTiles(false);
+		preferencesActorApplyPropertiesToAllFrames(true);
+		preferencesActorUses8x16Sprites(true);
+		preferencesSceneRefMap(0);
+		preferencesSceneShowActors(true);
+		preferencesSceneShowTriggers(true);
+		preferencesSceneShowProperties(true);
+		preferencesSceneShowAttributes(false);
+		preferencesSceneUseGravity(false);
+
+		isPlain(true);
+		preferPlain(true);
+
+		// Finish.
+		return true;
+	}
+
 	// Read from the file.
 	std::string source;
 	const bool ret = read(
@@ -1906,6 +2056,7 @@ bool Project::close(bool deep) {
 
 	// Destroy the assets.
 	assets(nullptr);
+	rom(nullptr);
 
 	attributesTexture(nullptr);
 	propertiesTexture(nullptr);
@@ -1939,253 +2090,44 @@ bool Project::loaded(void) const {
 
 void Project::unload(void) {
 	assets(nullptr);
+	rom(nullptr);
 }
 
-bool Project::load(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError) {
+bool Project::load(bool allowBin, const char* fontConfigPath, WarningOrErrorHandler onWarningOrError) {
 	// Prepare.
 	sharedSfxEditorDisabled(false);
 
-	// Read from the file.
-	std::string source;
-	const bool ret = read(
-		path().c_str(),
-		[&] (File::Ptr file) -> bool {
-			if (!file->readString(source))
-				return false;
+	// Determine the file type.
+	std::string ext;
+	Path::split(path(), nullptr, &ext, nullptr);
+	Text::toLowerCase(ext);
 
-			return true;
-		}
-	);
-	if (!ret)
-		return false;
+	const bool isBin = ext == GBBASIC_CLASSIC_ROM_EXT || ext == GBBASIC_COLORED_ROM_EXT || ext == "zip";
 
-	if (!Unicode::isPrintable(source.c_str(), source.length())) {
-		fprintf(stderr, "Invalid file.\n");
+	// Load.
+	if (isBin) {
+		if (!allowBin)
+			return false;
 
-		return false;
+		return loadRom(onWarningOrError);
 	}
 
-	// Determine the source type.
-	std::string content;
-	const std::string sectionBegin = COMPILER_PROGRAM_BEGIN;
-	const std::string sectionEnd = COMPILER_PROGRAM_END;
-	const size_t beginIndex = Text::indexOf(source, sectionBegin);
-	const size_t endIndex = Text::indexOf(source, sectionEnd, beginIndex + sectionBegin.length());
-	if (beginIndex == std::string::npos && endIndex == std::string::npos) { // Is a plain source code file.
-		// Fill the information.
-		std::string title_;
-		std::string ext;
-		Path::split(path(), &title_, &ext, nullptr);
-		title(title_);
-
-		const long long now = DateTime::now();
-		contentType(ContentTypes::BASIC);
-		cartridgeType(PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION);
-		sramType("0");
-		hasRtc(false);
-		caseInsensitive(true);
-		description("");
-		author("");
-		genre("");
-		version("1.0.0");
-		url("");
-		created(now);
-		modified(now);
-		preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
-		preferencesFontOffset(GBBASIC_FONT_DEFAULT_OFFSET);
-		preferencesFontIsTwoBitsPerPixel(GBBASIC_FONT_DEFAULT_IS_2BPP);
-		preferencesFontPreferFullWord(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD);
-		preferencesFontPreferFullWordForNonAscii(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD_FOR_NON_ASCII);
-		preferencesPreviewPaletteBits(true);
-		preferencesUseByteMatrix(false);
-		preferencesShowGrids(true);
-		preferencesCodePageForBindedRoutine(0);
-		preferencesCodeLineForBindedRoutine(Left<int>(0));
-		preferencesMapRef(0);
-		preferencesMusicPreviewStroke(true);
-		preferencesSfxShowSoundShape(true);
-		preferencesActorApplyPropertiesToAllTiles(false);
-		preferencesActorApplyPropertiesToAllFrames(true);
-		preferencesActorUses8x16Sprites(true);
-		preferencesSceneRefMap(0);
-		preferencesSceneShowActors(true);
-		preferencesSceneShowTriggers(true);
-		preferencesSceneShowProperties(true);
-		preferencesSceneShowAttributes(false);
-		preferencesSceneUseGravity(false);
-
-		// Fill the assets.
-		assets(AssetsBundle::Ptr(new AssetsBundle()));
-
-		touchPalette();
-
-		clearFontPages();
-		addGlobalFontPages(fontConfigPath, onWarningOrError);
-		activeFontIndex(0);
-
-		CodeAssets code;
-		code.add(source);
-		assets()->code = code;
-		isPlain(true);
-		preferPlain(ext == GBBASIC_PLAIN_PROJECT_EXT);
-		activeMajorCodeIndex(0);
-#if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
-		isMajorCodeEditorActive(true);
-		isMinorCodeEditorEnabled(false);
-		activeMinorCodeIndex(-1);
-		minorCodeEditorWidth(0.0f);
-#endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
-
-		activePaletteIndex(-1);
-
-		activeFontIndex(-1);
-
-		fontPreviewHeight(0.0f);
-
-		activeTilesIndex(-1);
-
-		activeMapIndex(-1);
-
-		activeMusicIndex(-1);
-
-		activeSfxIndex(-1);
-
-		activeActorIndex(-1);
-
-		activeSceneIndex(-1);
-
-		// Finish.
-		return true;
-	} else { // Is a rich project file.
-		content = Text::trim(source);
-		isPlain(false);
-		preferPlain(false);
-	}
-
-	// Parse the information.
-	loadInformation(content, onWarningOrError);
-
-	// Parse the assets.
-	loadAssets(fontConfigPath, content, onWarningOrError);
-
-	// Finish.
-	return true;
+	return loadBasic(fontConfigPath, onWarningOrError);
 }
 
 bool Project::save(const char* path_, bool redirect, WarningOrErrorHandler onWarningOrError) {
-	// Prepare.
-	if (path().empty() || redirect)
-		path(path_);
+	// Only allow saving BASIC projects.
+	if (contentType() != ContentTypes::BASIC) {
+		GBBASIC_ASSERT(false && "Saving non-BASIC project is not supported.");
 
-	// Determine the source type.
-	const bool saveAsPlain = isPlain() && preferPlain();
-	if (saveAsPlain) { // Save as plain source code file.
-		// Prepare.
-		std::string source;
+		if (onWarningOrError)
+			onWarningOrError("Saving non-BASIC project is not supported.", true);
 
-		// Check the assets.
-		if (assets()->fonts.count() > 1) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored font assets after page 1.", true);
-		}
-		if (assets()->code.count() > 1) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored code after page 1.", true);
-		}
-		if (assets()->tiles.count() > 0) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored tiles assets.", true);
-		}
-		if (assets()->maps.count() > 0) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored map assets.", true);
-		}
-		if (assets()->music.count() > 0) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored music assets.", true);
-		}
-		if (assets()->sfx.count() > 0) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored SFX assets.", true);
-		}
-		if (assets()->actors.count() > 0) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored actor assets.", true);
-		}
-		if (assets()->scenes.count() > 0) {
-			if (onWarningOrError)
-				onWarningOrError("Ignored scene assets.", true);
-		}
-
-		// Serialize the code.
-		CodeAssets::Entry* entry = assets()->code.get(0);
-		if (entry->editor && entry->editor->hasUnsavedChanges()) {
-			entry->editor->flush();
-			entry->editor->markChangesSaved();
-		}
-		if (!entry->toString(source, onWarningOrError))
-			return false;
-
-		// Write to the file.
-		const bool ret = write(
-			path().c_str(),
-			[&] (File::Ptr file) -> bool {
-				if (source.empty())
-					return true;
-
-				if (!file->writeString(source))
-					return false;
-
-				return true;
-			}
-		);
-		if (!ret)
-			return false;
-
-		// Finish.
-		hasDirtyAsset(false);
-		hasDirtyEditor(false);
-		toPollEditor(false);
-
-		return true;
-	} else { // Save as rich project file.
-		// Prepare.
-		std::string source;
-		std::string content;
-
-		// Transfer external stuff that is pending.
-		transfer();
-
-		// Update the modification timestamp.
-		const long long now = DateTime::now();
-		modified(now);
-
-		// Serialize the information.
-		saveInformation(content);
-
-		// Serialize the assets.
-		if (!saveAssets(content, onWarningOrError))
-			return false;
-
-		// Write to the file.
-		content = Text::trim(content);
-		put(source, COMPILER_PROGRAM_BEGIN, COMPILER_PROGRAM_END, content);
-
-		const bool ret = write(
-			path().c_str(),
-			[&] (File::Ptr file) -> bool {
-				if (!file->writeString(source))
-					return false;
-
-				return true;
-			}
-		);
-		if (!ret)
-			return false;
-
-		// Finish.
-		return true;
+		return false;
 	}
+
+	// Save.
+	return saveBasic(path_, redirect, onWarningOrError);
 }
 
 bool Project::rename(const char* name) {
@@ -2324,7 +2266,352 @@ void Project::transfer(void) {
 	}
 }
 
+bool Project::extractRom(Bytes* data, Bytes* icon) const {
+	// Prepare.
+	Archive::Ptr arc(Archive::create(Archive::ZIP));
+	if (!arc->open(path().c_str(), Stream::Accesses::READ))
+		return false;
+
+	// Read all entries in the archive.
+	Text::Array entries;
+	if (!arc->all(entries)) {
+		arc->close();
+
+		return false;
+	}
+
+	// Parse ROM data.
+	Text::Array::iterator it = std::find_if(
+		entries.begin(), entries.end(),
+		[] (const std::string &entry) -> bool {
+			return Text::endsWith(entry, "." GBBASIC_CLASSIC_ROM_EXT, true) || Text::endsWith(entry, "." GBBASIC_COLORED_ROM_EXT, true);
+		}
+	);
+	if (it == entries.end()) {
+		arc->close();
+
+		return false;
+	}
+
+	if (data) {
+		if (!arc->toBytes(data, it->c_str())) {
+			arc->close();
+
+			return false;
+		}
+	}
+
+	// Parse icon.
+	it = std::find_if(
+		entries.begin(), entries.end(),
+		[] (const std::string &entry) -> bool {
+			return
+				Text::endsWith(entry, ".png", true) ||
+				Text::endsWith(entry, ".jpg", true) ||
+				Text::endsWith(entry, ".bmp", true) ||
+				Text::endsWith(entry, ".tga", true);
+		}
+	);
+	do {
+		if (it == entries.end())
+			break;
+
+		if (!icon)
+			break;
+
+		if (!arc->toBytes(icon, it->c_str()))
+			break;
+	} while (false);
+
+	// Finish.
+	arc->close();
+
+	return true;
+}
+
+bool Project::loadRom(WarningOrErrorHandler onWarningOrError) {
+	std::string ext;
+	Path::split(path(), nullptr, &ext, nullptr);
+	Text::toLowerCase(ext);
+
+	const bool isZip = ext == "zip";
+
+	Bytes::Ptr bytes(Bytes::create());
+	const bool ret = read(
+		path().c_str(),
+		[&] (File::Ptr file) -> bool {
+			if (!file->readBytes(bytes.get()))
+				return false;
+
+			return true;
+		}
+	);
+	if (!ret)
+		return false;
+
+	if (isZip) {
+		if (!extractRom(bytes.get(), nullptr))
+			return false;
+	}
+
+	if (!rom())
+		rom(Bytes::Ptr(Bytes::create()));
+	rom()->writeBytes(bytes.get());
+
+	return true;
+}
+
+bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError) {
+	// Read from the file.
+	std::string source;
+	const bool ret = read(
+		path().c_str(),
+		[&] (File::Ptr file) -> bool {
+			if (!file->readString(source))
+				return false;
+
+			return true;
+		}
+	);
+	if (!ret)
+		return false;
+
+	if (!Unicode::isPrintable(source.c_str(), source.length())) {
+		fprintf(stderr, "Invalid file.\n");
+
+		return false;
+	}
+
+	// Determine the source type.
+	std::string content;
+	const std::string sectionBegin = COMPILER_PROGRAM_BEGIN;
+	const std::string sectionEnd = COMPILER_PROGRAM_END;
+	const size_t beginIndex = Text::indexOf(source, sectionBegin);
+	const size_t endIndex = Text::indexOf(source, sectionEnd, beginIndex + sectionBegin.length());
+	if (beginIndex == std::string::npos && endIndex == std::string::npos) { // Is a plain source code file.
+		// Fill the information.
+		std::string title_;
+		std::string ext;
+		Path::split(path(), &title_, &ext, nullptr);
+		title(title_);
+
+		const long long now = DateTime::now();
+		contentType(ContentTypes::BASIC);
+		cartridgeType(PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION);
+		sramType("0");
+		hasRtc(false);
+		caseInsensitive(true);
+		description("");
+		author("");
+		genre("");
+		version("1.0.0");
+		url("");
+		created(now);
+		modified(now);
+		preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
+		preferencesFontOffset(GBBASIC_FONT_DEFAULT_OFFSET);
+		preferencesFontIsTwoBitsPerPixel(GBBASIC_FONT_DEFAULT_IS_2BPP);
+		preferencesFontPreferFullWord(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD);
+		preferencesFontPreferFullWordForNonAscii(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD_FOR_NON_ASCII);
+		preferencesPreviewPaletteBits(true);
+		preferencesUseByteMatrix(false);
+		preferencesShowGrids(true);
+		preferencesCodePageForBindedRoutine(0);
+		preferencesCodeLineForBindedRoutine(Left<int>(0));
+		preferencesMapRef(0);
+		preferencesMusicPreviewStroke(true);
+		preferencesSfxShowSoundShape(true);
+		preferencesActorApplyPropertiesToAllTiles(false);
+		preferencesActorApplyPropertiesToAllFrames(true);
+		preferencesActorUses8x16Sprites(true);
+		preferencesSceneRefMap(0);
+		preferencesSceneShowActors(true);
+		preferencesSceneShowTriggers(true);
+		preferencesSceneShowProperties(true);
+		preferencesSceneShowAttributes(false);
+		preferencesSceneUseGravity(false);
+
+		// Fill the assets.
+		assets(AssetsBundle::Ptr(new AssetsBundle()));
+
+		touchPalette();
+
+		clearFontPages();
+		addGlobalFontPages(fontConfigPath, onWarningOrError);
+		activeFontIndex(0);
+
+		CodeAssets code;
+		code.add(source);
+		assets()->code = code;
+		isPlain(true);
+		preferPlain(ext == GBBASIC_PLAIN_PROJECT_EXT);
+		activeMajorCodeIndex(0);
+#if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
+		isMajorCodeEditorActive(true);
+		isMinorCodeEditorEnabled(false);
+		activeMinorCodeIndex(-1);
+		minorCodeEditorWidth(0.0f);
+#endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
+
+		activePaletteIndex(-1);
+
+		activeFontIndex(-1);
+
+		fontPreviewHeight(0.0f);
+
+		activeTilesIndex(-1);
+
+		activeMapIndex(-1);
+
+		activeMusicIndex(-1);
+
+		activeSfxIndex(-1);
+
+		activeActorIndex(-1);
+
+		activeSceneIndex(-1);
+
+		// Finish.
+		return true;
+	} else { // Is a rich project file.
+		content = Text::trim(source);
+		isPlain(false);
+		preferPlain(false);
+	}
+
+	// Parse the information.
+	loadInformation(content, onWarningOrError);
+
+	// Parse the assets.
+	loadAssets(fontConfigPath, content, onWarningOrError);
+
+	// Finish.
+	return true;
+}
+
+bool Project::saveBasic(const char* path_, bool redirect, WarningOrErrorHandler onWarningOrError) {
+	// Prepare.
+	if (path().empty() || redirect)
+		path(path_);
+
+	// Determine the source type.
+	const bool saveAsPlain = isPlain() && preferPlain();
+	if (saveAsPlain) { // Save as plain source code file.
+		// Prepare.
+		std::string source;
+
+		// Check the assets.
+		if (assets()->fonts.count() > 1) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored font assets after page 1.", true);
+		}
+		if (assets()->code.count() > 1) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored code after page 1.", true);
+		}
+		if (assets()->tiles.count() > 0) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored tiles assets.", true);
+		}
+		if (assets()->maps.count() > 0) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored map assets.", true);
+		}
+		if (assets()->music.count() > 0) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored music assets.", true);
+		}
+		if (assets()->sfx.count() > 0) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored SFX assets.", true);
+		}
+		if (assets()->actors.count() > 0) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored actor assets.", true);
+		}
+		if (assets()->scenes.count() > 0) {
+			if (onWarningOrError)
+				onWarningOrError("Ignored scene assets.", true);
+		}
+
+		// Serialize the code.
+		CodeAssets::Entry* entry = assets()->code.get(0);
+		if (entry->editor && entry->editor->hasUnsavedChanges()) {
+			entry->editor->flush();
+			entry->editor->markChangesSaved();
+		}
+		if (!entry->toString(source, onWarningOrError))
+			return false;
+
+		// Write to the file.
+		const bool ret = write(
+			path().c_str(),
+			[&] (File::Ptr file) -> bool {
+				if (source.empty())
+					return true;
+
+				if (!file->writeString(source))
+					return false;
+
+				return true;
+			}
+		);
+		if (!ret)
+			return false;
+
+		// Finish.
+		hasDirtyAsset(false);
+		hasDirtyEditor(false);
+		toPollEditor(false);
+
+		return true;
+	} else { // Save as rich project file.
+		// Prepare.
+		std::string source;
+		std::string content;
+
+		// Transfer external stuff that is pending.
+		transfer();
+
+		// Update the modification timestamp.
+		const long long now = DateTime::now();
+		modified(now);
+
+		// Serialize the information.
+		saveInformation(content);
+
+		// Serialize the assets.
+		if (!saveAssets(content, onWarningOrError))
+			return false;
+
+		// Write to the file.
+		content = Text::trim(content);
+		put(source, COMPILER_PROGRAM_BEGIN, COMPILER_PROGRAM_END, content);
+
+		const bool ret = write(
+			path().c_str(),
+			[&] (File::Ptr file) -> bool {
+				if (!file->writeString(source))
+					return false;
+
+				return true;
+			}
+		);
+		if (!ret)
+			return false;
+
+		// Finish.
+		return true;
+	}
+}
+
 bool Project::loadInformation(const std::string &content, WarningOrErrorHandler onWarningOrError) {
+	if (contentType() != ContentTypes::BASIC) {
+		GBBASIC_ASSERT(false && "Loading non-BASIC assets is not supported.");
+
+		return false;
+	}
+
 	auto report = [onWarningOrError] (const char* msg, bool isWarning) -> void {
 		if (onWarningOrError)
 			onWarningOrError(msg, isWarning);
@@ -2659,6 +2946,12 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 }
 
 bool Project::saveInformation(std::string &content) {
+	if (contentType() != ContentTypes::BASIC) {
+		GBBASIC_ASSERT(false && "Saving non-BASIC project is not supported.");
+
+		return false;
+	}
+
 	rapidjson::Document doc;
 	doc.SetObject();
 	std::string txt;
@@ -2756,6 +3049,13 @@ bool Project::saveInformation(std::string &content) {
 }
 
 bool Project::loadAssets(const char* fontConfigPath, const std::string &content, WarningOrErrorHandler onWarningOrError) {
+	// Only allow saving BASIC projects.
+	if (contentType() != ContentTypes::BASIC) {
+		GBBASIC_ASSERT(false && "Loading non-BASIC assets is not supported.");
+
+		return false;
+	}
+
 	// Prepare.
 	assets(AssetsBundle::Ptr(new AssetsBundle()));
 
@@ -2957,6 +3257,13 @@ bool Project::loadAssets(const char* fontConfigPath, const std::string &content,
 }
 
 bool Project::saveAssets(std::string &content, WarningOrErrorHandler onWarningOrError) {
+	// Only allow saving BASIC projects.
+	if (contentType() != ContentTypes::BASIC) {
+		GBBASIC_ASSERT(false && "Saving non-BASIC project is not supported.");
+
+		return false;
+	}
+
 	// Save palette.
 	do {
 		std::string txt_;

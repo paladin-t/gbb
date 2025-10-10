@@ -960,9 +960,9 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 				break;
 			}
 
-			Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-			Texture::Ptr propstex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-			Texture::Ptr actorstex(ws->theme()->textureActors(), [] (Texture*) { /* Do nothing. */ });
+			Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+			Texture::Ptr propstex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+			Texture::Ptr actorstex(ws->theme()->textureActors(), [] (Texture*) -> void { /* Do nothing. */ });
 			templatePrj->attributesTexture(attribtex);
 			templatePrj->propertiesTexture(propstex);
 			templatePrj->actorsTexture(actorstex);
@@ -970,7 +970,7 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			templatePrj->behaviourSerializer(std::bind(&Workspace::serializeKernelBehaviour, ws, std::placeholders::_1));
 			templatePrj->behaviourParser(std::bind(&Workspace::parseKernelBehaviour, ws, std::placeholders::_1));
 
-			if (!templatePrj->load(fontConfigPath, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
+			if (!templatePrj->load(false, fontConfigPath, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
 				templatePrj->close(true);
 				templatePrj = nullptr;
 
@@ -1098,19 +1098,19 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 	);
 }
 
-promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj, const char* fontConfigPath) {
+promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj, bool allowBin, const char* fontConfigPath) {
 	return promise::newPromise(
-		[&] (promise::Defer df) -> void {
+		[&, allowBin] (promise::Defer df) -> void {
 			const std::string fontConfigPath_ = fontConfigPath;
 
-			auto next = [wnd, rnd, ws, prj, fontConfigPath_] (promise::Defer df) -> void {
+			auto next = [wnd, rnd, ws, prj, allowBin, fontConfigPath_] (promise::Defer df) -> void {
 #if defined OPERATIONS_GBBASIC_TIME_STAT_ENABLED
 				const long long start = DateTime::ticks();
 #endif /* OPERATIONS_GBBASIC_TIME_STAT_ENABLED */
 
-				Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-				Texture::Ptr propstex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-				Texture::Ptr actorstex(ws->theme()->textureActors(), [] (Texture*) { /* Do nothing. */ });
+				Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+				Texture::Ptr propstex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+				Texture::Ptr actorstex(ws->theme()->textureActors(), [] (Texture*) -> void { /* Do nothing. */ });
 				prj->attributesTexture(attribtex);
 				prj->propertiesTexture(propstex);
 				prj->actorsTexture(actorstex);
@@ -1124,7 +1124,7 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 				ws->print("");
 				ws->print("Ready.");
 
-				if (!prj->loaded() && !prj->load(fontConfigPath_.c_str(), std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
+				if (!prj->loaded() && !prj->load(allowBin, fontConfigPath_.c_str(), std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
 					df.reject();
 
 					popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotOpenProject().c_str());
@@ -1142,7 +1142,12 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 				}
 
 				ws->currentProject(prj);
-				ws->category(Workspace::Categories::CODE);
+				if (prj->contentType() == Project::ContentTypes::BASIC) {
+					ws->category(Workspace::Categories::CODE);
+				} else {
+					ws->category(Workspace::Categories::CONSOLE);
+					ws->categoryBeforeCompiling(Workspace::Categories::CONSOLE);
+				}
 				ws->tabsWidth(0.0f);
 
 				ws->refreshWindowTitle(wnd);
@@ -1358,6 +1363,7 @@ promise::Promise Operations::fileSave(Window* wnd, Renderer* rnd, Workspace* ws,
 				}
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || ext != GBBASIC_RICH_PROJECT_EXT) {
 					path += "." GBBASIC_RICH_PROJECT_EXT;
 				}
@@ -1554,9 +1560,9 @@ promise::Promise Operations::fileRename(Window* wnd, Renderer* rnd, Workspace* w
 							popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_FileNameHasNotBeenChanged().c_str());
 						}
 
-						Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-						Texture::Ptr propstex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-						Texture::Ptr actorstex(ws->theme()->textureActors(), [] (Texture*) { /* Do nothing. */ });
+						Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+						Texture::Ptr propstex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+						Texture::Ptr actorstex(ws->theme()->textureActors(), [] (Texture*) -> void { /* Do nothing. */ });
 						prj->attributesTexture(attribtex);
 						prj->propertiesTexture(propstex);
 						prj->actorsTexture(actorstex);
@@ -1564,7 +1570,7 @@ promise::Promise Operations::fileRename(Window* wnd, Renderer* rnd, Workspace* w
 						prj->behaviourSerializer(std::bind(&Workspace::serializeKernelBehaviour, ws, std::placeholders::_1));
 						prj->behaviourParser(std::bind(&Workspace::parseKernelBehaviour, ws, std::placeholders::_1));
 
-						if (!prj->load(fontConfigPath, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
+						if (!prj->load(false, fontConfigPath, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
 							df.reject();
 
 							popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotOpenProject().c_str());
@@ -1610,7 +1616,7 @@ promise::Promise Operations::fileRename(Window* wnd, Renderer* rnd, Workspace* w
 		);
 }
 
-promise::Promise Operations::fileRemove(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj) {
+promise::Promise Operations::fileRemove(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
 			const std::string &path = prj->path();
@@ -1728,6 +1734,42 @@ promise::Promise Operations::fileRemove(Window* wnd, Renderer* rnd, Workspace* w
 						df.reject();
 					}
 				);
+		}
+	);
+}
+
+promise::Promise Operations::fileRemoveReference(Window*, Renderer*, Workspace* ws, const Project::Ptr &prj) {
+	return promise::newPromise(
+		[&] (promise::Defer df) -> void {
+			for (int i = 0; i < (int)ws->projects().size(); ++i) {
+				const Project::Ptr &prj_ = ws->projects()[i];
+				if (prj == prj_) {
+					ws->projects().erase(ws->projects().begin() + i);
+					ws->recentProjectFocusableCount(ws->recentProjectFocusableCount() - 1);
+					if (ws->recentProjectSelectedIndex() == i) {
+						if (!ws->projects().empty()) {
+							ws->recentProjectFocusingIndex(
+								Math::clamp(
+									ws->recentProjectFocusedIndex(),
+									0,
+									ws->recentProjectFocusableCount() - 1
+								)
+							);
+						}
+						ws->recentProjectSelectedIndex(
+							Math::clamp(
+								ws->recentProjectSelectedIndex(),
+								0,
+								ws->recentProjectFocusableCount() - 1
+							)
+						);
+					}
+
+					break;
+				}
+			}
+
+			df.resolve(true);
 		}
 	);
 }
@@ -2553,6 +2595,7 @@ promise::Promise Operations::fileExportForNotepad(Window* wnd, Renderer* rnd, Wo
 			}
 			std::string ext;
 			Path::split(path, nullptr, &ext, nullptr);
+			Text::toLowerCase(ext);
 			if (ext.empty() || ext != GBBASIC_RICH_PROJECT_EXT) {
 				path += "." GBBASIC_RICH_PROJECT_EXT;
 			}
@@ -2613,9 +2656,9 @@ promise::Promise Operations::fileDuplicate(Window* wnd, Renderer* rnd, Workspace
 			return;
 		}
 
-		Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-		Texture::Ptr propstex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-		Texture::Ptr actorstex(ws->theme()->textureActors(), [] (Texture*) { /* Do nothing. */ });
+		Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+		Texture::Ptr propstex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+		Texture::Ptr actorstex(ws->theme()->textureActors(), [] (Texture*) -> void { /* Do nothing. */ });
 		prj_->attributesTexture(attribtex);
 		prj_->propertiesTexture(propstex);
 		prj_->actorsTexture(actorstex);
@@ -2623,7 +2666,7 @@ promise::Promise Operations::fileDuplicate(Window* wnd, Renderer* rnd, Workspace
 		prj->behaviourSerializer(std::bind(&Workspace::serializeKernelBehaviour, ws, std::placeholders::_1));
 		prj->behaviourParser(std::bind(&Workspace::parseKernelBehaviour, ws, std::placeholders::_1));
 
-		if (!prj_->load(fontConfigPath, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
+		if (!prj_->load(false, fontConfigPath, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
 			df.reject();
 
 			popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotOpenProject().c_str());
@@ -2686,6 +2729,7 @@ promise::Promise Operations::fileDuplicate(Window* wnd, Renderer* rnd, Workspace
 						}
 						std::string ext;
 						Path::split(path, nullptr, &ext, nullptr);
+						Text::toLowerCase(ext);
 						if (ext.empty() || ext != GBBASIC_RICH_PROJECT_EXT) {
 							path += "." GBBASIC_RICH_PROJECT_EXT;
 						}
@@ -3229,7 +3273,7 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 
 							std::string str;
 							const int ref = Math::clamp(*index, 0, prj->tilesPageCount() - 1);
-							Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
+							Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
 							MapAssets::Entry default_(ref, prj->tilesGetter(), attribtex);
 							default_.toString(str, nullptr);
 
@@ -3306,7 +3350,7 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 								}
 
 								// Load from the image.
-								Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
+								Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
 								TilesAssets::Entry tiles(rnd, prj->paletteGetter());
 								MapAssets::Entry map("", prj->tilesGetter(), attribtex);
 								const bool loaded = MapAssets::parseImage(
@@ -3694,8 +3738,8 @@ promise::Promise Operations::sceneAddPage(Window* wnd, Renderer* rnd, Workspace*
 
 						std::string str;
 						const int ref = Math::clamp(index, 0, prj->mapPageCount() - 1);
-						Texture::Ptr propstex(ws->theme()->textureByte(), [] (Texture*) { /* Do nothing. */ });
-						Texture::Ptr actorstex(ws->theme()->textureActors(), [] (Texture*) { /* Do nothing. */ });
+						Texture::Ptr propstex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+						Texture::Ptr actorstex(ws->theme()->textureActors(), [] (Texture*) -> void { /* Do nothing. */ });
 						SceneAssets::Entry default_(ref, prj->mapGetter(), prj->actorGetter(), propstex, actorstex);
 						if (useGravity) {
 							default_.definition.gravity = 10;
@@ -3822,7 +3866,7 @@ promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspac
 				}
 
 				// Load the program from disk.
-				if (!prj_->load(fontConfigPath, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
+				if (!prj_->load(false, fontConfigPath, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
 					df.reject();
 
 					popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotOpenProject().c_str());
@@ -4012,6 +4056,7 @@ promise::Promise Operations::projectBuild(Window* wnd, Renderer* rnd, Workspace*
 
 				std::string ext;
 				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
 				if (ext.empty() || !(ext == ext0 || ext == ext1)) {
 					if (isClassic)
 						path += "." + ext0;
@@ -4275,7 +4320,7 @@ promise::Promise Operations::projectReload(Window* wnd, Renderer* rnd, Workspace
 
 	auto next = [wnd, rnd, ws, prj, fontConfigPath_, path, cat, page] (promise::Defer df) -> void {
 		Project::Ptr prj_ = prj;
-		fileOpen(wnd, rnd, ws, prj_, fontConfigPath_.c_str())
+		fileOpen(wnd, rnd, ws, prj_, true, fontConfigPath_.c_str())
 			.then(
 				[wnd, rnd, ws, df, path, cat, page] (bool arg) -> void {
 					ws->category(cat);
