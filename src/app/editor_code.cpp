@@ -1237,23 +1237,23 @@ private:
 			float width_ = 0.0f;
 			const float wndWidth = ImGui::GetWindowWidth();
 			ImGui::SetCursorPosX(wndWidth - _statusWidth);
+			if (analyzing.first) {
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_Button));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_Button));
+				ImGui::ImageButton(ws->theme()->iconWorking()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_Analyzing().c_str());
+				ImGui::PopStyleColor(2);
+				width_ += ImGui::GetItemRectSize().x;
+				ImGui::SameLine();
+			} else {
+				const std::string &info = ws->getAnalyzedCodeInformation();
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_Button));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_Button));
+				ImGui::ImageButton(ws->theme()->iconInfo()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, info.empty() ? nullptr : info.c_str());
+				ImGui::PopStyleColor(2);
+				width_ += ImGui::GetItemRectSize().x;
+				ImGui::SameLine();
+			}
 			if (wndWidth >= 430) {
-				if (analyzing.first) {
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_Button));
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_Button));
-					ImGui::ImageButton(ws->theme()->iconWorking()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_Analyzing().c_str());
-					ImGui::PopStyleColor(2);
-					width_ += ImGui::GetItemRectSize().x;
-					ImGui::SameLine();
-				} else {
-					const std::string &info = ws->getAnalyzedCodeInformation();
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_Button));
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_Button));
-					ImGui::ImageButton(ws->theme()->iconInfo()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, info.empty() ? nullptr : info.c_str());
-					ImGui::PopStyleColor(2);
-					width_ += ImGui::GetItemRectSize().x;
-					ImGui::SameLine();
-				}
 				if (ImGui::ImageButton(ws->theme()->iconImport()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_Import().c_str())) {
 					ImGui::OpenPopup("@Imp");
 				}

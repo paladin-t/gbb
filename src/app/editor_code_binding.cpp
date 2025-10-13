@@ -13,6 +13,8 @@
 #include "theme.h"
 #include "workspace.h"
 #include "../utils/encoding.h"
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "../../lib/imgui/imgui_internal.h"
 #include <SDL.h>
 
 /*
@@ -241,6 +243,7 @@ public:
 	}
 
 	virtual void update(Workspace* ws) override {
+		ImGuiIO &io = ImGui::GetIO();
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		touchLanguageDefinition(ws);
@@ -253,11 +256,15 @@ public:
 		if (_init.begin())
 			ImGui::OpenPopup(_title);
 
+		if (!_init.end()) {
+			const ImVec2 pos = io.DisplaySize/* * io.DisplayFramebufferScale*/ * 0.5f;
+			ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+		}
 		if (ws->analyzing()) {
 			ImGui::SetNextWindowSize(ImVec2(280, 0), ImGuiCond_Always);
 		} else {
-			ImGui::SetNextWindowSizeConstraints(ImVec2(280, 192), ImVec2((float)_renderer->width(), (float)_renderer->height()));
-			ImGui::SetNextWindowSize(ImVec2(280, 192), ImGuiCond_Once);
+			ImGui::SetNextWindowSizeConstraints(ImVec2(280, 180), ImVec2((float)_renderer->width(), (float)_renderer->height()));
+			ImGui::SetNextWindowSize(ImVec2(280, Math::max(_renderer->height() * 0.85f, 180.0f)), ImGuiCond_Once);
 		}
 		if (ImGui::BeginPopupModal(_title, nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav)) {
 			if (ws->analyzing()) {
