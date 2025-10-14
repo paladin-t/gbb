@@ -1,0 +1,36 @@
+{
+  "title": {
+    "english": "ROM..."
+  },
+  "order": 100,
+  "frequently_used": "major",
+  "message": {
+    "enabled": false,
+    "content": ""
+  },
+  "extensions": [
+    "gb",
+    "gbc"
+  ],
+  "filter": [
+    "ROM files (*.gb, *.gbc)", "*.gb *.gbc",
+    "All files (*.*)", "*"
+  ],
+  "build": {
+    "enabled": true
+  },
+  "package": {
+    "archived": false,
+    "template": "",
+    "entry": "",
+    "config": "",
+    "args": "",
+    "icon": ""
+  },
+  "surf": {
+    "method": "",
+    "entry": ""
+  },
+  "licenses": [
+  ]
+}
