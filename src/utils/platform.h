@@ -185,7 +185,7 @@ public:
 	static bool isSystemInDarkMode(void);
 	static void useDarkMode(class Window* wnd);
 
-	static void setWindowTransparentColor(class Window* wnd, const struct Colour* col);
+	static void setWindowTransparentColor(class Window* wnd, const struct Colour* col /* nullable */);
 
 	/**< Hardware. */
 

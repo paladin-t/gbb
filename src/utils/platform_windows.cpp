@@ -937,9 +937,14 @@ void Platform::setWindowTransparentColor(class Window* wnd, const struct Colour*
 
 	HWND hWnd = wmInfo.info.win.window;
 	LONG style = ::GetWindowLong(hWnd, GWL_EXSTYLE);
-	style |= WS_EX_LAYERED;
-	::SetWindowLong(hWnd, GWL_EXSTYLE, style);
-	::SetLayeredWindowAttributes(hWnd, RGB(col->r, col->g, col->b), 0, LWA_COLORKEY);
+	if (col) {
+		style |= WS_EX_LAYERED;
+		::SetWindowLong(hWnd, GWL_EXSTYLE, style);
+		::SetLayeredWindowAttributes(hWnd, RGB(col->r, col->g, col->b), 0, LWA_COLORKEY);
+	} else {
+		style &= ~WS_EX_LAYERED;
+		::SetWindowLong(hWnd, GWL_EXSTYLE, style);
+	}
 }
 
 /* ===========================================================================} */

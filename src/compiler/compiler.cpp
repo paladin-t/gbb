@@ -21544,25 +21544,80 @@ public:
 					}
 					if (!ctx.symbols) { THROW_INVALID_ASSET_POINT(onError); }
 					const RomLocation* romLocation = ctx.symbols->find(name);
-					if (!romLocation) { THROW_INVALID_ASSET_POINT(onError); }
-					const int bank = romLocation->bank;
-					const int address = romLocation->address;
-					writeRoutine(
-						bytes, context,
-						Asm::Types::SET_ACTOR_PROP, ASSET_SOURCE_FAR, 2,
-						[&] (Counter &stk) -> int {
-							if (arge)
-								writeChildren(bytes, context, Range(1 + arge, 1 + 1), stk, onError);
-							writeChildren(bytes, context, Range(1, 0), stk, onError);
+					const ActorAssets &actors = ctx.assets->actors;
+					int pageIndex = -1;
+					const ActorAssets::Entry* actorEntry = actors.find(name, &pageIndex); // By asset name.
+					if (romLocation) {
+						const int bank = romLocation->bank;
+						const int address = romLocation->address;
+						writeRoutine(
+							bytes, context,
+							Asm::Types::SET_ACTOR_PROP, ASSET_SOURCE_FAR, 2,
+							[&] (Counter &stk) -> int {
+								if (arge)
+									writeChildren(bytes, context, Range(1 + arge, 1 + 1), stk, onError);
+								writeChildren(bytes, context, Range(1, 0), stk, onError);
 
-							return 2 + arge;
-						},
-						[&] (Counter &) -> void {
-							emit(bytes, context, (UInt8)bank);
-							emit(bytes, context, (UInt16)address);
-						},
-						onError
-					);
+								return 2 + arge;
+							},
+							[&] (Counter &) -> void {
+								emit(bytes, context, (UInt8)bank);
+								emit(bytes, context, (UInt16)address);
+							},
+							onError
+						);
+					} else if (actorEntry && forFrame) {
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::ACTOR, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+							writeChildren(bytes, context, Range(2, 0), stk, onError);
+
+							return 3;
+						};
+						Generator_Void_Counter argi = [&] (Counter &) -> void {
+							int page = -1;
+							Destination dest(0);
+							const ActorAssets &actors = ctx.assets->actors;
+							page = isString(context, (int)_children.size() - 1, &name, nullptr) ?
+								actors.indexOf(name) : // By asset name.
+								-1;
+							if (page == -1) {
+								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+								if (tks.size() == 1) { /* Do nothing. */ }
+								else {
+									std::string fuzzyName;
+									if (actors.fuzzy(name, nullptr, fuzzyName)) {
+										THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+									}
+
+									THROW_INVALID_ASSET_POINT(onError);
+								}
+							}
+
+							const ActorAssets::Entry* entry = actors.get(page);
+							if (!entry) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!entry->asActor) { THROW_ASSET_IS_DEFINED_AS_A_PROJECTILE_BUT_USED_AS_AN_ACTOR(onError); }
+
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::ACTOR, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							SourceLocation target(page); // `#pg`. By page number.
+							const int offset = (int)bytes->peek();
+							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
+							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
+							_scheduled.push_back(Scheduled(target, offset, false));
+							_type = OperationTypes::SET_ACTOR_PROP;
+						};
+						writeRoutine(bytes, context, Asm::Types::SET_ACTOR_PROP, ASSET_SOURCE_FAR, 3, argf, argi, onError);
+					} else {
+						std::string fuzzyName;
+						if (actors.fuzzy(name, nullptr, fuzzyName)) {
+							THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+						}
+
+						THROW_INVALID_ASSET_POINT(onError);
+					}
 				} else /* From asset. */ {
 					Token::Ptr tk = nullptr;
 					int data = 0;
@@ -23230,25 +23285,80 @@ public:
 					}
 					if (!ctx.symbols) { THROW_INVALID_ASSET_POINT(onError); }
 					const RomLocation* romLocation = ctx.symbols->find(name);
-					if (!romLocation) { THROW_INVALID_ASSET_POINT(onError); }
-					const int bank = romLocation->bank;
-					const int address = romLocation->address;
-					writeRoutine(
-						bytes, context,
-						Asm::Types::SET_PROJECTILE_PROP, ASSET_SOURCE_FAR, 2,
-						[&] (Counter &stk) -> int {
-							if (arge)
-								writeChildren(bytes, context, Range(1 + arge, 1 + 1), stk, onError);
-							writeChildren(bytes, context, Range(1, 0), stk, onError);
+					const ActorAssets &actors = ctx.assets->actors;
+					int pageIndex = -1;
+					const ActorAssets::Entry* actorEntry = actors.find(name, &pageIndex); // By asset name.
+					if (romLocation) {
+						const int bank = romLocation->bank;
+						const int address = romLocation->address;
+						writeRoutine(
+							bytes, context,
+							Asm::Types::SET_PROJECTILE_PROP, ASSET_SOURCE_FAR, 2,
+							[&] (Counter &stk) -> int {
+								if (arge)
+									writeChildren(bytes, context, Range(1 + arge, 1 + 1), stk, onError);
+								writeChildren(bytes, context, Range(1, 0), stk, onError);
 
-							return 2 + arge;
-						},
-						[&] (Counter &) -> void {
-							emit(bytes, context, (UInt8)bank);
-							emit(bytes, context, (UInt16)address);
-						},
-						onError
-					);
+								return 2 + arge;
+							},
+							[&] (Counter &) -> void {
+								emit(bytes, context, (UInt8)bank);
+								emit(bytes, context, (UInt16)address);
+							},
+							onError
+						);
+					} else if (actorEntry && forFrame) {
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::ACTOR, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+							writeChildren(bytes, context, Range(2, 0), stk, onError);
+
+							return 3;
+						};
+						Generator_Void_Counter argi = [&] (Counter &) -> void {
+							int page = -1;
+							Destination dest(0);
+							const ActorAssets &actors = ctx.assets->actors;
+							page = isString(context, (int)_children.size() - 1, &name, nullptr) ?
+								actors.indexOf(name) : // By asset name.
+								-1;
+							if (page == -1) {
+								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+								if (tks.size() == 1) { /* Do nothing. */ }
+								else {
+									std::string fuzzyName;
+									if (actors.fuzzy(name, nullptr, fuzzyName)) {
+										THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+									}
+
+									THROW_INVALID_ASSET_POINT(onError);
+								}
+							}
+
+							const ActorAssets::Entry* entry = actors.get(page);
+							if (!entry) { THROW_INVALID_ASSET_POINT(onError); }
+							if (entry->asActor) { THROW_ASSET_IS_DEFINED_AS_AN_ACTOR_BUT_USED_AS_A_PROJECTILE(onError); }
+
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::PROJECTILE, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							SourceLocation target(page); // `#pg`. By page number.
+							const int offset = (int)bytes->peek();
+							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
+							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
+							_scheduled.push_back(Scheduled(target, offset, false));
+							_type = OperationTypes::SET_PROJECTILE_PROP;
+						};
+						writeRoutine(bytes, context, Asm::Types::SET_PROJECTILE_PROP, ASSET_SOURCE_FAR, 3, argf, argi, onError);
+					} else {
+						std::string fuzzyName;
+						if (actors.fuzzy(name, nullptr, fuzzyName)) {
+							THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+						}
+
+						THROW_INVALID_ASSET_POINT(onError);
+					}
 				} else /* From asset. */ {
 					Token::Ptr tk = nullptr;
 					int data = 0;
