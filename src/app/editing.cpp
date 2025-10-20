@@ -2058,7 +2058,9 @@ bool camera(
 
 	float widgetWidth = (float)map->width();
 	float widgetHeight = (float)map->height();
+	float scale = 1;
 	if (width > 0 && std::abs(widgetWidth * tileSize.x - width) >= Math::EPSILON<float>()) {
+		scale = width / (widgetWidth * tileSize.x) / magnification;
 		widgetHeight = widgetHeight / (widgetWidth * tileSize.x) * width;
 		widgetWidth = width / tileSize.x;
 	}
@@ -2076,8 +2078,15 @@ bool camera(
 	do {
 		const ImVec2 curPos = ImGui::GetCursorScreenPos() + ImVec2(1, 1);
 
-		const ImVec2 size = magnification == -1 ? ImVec2(GBBASIC_SCREEN_WIDTH, GBBASIC_SCREEN_HEIGHT) : (ImVec2(GBBASIC_SCREEN_WIDTH, GBBASIC_SCREEN_HEIGHT) * (float)magnification);
-		const ImVec2 start(curPos + ImVec2(-1, -1) + ImVec2((float)pos.x, (float)pos.y));
+		const ImVec2 pos_ = (magnification == -1 ?
+				ImVec2((float)pos.x, (float)pos.y) :
+				(ImVec2((float)pos.x, (float)pos.y) * (float)magnification)) *
+			scale;
+		const ImVec2 size = (magnification == -1 ?
+				ImVec2(GBBASIC_SCREEN_WIDTH, GBBASIC_SCREEN_HEIGHT) :
+				(ImVec2(GBBASIC_SCREEN_WIDTH, GBBASIC_SCREEN_HEIGHT) * (float)magnification)) *
+			scale;
+		const ImVec2 start(curPos + ImVec2(-1, -1) + pos_);
 		const ImVec2 end(start + ImVec2(1, 1) + size);
 
 		ImGui::Indicator(start, end, 1);
