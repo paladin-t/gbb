@@ -36684,12 +36684,12 @@ bool load(Program &program, Options &options) {
 			else if (Text::endsWith(path, "." GBBASIC_COLORED_ROM_EXT, true))
 				path = path.substr(0, path.length() - 4);
 			path += ".sym";
-			if (!Path::existsFile(path.c_str()))
+			if (!Path::fileExists(path.c_str()))
 				path.clear();
 		}
 		if (path.empty())
 			break;
-		if (!Path::existsFile(path.c_str()))
+		if (!Path::fileExists(path.c_str()))
 			break;
 
 		// Read the symbol file.
@@ -36724,12 +36724,12 @@ bool load(Program &program, Options &options) {
 			else if (Text::endsWith(path, "." GBBASIC_COLORED_ROM_EXT, true))
 				path = path.substr(0, path.length() - 4);
 			path += ".aliases.json";
-			if (!Path::existsFile(path.c_str()))
+			if (!Path::fileExists(path.c_str()))
 				path.clear();
 		}
 		if (path.empty())
 			break;
-		if (!Path::existsFile(path.c_str()))
+		if (!Path::fileExists(path.c_str()))
 			break;
 
 		// Read the aliases file.

@@ -58,8 +58,8 @@ public:
 	static void split(const std::string &full, std::string* self /* nullable */, std::string* ext /* nullable */, std::string* parent /* nullable */);
 
 	static size_t countFile(const char* path);
-	static bool existsFile(const char* path);
-	static bool existsDirectory(const char* path);
+	static bool fileExists(const char* path);
+	static bool directoryExists(const char* path);
 	static bool copyFile(const char* src, const char* dst);
 	static bool copyDirectory(const char* src, const char* dst);
 	static bool moveFile(const char* src, const char* dst);

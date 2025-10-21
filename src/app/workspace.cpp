@@ -173,7 +173,7 @@ static void workspaceSleep(int ms) {
 }
 #else /* GBBASIC_OS_HTML */
 static bool workspaceHasSplashImage(void) {
-	return Path::existsFile(WORKSPACE_SPLASH_FILE);
+	return Path::fileExists(WORKSPACE_SPLASH_FILE);
 }
 static void workspaceSleep(int ms) {
 	DateTime::sleep(ms);
@@ -1928,7 +1928,7 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 		} else if (files.size() > 1) {
 			auto next = [wnd, rnd, this, files] (void) -> void {
 				for (const std::string &path_ : files) {
-					if (Path::existsFile(path_.c_str())) {
+					if (Path::fileExists(path_.c_str())) {
 						Operations::fileDragAndDropFile(wnd, rnd, this, path_.c_str());
 					}
 				}
@@ -4039,7 +4039,7 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd) {
 
 	std::string name;
 	const std::string src = getSourceCodePath(&name);
-	if (!Path::existsFile(src.c_str())) {
+	if (!Path::fileExists(src.c_str())) {
 		const std::string msg = "Cannot find source code \"" + src + "\".";
 		error(msg.c_str());
 
@@ -5816,7 +5816,7 @@ void Workspace::loadKernels(void) {
 	activeKernelIndex(index);
 
 	const std::string src = getSourceCodePath(nullptr);
-	hasKernelSourceCode(Path::existsFile(src.c_str()));
+	hasKernelSourceCode(Path::fileExists(src.c_str()));
 }
 
 void Workspace::unloadKernels(void) {
@@ -6092,7 +6092,7 @@ void Workspace::unloadDocuments(void) {
 
 void Workspace::loadLinks(void) {
 	const std::string path = Path::combine(DOCUMENT_MARKDOWN_DIR, WORKSPACE_LINKS_FILE);
-	if (!Path::existsFile(path.c_str()))
+	if (!Path::fileExists(path.c_str()))
 		return;
 
 	File::Ptr file(File::create());

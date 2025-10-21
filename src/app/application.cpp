@@ -475,7 +475,7 @@ public:
 #endif /* Platform macro. */
 
 		// Initialize the icon.
-		if (!_commandlineOnly && Path::existsFile(APPLICATION_ICON_FILE)) {
+		if (!_commandlineOnly && Path::fileExists(APPLICATION_ICON_FILE)) {
 			File::Ptr file(File::create());
 			if (file->open(APPLICATION_ICON_FILE, Stream::READ)) {
 				Bytes::Ptr bytes(Bytes::create());
@@ -1390,7 +1390,7 @@ class Application* createApplication(class Workspace* workspace, int argc, const
 
 	const char* package = "/gbbasic.zip";
 	do {
-		if (!Path::existsFile(package)) {
+		if (!Path::fileExists(package)) {
 			fprintf(stderr, "Cannot find package \"%s\".\n", package);
 
 			break;

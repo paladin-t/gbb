@@ -1743,7 +1743,7 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 
 								std::string path = open.result().front();
 								Path::uniform(path);
-								if (!Path::existsFile(path.c_str()))
+								if (!Path::fileExists(path.c_str()))
 									break;
 
 								File::Ptr file(File::create());
@@ -2328,7 +2328,7 @@ FontResolverPopupBox::FontResolverPopupBox(
 	_selectedHandler(selected),
 	_customHandler(custom)
 {
-	_exists = Path::existsFile(_path.c_str());
+	_exists = Path::fileExists(_path.c_str());
 
 	if (browseTxt)
 		_browseText = browseTxt;
@@ -2426,7 +2426,7 @@ void FontResolverPopupBox::update(Workspace* ws) {
 				std::string path = open.result().front();
 				Path::uniform(path);
 				_path = path;
-				_exists = Path::existsFile(_path.c_str());
+				_exists = Path::fileExists(_path.c_str());
 				if (_exists) {
 					std::string ext;
 					Path::split(_path, nullptr, &ext, nullptr);
@@ -2579,7 +2579,7 @@ MapResolverPopupBox::MapResolverPopupBox(
 	_selectedHandler(selected),
 	_customHandler(custom)
 {
-	_exists = Path::existsFile(_path.c_str());
+	_exists = Path::fileExists(_path.c_str());
 
 	if (withIndexTxt)
 		_withIndexText = withIndexTxt;
@@ -2733,7 +2733,7 @@ void MapResolverPopupBox::update(Workspace* ws) {
 						std::string path = open.result().front();
 						Path::uniform(path);
 						_path = path;
-						_exists = Path::existsFile(_path.c_str());
+						_exists = Path::fileExists(_path.c_str());
 
 						if (!_selectedHandler.empty()) {
 							if (!_selectedHandler(this)) {
@@ -3026,7 +3026,7 @@ FileResolverPopupBox::FileResolverPopupBox(
 	_selectedHandler(selected),
 	_customHandler(custom)
 {
-	_exists = Path::existsFile(_path.c_str());
+	_exists = Path::fileExists(_path.c_str());
 
 	if (browseTxt)
 		_browseText = browseTxt;
@@ -3061,7 +3061,7 @@ FileResolverPopupBox::FileResolverPopupBox(
 	_selectedHandler(selected),
 	_customHandler(custom)
 {
-	_exists = Path::existsFile(_path.c_str());
+	_exists = Path::fileExists(_path.c_str());
 
 	if (browseTxt)
 		_browseText = browseTxt;
@@ -3098,7 +3098,7 @@ FileResolverPopupBox::FileResolverPopupBox(
 	_selectedHandler(selected),
 	_customHandler(custom)
 {
-	_exists = Path::existsFile(_path.c_str());
+	_exists = Path::fileExists(_path.c_str());
 
 	if (browseTxt)
 		_browseText = browseTxt;
@@ -3137,7 +3137,7 @@ FileResolverPopupBox::FileResolverPopupBox(
 	_customHandler(custom),
 	_vec2iResolver(resolveVec2i)
 {
-	_exists = Path::existsFile(_path.c_str());
+	_exists = Path::fileExists(_path.c_str());
 
 	if (browseTxt)
 		_browseText = browseTxt;
@@ -3299,7 +3299,7 @@ void FileResolverPopupBox::update(Workspace* ws) {
 			if (!path.empty()) {
 				Path::uniform(path);
 				_path = path;
-				_exists = Path::existsFile(_path.c_str());
+				_exists = Path::fileExists(_path.c_str());
 
 				if (!_selectedHandler.empty()) {
 					if (!_selectedHandler(this)) {
@@ -3859,7 +3859,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 					std::string path = open.result().front();
 					Path::uniform(path);
-					if (!Path::existsFile(path.c_str()))
+					if (!Path::fileExists(path.c_str()))
 						break;
 
 					File::Ptr file(File::create());

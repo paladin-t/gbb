@@ -1253,8 +1253,8 @@ FontAssets::Entry::Entry(bool toBeCopied, bool toBeEmbedded, const std::string &
 	std::string calcPath = path_;
 	std::string calcDir = dir;
 	std::string readingPath = Path::combine(dir.c_str(), path_.c_str());
-	const bool pathExists = Path::existsFile(path_.c_str());
-	const bool dirPathExists = Path::existsFile(readingPath.c_str());
+	const bool pathExists = Path::fileExists(path_.c_str());
+	const bool dirPathExists = Path::fileExists(readingPath.c_str());
 	if (dir.empty()) {
 		if (pathExists) { // Is absolute path.
 			readingPath = path_;
@@ -1474,8 +1474,8 @@ Font::Ptr &FontAssets::Entry::touch(void) {
 		return object;
 
 	std::string readingPath = Path::combine(directory.c_str(), path.c_str());
-	const bool pathExists = Path::existsFile(path.c_str());
-	const bool dirPathExists = Path::existsFile(readingPath.c_str());
+	const bool pathExists = Path::fileExists(path.c_str());
+	const bool dirPathExists = Path::fileExists(readingPath.c_str());
 	if (isAsset) {
 		if (directory.empty()) {
 			if (pathExists) { // Is absolute path.
@@ -1534,7 +1534,7 @@ Font::Ptr &FontAssets::Entry::touchSubstitution(int* offset_, int* thresholds_) 
 	}
 
 	do {
-		if (!Path::existsFile(ASSETS_FONT_SUBSTITUTION_CONFIG_FILE))
+		if (!Path::fileExists(ASSETS_FONT_SUBSTITUTION_CONFIG_FILE))
 			break;
 
 		File::Ptr file(File::create());
@@ -1996,8 +1996,8 @@ bool FontAssets::fromString(const std::string &val, const std::string &dir, bool
 			continue;
 		}
 		std::string readingPath = Path::combine(dir.c_str(), path.c_str());
-		const bool pathExists = Path::existsFile(path.c_str());
-		const bool dirPathExists = Path::existsFile(readingPath.c_str());
+		const bool pathExists = Path::fileExists(path.c_str());
+		const bool dirPathExists = Path::fileExists(readingPath.c_str());
 		if (isAsset) {
 			if (encodedTtfData.empty() && bitmapData.empty()) {
 				if (dir.empty()) {
@@ -2203,7 +2203,7 @@ bool FontAssets::loadTtf(std::string* encodedTtfDataPtr, Font::Ptr obj, const st
 
 	const bool fromFile = !encodedTtfDataPtr || encodedTtfDataPtr->empty();
 	if (fromFile) { // Load from TTF file.
-		if (!Path::existsFile(path.c_str()))
+		if (!Path::fileExists(path.c_str()))
 			return false;
 
 		File::Ptr file(File::create());
@@ -2245,7 +2245,7 @@ bool FontAssets::loadBitmap(std::string* bitmapDataPtr, Font::Ptr obj, const std
 
 	const bool fromFile = !bitmapDataPtr || bitmapDataPtr->empty();
 	if (fromFile) { // Load from TTF file.
-		if (!Path::existsFile(path.c_str()))
+		if (!Path::fileExists(path.c_str()))
 			return false;
 
 		File::Ptr file(File::create());

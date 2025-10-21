@@ -333,7 +333,7 @@ size_t Path::countFile(const char* path) {
 	return len >= 0 ? (size_t)len : 0;
 }
 
-bool Path::existsFile(const char* path) {
+bool Path::fileExists(const char* path) {
 	if (!path || !(*path))
 		return false;
 
@@ -344,7 +344,7 @@ bool Path::existsFile(const char* path) {
 	return (stat(osstr.c_str(), &buf) == 0) && ((buf.st_mode & S_IFDIR) == 0);
 }
 
-bool Path::existsDirectory(const char* path) {
+bool Path::directoryExists(const char* path) {
 	if (!path || !(*path))
 		return false;
 
@@ -662,7 +662,7 @@ public:
 		if (!_splitted)
 			return false;
 
-		return Path::existsFile(_fullPath.c_str());
+		return Path::fileExists(_fullPath.c_str());
 	}
 	virtual bool make(void) override {
 		if (exists())
@@ -966,7 +966,7 @@ public:
 		return result;
 	}
 	virtual bool exists(void) const override {
-		return Path::existsDirectory(_fullPath.c_str());
+		return Path::directoryExists(_fullPath.c_str());
 	}
 	virtual bool make(void) override {
 		if (exists())

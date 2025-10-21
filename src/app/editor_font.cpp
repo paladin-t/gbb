@@ -1908,8 +1908,8 @@ private:
 				if (ImGui::ImageButton(ws->theme()->iconBrowse()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_Browse().c_str())) {
 					if (entry()->isAsset) {
 						std::string finalPath = Path::combine(entry()->directory.c_str(), entry()->path.c_str());
-						const bool pathExists = Path::existsFile(entry()->path.c_str());
-						const bool dirPathExists = Path::existsFile(finalPath.c_str());
+						const bool pathExists = Path::fileExists(entry()->path.c_str());
+						const bool dirPathExists = Path::fileExists(finalPath.c_str());
 						if (entry()->directory.empty()) {
 							if (pathExists) // Is absolute path.
 								finalPath = entry()->path;

@@ -234,7 +234,7 @@ void FileMonitor::unuse(const char* path) {
 	if (!Text::startsWith(path, "/Documents/", false))
 		return;
 
-	if (Path::existsFile(path))
+	if (Path::fileExists(path))
 		unuseFileJs(path);
 }
 
@@ -242,7 +242,7 @@ void FileMonitor::unuse(const std::string &path) {
 	if (!Text::startsWith(path, "/Documents/", false))
 		return;
 
-	if (Path::existsFile(path.c_str()))
+	if (Path::fileExists(path.c_str()))
 		unuseFileJs(path.c_str());
 }
 

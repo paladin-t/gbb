@@ -1620,7 +1620,7 @@ promise::Promise Operations::fileRemove(Window* wnd, Renderer* rnd, Workspace* w
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
 			const std::string &path = prj->path();
-			if (!Path::existsFile(path.c_str())) {
+			if (!Path::fileExists(path.c_str())) {
 				for (int i = 0; i < (int)ws->projects().size(); ++i) {
 					const Project::Ptr &prj_ = ws->projects()[i];
 					if (prj == prj_) {
@@ -1690,7 +1690,7 @@ promise::Promise Operations::fileRemove(Window* wnd, Renderer* rnd, Workspace* w
 							Path::split(path, &name, nullptr, &dir);
 							name += "." GBBASIC_ROM_DUMP_EXT;
 							const std::string newPath = Path::combine(dir.c_str(), name.c_str());
-							if (Path::existsFile(newPath.c_str()))
+							if (Path::fileExists(newPath.c_str()))
 								Path::removeFile(newPath.c_str(), true);
 						} while (false);
 #endif /* GBBASIC_DEBUG */
@@ -2370,7 +2370,7 @@ promise::Promise Operations::fileImportExamples(Window* wnd, Renderer* rnd, Work
 			return prj;
 		};
 
-		const bool preferedPathExists = preferedPath.empty() || !Path::existsFile(preferedPath.c_str());
+		const bool preferedPathExists = preferedPath.empty() || !Path::fileExists(preferedPath.c_str());
 		if (preferedPathExists) {
 			pfd::open_file open(
 				ws->theme()->generic_Open(),
@@ -2783,7 +2783,7 @@ promise::Promise Operations::fileDuplicate(Window* wnd, Renderer* rnd, Workspace
 promise::Promise Operations::fileBrowseExamples(Window*, Renderer*, Workspace*) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
-			if (!Path::existsDirectory(WORKSPACE_EXAMPLE_PROJECTS_DIR)) {
+			if (!Path::directoryExists(WORKSPACE_EXAMPLE_PROJECTS_DIR)) {
 				df.reject();
 
 				return;
@@ -3312,7 +3312,7 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 
 							auto next = [wnd, rnd, ws, prj, path_, allowFlip] (promise::Defer df) -> void {
 								// Load the image.
-								if (!Path::existsFile(path_.c_str())) {
+								if (!Path::fileExists(path_.c_str())) {
 									df.reject();
 
 									popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_InvalidFile().c_str());
@@ -3833,7 +3833,7 @@ promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspac
 			const Project::Ptr &prj = ws->currentProject();
 			const std::string &path = prj->path();
 			if (!useInRam) {
-				if (path.empty() || !Path::existsFile(path.c_str())) {
+				if (path.empty() || !Path::fileExists(path.c_str())) {
 					df.reject();
 
 					popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_TheProjectIsNotSavedYet().c_str());
@@ -4402,7 +4402,7 @@ promise::Promise Operations::projectLoadSram(Window*, Renderer*, Workspace* ws, 
 			const long long start = DateTime::ticks();
 #endif /* OPERATIONS_GBBASIC_TIME_STAT_ENABLED */
 
-			if (!Path::existsFile(path.c_str())) {
+			if (!Path::fileExists(path.c_str())) {
 				df.resolve(false);
 
 				const std::string msg = "No SRAM file found at \"" + path + "\".";

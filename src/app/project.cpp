@@ -1619,7 +1619,7 @@ std::string Project::getUsableSceneName(int index) const {
 bool Project::sramExists(class Workspace* ws) const {
 	const std::string path_ = sramPath(ws);
 
-	return Path::existsFile(path_.c_str());
+	return Path::fileExists(path_.c_str());
 }
 
 std::string Project::sramPath(class Workspace* ws) const {
@@ -1654,7 +1654,7 @@ std::string Project::sramPath(class Workspace* ws) const {
 	if (ws->isUnderExamplesDirectory(path_.c_str()) || ws->isUnderKitsDirectory(path_.c_str())) {
 		const std::string writableDir = Path::writableDirectory();
 		const std::string sramDir = Path::combine(writableDir.c_str(), "sram");
-		if (!Path::existsDirectory(sramDir.c_str()))
+		if (!Path::directoryExists(sramDir.c_str()))
 			Path::touchDirectory(sramDir.c_str());
 		path_ = Path::combine(sramDir.c_str(), name.c_str()) + "." GBBASIC_SRAM_STATE_EXT;
 	}
@@ -2084,7 +2084,7 @@ bool Project::exists(void) const {
 	if (path().empty())
 		return false;
 
-	if (!Path::existsFile(path().c_str()))
+	if (!Path::fileExists(path().c_str()))
 		return false;
 
 	return true;
@@ -2140,7 +2140,7 @@ bool Project::rename(const char* name) {
 	auto proc = [] (const std::string &self, const std::string &dir, const std::string &name, std::string ext) -> bool {
 		const std::string oldName = self + "." + ext;
 		const std::string oldPath = Path::combine(dir.c_str(), oldName.c_str());
-		if (!Path::existsFile(oldPath.c_str()))
+		if (!Path::fileExists(oldPath.c_str()))
 			return true;
 
 		const std::string newName = name + "." + ext;
@@ -2164,7 +2164,7 @@ bool Project::rename(const char* name) {
 	if (newPath == path())
 		return true;
 
-	while (Path::existsFile(newPath.c_str())) {
+	while (Path::fileExists(newPath.c_str())) {
 		++id;
 		name_ = name + std::string(" (") + Text::toString(id) + ")";
 		newName = name_ + std::string(".") + ext;
@@ -3422,11 +3422,11 @@ bool Project::read(const char* path, FileReadingHandler read_) {
 	std::string dir;
 	Path::split(path_, &name, &ext, &dir);
 	path_ = Path::combine(dir.c_str(), name.c_str()) + ".trans";
-	if (Path::existsFile(path) && Path::existsFile(path_.c_str()))
+	if (Path::fileExists(path) && Path::fileExists(path_.c_str()))
 		path_ = path;
-	else if (Path::existsFile(path) && !Path::existsFile(path_.c_str()))
+	else if (Path::fileExists(path) && !Path::fileExists(path_.c_str()))
 		path_ = path;
-	else if (!Path::existsFile(path) && !Path::existsFile(path_.c_str()))
+	else if (!Path::fileExists(path) && !Path::fileExists(path_.c_str()))
 		path_ = path;
 
 	File::Ptr file(File::create());
