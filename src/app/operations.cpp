@@ -1685,7 +1685,8 @@ promise::Promise Operations::fileRemove(Window* wnd, Renderer* rnd, Workspace* w
 
 #if defined GBBASIC_DEBUG
 						do {
-							std::string name, dir;
+							std::string name;
+							std::string dir;
 							Path::split(path, &name, nullptr, &dir);
 							name += "." GBBASIC_ROM_DUMP_EXT;
 							const std::string newPath = Path::combine(dir.c_str(), name.c_str());

@@ -5273,9 +5273,15 @@ void Workspace::compile(
 			if (!project)
 				break;
 
-			std::string name, dir;
-			Path::split(project->path(), &name, nullptr, &dir);
-			name += "." GBBASIC_ROM_DUMP_EXT;
+			std::string name;
+			std::string ext;
+			std::string dir;
+			Path::split(project->path(), &name, &ext, &dir);
+			Text::toLowerCase(ext);
+			if (ext == GBBASIC_ROM_DUMP_EXT)
+				name += "." + ext + "." GBBASIC_ROM_DUMP_EXT;
+			else
+				name += "." GBBASIC_ROM_DUMP_EXT;
 			const std::string newPath = Path::combine(dir.c_str(), name.c_str());
 
 			Operations::projectDump(params->window, params->renderer, self, rom, newPath.c_str());

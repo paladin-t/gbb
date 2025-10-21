@@ -716,7 +716,8 @@ void Project::makeFontEntry(FontAssets::Entry &entry, bool toBeCopied, bool toBe
 
 		if (!toBeCopied)
 			break;
-		std::string name, ext;
+		std::string name;
+		std::string ext;
 		Path::split(finalPath, &name, &ext, nullptr);
 		const std::string relPath = name + "." + ext;
 		const std::string newPath = Path::combine(dir.c_str(), relPath.c_str());
@@ -1631,8 +1632,13 @@ std::string Project::sramPath(class Workspace* ws) const {
 	}
 
 	std::string name;
+	std::string ext;
 	std::string dir;
-	Path::split(path(), &name, nullptr, &dir);
+	Path::split(path(), &name, &ext, &dir);
+	Text::toLowerCase(ext);
+
+	if (ext == GBBASIC_SRAM_STATE_EXT) // The project has the same extension name with the SRAM file type.
+		return ""; // Not saved in this case.
 
 	const char* name_ = projectGetSramFileName();
 	if (name_) {
@@ -2248,7 +2254,8 @@ void Project::transfer(void) {
 			std::string dir;
 			Path::split(path(), nullptr, nullptr, &dir);
 
-			std::string name, ext;
+			std::string name;
+			std::string ext;
 			Path::split(entry->path, &name, &ext, nullptr);
 			const std::string relPath = name + "." + ext;
 			const std::string newPath = Path::combine(dir.c_str(), relPath.c_str());
@@ -3410,7 +3417,9 @@ bool Project::saveAssets(std::string &content, WarningOrErrorHandler onWarningOr
 bool Project::read(const char* path, FileReadingHandler read_) {
 #if !defined GBBASIC_OS_HTML
 	std::string path_ = path;
-	std::string name, ext, dir;
+	std::string name;
+	std::string ext;
+	std::string dir;
 	Path::split(path_, &name, &ext, &dir);
 	path_ = Path::combine(dir.c_str(), name.c_str()) + ".trans";
 	if (Path::existsFile(path) && Path::existsFile(path_.c_str()))
@@ -3451,7 +3460,9 @@ bool Project::read(const char* path, FileReadingHandler read_) {
 bool Project::write(const char* path, FileWritingHandler write_) {
 #if !defined GBBASIC_OS_HTML
 	std::string path_ = path;
-	std::string name, ext, dir;
+	std::string name;
+	std::string ext;
+	std::string dir;
 	Path::split(path_, &name, &ext, &dir);
 	path_ = Path::combine(dir.c_str(), name.c_str()) + ".trans";
 
