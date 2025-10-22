@@ -126,13 +126,13 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 	// Keywords.
 	constexpr const char* const KEYWORDS[] = {
 		// Type definition.
-		"int",
+		"int", "uint",
 
 		// Blank and remark.
 		"do",
 
 		// Declaration.
-		"const", "let", "local", "dim",
+		"var", "const", "let", "local", "dim",
 
 		// Conditional.
 		"if", "then", "else", "elseif", "endif", "iif",

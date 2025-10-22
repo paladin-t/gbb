@@ -27263,8 +27263,10 @@ public:
 
 			// Type definition.
 			ADD_STATEMENT("int",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("uint",              RESERVED,                                   Token::Types::KEYWORD,    false);
 
 			// Declaration.
+			ADD_STATEMENT("var",               RESERVED,                                   Token::Types::KEYWORD,    false);
 			ADD_STATEMENT("const",             node<NodeConst>(),                          Token::Types::KEYWORD,    false);
 			ADD_STATEMENT("let",               node<NodeLet>(),                            Token::Types::KEYWORD,    false);
 			ADD_STATEMENT("local",             RESERVED,                                   Token::Types::KEYWORD,    false);
