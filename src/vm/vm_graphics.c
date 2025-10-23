@@ -409,7 +409,8 @@ void vm_get_sprite_prop(SCRIPT_CTX * THIS) OLDCALL BANKED {
 
         break;
     case PROPERTY_BANK:
-        // TODO
+        ret = get_sprite_prop(n);
+        ret &= S_BANK;
 
         break;
     case PROPERTY_OBJPAL:
@@ -457,7 +458,9 @@ void vm_set_sprite_prop(SCRIPT_CTX * THIS) OLDCALL BANKED {
 
         break;
     case PROPERTY_BANK:
-        // TODO
+        prop = get_sprite_prop(n);
+        if (val) prop |= S_BANK; else prop &= ~S_BANK;
+        set_sprite_prop(n, prop);
 
         break;
     case PROPERTY_OBJPAL:
