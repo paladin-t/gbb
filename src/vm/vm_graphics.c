@@ -402,6 +402,17 @@ void vm_get_sprite_prop(SCRIPT_CTX * THIS) OLDCALL BANKED {
 
     switch (p) {
     case PROPERTY_PALETTE:
+        if (device_type & DEVICE_TYPE_CGB) {
+            ret = get_sprite_prop(n);
+            ret &= 0b00000111;
+        }
+
+        break;
+    case PROPERTY_BANK:
+        // TODO
+
+        break;
+    case PROPERTY_OBJPAL:
         ret = get_sprite_prop(n);
         ret &= S_PALETTE;
 
@@ -419,14 +430,6 @@ void vm_get_sprite_prop(SCRIPT_CTX * THIS) OLDCALL BANKED {
     case PROPERTY_PRIORITY:
         ret = get_sprite_prop(n);
         ret &= S_PRIORITY;
-
-        break;
-    case PROPERTY_BANK:
-        // TODO
-
-        break;
-    case PROPERTY_COLOR:
-        // TODO
 
         break;
     case PROPERTY_HIDDEN:
@@ -449,10 +452,17 @@ void vm_set_sprite_prop(SCRIPT_CTX * THIS) OLDCALL BANKED {
         if (device_type & DEVICE_TYPE_CGB) {
             prop = get_sprite_prop(n);
             prop = (prop & 0b11111000) | (val & 0b00000111);
-        } else {
-            prop = get_sprite_prop(n);
-            if (val) prop |= S_PALETTE; else prop &= ~S_PALETTE;
+            set_sprite_prop(n, prop);
         }
+
+        break;
+    case PROPERTY_BANK:
+        // TODO
+
+        break;
+    case PROPERTY_OBJPAL:
+        prop = get_sprite_prop(n);
+        if (val) prop |= S_PALETTE; else prop &= ~S_PALETTE;
         set_sprite_prop(n, prop);
 
         break;
@@ -472,14 +482,6 @@ void vm_set_sprite_prop(SCRIPT_CTX * THIS) OLDCALL BANKED {
         prop = get_sprite_prop(n);
         if (val) prop |= S_PRIORITY; else prop &= ~S_PRIORITY;
         set_sprite_prop(n, prop);
-
-        break;
-    case PROPERTY_BANK:
-        // TODO
-
-        break;
-    case PROPERTY_COLOR:
-        // TODO
 
         break;
     case PROPERTY_HIDDEN:

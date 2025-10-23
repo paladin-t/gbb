@@ -259,11 +259,11 @@ inline void vector_translate_angle(point16_t * vector, UINT8 angle, UINT8 speed)
 
 // Basic properties.
 #define PROPERTY_PALETTE                         1
-#define PROPERTY_HFLIP                           2
-#define PROPERTY_VFLIP                           3
-#define PROPERTY_PRIORITY                        4
-#define PROPERTY_BANK                            5
-#define PROPERTY_COLOR                           6
+#define PROPERTY_BANK                            2
+#define PROPERTY_OBJPAL                          3
+#define PROPERTY_HFLIP                           4
+#define PROPERTY_VFLIP                           5
+#define PROPERTY_PRIORITY                        6
 #define PROPERTY_HIDDEN                          7
 
 // Advanced properties.

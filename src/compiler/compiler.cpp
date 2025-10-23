@@ -272,11 +272,11 @@ namespace GBBASIC {
 
 	// Basic properties.
 #	define PROPERTY_PALETTE                                         1
-#	define PROPERTY_HFLIP                                           2
-#	define PROPERTY_VFLIP                                           3
-#	define PROPERTY_PRIORITY                                        4
-#	define PROPERTY_BANK                                            5
-#	define PROPERTY_COLOR                                           6
+#	define PROPERTY_BANK                                            2
+#	define PROPERTY_OBJPAL                                          3
+#	define PROPERTY_HFLIP                                           4
+#	define PROPERTY_VFLIP                                           5
+#	define PROPERTY_PRIORITY                                        6
 #	define PROPERTY_HIDDEN                                          7
 
 	// Advanced properties.
@@ -27524,11 +27524,11 @@ public:
 
 			// Properties.
 			ADD_BUILTIN("PALETTE_PROP",                              BuiltinTable::Entry(PROPERTY_PALETTE)                                  ); // For properties...
+			ADD_BUILTIN("BANK_PROP",                                 BuiltinTable::Entry(PROPERTY_BANK)                                     );
+			ADD_BUILTIN("OBJPAL_PROP",                               BuiltinTable::Entry(PROPERTY_OBJPAL)                                   );
 			ADD_BUILTIN("HFLIP_PROP",                                BuiltinTable::Entry(PROPERTY_HFLIP)                                    );
 			ADD_BUILTIN("VFLIP_PROP",                                BuiltinTable::Entry(PROPERTY_VFLIP)                                    );
 			ADD_BUILTIN("PRIORITY_PROP",                             BuiltinTable::Entry(PROPERTY_PRIORITY)                                 );
-			ADD_BUILTIN("BANK_PROP",                                 BuiltinTable::Entry(PROPERTY_BANK)                                     );
-			ADD_BUILTIN("COLOR_PROP",                                BuiltinTable::Entry(PROPERTY_COLOR)                                    );
 			ADD_BUILTIN("HIDDEN_PROP",                               BuiltinTable::Entry(PROPERTY_HIDDEN)                                   );
 			ADD_BUILTIN("ACTIVE_PROP",                               BuiltinTable::Entry(PROPERTY_ACTIVE)                                   );
 			ADD_BUILTIN("ENABLED_PROP",                              BuiltinTable::Entry(PROPERTY_ENABLED)                                  );
