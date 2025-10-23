@@ -972,6 +972,11 @@ public:
 	}
 
 	virtual void resized(class Renderer*, const Math::Vec2i &, const Math::Vec2i &) override {
+		entry()->cleanup(); // Clean up the outdated editable and runtime resources.
+
+		_ref.image = nullptr;
+		_ref.texture = nullptr;
+
 		_ref.windowResized();
 	}
 
