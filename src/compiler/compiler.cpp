@@ -272,66 +272,68 @@ namespace GBBASIC {
 
 	// Basic properties.
 #	define PROPERTY_PALETTE                                         1
-#	define PROPERTY_HFLIP                                           2
-#	define PROPERTY_VFLIP                                           3
-#	define PROPERTY_PRIORITY                                        4
-#	define PROPERTY_HIDDEN                                          5
+#	define PROPERTY_BANK                                            2
+#	define PROPERTY_OBJPAL                                          3
+#	define PROPERTY_HFLIP                                           4
+#	define PROPERTY_VFLIP                                           5
+#	define PROPERTY_PRIORITY                                        6
+#	define PROPERTY_HIDDEN                                          7
 
 	// Advanced properties.
-#	define PROPERTY_ACTIVE                                          6
-#	define PROPERTY_ENABLED                                         7
-#	define PROPERTY_PINNED                                          8
-#	define PROPERTY_PERSISTENT                                      9
-#	define PROPERTY_FOLLOWING                                       10
-#	define PROPERTY_ANIMATION_LOOP                                  11
-#	define PROPERTY_ANIMATION_PAUSED                                12
-#	define PROPERTY_MOVEMENT_INTERRUPT                              13
-#	define PROPERTY_POSITION                                        14
-#		define PROPERTY_POSITION_X                                  15
-#		define PROPERTY_POSITION_Y                                  16
-#	define PROPERTY_DIRECTION                                       17
-#	define PROPERTY_ANGLE                                           18
-#	define PROPERTY_BOUNDS                                          19
-#		define PROPERTY_BOUNDS_LEFT                                 20
-#		define PROPERTY_BOUNDS_RIGHT                                21
-#		define PROPERTY_BOUNDS_TOP                                  22
-#		define PROPERTY_BOUNDS_BOTTOM                               23
-#	define PROPERTY_BASE_TILE                                       24
-#	define PROPERTY_FRAMES                                          25
-#		define PROPERTY_FRAME_INDEX                                 26
-#	define PROPERTY_ANIMATION_INTERVAL                              27
-#	define PROPERTY_ANIMATIONS                                      28
-#		define PROPERTY_ANIMATION                                   29
-#		define PROPERTY_ANIMATION_INDEX                             30
-#	define PROPERTY_MOVE_SPEED                                      31
-#	define PROPERTY_BEHAVIOUR                                       32
-#	define PROPERTY_COLLISION_GROUP                                 33
+#	define PROPERTY_ACTIVE                                          8
+#	define PROPERTY_ENABLED                                         9
+#	define PROPERTY_PINNED                                          10
+#	define PROPERTY_PERSISTENT                                      11
+#	define PROPERTY_FOLLOWING                                       12
+#	define PROPERTY_ANIMATION_LOOP                                  13
+#	define PROPERTY_ANIMATION_PAUSED                                14
+#	define PROPERTY_MOVEMENT_INTERRUPT                              15
+#	define PROPERTY_POSITION                                        16
+#		define PROPERTY_POSITION_X                                  17
+#		define PROPERTY_POSITION_Y                                  18
+#	define PROPERTY_DIRECTION                                       19
+#	define PROPERTY_ANGLE                                           20
+#	define PROPERTY_BOUNDS                                          21
+#		define PROPERTY_BOUNDS_LEFT                                 22
+#		define PROPERTY_BOUNDS_RIGHT                                23
+#		define PROPERTY_BOUNDS_TOP                                  24
+#		define PROPERTY_BOUNDS_BOTTOM                               25
+#	define PROPERTY_BASE_TILE                                       26
+#	define PROPERTY_FRAMES                                          27
+#		define PROPERTY_FRAME_INDEX                                 28
+#	define PROPERTY_ANIMATION_INTERVAL                              29
+#	define PROPERTY_ANIMATIONS                                      30
+#		define PROPERTY_ANIMATION                                   31
+#		define PROPERTY_ANIMATION_INDEX                             32
+#	define PROPERTY_MOVE_SPEED                                      33
+#	define PROPERTY_BEHAVIOUR                                       34
+#	define PROPERTY_COLLISION_GROUP                                 35
 
-#	define PROPERTY_STRONG                                          34
-#	define PROPERTY_LIFE_TIME                                       35
-#	define PROPERTY_INITIAL_OFFSET                                  36
+#	define PROPERTY_STRONG                                          36
+#	define PROPERTY_LIFE_TIME                                       37
+#	define PROPERTY_INITIAL_OFFSET                                  38
 
-#	define PROPERTY_IS_16x16_GRID                                   37
-#	define PROPERTY_IS_16x16_PLAYER                                 38
-#	define PROPERTY_CLAMP_CAMERA                                    39
-#	define PROPERTY_GRAVITY                                         40
-#	define PROPERTY_JUMP_GRAVITY                                    41
-#	define PROPERTY_JUMP_MAX_COUNT                                  42
-#	define PROPERTY_JUMP_MAX_TICKS                                  43
-#	define PROPERTY_CLIMB_VELOCITY                                  44
-#	define PROPERTY_SIZE                                            45
-#		define PROPERTY_SIZE_WIDTH                                  46
-#		define PROPERTY_SIZE_HEIGHT                                 47
-#	define PROPERTY_CAMERA_DEADZONE                                 48
-#		define PROPERTY_CAMERA_DEADZONE_X                           49
-#		define PROPERTY_CAMERA_DEADZONE_Y                           50
-#	define PROPERTY_BLOCKING                                        51
-#		define PROPERTY_BLOCKING_X                                  52
-#			define PROPERTY_BLOCKING_LEFT                           53
-#			define PROPERTY_BLOCKING_RIGHT                          54
-#		define PROPERTY_BLOCKING_Y                                  55
-#			define PROPERTY_BLOCKING_UP                             56
-#			define PROPERTY_BLOCKING_DOWN                           57
+#	define PROPERTY_IS_16x16_GRID                                   39
+#	define PROPERTY_IS_16x16_PLAYER                                 40
+#	define PROPERTY_CLAMP_CAMERA                                    41
+#	define PROPERTY_GRAVITY                                         42
+#	define PROPERTY_JUMP_GRAVITY                                    43
+#	define PROPERTY_JUMP_MAX_COUNT                                  44
+#	define PROPERTY_JUMP_MAX_TICKS                                  45
+#	define PROPERTY_CLIMB_VELOCITY                                  46
+#	define PROPERTY_SIZE                                            47
+#		define PROPERTY_SIZE_WIDTH                                  48
+#		define PROPERTY_SIZE_HEIGHT                                 49
+#	define PROPERTY_CAMERA_DEADZONE                                 50
+#		define PROPERTY_CAMERA_DEADZONE_X                           51
+#		define PROPERTY_CAMERA_DEADZONE_Y                           52
+#	define PROPERTY_BLOCKING                                        53
+#		define PROPERTY_BLOCKING_X                                  54
+#			define PROPERTY_BLOCKING_LEFT                           55
+#			define PROPERTY_BLOCKING_RIGHT                          56
+#		define PROPERTY_BLOCKING_Y                                  57
+#			define PROPERTY_BLOCKING_UP                             58
+#			define PROPERTY_BLOCKING_DOWN                           59
 #endif /* PROPERTIES */
 
 // Types.
@@ -27522,6 +27524,8 @@ public:
 
 			// Properties.
 			ADD_BUILTIN("PALETTE_PROP",                              BuiltinTable::Entry(PROPERTY_PALETTE)                                  ); // For properties...
+			ADD_BUILTIN("BANK_PROP",                                 BuiltinTable::Entry(PROPERTY_BANK)                                     );
+			ADD_BUILTIN("OBJPAL_PROP",                               BuiltinTable::Entry(PROPERTY_OBJPAL)                                   );
 			ADD_BUILTIN("HFLIP_PROP",                                BuiltinTable::Entry(PROPERTY_HFLIP)                                    );
 			ADD_BUILTIN("VFLIP_PROP",                                BuiltinTable::Entry(PROPERTY_VFLIP)                                    );
 			ADD_BUILTIN("PRIORITY_PROP",                             BuiltinTable::Entry(PROPERTY_PRIORITY)                                 );
