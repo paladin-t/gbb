@@ -377,7 +377,8 @@ void emote_update(void) BANKED {
 }
 
 STATIC UINT8 emote_def(UINT16 x, UINT16 y, UINT8 base_tile, BOOLEAN mirrored, UINT8 pal, actor_t * ref_actor, UINT8 bank, UINT8 * ptr) {
-    call_v_bbp_oldcall(base_tile, EMOTE_SPRITE_TILE_COUNT, bank, ptr, set_sprite_data);
+    const UINT8 n = mirrored ? (EMOTE_SPRITE_TILE_COUNT / 2) : EMOTE_SPRITE_TILE_COUNT;
+    call_v_bbp_oldcall(base_tile, n, bank, ptr, set_sprite_data);
 
     if (ref_actor) {
         x += TO_SCREEN(ref_actor->position.x);
@@ -400,7 +401,7 @@ STATIC UINT8 emote_def(UINT16 x, UINT16 y, UINT8 base_tile, BOOLEAN mirrored, UI
     }
     emote_actor->animation_interval  = ACTOR_ANIMATION_PAUSED;
 
-    return MUL16(EMOTE_SPRITE_TILE_COUNT);
+    return MUL16(n);
 }
 
 STATIC void emote_load(SCRIPT_CTX * THIS, UINT8 src) {
@@ -425,8 +426,8 @@ STATIC void emote_load(SCRIPT_CTX * THIS, UINT8 src) {
     case ASSET_SOURCE_DATA:
         bank = THIS->bank;
         ptr  = (UINT8 *)THIS->PC;
-        size = emote_def(x, y, base_tile, mirrored, pal, ref_actor, bank, ptr);
-        THIS->PC += size;
+        emote_def(x, y, base_tile, mirrored, pal, ref_actor, bank, ptr);
+        THIS->PC += MUL16(EMOTE_SPRITE_TILE_COUNT);
 
         break;
     case ASSET_SOURCE_FAR:

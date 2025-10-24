@@ -22659,11 +22659,16 @@ public:
 				Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
 				constexpr const int N = 64;
 				const int n = (int)Token::sizeOfIntegers(seq);
-				if (n < N) { THROW_TOO_FEW_ARGUMENTS(onError); }
+				if (n == N || n == N / 2) { /* Do nothing. */ }
+				else if (n < N) { THROW_TOO_FEW_ARGUMENTS(onError); }
 				else if (n > N) { THROW_TOO_MANY_ARGUMENTS(onError); }
 				argi = [&, seq] (Counter &) -> void {
 					for (const Token::Ptr &tk : seq)
 						writeInteger(bytes, context, tk);
+					if (n == N / 2) { // Make sure there are always 64 bytes for `DATA`.
+						for (const Token::Ptr &tk : seq)
+							writeInteger(bytes, context, tk);
+					}
 				};
 				writeRoutine(bytes, context, Asm::Types::EMOTE, ASSET_SOURCE_DATA, -1, argf, argi, onError);
 			} else if (byName_) {
