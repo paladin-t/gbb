@@ -4841,7 +4841,7 @@ void Workspace::upgrade(
 	} while (false);
 
 	// Upgrade the project.
-	if (prj) {
+	if (prj && prj->assets()) {
 		// Set version.
 		if (!_toUpgradeToVersion.empty() && _toUpgradeToVersion != "*")
 			prj->version(_toUpgradeToVersion);
