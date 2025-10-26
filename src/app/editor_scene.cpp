@@ -4032,17 +4032,6 @@ private:
 		// Exporting.
 		if (ImGui::BeginPopup("@Xpt")) {
 			if (ImGui::BeginMenu(ws->theme()->menu_Code())) {
-				if (ImGui::MenuItem("DEF SCENE(...)")) {
-					do {
-						std::string txt;
-						if (!entry()->serializeBasic(txt, _index, false))
-							break;
-
-						Platform::setClipboardText(txt.c_str());
-
-						ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
-					} while (false);
-				}
 				if (ImGui::MenuItem("LOAD SCENE(...)")) {
 					do {
 						std::string txt;
@@ -4051,7 +4040,18 @@ private:
 
 						Platform::setClipboardText(txt.c_str());
 
-						ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
+						ws->bubble(ws->theme()->dialogPrompt_ExportedCode(), nullptr);
+					} while (false);
+				}
+				if (ImGui::MenuItem("DEF SCENE(...)")) {
+					do {
+						std::string txt;
+						if (!entry()->serializeBasic(txt, _index, false))
+							break;
+
+						Platform::setClipboardText(txt.c_str());
+
+						ws->bubble(ws->theme()->dialogPrompt_ExportedCode(), nullptr);
 					} while (false);
 				}
 

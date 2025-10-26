@@ -339,6 +339,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Effect)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Ejecting)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ExportedAsset)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ExportedCode)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ExportedProject)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ExportedSourceCode)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_FileNameHasNotBeenChanged)

@@ -1432,7 +1432,7 @@ private:
 
 					Platform::setClipboardText(txt.c_str());
 
-					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
+					ws->bubble(ws->theme()->dialogPrompt_ExportedCode(), nullptr);
 				} while (false);
 			}
 			if (ImGui::IsItemHovered()) {
@@ -1473,7 +1473,7 @@ private:
 					Platform::browse(path_.c_str());
 #endif /* Platform macro. */
 
-					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
+					ws->bubble(ws->theme()->dialogPrompt_ExportedCode(), nullptr);
 				} while (false);
 			}
 

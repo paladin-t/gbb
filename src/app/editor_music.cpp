@@ -4366,7 +4366,7 @@ private:
 
 					Platform::setClipboardText(txt.c_str());
 
-					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
+					ws->bubble(ws->theme()->dialogPrompt_ExportedCode(), nullptr);
 				} while (false);
 			}
 			if (ImGui::IsItemHovered()) {

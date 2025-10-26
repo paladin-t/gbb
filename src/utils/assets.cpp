@@ -7050,7 +7050,7 @@ bool SceneAssets::Entry::serializeBasic(std::string &val, int page, bool loading
 		asset = "\"" + name + "\"";
 
 	if (loading) {
-		val += "load scene(0, 0, 0, true) = ";
+		val += "load scene(0, 0) = ";
 		val += asset;
 		val += "\n";
 	} else {

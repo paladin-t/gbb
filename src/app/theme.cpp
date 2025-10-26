@@ -540,6 +540,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Effect("Effect");
 	dialogPrompt_Ejecting("Ejecting");
 	dialogPrompt_ExportedAsset("Exported asset");
+	dialogPrompt_ExportedCode("Exported code");
 	dialogPrompt_ExportedProject("Exported project");
 	dialogPrompt_ExportedSourceCode("Exported source code");
 	dialogPrompt_FileNameHasNotBeenChanged("File name has not been changed.");
