@@ -1203,7 +1203,7 @@ static bool generate_toBytes(const ActorAssets::Entry* entry, Pipeline* pipeline
 	};
 	auto serializeDefinitionAsActor = [] (
 		const Actor::Ptr &data,
-		const active_t &def,
+		const Actor::Animation &animation, const active_t &def,
 		Pipeline* pipeline, Table &table, int page, bool includeUnused
 	) -> bool {
 		// Prepare.
@@ -1244,8 +1244,10 @@ static bool generate_toBytes(const ActorAssets::Entry* entry, Pipeline* pipeline
 			}
 			bytes->writeUInt8((UInt8)def.animation_interval);
 			for (int i = 0; i < ASSETS_ACTOR_MAX_ANIMATIONS; ++i) {
-				bytes->writeUInt8((UInt8)def.animations[i].begin);
-				bytes->writeUInt8((UInt8)def.animations[i].end);
+				const int begin = Math::clamp((int)def.animations[i].begin, 0, (int)animation.size() - 1);
+				const int end = Math::clamp((int)def.animations[i].end, 0, (int)animation.size() - 1);
+				bytes->writeUInt8((UInt8)begin);
+				bytes->writeUInt8((UInt8)end);
 			}
 			bytes->writeUInt8((UInt8)def.move_speed);
 			bytes->writeUInt8((UInt8)def.behaviour);
@@ -1277,7 +1279,7 @@ static bool generate_toBytes(const ActorAssets::Entry* entry, Pipeline* pipeline
 	};
 	auto serializeDefinitionAsProjectile = [] (
 		const Actor::Ptr &data,
-		const active_t &def,
+		const Actor::Animation &animation, const active_t &def,
 		Pipeline* pipeline, Table &table, int page, bool includeUnused
 	) -> bool {
 		// Prepare.
@@ -1312,8 +1314,10 @@ static bool generate_toBytes(const ActorAssets::Entry* entry, Pipeline* pipeline
 			}
 			bytes->writeUInt8((UInt8)def.animation_interval);
 			for (int i = 0; i < ASSETS_PROJECTILE_MAX_ANIMATIONS; ++i) {
-				bytes->writeUInt8((UInt8)def.animations[i].begin);
-				bytes->writeUInt8((UInt8)def.animations[i].end);
+				const int begin = Math::clamp((int)def.animations[i].begin, 0, (int)animation.size() - 1);
+				const int end = Math::clamp((int)def.animations[i].end, 0, (int)animation.size() - 1);
+				bytes->writeUInt8((UInt8)begin);
+				bytes->writeUInt8((UInt8)end);
 			}
 			bytes->writeUInt8((UInt8)def.life_time);
 			bytes->writeUInt8((UInt8)def.move_speed);
@@ -1349,10 +1353,10 @@ static bool generate_toBytes(const ActorAssets::Entry* entry, Pipeline* pipeline
 	if (!serializeFrames(entry->data, entry->animation, entry->shadow, pipeline, table, page, includeUnused))
 		return false;
 	if (entry->asActor) {
-		if (!serializeDefinitionAsActor(entry->data, entry->definition, pipeline, table, page, includeUnused))
+		if (!serializeDefinitionAsActor(entry->data, entry->animation, entry->definition, pipeline, table, page, includeUnused))
 			return false;
 	} else /* if (!entry->asActor) */ {
-		if (!serializeDefinitionAsProjectile(entry->data, entry->definition, pipeline, table, page, includeUnused))
+		if (!serializeDefinitionAsProjectile(entry->data, entry->animation, entry->definition, pipeline, table, page, includeUnused))
 			return false;
 	}
 
