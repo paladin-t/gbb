@@ -259,12 +259,20 @@ public:
 		if (toConfirm) {
 			_init.reset();
 
-			if ((paletteAppliable || groupAppliable) && _changed != nullptr) {
-				_group = _shadowGroup;
-				_changed({ _shadowGroup });
-			}
-			if (!_confirmedHandler.empty()) {
+			if (_confirmedHandler.empty()) {
+				if ((paletteAppliable || groupAppliable) && _changed != nullptr) {
+					_group = _shadowGroup;
+					_changed({ _shadowGroup });
+				}
+			} else {
+				const ChangedHandler changed = _changed;
+				const int shadowGroup = _shadowGroup;
+
 				_confirmedHandler(_shadow);
+
+				if ((paletteAppliable || groupAppliable) && changed != nullptr) {
+					changed({ shadowGroup });
+				}
 
 				return;
 			}

@@ -3662,6 +3662,9 @@ bool MapAssets::Entry::refresh(void) {
 		// Mark this asset synchronized.
 		synchronizeRefRevision(ref_); // Mark as synchronized for this asset's dependency.
 
+		// Increase this asset's revision.
+		increaseRevision();
+
 		// Finish.
 		return true;
 	}
