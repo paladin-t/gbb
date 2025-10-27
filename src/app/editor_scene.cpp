@@ -3361,7 +3361,12 @@ private:
 					break;
 
 				const Math::Vec2i pos = getActorPositionUnderCursor(_status.cursor.position);
-				const Byte cel = _selection.paintAreaFocused ? (Byte)currentLayer()->get(pos.x, pos.y) : Scene::INVALID_ACTOR();
+				Byte cel = Scene::INVALID_ACTOR();
+				if (_selection.paintAreaFocused) {
+					cel = (Byte)currentLayer()->get(pos.x, pos.y);
+					if (cel == Scene::INVALID_ACTOR())
+						cel = (Byte)currentLayer()->get(_status.cursor.position.x, _status.cursor.position.y);
+				}
 
 				ImGuiStyle &style = ImGui::GetStyle();
 
