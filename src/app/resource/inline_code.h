@@ -14,6 +14,21 @@
 ** Inline code
 */
 
+#ifndef RES_CODE_PLAY_MAP_TESTING
+#	define RES_CODE_PLAY_MAP_TESTING \
+		"map on"
+#endif /* RES_CODE_PLAY_MAP_TESTING */
+
+#ifndef RES_CODE_PLAY_SCENE_TESTING
+#	define RES_CODE_PLAY_SCENE_TESTING \
+		"map on"
+#endif /* RES_CODE_PLAY_SCENE_TESTING */
+
+#ifndef RES_CODE_PLAY_ACTOR_TESTING
+#	define RES_CODE_PLAY_ACTOR_TESTING \
+		"sprite on"
+#endif /* RES_CODE_PLAY_ACTOR_TESTING */
+
 #ifndef RES_CODE_PLAY_MUSIC
 #	define RES_CODE_PLAY_MUSIC \
 		"sound on\n" \

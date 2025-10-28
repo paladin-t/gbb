@@ -11,6 +11,8 @@
 #include "editor_scene.h"
 #include "theme.h"
 #include "workspace.h"
+#include "resource/inline_resource.h"
+#include "../utils/datetime.h"
 #include "../utils/encoding.h"
 #include "../utils/file_sandbox.h"
 #include "../utils/filesystem.h"
@@ -19,6 +21,17 @@
 #include "../../lib/imgui/imgui_internal.h"
 #include "../../lib/jpath/jpath.hpp"
 #include <SDL.h>
+
+/*
+** {===========================================================================
+** Macros and constants
+*/
+
+#ifndef EDITOR_SCENE_UNLOAD_SYMBOLS_ON_STOP
+#	define EDITOR_SCENE_UNLOAD_SYMBOLS_ON_STOP 1
+#endif /* EDITOR_SCENE_UNLOAD_SYMBOLS_ON_STOP */
+
+/* ===========================================================================} */
 
 /*
 ** {===========================================================================
@@ -355,6 +368,13 @@ private:
 		ImVec2 mousePos = ImVec2(-1, -1);
 		ImVec2 mouseDiff = ImVec2(0, 0);
 
+		std::function<bool(void)> playSceneTesting = nullptr;
+		std::function<bool(void)> stopSceneTesting = nullptr;
+		bool isPlaying = false;
+		bool isPlayerSymbolsLoaded = false;
+		std::string playerSymbolsText;
+		std::string playerAliasesText;
+
 		PostHandler post = nullptr;
 		Editing::Tools::PaintableTools postType = Editing::Tools::PENCIL;
 
@@ -386,6 +406,13 @@ private:
 
 			mousePos = ImVec2(-1, -1);
 			mouseDiff = ImVec2(0, 0);
+
+			playSceneTesting = nullptr;
+			stopSceneTesting = nullptr;
+			isPlaying = false;
+			isPlayerSymbolsLoaded = false;
+			playerSymbolsText.clear();
+			playerAliasesText.clear();
 
 			post = nullptr;
 			postType = Editing::Tools::PENCIL;
@@ -767,6 +794,8 @@ public:
 		_tools.gridUnit = Math::Vec2i(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
 		_tools.transparentBackbroundVisible = num.pressed();
 		_tools.definitionShadow = entry()->definition;
+		_tools.playSceneTesting = std::bind(&EditorSceneImpl::playSceneTesting, this, wnd, rnd, ws);
+		_tools.stopSceneTesting = std::bind(&EditorSceneImpl::stopSceneTesting, this, wnd, rnd, ws);
 
 		bindLayerTools(wnd, ws);
 
@@ -811,6 +840,8 @@ public:
 		_determinator();
 	}
 	virtual void leave(class Workspace*) override {
+		_tools.stopSceneTesting();
+
 		if (entry())
 			entry()->cleanup(); // Clean up the outdated editable and runtime resources.
 	}
@@ -3006,7 +3037,7 @@ public:
 	}
 
 	virtual void played(class Renderer*, class Workspace*) override {
-		// Do nothing.
+		_tools.stopSceneTesting();
 	}
 	virtual void stopped(class Renderer*, class Workspace*) override {
 		// Do nothing.
@@ -3752,6 +3783,24 @@ private:
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(ws->theme()->tooltipEdit_NextPage());
+		}
+		if (entry()->refMap != -1) {
+			ImGui::SameLine();
+			if (_tools.isPlaying) {
+				if (ImGui::ImageButton(ws->theme()->iconStopPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipScene_StopTesting().c_str())) {
+					_tools.stopSceneTesting();
+				}
+			} else {
+				if (ws->running()) {
+					ImGui::BeginDisabled();
+					ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipScene_TestScene().c_str());
+					ImGui::EndDisabled();
+				} else {
+					if (ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipScene_TestScene().c_str())) {
+						_tools.playSceneTesting();
+					}
+				}
+			}
 		}
 		ImGui::SameLine();
 		ImGui::AlignTextToFramePadding();
@@ -5949,6 +5998,150 @@ private:
 			->exec(object(), Variant((void*)entry()));
 
 		_refresh(cmd);
+	}
+
+	bool playSceneTesting(Window* wnd, Renderer* rnd, Workspace* ws) {
+		// Prepare.
+		if (ws->running())
+			return true;
+
+		if (_tools.isPlaying)
+			stopSceneTesting(wnd, rnd, ws);
+
+		// Start measuring performance.
+		const long long start = DateTime::ticks();
+
+		// Compose the scene.
+		// TODO
+
+		// Compile.
+		const Bytes::Ptr rom_ = compileScene(ws, this, entry(), _tools);
+
+		if (!rom_)
+			return false;
+
+		// Finish measuring performance.
+		const long long end = DateTime::ticks();
+		const long long diff = end - start;
+		const double secs = DateTime::toSeconds(diff);
+		const std::string time = Text::toString(secs, 6, 0, ' ', std::ios::fixed);
+
+		const std::string msg = "Completed in " + time + "s.";
+		fprintf(stdout, "%s\n", msg.c_str());
+
+		// Run and play.
+		ws->run(wnd, rnd, rom_);
+
+		_tools.isPlaying = true;
+
+		// Finish.
+		return true;
+	}
+	bool stopSceneTesting(Window* wnd, Renderer* rnd, Workspace* ws) {
+		// Prepare.
+		if (!_tools.isPlaying)
+			return true;
+
+		// Close the device.
+		ws->stop(wnd, rnd);
+
+		// Stop playing.
+		_tools.isPlaying = false;
+#if EDITOR_SCENE_UNLOAD_SYMBOLS_ON_STOP
+		_tools.isPlayerSymbolsLoaded = false;
+		_tools.playerSymbolsText.clear();
+		_tools.playerAliasesText.clear();
+#endif /* EDITOR_SCENE_UNLOAD_SYMBOLS_ON_STOP */
+
+		// Finish.
+		return true;
+	}
+	static Bytes::Ptr compileScene(Workspace* ws, EditorSceneImpl* self, const SceneAssets::Entry* entry_, Tools &tools) {
+		// Prepare.
+		if (!entry_)
+			return nullptr;
+
+		auto print_ = [ws] (const std::string &msg) -> void {
+			std::string msg_ = "Scene editor:\n";
+			msg_ += msg;
+			if (msg_.back() != '.')
+				msg_ += '.';
+			ws->print(msg_.c_str());
+		};
+		auto warn_ = [ws] (const std::string &msg) -> void {
+			std::string msg_ = "Scene editor:\n";
+			msg_ += msg;
+			if (msg_.back() != '\n' && msg_.back() != '.')
+				msg_ += '.';
+			ws->warn(msg_.c_str());
+		};
+		auto error_ = [ws] (const std::string &msg) -> void {
+			std::string msg_ = "Scene editor:\n";
+			msg_ += msg;
+			if (msg_.back() != '.')
+				msg_ += '.';
+			ws->error(msg_.c_str());
+		};
+
+		// Get the kernel.
+		if (ws->kernels().empty()) {
+			self->warn(ws, "No valid scene player", true);
+
+			return nullptr;
+		}
+
+		if (ws->kernels().empty())
+			return nullptr;
+
+		const GBBASIC::Kernel::Ptr &krnl = ws->kernels().front();
+		if (!krnl)
+			return nullptr;
+
+		std::string dir;
+		Path::split(krnl->path(), nullptr, nullptr, &dir);
+		const std::string rom = Path::combine(dir.c_str(), krnl->kernelRom().c_str());
+		const std::string sym = Path::combine(dir.c_str(), krnl->kernelSymbols().c_str());
+		const std::string aliases = Path::combine(dir.c_str(), krnl->kernelAliases().c_str());
+		const int bootstrapBank = krnl->bootstrapBank();
+
+		// Load and parse the symbols.
+		if (!tools.isPlayerSymbolsLoaded) {
+			Editing::SymbolTable::Dictionary dict;
+			std::string symTxt;
+			std::string aliasesTxt;
+			Editing::SymbolTable symbols;
+			const bool loaded = symbols.load(
+				dict, sym, symTxt, aliases, aliasesTxt,
+				[self, ws] (const char* msg) -> void {
+					self->warn(ws, msg, true);
+				}
+			);
+			if (!loaded)
+				return nullptr;
+
+			tools.isPlayerSymbolsLoaded                     = true;
+			tools.playerSymbolsText                         = symTxt;
+			tools.playerAliasesText                         = aliasesTxt;
+		}
+
+		// Compile.
+		AssetsBundle::Ptr assets(new AssetsBundle());
+		const std::string src = RES_CODE_PLAY_SCENE_TESTING;
+		assets->code.add(src);
+		assets->scenes.add(*entry_);
+
+		const Bytes::Ptr rom_ = Workspace::compile(
+			rom, sym, tools.playerSymbolsText, aliases, tools.playerAliasesText,
+			"Scene", assets,
+			bootstrapBank,
+			print_, warn_, error_
+		);
+
+		if (!rom_)
+			return nullptr;
+
+		// Finish.
+		return rom_;
 	}
 };
 

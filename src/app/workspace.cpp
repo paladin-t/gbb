@@ -1748,6 +1748,10 @@ void Workspace::cursor(Device::CursorTypes mode) {
 	canvasCursorMode(mode);
 }
 
+void Workspace::run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom) {
+	Operations::projectRun(wnd, rnd, this, rom, nullptr, false);
+}
+
 bool Workspace::running(void) const {
 	if (canvasDevice())
 		return true;
@@ -12028,7 +12032,7 @@ void Workspace::runProject(Window* wnd, Renderer* rnd, Bytes::Ptr rom) {
 	Operations::projectLoadSram(wnd, rnd, this, prj, sram)
 		.always(
 			[wnd, rnd, this, rom, sram] (void) -> void {
-				Operations::projectRun(wnd, rnd, this, rom, sram);
+				Operations::projectRun(wnd, rnd, this, rom, sram, true);
 			}
 		);
 }

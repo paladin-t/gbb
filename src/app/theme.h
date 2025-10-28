@@ -781,6 +781,8 @@ public:
 	GBBASIC_PROPERTY(Text::Array, tooltipActor_IntervalTooltips)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipActor_PasteDefinition)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipActor_Refresh)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipActor_StopTesting)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipActor_TestActor)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipActor_ToAllFrames)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipActor_ToAllTiles)
 
@@ -845,6 +847,8 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_InfoLayer)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_InfoLayers)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_Optimize)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_StopTesting)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_TestMap)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_UpdateTheRefTilesAssetPage)
 
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipPalette_Index0)
@@ -880,6 +884,8 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_InfoLayers)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_PasteDefinition)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_Properties)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_StopTesting)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_TestScene)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_TriggerDetails)
 
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipTiles_CreateAMapReferencingThisTilesPage)
@@ -994,9 +1000,9 @@ public:
 	GBBASIC_PROPERTY_PTR(class Texture, iconAppend)
 
 	GBBASIC_PROPERTY_PTR(class Texture, iconPlay)
-	GBBASIC_PROPERTY_PTR(class Texture, iconPlayAudio)
+	GBBASIC_PROPERTY_PTR(class Texture, iconStartPreview)
 	GBBASIC_PROPERTY_PTR(class Texture, iconStop)
-	GBBASIC_PROPERTY_PTR(class Texture, iconStopAudio)
+	GBBASIC_PROPERTY_PTR(class Texture, iconStopPreview)
 	GBBASIC_PROPERTY_PTR(class Texture, iconPause)
 
 	GBBASIC_PROPERTY_PTR(class Texture, iconNumber0)

@@ -27,7 +27,7 @@
 */
 
 #ifndef EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_STOP
-#	define EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_STOP 0
+#	define EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_STOP 1
 #endif /* EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_STOP */
 
 static constexpr const char* const NOTE_NAMES[] = {
@@ -4119,19 +4119,17 @@ private:
 			ImGui::SetTooltip(ws->theme()->tooltipEdit_NextPage());
 		}
 		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(style.FramePadding.x, 0));
-		ImGui::SameLine();
 		if (_tools.isPlaying) {
-			if (ImGui::ImageButton(ws->theme()->iconStopAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_StopMusic().c_str())) {
+			if (ImGui::ImageButton(ws->theme()->iconStopPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_StopMusic().c_str())) {
 				stopMusic(ws);
 			}
 		} else {
 			if (ws->running()) {
 				ImGui::BeginDisabled();
-				ImGui::ImageButton(ws->theme()->iconPlayAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_PlayMusic().c_str());
+				ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_PlayMusic().c_str());
 				ImGui::EndDisabled();
 			} else {
-				if (ImGui::ImageButton(ws->theme()->iconPlayAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_PlayMusic().c_str())) {
+				if (ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_PlayMusic().c_str())) {
 					playMusic(ws, nullptr);
 				}
 			}
@@ -5269,10 +5267,10 @@ private:
 		_tools.isPlayerSymbolsLoaded = false;
 		_tools.playerSymbolsText.clear();
 		_tools.playerAliasesText.clear();
-		_tools.playerIsPlayingLocation = Location();
-		_tools.playerOrderCursorLocation = Location();
-		_tools.playerLineCursorLocation = Location();
-		_tools.playerTicksLocation = Location();
+		_tools.playerIsPlayingLocation = Editing::SymbolLocation();
+		_tools.playerOrderCursorLocation = Editing::SymbolLocation();
+		_tools.playerLineCursorLocation = Editing::SymbolLocation();
+		_tools.playerTicksLocation = Editing::SymbolLocation();
 #endif /* EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_STOP */
 		_tools.hasPlayerPlayed = false;
 		_tools.lastPlayingOrderIndex = -1;

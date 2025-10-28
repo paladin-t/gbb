@@ -2272,16 +2272,16 @@ bool sfx(
 		if (playingIndex == nullptr || *playingIndex != i) {
 			if (ws->running()) {
 				ImGui::BeginDisabled();
-				ImGui::ImageButton(ws->theme()->iconPlayAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_PlaySfx().c_str());
+				ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_PlaySfx().c_str());
 				ImGui::EndDisabled();
 			} else {
-				if (ImGui::ImageButton(theme->iconPlayAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme->tooltipAudio_PlaySfx().c_str())) {
+				if (ImGui::ImageButton(theme->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme->tooltipAudio_PlaySfx().c_str())) {
 					if (operate)
 						operate(i, Operations::PLAY);
 				}
 			}
 		} else {
-			if (ImGui::ImageButton(theme->iconStopAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme->tooltipAudio_StopSfx().c_str())) {
+			if (ImGui::ImageButton(theme->iconStopPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme->tooltipAudio_StopSfx().c_str())) {
 				if (operate)
 					operate(i, Operations::STOP);
 			}

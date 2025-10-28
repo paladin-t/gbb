@@ -90,7 +90,7 @@ public:
 	static promise::Promise projectCompile(Window* wnd, Renderer* rnd, Workspace* ws, const char* cartType /* nullable */, const char* sramType /* nullable */, bool* hasRtc /* nullable */, const char* fontConfigPath, bool useInRam);
 	static promise::Promise projectDump(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, const char* path);
 	static promise::Promise projectBuild(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, Exporter::Ptr ex);                     // Shows save file dialog if necessary.
-	static promise::Promise projectRun(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, Bytes::Ptr sram);
+	static promise::Promise projectRun(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, Bytes::Ptr sram, bool countActivities);
 	static promise::Promise projectStop(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise projectReload(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj, const char* fontConfigPath);
 	static promise::Promise projectLoadSram(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj, Bytes::Ptr sram);
