@@ -9929,7 +9929,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 					if (ImGui::MenuItem(theme()->menu_Run(), nullptr, nullptr, sel)) {
 						closeFilter();
 
-						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
 								[wnd, rnd, this, prj] (bool ok) -> void {
 									if (!ok)
