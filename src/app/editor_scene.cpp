@@ -3040,7 +3040,7 @@ public:
 		_tools.stopSceneTesting();
 	}
 	virtual void stopped(class Renderer*, class Workspace*) override {
-		// Do nothing.
+		_tools.stopSceneTesting();
 	}
 
 	virtual void resized(class Renderer*, const Math::Vec2i &, const Math::Vec2i &) override {
@@ -6008,14 +6008,14 @@ private:
 		if (_tools.isPlaying)
 			stopSceneTesting(wnd, rnd, ws);
 
+		if (!object())
+			return false;
+
 		// Start measuring performance.
 		const long long start = DateTime::ticks();
 
-		// Compose the scene.
-		// TODO
-
 		// Compile.
-		const Bytes::Ptr rom_ = compileScene(ws, this, entry(), _tools);
+		const Bytes::Ptr rom_ = compileScene(wnd, rnd, ws, this, entry(), _tools);
 
 		if (!rom_)
 			return false;
@@ -6043,7 +6043,8 @@ private:
 			return true;
 
 		// Close the device.
-		ws->stop(wnd, rnd);
+		if (ws->running())
+			ws->stop(wnd, rnd);
 
 		// Stop playing.
 		_tools.isPlaying = false;
@@ -6056,9 +6057,9 @@ private:
 		// Finish.
 		return true;
 	}
-	static Bytes::Ptr compileScene(Workspace* ws, EditorSceneImpl* self, const SceneAssets::Entry* entry_, Tools &tools) {
+	static Bytes::Ptr compileScene(Window*, Renderer*, Workspace* ws, EditorSceneImpl* self, const SceneAssets::Entry* entry_, Tools &tools) {
 		// Prepare.
-		if (!entry_)
+		if (!entry_ || !entry_->data)
 			return nullptr;
 
 		auto print_ = [ws] (const std::string &msg) -> void {
@@ -6119,16 +6120,19 @@ private:
 			if (!loaded)
 				return nullptr;
 
-			tools.isPlayerSymbolsLoaded                     = true;
-			tools.playerSymbolsText                         = symTxt;
-			tools.playerAliasesText                         = aliasesTxt;
+			tools.isPlayerSymbolsLoaded = true;
+			tools.playerSymbolsText     = symTxt;
+			tools.playerAliasesText     = aliasesTxt;
 		}
 
 		// Compile.
 		AssetsBundle::Ptr assets(new AssetsBundle());
+		const int width = entry_->data->width();
+		const int height = entry_->data->height();
+		// TODO
+		assets->scenes.add(*entry_);
 		const std::string src = RES_CODE_PLAY_SCENE_TESTING;
 		assets->code.add(src);
-		assets->scenes.add(*entry_);
 
 		const Bytes::Ptr rom_ = Workspace::compile(
 			rom, sym, tools.playerSymbolsText, aliases, tools.playerAliasesText,

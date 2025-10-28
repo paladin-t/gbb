@@ -483,6 +483,9 @@ struct PaletteAssets {
 	const Entry* get(int index) const;
 	Entry* get(int index);
 
+	Bytes::Ptr generateBackgroundPalettes(void) const;
+	Bytes::Ptr generateSpritePalettes(void) const;
+
 	bool serializeBasic(std::string &val) const;
 
 	bool toString(std::string &val, WarningOrErrorHandler onWarningOrError /* nullable */) const;

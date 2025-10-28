@@ -5431,8 +5431,10 @@ Bytes::Ptr Workspace::compile(
 	options.sym = symPath;
 	options.aliases = aliasesPath;
 	options.font = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
+	options.backgroundPalettes = assets->palette.generateBackgroundPalettes();
+	options.spritePalettes = assets->palette.generateSpritePalettes();
 	options.title = title;
-	options.strategies.compatibility = GBBASIC::Options::Strategies::Compatibilities::CLASSIC; // | GBBASIC::Options::Strategies::Compatibilities::COLORED;
+	options.strategies.compatibility = GBBASIC::Options::Strategies::Compatibilities::CLASSIC | GBBASIC::Options::Strategies::Compatibilities::COLORED;
 	options.strategies.sramType = 0x00;
 	options.strategies.cartridgeHasRtc = false;
 	options.strategies.bootstrapBank = bootstrapBank;

@@ -999,7 +999,7 @@ public:
 		_tools.stopMapTesting();
 	}
 	virtual void stopped(class Renderer*, class Workspace*) override {
-		// Do nothing.
+		_tools.stopMapTesting();
 	}
 
 	virtual void resized(class Renderer*, const Math::Vec2i &, const Math::Vec2i &) override {
@@ -3699,14 +3699,14 @@ private:
 		if (_tools.isPlaying)
 			stopMapTesting(wnd, rnd, ws);
 
+		if (!object())
+			return false;
+
 		// Start measuring performance.
 		const long long start = DateTime::ticks();
 
-		// Compose the map.
-		// TODO
-
 		// Compile.
-		const Bytes::Ptr rom_ = compileMap(ws, this, entry(), _tools);
+		const Bytes::Ptr rom_ = compileMap(wnd, rnd, ws, this, entry(), _tools);
 
 		if (!rom_)
 			return false;
@@ -3734,7 +3734,8 @@ private:
 			return true;
 
 		// Close the device.
-		ws->stop(wnd, rnd);
+		if (ws->running())
+			ws->stop(wnd, rnd);
 
 		// Stop playing.
 		_tools.isPlaying = false;
@@ -3747,9 +3748,9 @@ private:
 		// Finish.
 		return true;
 	}
-	static Bytes::Ptr compileMap(Workspace* ws, EditorMapImpl* self, const MapAssets::Entry* entry_, Tools &tools) {
+	static Bytes::Ptr compileMap(Window*, Renderer*, Workspace* ws, EditorMapImpl* self, MapAssets::Entry* entry_, Tools &tools) {
 		// Prepare.
-		if (!entry_)
+		if (!entry_ || !entry_->data)
 			return nullptr;
 
 		auto print_ = [ws] (const std::string &msg) -> void {
@@ -3810,16 +3811,56 @@ private:
 			if (!loaded)
 				return nullptr;
 
-			tools.isPlayerSymbolsLoaded                     = true;
-			tools.playerSymbolsText                         = symTxt;
-			tools.playerAliasesText                         = aliasesTxt;
+			tools.isPlayerSymbolsLoaded = true;
+			tools.playerSymbolsText     = symTxt;
+			tools.playerAliasesText     = aliasesTxt;
 		}
 
 		// Compile.
 		AssetsBundle::Ptr assets(new AssetsBundle());
-		const std::string src = RES_CODE_PLAY_MAP_TESTING;
-		assets->code.add(src);
-		assets->maps.add(*entry_);
+		do {
+			// Prepare.
+			const Project::Ptr &prj = ws->currentProject();
+			GBBASIC_ASSERT(prj && "Impossible.");
+
+			// Add the palette asset.
+			assets->palette = prj->assets()->palette;
+
+			// Add the tiles asset.
+			const int ref = entry_->ref;
+			const TilesAssets::Entry* tilesEntry = entry_->getTiles(ref);
+			if (tilesEntry)
+				assets->tiles.add(*tilesEntry);
+
+			// Add the map asset.
+			const int width = entry_->data->width();
+			const int height = entry_->data->height();
+			MapAssets::Entry mapEntry = *entry_;
+			mapEntry.ref = 0;
+			assets->maps.add(mapEntry);
+
+			// Add a dummy scene asset.
+			const SceneAssets::Entry sceneEntry(
+				0,
+				[entry_] (int) -> MapAssets::Entry* {
+					return entry_;
+				},
+				[] (int) -> ActorAssets::Entry* {
+					return nullptr;
+				},
+				prj->propertiesTexture(),
+				prj->actorsTexture()
+			);
+			sceneEntry.data->hasAttributes(mapEntry.hasAttributes);
+			assets->scenes.add(sceneEntry);
+
+			// Add a dummy code asset.
+			int n = 0;
+			if (tilesEntry && tilesEntry->data)
+				n = (tilesEntry->data->width() / GBBASIC_TILE_SIZE) * (tilesEntry->data->height() / GBBASIC_TILE_SIZE);
+			const std::string src = RES_CODE_PLAY_MAP_TESTING(Text::toString(n), Text::toString(width), Text::toString(height));
+			assets->code.add(src);
+		} while (false);
 
 		const Bytes::Ptr rom_ = Workspace::compile(
 			rom, sym, tools.playerSymbolsText, aliases, tools.playerAliasesText,

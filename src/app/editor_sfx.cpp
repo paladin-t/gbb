@@ -29,7 +29,7 @@
 */
 
 #ifndef EDITOR_SFX_UNLOAD_SYMBOLS_ON_STOP
-#	define EDITOR_SFX_UNLOAD_SYMBOLS_ON_STOP 0
+#	define EDITOR_SFX_UNLOAD_SYMBOLS_ON_STOP 1
 #endif /* EDITOR_SFX_UNLOAD_SYMBOLS_ON_STOP */
 
 /* ===========================================================================} */
@@ -2712,7 +2712,7 @@ private:
 		_tools.isPlayerSymbolsLoaded = false;
 		_tools.playerSymbolsText.clear();
 		_tools.playerAliasesText.clear();
-		_tools.playerIsPlayingLocation = Location();
+		_tools.playerIsPlayingLocation = Editing::SymbolLocation();
 #endif /* EDITOR_SFX_UNLOAD_SYMBOLS_ON_STOP */
 		_tools.hasPlayerPlayed = false;
 
