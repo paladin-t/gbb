@@ -27,9 +27,9 @@
 ** Macros and constants
 */
 
-#ifndef EDITOR_MAP_UNLOAD_SYMBOLS_ON_STOP
-#	define EDITOR_MAP_UNLOAD_SYMBOLS_ON_STOP 1
-#endif /* EDITOR_MAP_UNLOAD_SYMBOLS_ON_STOP */
+#ifndef EDITOR_MAP_UNLOAD_SYMBOLS_ON_FINISH
+#	define EDITOR_MAP_UNLOAD_SYMBOLS_ON_FINISH 1
+#endif /* EDITOR_MAP_UNLOAD_SYMBOLS_ON_FINISH */
 
 /* ===========================================================================} */
 
@@ -3739,11 +3739,11 @@ private:
 
 		// Stop playing.
 		_tools.isPlaying = false;
-#if EDITOR_MAP_UNLOAD_SYMBOLS_ON_STOP
+#if EDITOR_MAP_UNLOAD_SYMBOLS_ON_FINISH
 		_tools.isPlayerSymbolsLoaded = false;
 		_tools.playerSymbolsText.clear();
 		_tools.playerAliasesText.clear();
-#endif /* EDITOR_MAP_UNLOAD_SYMBOLS_ON_STOP */
+#endif /* EDITOR_MAP_UNLOAD_SYMBOLS_ON_FINISH */
 
 		// Finish.
 		return true;
@@ -3754,40 +3754,28 @@ private:
 			return nullptr;
 
 		auto print_ = [ws] (const std::string &msg) -> void {
-			std::string msg_ = "Map editor:\n";
-			msg_ += msg;
-			if (msg_.back() != '.')
-				msg_ += '.';
-			ws->print(msg_.c_str());
+			ws->print(msg.c_str());
 		};
 		auto warn_ = [ws] (const std::string &msg) -> void {
-			std::string msg_ = "Map editor:\n";
-			msg_ += msg;
-			if (msg_.back() != '\n' && msg_.back() != '.')
-				msg_ += '.';
-			ws->warn(msg_.c_str());
+			ws->warn(msg.c_str());
 		};
 		auto error_ = [ws] (const std::string &msg) -> void {
-			std::string msg_ = "Map editor:\n";
-			msg_ += msg;
-			if (msg_.back() != '.')
-				msg_ += '.';
-			ws->error(msg_.c_str());
+			ws->error(msg.c_str());
 		};
 
 		// Get the kernel.
 		if (ws->kernels().empty()) {
-			self->warn(ws, "No valid map player", true);
+			self->warn(ws, "No valid map player.", true);
 
 			return nullptr;
 		}
 
-		if (ws->kernels().empty())
-			return nullptr;
-
 		const GBBASIC::Kernel::Ptr &krnl = ws->kernels().front();
-		if (!krnl)
+		if (!krnl) {
+			self->warn(ws, "No valid kernel.", true);
+
 			return nullptr;
+		}
 
 		std::string dir;
 		Path::split(krnl->path(), nullptr, nullptr, &dir);
@@ -3808,8 +3796,11 @@ private:
 					self->warn(ws, msg, true);
 				}
 			);
-			if (!loaded)
+			if (!loaded) {
+				self->warn(ws, "No valid symbol.", true);
+
 				return nullptr;
+			}
 
 			tools.isPlayerSymbolsLoaded = true;
 			tools.playerSymbolsText     = symTxt;
@@ -3817,6 +3808,8 @@ private:
 		}
 
 		// Compile.
+		print_("Begin compiling for map testing.");
+
 		AssetsBundle::Ptr assets(new AssetsBundle());
 		do {
 			// Prepare.
@@ -3829,8 +3822,12 @@ private:
 			// Add the tiles asset.
 			const int ref = entry_->ref;
 			const TilesAssets::Entry* tilesEntry = entry_->getTiles(ref);
-			if (tilesEntry)
-				assets->tiles.add(*tilesEntry);
+			if (!tilesEntry || !tilesEntry->data) {
+				error_("Invalid tiles asset.");
+
+				break;
+			}
+			assets->tiles.add(*tilesEntry);
 
 			// Add the map asset.
 			const int width = entry_->data->width();
@@ -3855,10 +3852,11 @@ private:
 			assets->scenes.add(sceneEntry);
 
 			// Add a dummy code asset.
-			int n = 0;
-			if (tilesEntry && tilesEntry->data)
-				n = (tilesEntry->data->width() / GBBASIC_TILE_SIZE) * (tilesEntry->data->height() / GBBASIC_TILE_SIZE);
-			const std::string src = RES_CODE_PLAY_MAP_TESTING(Text::toString(n), Text::toString(width), Text::toString(height));
+			const int n = (tilesEntry->data->width() / GBBASIC_TILE_SIZE) * (tilesEntry->data->height() / GBBASIC_TILE_SIZE);
+			const std::string src = RES_CODE_PLAY_MAP_TESTING(
+				Text::toString(width), Text::toString(height),
+				Text::toString(n)
+			);
 			assets->code.add(src);
 		} while (false);
 
@@ -3869,8 +3867,12 @@ private:
 			print_, warn_, error_
 		);
 
+		print_("End compiling for map testing.");
+
 		if (!rom_)
 			return nullptr;
+
+		print_("Ok.");
 
 		// Finish.
 		return rom_;

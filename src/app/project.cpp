@@ -613,13 +613,13 @@ PaletteAssets::Getter Project::paletteGetter(void) {
 Bytes::Ptr Project::backgroundPalettes(void) {
 	const PaletteAssets &assets_ = touchPalette();
 
-	return assets_.generateBackgroundPalettes();
+	return assets_.serializeBackgroundPalettes();
 }
 
 Bytes::Ptr Project::spritePalettes(void) {
 	const PaletteAssets &assets_ = touchPalette();
 
-	return assets_.generateSpritePalettes();
+	return assets_.serializeSpritePalettes();
 }
 
 int Project::fontPageCount(void) const {

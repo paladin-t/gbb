@@ -28,9 +28,9 @@
 ** Macros and constants
 */
 
-#ifndef EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_STOP
-#	define EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_STOP 1
-#endif /* EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_STOP */
+#ifndef EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_FINISH
+#	define EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_FINISH 1
+#endif /* EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_FINISH */
 
 /* ===========================================================================} */
 
@@ -3677,11 +3677,11 @@ private:
 
 		// Stop playing.
 		_tools.isPlaying = false;
-#if EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_STOP
+#if EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_FINISH
 		_tools.isPlayerSymbolsLoaded = false;
 		_tools.playerSymbolsText.clear();
 		_tools.playerAliasesText.clear();
-#endif /* EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_STOP */
+#endif /* EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_FINISH */
 
 		// Finish.
 		return true;
@@ -3692,40 +3692,28 @@ private:
 			return nullptr;
 
 		auto print_ = [ws] (const std::string &msg) -> void {
-			std::string msg_ = "Actor editor:\n";
-			msg_ += msg;
-			if (msg_.back() != '.')
-				msg_ += '.';
-			ws->print(msg_.c_str());
+			ws->print(msg.c_str());
 		};
 		auto warn_ = [ws] (const std::string &msg) -> void {
-			std::string msg_ = "Actor editor:\n";
-			msg_ += msg;
-			if (msg_.back() != '\n' && msg_.back() != '.')
-				msg_ += '.';
-			ws->warn(msg_.c_str());
+			ws->warn(msg.c_str());
 		};
 		auto error_ = [ws] (const std::string &msg) -> void {
-			std::string msg_ = "Actor editor:\n";
-			msg_ += msg;
-			if (msg_.back() != '.')
-				msg_ += '.';
-			ws->error(msg_.c_str());
+			ws->error(msg.c_str());
 		};
 
 		// Get the kernel.
 		if (ws->kernels().empty()) {
-			self->warn(ws, "No valid actor player", true);
+			self->warn(ws, "No valid actor player.", true);
 
 			return nullptr;
 		}
 
-		if (ws->kernels().empty())
-			return nullptr;
-
 		const GBBASIC::Kernel::Ptr &krnl = ws->kernels().front();
-		if (!krnl)
+		if (!krnl) {
+			self->warn(ws, "No valid kernel.", true);
+
 			return nullptr;
+		}
 
 		std::string dir;
 		Path::split(krnl->path(), nullptr, nullptr, &dir);
@@ -3746,8 +3734,11 @@ private:
 					self->warn(ws, msg, true);
 				}
 			);
-			if (!loaded)
+			if (!loaded) {
+				self->warn(ws, "No valid symbol.", true);
+
 				return nullptr;
+			}
 
 			tools.isPlayerSymbolsLoaded = true;
 			tools.playerSymbolsText     = symTxt;
@@ -3755,11 +3746,22 @@ private:
 		}
 
 		// Compile.
+		print_("Begin compiling for actor testing.");
+
 		AssetsBundle::Ptr assets(new AssetsBundle());
-		// TODO
-		assets->actors.add(*entry_);
-		const std::string src = RES_CODE_PLAY_ACTOR_TESTING;
-		assets->code.add(src);
+		do {
+			// Prepare.
+			const Project::Ptr &prj = ws->currentProject();
+			GBBASIC_ASSERT(prj && "Impossible.");
+
+			// Add the palette asset.
+			assets->palette = prj->assets()->palette;
+
+			// TODO
+			assets->actors.add(*entry_);
+			const std::string src = RES_CODE_PLAY_ACTOR_TESTING;
+			assets->code.add(src);
+		} while (false);
 
 		const Bytes::Ptr rom_ = Workspace::compile(
 			rom, sym, tools.playerSymbolsText, aliases, tools.playerAliasesText,
@@ -3768,8 +3770,12 @@ private:
 			print_, warn_, error_
 		);
 
+		print_("End compiling for actor testing.");
+
 		if (!rom_)
 			return nullptr;
+
+		print_("Ok.");
 
 		// Finish.
 		return rom_;

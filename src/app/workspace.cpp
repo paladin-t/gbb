@@ -5431,8 +5431,8 @@ Bytes::Ptr Workspace::compile(
 	options.sym = symPath;
 	options.aliases = aliasesPath;
 	options.font = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
-	options.backgroundPalettes = assets->palette.generateBackgroundPalettes();
-	options.spritePalettes = assets->palette.generateSpritePalettes();
+	options.backgroundPalettes = assets->palette.serializeBackgroundPalettes();
+	options.spritePalettes = assets->palette.serializeSpritePalettes();
 	options.title = title;
 	options.strategies.compatibility = GBBASIC::Options::Strategies::Compatibilities::CLASSIC | GBBASIC::Options::Strategies::Compatibilities::COLORED;
 	options.strategies.sramType = 0x00;

@@ -28,9 +28,9 @@
 ** Macros and constants
 */
 
-#ifndef EDITOR_SFX_UNLOAD_SYMBOLS_ON_STOP
-#	define EDITOR_SFX_UNLOAD_SYMBOLS_ON_STOP 1
-#endif /* EDITOR_SFX_UNLOAD_SYMBOLS_ON_STOP */
+#ifndef EDITOR_SFX_UNLOAD_SYMBOLS_ON_FINISH
+#	define EDITOR_SFX_UNLOAD_SYMBOLS_ON_FINISH 1
+#endif /* EDITOR_SFX_UNLOAD_SYMBOLS_ON_FINISH */
 
 /* ===========================================================================} */
 
@@ -2708,12 +2708,12 @@ private:
 		_tools.playerStopDelay = 0.2;
 		_tools.playerMaxDuration = 0.0;
 		_tools.playerPlayedTicks = 0.0;
-#if EDITOR_SFX_UNLOAD_SYMBOLS_ON_STOP
+#if EDITOR_SFX_UNLOAD_SYMBOLS_ON_FINISH
 		_tools.isPlayerSymbolsLoaded = false;
 		_tools.playerSymbolsText.clear();
 		_tools.playerAliasesText.clear();
 		_tools.playerIsPlayingLocation = Editing::SymbolLocation();
-#endif /* EDITOR_SFX_UNLOAD_SYMBOLS_ON_STOP */
+#endif /* EDITOR_SFX_UNLOAD_SYMBOLS_ON_FINISH */
 		_tools.hasPlayerPlayed = false;
 
 		// Finish.
@@ -2778,40 +2778,28 @@ private:
 	static Bytes::Ptr compileSfx(Workspace* ws, EditorSfxImpl* self, const SfxAssets::Entry &entry_, Tools &tools) {
 		// Prepare.
 		auto print_ = [ws] (const std::string &msg) -> void {
-			std::string msg_ = "SFX editor:\n";
-			msg_ += msg;
-			if (msg_.back() != '.')
-				msg_ += '.';
-			ws->print(msg_.c_str());
+			ws->print(msg.c_str());
 		};
 		auto warn_ = [ws] (const std::string &msg) -> void {
-			std::string msg_ = "SFX editor:\n";
-			msg_ += msg;
-			if (msg_.back() != '\n' && msg_.back() != '.')
-				msg_ += '.';
-			ws->warn(msg_.c_str());
+			ws->warn(msg.c_str());
 		};
 		auto error_ = [ws] (const std::string &msg) -> void {
-			std::string msg_ = "SFX editor:\n";
-			msg_ += msg;
-			if (msg_.back() != '.')
-				msg_ += '.';
-			ws->error(msg_.c_str());
+			ws->error(msg.c_str());
 		};
 
 		// Get the kernel.
 		if (ws->kernels().empty()) {
-			self->warn(ws, "No valid SFX player", true);
+			self->warn(ws, "No valid SFX player.", true);
 
 			return nullptr;
 		}
 
-		if (ws->kernels().empty())
-			return nullptr;
-
 		const GBBASIC::Kernel::Ptr &krnl = ws->kernels().front();
-		if (!krnl)
+		if (!krnl) {
+			self->warn(ws, "No valid kernel.", true);
+
 			return nullptr;
+		}
 
 		std::string dir;
 		Path::split(krnl->path(), nullptr, nullptr, &dir);
@@ -2833,8 +2821,11 @@ private:
 					self->warn(ws, msg, true);
 				}
 			);
-			if (!loaded)
+			if (!loaded) {
+				self->warn(ws, "No valid symbol.", true);
+
 				return nullptr;
+			}
 
 			const Editing::SymbolLocation &isPlayingLoc  = dict[EDITOR_SFX_PLAYER_IS_PLAYING_RAM_STUB];
 			tools.playerIsPlayingLocation                = isPlayingLoc;
@@ -2845,6 +2836,8 @@ private:
 		}
 
 		// Compile.
+		print_("Begin compiling for SFX playback.");
+
 		AssetsBundle::Ptr assets(new AssetsBundle());
 		std::string src;
 		src += RES_CODE_PLAY_SFX;
@@ -2858,8 +2851,12 @@ private:
 			print_, warn_, error_
 		);
 
+		print_("End compiling for SFX playback.");
+
 		if (!rom_)
 			return nullptr;
+
+		print_("Ok.");
 
 		// Finish.
 		return rom_;

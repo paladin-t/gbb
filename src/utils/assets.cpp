@@ -1008,7 +1008,7 @@ PaletteAssets::Entry* PaletteAssets::get(int index) {
 	return &entries[index];
 }
 
-Bytes::Ptr PaletteAssets::generateBackgroundPalettes(void) const {
+Bytes::Ptr PaletteAssets::serializeBackgroundPalettes(void) const {
 	Bytes::Ptr result(Bytes::create());
 	for (int i = 0; i < count() && i < 8; ++i) {
 		const PaletteAssets::Entry* entry = get(i);
@@ -1034,7 +1034,7 @@ Bytes::Ptr PaletteAssets::generateBackgroundPalettes(void) const {
 	return result;
 }
 
-Bytes::Ptr PaletteAssets::generateSpritePalettes(void) const {
+Bytes::Ptr PaletteAssets::serializeSpritePalettes(void) const {
 	Bytes::Ptr result(Bytes::create());
 	for (int i = 8; i < count() && i < 16; ++i) {
 		const PaletteAssets::Entry* entry = get(i);
