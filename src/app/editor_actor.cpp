@@ -3643,25 +3643,50 @@ private:
 		// Start measuring performance.
 		const long long start = DateTime::ticks();
 
-		// Compile.
-		const Bytes::Ptr rom_ = compileActor(wnd, rnd, ws, this, entry(), _tools);
+		auto finish = [wnd, rnd, ws, this, start] (void) -> bool {
+			// Compile.
+			const Bytes::Ptr rom_ = compileActor(wnd, rnd, ws, this, entry(), _tools);
 
-		if (!rom_)
-			return false;
+			if (!rom_)
+				return false;
 
-		// Finish measuring performance.
-		const long long end = DateTime::ticks();
-		const long long diff = end - start;
-		const double secs = DateTime::toSeconds(diff);
-		const std::string time = Text::toString(secs, 6, 0, ' ', std::ios::fixed);
+			// Finish measuring performance.
+			const long long end = DateTime::ticks();
+			const long long diff = end - start;
+			const double secs = DateTime::toSeconds(diff);
+			const std::string time = Text::toString(secs, 6, 0, ' ', std::ios::fixed);
 
-		const std::string msg = "Completed in " + time + "s.";
-		fprintf(stdout, "%s\n", msg.c_str());
+			const std::string msg = "Completed in " + time + "s.";
+			fprintf(stdout, "%s\n", msg.c_str());
 
-		// Run and play.
-		ws->run(wnd, rnd, rom_);
+			// Run and play.
+			ws->run(wnd, rnd, rom_);
 
-		_tools.isPlaying = true;
+			_tools.isPlaying = true;
+
+			// Finish.
+			return true;
+		};
+
+		// Async.
+		ImGui::WaitingPopupBox::TimeoutHandler timeout(
+			[ws, this, finish] (void) -> void {
+				if (!_compacted.filled)
+					compactAllEntriesSlices(ws, true);
+
+				_compacted.generated.wait();
+
+				finish();
+
+				ws->popupBox(nullptr);
+			},
+			nullptr
+		);
+		ws->waitingPopupBox(
+			true, ws->theme()->dialogPrompt_Compacting(),
+			true, timeout,
+			true
+		);
 
 		// Finish.
 		return true;
@@ -3688,7 +3713,7 @@ private:
 	}
 	static Bytes::Ptr compileActor(Window*, Renderer*, Workspace* ws, EditorActorImpl* self, const ActorAssets::Entry* entry_, Tools &tools) {
 		// Prepare.
-		if (!entry_ || !entry_->data)
+		if (!entry_ || !entry_->data || entry_->data->count() == 0)
 			return nullptr;
 
 		auto print_ = [ws] (const std::string &msg) -> void {
@@ -3757,9 +3782,29 @@ private:
 			// Add the palette asset.
 			assets->palette = prj->assets()->palette;
 
-			// TODO
-			assets->actors.add(*entry_);
-			const std::string src = RES_CODE_PLAY_ACTOR_TESTING;
+			// Add the actor asset.
+			int tileCount = (int)entry_->slices.size();
+			if (entry_->data->is8x16())
+				tileCount *= 2;
+
+			Actor* newActor = nullptr;
+			entry_->data->clone(&newActor, false);
+			if (!newActor->updateRoutine().empty())
+				newActor->updateRoutine("");
+			if (!newActor->onHitsRoutine().empty())
+				newActor->onHitsRoutine("");
+			ActorAssets::Entry actorEntry_ = *entry_;
+			actorEntry_.data = Actor::Ptr(newActor);
+			assets->actors.add(actorEntry_);
+
+			// Add a dummy code asset.
+			const int x = GBBASIC_SCREEN_WIDTH / 2;
+			const int y = GBBASIC_SCREEN_HEIGHT / 2;
+			const std::string src = RES_CODE_PLAY_ACTOR_TESTING(
+				Text::toString(x), Text::toString(y),
+				Text::toString(tileCount),
+				Text::toString(true)
+			);
 			assets->code.add(src);
 		} while (false);
 
