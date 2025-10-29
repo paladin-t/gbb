@@ -1000,6 +1000,8 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipActor_IntervalTooltips().push_back("  60 FPS (Fast)");
 	tooltipActor_PasteDefinition("Paste definition");
 	tooltipActor_Refresh("Refresh (Ctrl+Shift+R)");
+	tooltipActor_StopTesting("Stop testing");
+	tooltipActor_TestActor("Test actor");
 	tooltipActor_ToAllFrames("To all frames");
 	tooltipActor_ToAllTiles("To all tiles");
 
@@ -1111,6 +1113,8 @@ bool Theme::open(class Renderer* rnd) {
 		"`IMAGE(...) = WITH MAP ...`,\n"
 		"otherwise all tiles will be filled."
 	);
+	tooltipMap_StopTesting("Stop testing");
+	tooltipMap_TestMap("Test map");
 	tooltipMap_UpdateTheRefTilesAssetPage("Update the ref tiles asset page");
 
 	tooltipPalette_Index0("(1)\nIgnored by sprites");
@@ -1148,6 +1152,8 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipScene_InfoLayers("layers");
 	tooltipScene_PasteDefinition("Paste definition");
 	tooltipScene_Properties("Properties:");
+	tooltipScene_StopTesting("Stop testing");
+	tooltipScene_TestScene("Test scene");
 	tooltipScene_TriggerDetails("Index: {0}\n  Pos: {1},{2}\n Size: {3}x{4}");
 
 	tooltipTiles_CreateAMapReferencingThisTilesPage("Create a map referencing this tiles page");
@@ -1261,9 +1267,9 @@ bool Theme::open(class Renderer* rnd) {
 	iconAppend(createTexture(rnd, RES_ICON_APPEND, GBBASIC_COUNTOF(RES_ICON_APPEND), nullptr));
 
 	iconPlay(createTexture(rnd, RES_ICON_PLAY, GBBASIC_COUNTOF(RES_ICON_PLAY), nullptr));
-	iconPlayAudio(createTexture(rnd, RES_ICON_PLAY_AUDIO, GBBASIC_COUNTOF(RES_ICON_PLAY_AUDIO), nullptr));
+	iconStartPreview(createTexture(rnd, RES_ICON_PLAY_AUDIO, GBBASIC_COUNTOF(RES_ICON_PLAY_AUDIO), nullptr));
 	iconStop(createTexture(rnd, RES_ICON_STOP, GBBASIC_COUNTOF(RES_ICON_STOP), nullptr));
-	iconStopAudio(createTexture(rnd, RES_ICON_STOP_AUDIO, GBBASIC_COUNTOF(RES_ICON_STOP_AUDIO), nullptr));
+	iconStopPreview(createTexture(rnd, RES_ICON_STOP_AUDIO, GBBASIC_COUNTOF(RES_ICON_STOP_AUDIO), nullptr));
 	iconPause(createTexture(rnd, RES_ICON_PAUSE, GBBASIC_COUNTOF(RES_ICON_PAUSE), nullptr));
 
 	iconNumber0(createTexture(rnd, RES_ICON_NUMBER_0, GBBASIC_COUNTOF(RES_ICON_NUMBER_0), nullptr));
@@ -1425,9 +1431,9 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconAppend(), nullptr);
 
 	destroyTexture(rnd, iconPlay(), nullptr);
-	destroyTexture(rnd, iconPlayAudio(), nullptr);
+	destroyTexture(rnd, iconStartPreview(), nullptr);
 	destroyTexture(rnd, iconStop(), nullptr);
-	destroyTexture(rnd, iconStopAudio(), nullptr);
+	destroyTexture(rnd, iconStopPreview(), nullptr);
 	destroyTexture(rnd, iconPause(), nullptr);
 
 	destroyTexture(rnd, iconNumber0(), nullptr);

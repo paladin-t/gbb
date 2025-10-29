@@ -11,6 +11,8 @@
 #include "editor_scene.h"
 #include "theme.h"
 #include "workspace.h"
+#include "resource/inline_resource.h"
+#include "../utils/datetime.h"
 #include "../utils/encoding.h"
 #include "../utils/file_sandbox.h"
 #include "../utils/filesystem.h"
@@ -19,6 +21,17 @@
 #include "../../lib/imgui/imgui_internal.h"
 #include "../../lib/jpath/jpath.hpp"
 #include <SDL.h>
+
+/*
+** {===========================================================================
+** Macros and constants
+*/
+
+#ifndef EDITOR_SCENE_UNLOAD_SYMBOLS_ON_FINISH
+#	define EDITOR_SCENE_UNLOAD_SYMBOLS_ON_FINISH 1
+#endif /* EDITOR_SCENE_UNLOAD_SYMBOLS_ON_FINISH */
+
+/* ===========================================================================} */
 
 /*
 ** {===========================================================================
@@ -206,6 +219,7 @@ private:
 	std::function<void(const Command*)> _refresh = nullptr;
 	std::function<void(void)> _checker = nullptr;
 	std::function<void(void)> _determinator = nullptr;
+	ActorAssets::Entry::PlayerBehaviourCheckingHandler _isPlayerBehaviour = nullptr;
 	struct {
 		std::string text;
 		bool filled = false;
@@ -355,6 +369,13 @@ private:
 		ImVec2 mousePos = ImVec2(-1, -1);
 		ImVec2 mouseDiff = ImVec2(0, 0);
 
+		std::function<bool(void)> playSceneTesting = nullptr;
+		std::function<bool(void)> stopSceneTesting = nullptr;
+		bool isPlaying = false;
+		bool isPlayerSymbolsLoaded = false;
+		std::string playerSymbolsText;
+		std::string playerAliasesText;
+
 		PostHandler post = nullptr;
 		Editing::Tools::PaintableTools postType = Editing::Tools::PENCIL;
 
@@ -386,6 +407,13 @@ private:
 
 			mousePos = ImVec2(-1, -1);
 			mouseDiff = ImVec2(0, 0);
+
+			playSceneTesting = nullptr;
+			stopSceneTesting = nullptr;
+			isPlaying = false;
+			isPlayerSymbolsLoaded = false;
+			playerSymbolsText.clear();
+			playerAliasesText.clear();
 
 			post = nullptr;
 			postType = Editing::Tools::PENCIL;
@@ -707,35 +735,32 @@ public:
 		};
 		_checker();
 
-		_determinator = [ws, this] (void) -> void {
-			// Prepare.
-			GBBASIC::Kernel::Ptr krnl = ws->activeKernel();
-
-			// Check for 16x16 player.
-			if (krnl) {
-				const GBBASIC::Kernel::Behaviour::Array &behaviours = krnl->behaviours();
-				ActorAssets::Entry::PlayerBehaviourCheckingHandler isPlayerBehaviour = [&behaviours] (UInt8 val) -> bool {
-					GBBASIC::Kernel::Behaviour::Array::const_iterator bit = std::find_if(
-						behaviours.begin(), behaviours.end(),
-						[val] (const GBBASIC::Kernel::Behaviour &bhvr) -> bool {
-							return val == bhvr.value;
-						}
-					);
-					if (bit == behaviours.end()) {
-						return false;
-					} else {
-						const GBBASIC::Kernel::Behaviour &bhvr = *bit;
-						if (bhvr.type == KERNEL_BEHAVIOUR_TYPE_PLAYER)
-							return true;
+		GBBASIC::Kernel::Ptr krnl = ws->activeKernel();
+		if (krnl) {
+			const GBBASIC::Kernel::Behaviour::Array &behaviours = krnl->behaviours();
+			_isPlayerBehaviour = [&behaviours] (UInt8 val) -> bool {
+				GBBASIC::Kernel::Behaviour::Array::const_iterator bit = std::find_if(
+					behaviours.begin(), behaviours.end(),
+					[val] (const GBBASIC::Kernel::Behaviour &bhvr) -> bool {
+						return val == bhvr.value;
 					}
-
+				);
+				if (bit == behaviours.end()) {
 					return false;
-				};
+				} else {
+					const GBBASIC::Kernel::Behaviour &bhvr = *bit;
+					if (bhvr.type == KERNEL_BEHAVIOUR_TYPE_PLAYER)
+						return true;
+				}
 
-				const bool is16x16Player = entry()->has16x16PlayerActor(isPlayerBehaviour);
-				entry()->definition.is_16x16_player = is16x16Player;
-				_tools.definitionShadow.is_16x16_player = is16x16Player;
-			}
+				return false;
+			};
+		}
+		_determinator = [ws, this] (void) -> void {
+			// Check for 16x16 player.
+			const bool is16x16Player = entry()->has16x16PlayerActor(_isPlayerBehaviour);
+			entry()->definition.is_16x16_player = is16x16Player;
+			_tools.definitionShadow.is_16x16_player = is16x16Player;
 		};
 
 		_ref.refCategory = refCategory;
@@ -767,6 +792,8 @@ public:
 		_tools.gridUnit = Math::Vec2i(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
 		_tools.transparentBackbroundVisible = num.pressed();
 		_tools.definitionShadow = entry()->definition;
+		_tools.playSceneTesting = std::bind(&EditorSceneImpl::playSceneTesting, this, wnd, rnd, ws);
+		_tools.stopSceneTesting = std::bind(&EditorSceneImpl::stopSceneTesting, this, wnd, rnd, ws);
 
 		bindLayerTools(wnd, ws);
 
@@ -792,6 +819,7 @@ public:
 		_refresh = nullptr;
 		_checker = nullptr;
 		_determinator = nullptr;
+		_isPlayerBehaviour = nullptr;
 		_estimated.clear();
 		_painting.clear();
 		_binding.clear();
@@ -811,6 +839,8 @@ public:
 		_determinator();
 	}
 	virtual void leave(class Workspace*) override {
+		_tools.stopSceneTesting();
+
 		if (entry())
 			entry()->cleanup(); // Clean up the outdated editable and runtime resources.
 	}
@@ -3006,10 +3036,10 @@ public:
 	}
 
 	virtual void played(class Renderer*, class Workspace*) override {
-		// Do nothing.
+		_tools.stopSceneTesting();
 	}
 	virtual void stopped(class Renderer*, class Workspace*) override {
-		// Do nothing.
+		_tools.stopSceneTesting();
 	}
 
 	virtual void resized(class Renderer*, const Math::Vec2i &, const Math::Vec2i &) override {
@@ -3752,6 +3782,24 @@ private:
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(ws->theme()->tooltipEdit_NextPage());
+		}
+		if (entry()->refMap != -1) {
+			ImGui::SameLine();
+			if (_tools.isPlaying) {
+				if (ImGui::ImageButton(ws->theme()->iconStopPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipScene_StopTesting().c_str())) {
+					_tools.stopSceneTesting();
+				}
+			} else {
+				if (ws->running()) {
+					ImGui::BeginDisabled();
+					ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipScene_TestScene().c_str());
+					ImGui::EndDisabled();
+				} else {
+					if (ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipScene_TestScene().c_str())) {
+						_tools.playSceneTesting();
+					}
+				}
+			}
 		}
 		ImGui::SameLine();
 		ImGui::AlignTextToFramePadding();
@@ -5949,6 +5997,269 @@ private:
 			->exec(object(), Variant((void*)entry()));
 
 		_refresh(cmd);
+	}
+
+	bool playSceneTesting(Window* wnd, Renderer* rnd, Workspace* ws) {
+		// Prepare.
+		if (ws->running())
+			return true;
+
+		if (_tools.isPlaying)
+			stopSceneTesting(wnd, rnd, ws);
+
+		if (!object())
+			return false;
+
+		// Start measuring performance.
+		const long long start = DateTime::ticks();
+
+		// Compile.
+		const Bytes::Ptr rom_ = compileScene(wnd, rnd, ws, this, entry(), _tools, _isPlayerBehaviour);
+
+		if (!rom_)
+			return false;
+
+		// Finish measuring performance.
+		const long long end = DateTime::ticks();
+		const long long diff = end - start;
+		const double secs = DateTime::toSeconds(diff);
+		const std::string time = Text::toString(secs, 6, 0, ' ', std::ios::fixed);
+
+		const std::string msg = "Completed in " + time + "s.";
+		fprintf(stdout, "%s\n", msg.c_str());
+
+		// Run and play.
+		ws->run(wnd, rnd, rom_);
+
+		_tools.isPlaying = true;
+
+		// Finish.
+		return true;
+	}
+	bool stopSceneTesting(Window* wnd, Renderer* rnd, Workspace* ws) {
+		// Prepare.
+		if (!_tools.isPlaying)
+			return true;
+
+		// Close the device.
+		if (ws->running())
+			ws->stop(wnd, rnd);
+
+		// Stop playing.
+		_tools.isPlaying = false;
+#if EDITOR_SCENE_UNLOAD_SYMBOLS_ON_FINISH
+		_tools.isPlayerSymbolsLoaded = false;
+		_tools.playerSymbolsText.clear();
+		_tools.playerAliasesText.clear();
+#endif /* EDITOR_SCENE_UNLOAD_SYMBOLS_ON_FINISH */
+
+		// Finish.
+		return true;
+	}
+	static Bytes::Ptr compileScene(Window*, Renderer*, Workspace* ws, EditorSceneImpl* self, const SceneAssets::Entry* entry_, Tools &tools, ActorAssets::Entry::PlayerBehaviourCheckingHandler isPlayerBehaviour) {
+		// Prepare.
+		if (!entry_ || !entry_->data)
+			return nullptr;
+
+		auto print_ = [ws] (const std::string &msg) -> void {
+			ws->print(msg.c_str());
+		};
+		auto warn_ = [ws] (const std::string &msg) -> void {
+			ws->warn(msg.c_str());
+		};
+		auto error_ = [ws] (const std::string &msg) -> void {
+			ws->error(msg.c_str());
+		};
+
+		// Get the kernel.
+		if (ws->kernels().empty()) {
+			self->warn(ws, "No valid scene player.", true);
+
+			return nullptr;
+		}
+
+		const GBBASIC::Kernel::Ptr &krnl = ws->kernels().front();
+		if (!krnl) {
+			self->warn(ws, "No valid kernel.", true);
+
+			return nullptr;
+		}
+
+		std::string dir;
+		Path::split(krnl->path(), nullptr, nullptr, &dir);
+		const std::string rom = Path::combine(dir.c_str(), krnl->kernelRom().c_str());
+		const std::string sym = Path::combine(dir.c_str(), krnl->kernelSymbols().c_str());
+		const std::string aliases = Path::combine(dir.c_str(), krnl->kernelAliases().c_str());
+		const int bootstrapBank = krnl->bootstrapBank();
+
+		// Load and parse the symbols.
+		if (!tools.isPlayerSymbolsLoaded) {
+			Editing::SymbolTable::Dictionary dict;
+			std::string symTxt;
+			std::string aliasesTxt;
+			Editing::SymbolTable symbols;
+			const bool loaded = symbols.load(
+				dict, sym, symTxt, aliases, aliasesTxt,
+				[self, ws] (const char* msg) -> void {
+					self->warn(ws, msg, true);
+				}
+			);
+			if (!loaded) {
+				self->warn(ws, "No valid symbol.", true);
+
+				return nullptr;
+			}
+
+			tools.isPlayerSymbolsLoaded = true;
+			tools.playerSymbolsText     = symTxt;
+			tools.playerAliasesText     = aliasesTxt;
+		}
+
+		// Compile.
+		print_("Begin compiling for scene testing.");
+
+		AssetsBundle::Ptr assets(new AssetsBundle());
+		do {
+			// Prepare.
+			struct IndexedActor {
+				int index = 0;
+				ActorAssets::Entry* entry = nullptr;
+
+				IndexedActor() {
+				}
+				IndexedActor(int idx, ActorAssets::Entry* ptr) : index(idx), entry(ptr) {
+				}
+			};
+			typedef std::map<int, IndexedActor> ActorMap;
+
+			const Project::Ptr &prj = ws->currentProject();
+			GBBASIC_ASSERT(prj && "Impossible.");
+
+			// Get the map asset.
+			const int refMap = entry_->refMap;
+			const MapAssets::Entry* mapEntry = entry_->getMap(refMap);
+			if (!mapEntry || !mapEntry->data) {
+				error_("Invalid map asset.");
+
+				break;
+			}
+
+			// Add the palette asset.
+			assets->palette = prj->assets()->palette;
+
+			// Add the tiles asset.
+			const int ref = mapEntry->ref;
+			const TilesAssets::Entry* tilesEntry = mapEntry->getTiles(ref);
+			if (!tilesEntry || !tilesEntry->data) {
+				error_("Invalid tiles asset.");
+
+				break;
+			}
+			assets->tiles.add(*tilesEntry);
+
+			// Add the map asset.
+			const int width = entry_->data->width();
+			const int height = entry_->data->height();
+			MapAssets::Entry mapEntry_ = *mapEntry;
+			mapEntry_.ref = 0;
+			assets->maps.add(mapEntry_);
+
+			// Add the actor assets.
+			SceneAssets::Entry::UniqueRef uref;
+			const SceneAssets::Entry::Ref refActors_ = entry_->getRefActors(&uref);
+			(void)refActors_;
+			ActorMap actorMap;
+			bool invalidActor = false;
+			int playerCount = 0;
+			for (int refActor : uref) {
+				ActorAssets::Entry* actorEntry = entry_->getActor(refActor);
+				if (!actorEntry || !actorEntry->data) {
+					invalidActor = true;
+
+					break;
+				}
+
+				const int idx = (int)actorMap.size();
+				actorMap[refActor] = IndexedActor(idx, actorEntry);
+
+				const UInt8 bhvr = actorEntry->definition.behaviour;
+				if (isPlayerBehaviour(bhvr))
+					++playerCount;
+			}
+			if (invalidActor) {
+				error_("Invalid actor asset.");
+
+				break;
+			}
+
+			for (ActorMap::value_type kv : actorMap) {
+				const int refActor = kv.first;
+				const IndexedActor &indexedActor = kv.second;
+				ActorAssets::Entry* actorEntry = indexedActor.entry;
+				Actor* newActor = nullptr;
+				actorEntry->data->clone(&newActor, false);
+				if (!newActor->updateRoutine().empty())
+					newActor->updateRoutine("");
+				if (!newActor->onHitsRoutine().empty())
+					newActor->onHitsRoutine("");
+				ActorAssets::Entry actorEntry_ = *actorEntry;
+				actorEntry_.data = Actor::Ptr(newActor);
+				assets->actors.add(actorEntry_);
+			}
+
+			// Add the scene asset.
+			Scene* newScene = nullptr;
+			entry_->data->clone(&newScene, false);
+			if (!newScene)
+				break;
+
+			newScene->triggerLayer()->clear();
+
+			SceneAssets::Entry sceneEntry = *entry_;
+			sceneEntry.data = Scene::Ptr(newScene);
+			sceneEntry.refMap = 0;
+			Map::Ptr actorLayer = sceneEntry.data->actorLayer();
+			for (int j = 0; j < actorLayer->height(); ++j) {
+				for (int i = 0; i < actorLayer->width(); ++i) {
+					const int cel = actorLayer->get(i, j);
+					if (cel == Scene::INVALID_ACTOR())
+						continue;
+
+					ActorMap::const_iterator it = actorMap.find(cel);
+					if (it == actorMap.end())
+						continue;
+
+					const int newIdx = it->second.index;
+					actorLayer->set(i, j, newIdx, false);
+				}
+			}
+			sceneEntry.actorRoutineOverridings.clear();
+			assets->scenes.add(sceneEntry);
+
+			// Add a dummy code asset.
+			const std::string src = RES_CODE_PLAY_SCENE_TESTING(
+				Text::toString(width), Text::toString(height),
+				Text::toString(!playerCount)
+			);
+			assets->code.add(src);
+		} while (false);
+
+		const Bytes::Ptr rom_ = Workspace::compile(
+			rom, sym, tools.playerSymbolsText, aliases, tools.playerAliasesText,
+			"Scene", assets,
+			bootstrapBank,
+			print_, warn_, error_
+		);
+
+		print_("End compiling for scene testing.");
+
+		if (!rom_)
+			return nullptr;
+
+		print_("Ok.");
+
+		// Finish.
+		return rom_;
 	}
 };
 

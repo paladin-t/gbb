@@ -4190,9 +4190,9 @@ promise::Promise Operations::projectBuild(Window* wnd, Renderer* rnd, Workspace*
 	);
 }
 
-promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes::Ptr rom, Bytes::Ptr sram) {
+promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes::Ptr rom, Bytes::Ptr sram, bool countActivities) {
 	return promise::newPromise(
-		[&] (promise::Defer df) -> void {
+		[&, rom, sram, countActivities] (promise::Defer df) -> void {
 			ws->print("Begin running.");
 
 			ws->category(Workspace::Categories::EMULATOR);
@@ -4251,13 +4251,15 @@ promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes
 
 			const Project::Ptr &prj = ws->currentProject();
 
-			ws->activities().playingStartTimestamp = DateTime::ticks();
+			if (countActivities) {
+				ws->activities().playingStartTimestamp = DateTime::ticks();
 
-			++ws->activities().played;
-			switch (prj->contentType()) {
-			case Project::ContentTypes::BASIC: ++ws->activities().playedBasic; break;
-			case Project::ContentTypes::ROM:   ++ws->activities().playedRom;   break;
-			default: GBBASIC_ASSERT(false && "Impossible.");                   break;
+				++ws->activities().played;
+				switch (prj->contentType()) {
+				case Project::ContentTypes::BASIC: ++ws->activities().playedBasic; break;
+				case Project::ContentTypes::ROM:   ++ws->activities().playedRom;   break;
+				default: GBBASIC_ASSERT(false && "Impossible.");                   break;
+				}
 			}
 
 			df.resolve(true);

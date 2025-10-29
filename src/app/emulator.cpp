@@ -411,6 +411,11 @@ void emulator(
 		canvasDevice->fps(), fps
 	);
 
+	GBBASIC_ASSERT(!!canvasDevice && "Impossible.");
+
+	if (!canvasTexture) // Not ready.
+		return;
+
 	// Render emulation.
 	context.begin();
 	{

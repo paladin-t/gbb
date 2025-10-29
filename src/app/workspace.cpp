@@ -1748,6 +1748,10 @@ void Workspace::cursor(Device::CursorTypes mode) {
 	canvasCursorMode(mode);
 }
 
+void Workspace::run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom) {
+	Operations::projectRun(wnd, rnd, this, rom, nullptr, false);
+}
+
 bool Workspace::running(void) const {
 	if (canvasDevice())
 		return true;
@@ -5427,8 +5431,10 @@ Bytes::Ptr Workspace::compile(
 	options.sym = symPath;
 	options.aliases = aliasesPath;
 	options.font = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
+	options.backgroundPalettes = assets->palette.serializeBackgroundPalettes();
+	options.spritePalettes = assets->palette.serializeSpritePalettes();
 	options.title = title;
-	options.strategies.compatibility = GBBASIC::Options::Strategies::Compatibilities::CLASSIC; // | GBBASIC::Options::Strategies::Compatibilities::COLORED;
+	options.strategies.compatibility = GBBASIC::Options::Strategies::Compatibilities::CLASSIC | GBBASIC::Options::Strategies::Compatibilities::COLORED;
 	options.strategies.sramType = 0x00;
 	options.strategies.cartridgeHasRtc = false;
 	options.strategies.bootstrapBank = bootstrapBank;
@@ -12028,7 +12034,7 @@ void Workspace::runProject(Window* wnd, Renderer* rnd, Bytes::Ptr rom) {
 	Operations::projectLoadSram(wnd, rnd, this, prj, sram)
 		.always(
 			[wnd, rnd, this, rom, sram] (void) -> void {
-				Operations::projectRun(wnd, rnd, this, rom, sram);
+				Operations::projectRun(wnd, rnd, this, rom, sram, true);
 			}
 		);
 }

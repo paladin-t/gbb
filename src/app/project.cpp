@@ -611,57 +611,15 @@ PaletteAssets::Getter Project::paletteGetter(void) {
 }
 
 Bytes::Ptr Project::backgroundPalettes(void) {
-	Bytes::Ptr result(Bytes::create());
 	const PaletteAssets &assets_ = touchPalette();
-	for (int i = 0; i < assets_.count() && i < 8; ++i) {
-		const PaletteAssets::Entry* entry = assets_.get(i);
-		if (entry) {
-			const Indexed::Ptr &palette = entry->data;
-			for (int j = 0; j < palette->count(); ++j) {
-				Colour color;
-				palette->get(j, color);
-				if (color.a == 0)
-					color.fromRGBA(0xffffffff);
-				const UInt16 rgb555 = color.toRGB555();
-				result->writeUInt16(rgb555);
-			}
-		} else {
-			for (int j = 0; j < GBBASIC_PALETTE_PER_GROUP_COUNT; ++j) {
-				Colour color;
-				const UInt16 rgb555 = color.toRGB555();
-				result->writeUInt16(rgb555);
-			}
-		}
-	}
 
-	return result;
+	return assets_.serializeBackgroundPalettes();
 }
 
 Bytes::Ptr Project::spritePalettes(void) {
-	Bytes::Ptr result(Bytes::create());
 	const PaletteAssets &assets_ = touchPalette();
-	for (int i = 8; i < assets_.count() && i < 16; ++i) {
-		const PaletteAssets::Entry* entry = assets_.get(i);
-		if (entry) {
-			const Indexed::Ptr &palette = entry->data;
-			for (int j = 0; j < palette->count(); ++j) {
-				Colour color;
-				palette->get(j, color);
-				if (color.a == 0)
-					color.fromRGBA(0xffffffff);
-				const UInt16 rgb555 = color.toRGB555();
-				result->writeUInt16(rgb555);
-			}
-		} else {
-			for (int j = 0; j < GBBASIC_PALETTE_PER_GROUP_COUNT; ++j) {
-				Colour color;
-				const UInt16 rgb555 = color.toRGB555();
-				result->writeUInt16(rgb555);
-			}
-		}
-	}
 
-	return result;
+	return assets_.serializeSpritePalettes();
 }
 
 int Project::fontPageCount(void) const {

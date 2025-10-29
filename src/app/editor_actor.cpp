@@ -11,6 +11,7 @@
 #include "editor_properties.h"
 #include "theme.h"
 #include "workspace.h"
+#include "resource/inline_resource.h"
 #include "../utils/datetime.h"
 #include "../utils/encoding.h"
 #include "../utils/file_sandbox.h"
@@ -21,6 +22,17 @@
 #include "../../lib/imgui/imgui_internal.h"
 #include "../../lib/jpath/jpath.hpp"
 #include <SDL.h>
+
+/*
+** {===========================================================================
+** Macros and constants
+*/
+
+#ifndef EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_FINISH
+#	define EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_FINISH 1
+#endif /* EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_FINISH */
+
+/* ===========================================================================} */
 
 /*
 ** {===========================================================================
@@ -307,6 +319,13 @@ private:
 		ImVec2 mousePos = ImVec2(-1, -1);
 		ImVec2 mouseDiff = ImVec2(0, 0);
 
+		std::function<bool(void)> playActorTesting = nullptr;
+		std::function<bool(void)> stopActorTesting = nullptr;
+		bool isPlaying = false;
+		bool isPlayerSymbolsLoaded = false;
+		std::string playerSymbolsText;
+		std::string playerAliasesText;
+
 		PostHandler post = nullptr;
 		Editing::Tools::PaintableTools postType = Editing::Tools::PENCIL;
 
@@ -332,6 +351,13 @@ private:
 
 			mousePos = ImVec2(-1, -1);
 			mouseDiff = ImVec2(0, 0);
+
+			playActorTesting = nullptr;
+			stopActorTesting = nullptr;
+			isPlaying = false;
+			isPlayerSymbolsLoaded = false;
+			playerSymbolsText.clear();
+			playerAliasesText.clear();
 
 			post = nullptr;
 			postType = Editing::Tools::PENCIL;
@@ -544,6 +570,8 @@ public:
 		_tools.transparentBackbroundVisible = num.pressed();
 		_tools.anchorVisible = num.pressed();
 		_tools.definitionShadow = entry()->definition;
+		_tools.playActorTesting = std::bind(&EditorActorImpl::playActorTesting, this, wnd, rnd, ws);
+		_tools.stopActorTesting = std::bind(&EditorActorImpl::stopActorTesting, this, wnd, rnd, ws);
 
 		fprintf(stdout, "Actor editor opened: #%d.\n", _index);
 	}
@@ -590,6 +618,8 @@ public:
 			compactAllEntriesSlices(ws, false);
 	}
 	virtual void leave(class Workspace*) override {
+		_tools.stopActorTesting();
+
 		if (entry())
 			entry()->cleanup(); // Clean up the outdated editable and runtime resources.
 	}
@@ -1802,10 +1832,10 @@ public:
 	}
 
 	virtual void played(class Renderer*, class Workspace*) override {
-		// Do nothing.
+		_tools.stopActorTesting();
 	}
 	virtual void stopped(class Renderer*, class Workspace*) override {
-		// Do nothing.
+		_tools.stopActorTesting();
 	}
 
 	virtual void resized(class Renderer*, const Math::Vec2i &, const Math::Vec2i &) override {
@@ -2101,6 +2131,22 @@ private:
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(ws->theme()->tooltipEdit_NextPage());
+		}
+		ImGui::SameLine();
+		if (_tools.isPlaying) {
+			if (ImGui::ImageButton(ws->theme()->iconStopPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipActor_StopTesting().c_str())) {
+				_tools.stopActorTesting();
+			}
+		} else {
+			if (ws->running()) {
+				ImGui::BeginDisabled();
+				ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipActor_TestActor().c_str());
+				ImGui::EndDisabled();
+			} else {
+				if (ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipActor_TestActor().c_str())) {
+					_tools.playActorTesting();
+				}
+			}
 		}
 		ImGui::SameLine();
 		ImGui::AlignTextToFramePadding();
@@ -3581,6 +3627,203 @@ private:
 			->exec(object(), Variant((void*)entry()));
 
 		_refresh(cmd);
+	}
+
+	bool playActorTesting(Window* wnd, Renderer* rnd, Workspace* ws) {
+		// Prepare.
+		if (ws->running())
+			return true;
+
+		if (_tools.isPlaying)
+			stopActorTesting(wnd, rnd, ws);
+
+		if (!object())
+			return false;
+
+		// Start measuring performance.
+		const long long start = DateTime::ticks();
+
+		auto finish = [wnd, rnd, ws, this, start] (void) -> bool {
+			// Compile.
+			const Bytes::Ptr rom_ = compileActor(wnd, rnd, ws, this, entry(), _tools);
+
+			if (!rom_)
+				return false;
+
+			// Finish measuring performance.
+			const long long end = DateTime::ticks();
+			const long long diff = end - start;
+			const double secs = DateTime::toSeconds(diff);
+			const std::string time = Text::toString(secs, 6, 0, ' ', std::ios::fixed);
+
+			const std::string msg = "Completed in " + time + "s.";
+			fprintf(stdout, "%s\n", msg.c_str());
+
+			// Run and play.
+			ws->run(wnd, rnd, rom_);
+
+			_tools.isPlaying = true;
+
+			// Finish.
+			return true;
+		};
+
+		// Async.
+		ImGui::WaitingPopupBox::TimeoutHandler timeout(
+			[ws, this, finish] (void) -> void {
+				if (!_compacted.filled)
+					compactAllEntriesSlices(ws, true);
+
+				_compacted.generated.wait();
+
+				finish();
+
+				ws->popupBox(nullptr);
+			},
+			nullptr
+		);
+		ws->waitingPopupBox(
+			true, ws->theme()->dialogPrompt_Compacting(),
+			true, timeout,
+			true
+		);
+
+		// Finish.
+		return true;
+	}
+	bool stopActorTesting(Window* wnd, Renderer* rnd, Workspace* ws) {
+		// Prepare.
+		if (!_tools.isPlaying)
+			return true;
+
+		// Close the device.
+		if (ws->running())
+			ws->stop(wnd, rnd);
+
+		// Stop playing.
+		_tools.isPlaying = false;
+#if EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_FINISH
+		_tools.isPlayerSymbolsLoaded = false;
+		_tools.playerSymbolsText.clear();
+		_tools.playerAliasesText.clear();
+#endif /* EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_FINISH */
+
+		// Finish.
+		return true;
+	}
+	static Bytes::Ptr compileActor(Window*, Renderer*, Workspace* ws, EditorActorImpl* self, const ActorAssets::Entry* entry_, Tools &tools) {
+		// Prepare.
+		if (!entry_ || !entry_->data || entry_->data->count() == 0)
+			return nullptr;
+
+		auto print_ = [ws] (const std::string &msg) -> void {
+			ws->print(msg.c_str());
+		};
+		auto warn_ = [ws] (const std::string &msg) -> void {
+			ws->warn(msg.c_str());
+		};
+		auto error_ = [ws] (const std::string &msg) -> void {
+			ws->error(msg.c_str());
+		};
+
+		// Get the kernel.
+		if (ws->kernels().empty()) {
+			self->warn(ws, "No valid actor player.", true);
+
+			return nullptr;
+		}
+
+		const GBBASIC::Kernel::Ptr &krnl = ws->kernels().front();
+		if (!krnl) {
+			self->warn(ws, "No valid kernel.", true);
+
+			return nullptr;
+		}
+
+		std::string dir;
+		Path::split(krnl->path(), nullptr, nullptr, &dir);
+		const std::string rom = Path::combine(dir.c_str(), krnl->kernelRom().c_str());
+		const std::string sym = Path::combine(dir.c_str(), krnl->kernelSymbols().c_str());
+		const std::string aliases = Path::combine(dir.c_str(), krnl->kernelAliases().c_str());
+		const int bootstrapBank = krnl->bootstrapBank();
+
+		// Load and parse the symbols.
+		if (!tools.isPlayerSymbolsLoaded) {
+			Editing::SymbolTable::Dictionary dict;
+			std::string symTxt;
+			std::string aliasesTxt;
+			Editing::SymbolTable symbols;
+			const bool loaded = symbols.load(
+				dict, sym, symTxt, aliases, aliasesTxt,
+				[self, ws] (const char* msg) -> void {
+					self->warn(ws, msg, true);
+				}
+			);
+			if (!loaded) {
+				self->warn(ws, "No valid symbol.", true);
+
+				return nullptr;
+			}
+
+			tools.isPlayerSymbolsLoaded = true;
+			tools.playerSymbolsText     = symTxt;
+			tools.playerAliasesText     = aliasesTxt;
+		}
+
+		// Compile.
+		print_("Begin compiling for actor testing.");
+
+		AssetsBundle::Ptr assets(new AssetsBundle());
+		do {
+			// Prepare.
+			const Project::Ptr &prj = ws->currentProject();
+			GBBASIC_ASSERT(prj && "Impossible.");
+
+			// Add the palette asset.
+			assets->palette = prj->assets()->palette;
+
+			// Add the actor asset.
+			int tileCount = (int)entry_->slices.size();
+			if (entry_->data->is8x16())
+				tileCount *= 2;
+
+			Actor* newActor = nullptr;
+			entry_->data->clone(&newActor, false);
+			if (!newActor->updateRoutine().empty())
+				newActor->updateRoutine("");
+			if (!newActor->onHitsRoutine().empty())
+				newActor->onHitsRoutine("");
+			ActorAssets::Entry actorEntry_ = *entry_;
+			actorEntry_.data = Actor::Ptr(newActor);
+			assets->actors.add(actorEntry_);
+
+			// Add a dummy code asset.
+			const int x = GBBASIC_SCREEN_WIDTH / 2;
+			const int y = GBBASIC_SCREEN_HEIGHT / 2;
+			const std::string src = RES_CODE_PLAY_ACTOR_TESTING(
+				Text::toString(x), Text::toString(y),
+				Text::toString(tileCount),
+				Text::toString(true)
+			);
+			assets->code.add(src);
+		} while (false);
+
+		const Bytes::Ptr rom_ = Workspace::compile(
+			rom, sym, tools.playerSymbolsText, aliases, tools.playerAliasesText,
+			"Actor", assets,
+			bootstrapBank,
+			print_, warn_, error_
+		);
+
+		print_("End compiling for actor testing.");
+
+		if (!rom_)
+			return nullptr;
+
+		print_("Ok.");
+
+		// Finish.
+		return rom_;
 	}
 };
 

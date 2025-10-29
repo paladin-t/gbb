@@ -1008,6 +1008,58 @@ PaletteAssets::Entry* PaletteAssets::get(int index) {
 	return &entries[index];
 }
 
+Bytes::Ptr PaletteAssets::serializeBackgroundPalettes(void) const {
+	Bytes::Ptr result(Bytes::create());
+	for (int i = 0; i < count() && i < 8; ++i) {
+		const PaletteAssets::Entry* entry = get(i);
+		if (entry) {
+			const Indexed::Ptr &palette = entry->data;
+			for (int j = 0; j < palette->count(); ++j) {
+				Colour color;
+				palette->get(j, color);
+				if (color.a == 0)
+					color.fromRGBA(0xffffffff);
+				const UInt16 rgb555 = color.toRGB555();
+				result->writeUInt16(rgb555);
+			}
+		} else {
+			for (int j = 0; j < GBBASIC_PALETTE_PER_GROUP_COUNT; ++j) {
+				Colour color;
+				const UInt16 rgb555 = color.toRGB555();
+				result->writeUInt16(rgb555);
+			}
+		}
+	}
+
+	return result;
+}
+
+Bytes::Ptr PaletteAssets::serializeSpritePalettes(void) const {
+	Bytes::Ptr result(Bytes::create());
+	for (int i = 8; i < count() && i < 16; ++i) {
+		const PaletteAssets::Entry* entry = get(i);
+		if (entry) {
+			const Indexed::Ptr &palette = entry->data;
+			for (int j = 0; j < palette->count(); ++j) {
+				Colour color;
+				palette->get(j, color);
+				if (color.a == 0)
+					color.fromRGBA(0xffffffff);
+				const UInt16 rgb555 = color.toRGB555();
+				result->writeUInt16(rgb555);
+			}
+		} else {
+			for (int j = 0; j < GBBASIC_PALETTE_PER_GROUP_COUNT; ++j) {
+				Colour color;
+				const UInt16 rgb555 = color.toRGB555();
+				result->writeUInt16(rgb555);
+			}
+		}
+	}
+
+	return result;
+}
+
 bool PaletteAssets::serializeBasic(std::string &val) const {
 	// Prepare.
 	val.clear();

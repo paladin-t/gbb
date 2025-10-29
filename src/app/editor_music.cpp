@@ -26,9 +26,9 @@
 ** Macros and constants
 */
 
-#ifndef EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_STOP
-#	define EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_STOP 0
-#endif /* EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_STOP */
+#ifndef EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_FINISH
+#	define EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_FINISH 1
+#endif /* EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_FINISH */
 
 static constexpr const char* const NOTE_NAMES[] = {
 	"C-3", "C#3", "D-3", "D#3", "E-3", "F-3", "F#3", "G-3", "G#3", "A-3", "A#3", "B-3",
@@ -4119,19 +4119,17 @@ private:
 			ImGui::SetTooltip(ws->theme()->tooltipEdit_NextPage());
 		}
 		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(style.FramePadding.x, 0));
-		ImGui::SameLine();
 		if (_tools.isPlaying) {
-			if (ImGui::ImageButton(ws->theme()->iconStopAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_StopMusic().c_str())) {
+			if (ImGui::ImageButton(ws->theme()->iconStopPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_StopMusic().c_str())) {
 				stopMusic(ws);
 			}
 		} else {
 			if (ws->running()) {
 				ImGui::BeginDisabled();
-				ImGui::ImageButton(ws->theme()->iconPlayAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_PlayMusic().c_str());
+				ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_PlayMusic().c_str());
 				ImGui::EndDisabled();
 			} else {
-				if (ImGui::ImageButton(ws->theme()->iconPlayAudio()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_PlayMusic().c_str())) {
+				if (ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_PlayMusic().c_str())) {
 					playMusic(ws, nullptr);
 				}
 			}
@@ -5265,15 +5263,15 @@ private:
 		_tools.playerMaxDuration = 0.0;
 		_tools.playerPlayedTicks = 0.0;
 		_tools.playingMusic = nullptr;
-#if EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_STOP
+#if EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_FINISH
 		_tools.isPlayerSymbolsLoaded = false;
 		_tools.playerSymbolsText.clear();
 		_tools.playerAliasesText.clear();
-		_tools.playerIsPlayingLocation = Location();
-		_tools.playerOrderCursorLocation = Location();
-		_tools.playerLineCursorLocation = Location();
-		_tools.playerTicksLocation = Location();
-#endif /* EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_STOP */
+		_tools.playerIsPlayingLocation = Editing::SymbolLocation();
+		_tools.playerOrderCursorLocation = Editing::SymbolLocation();
+		_tools.playerLineCursorLocation = Editing::SymbolLocation();
+		_tools.playerTicksLocation = Editing::SymbolLocation();
+#endif /* EDITOR_MUSIC_UNLOAD_SYMBOLS_ON_FINISH */
 		_tools.hasPlayerPlayed = false;
 		_tools.lastPlayingOrderIndex = -1;
 		_tools.lastPlayingLine = -1;
@@ -5399,40 +5397,28 @@ private:
 	static Bytes::Ptr compileMusic(Workspace* ws, EditorMusicImpl* self, const MusicAssets::Entry &entry_, Tools &tools, int sequence) {
 		// Prepare.
 		auto print_ = [ws] (const std::string &msg) -> void {
-			std::string msg_ = "Music editor:\n";
-			msg_ += msg;
-			if (msg_.back() != '.')
-				msg_ += '.';
-			ws->print(msg_.c_str());
+			ws->print(msg.c_str());
 		};
 		auto warn_ = [ws] (const std::string &msg) -> void {
-			std::string msg_ = "Music editor:\n";
-			msg_ += msg;
-			if (msg_.back() != '\n' && msg_.back() != '.')
-				msg_ += '.';
-			ws->warn(msg_.c_str());
+			ws->warn(msg.c_str());
 		};
 		auto error_ = [ws] (const std::string &msg) -> void {
-			std::string msg_ = "Music editor:\n";
-			msg_ += msg;
-			if (msg_.back() != '.')
-				msg_ += '.';
-			ws->error(msg_.c_str());
+			ws->error(msg.c_str());
 		};
 
 		// Get the kernel.
 		if (ws->kernels().empty()) {
-			self->warn(ws, "No valid music player", true);
+			self->warn(ws, "No valid music player.", true);
 
 			return nullptr;
 		}
 
-		if (ws->kernels().empty())
-			return nullptr;
-
 		const GBBASIC::Kernel::Ptr &krnl = ws->kernels().front();
-		if (!krnl)
+		if (!krnl) {
+			self->warn(ws, "No valid kernel.", true);
+
 			return nullptr;
+		}
 
 		std::string dir;
 		Path::split(krnl->path(), nullptr, nullptr, &dir);
@@ -5471,8 +5457,11 @@ private:
 					self->warn(ws, msg, true);
 				}
 			);
-			if (!loaded)
+			if (!loaded) {
+				self->warn(ws, "No valid symbol.", true);
+
 				return nullptr;
+			}
 
 			const Editing::SymbolLocation &isPlayingLoc     = dict[EDITOR_MUSIC_PLAYER_IS_PLAYING_RAM_STUB];
 			const Editing::SymbolLocation &ordCursorLoc     = dict[EDITOR_MUSIC_PLAYER_ORDER_CURSOR_RAM_STUB];
@@ -5492,12 +5481,13 @@ private:
 		}
 
 		// Compile.
+		print_("Begin compiling for music playback.");
+
 		AssetsBundle::Ptr assets(new AssetsBundle());
 		std::string src;
 		src += RES_CODE_PLAY_MUSIC;
-		if (sequence > 0) {
+		if (sequence > 0)
 			src += RES_CODE_SET_MUSIC_POSITION(Text::toString(sequence));
-		}
 		assets->code.add(src);
 		assets->music.add(entry_);
 
@@ -5508,8 +5498,12 @@ private:
 			print_, warn_, error_
 		);
 
+		print_("End compiling for music playback.");
+
 		if (!rom_)
 			return nullptr;
+
+		print_("Ok.");
 
 		// Finish.
 		return rom_;
