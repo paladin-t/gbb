@@ -6029,7 +6029,7 @@ private:
 		fprintf(stdout, "%s\n", msg.c_str());
 
 		// Run and play.
-		ws->run(wnd, rnd, rom_);
+		ws->run(wnd, rnd, rom_, true);
 
 		_tools.isPlaying = true;
 

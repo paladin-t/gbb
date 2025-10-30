@@ -4190,10 +4190,11 @@ promise::Promise Operations::projectBuild(Window* wnd, Renderer* rnd, Workspace*
 	);
 }
 
-promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes::Ptr rom, Bytes::Ptr sram, bool countActivities) {
+promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes::Ptr rom, Bytes::Ptr sram, bool traceless) {
 	return promise::newPromise(
-		[&, rom, sram, countActivities] (promise::Defer df) -> void {
-			ws->print("Begin running.");
+		[&, rom, sram, traceless] (promise::Defer df) -> void {
+			if (!traceless)
+				ws->print("Begin running.");
 
 			ws->category(Workspace::Categories::EMULATOR);
 			ws->tabsWidth(0.0f);
@@ -4203,8 +4204,10 @@ promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes
 				ws->canvasDevice()->classicPalette(i, ws->settings().deviceClassicPalette[i]);
 			const bool suc = ws->canvasDevice()->open(
 				rom,
-				(Device::DeviceTypes)ws->settings().deviceType, true, true, ws->input(),
-				sram
+				(Device::DeviceTypes)ws->settings().deviceType,
+				ws->input(),
+				sram,
+				true, true, traceless
 			);
 			if (!suc) {
 				ws->canvasDevice()->close(nullptr);
@@ -4251,7 +4254,7 @@ promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes
 
 			const Project::Ptr &prj = ws->currentProject();
 
-			if (countActivities) {
+			if (!traceless) {
 				ws->activities().playingStartTimestamp = DateTime::ticks();
 
 				++ws->activities().played;
@@ -4281,6 +4284,7 @@ promise::Promise Operations::projectStop(Window*, Renderer*, Workspace* ws) {
 				ws->category(ws->categoryBeforeCompiling());
 			ws->tabsWidth(0.0f);
 
+			const bool traceless = ws->canvasDevice()->traceless();
 			sram = Bytes::Ptr(Bytes::create());
 			ws->canvasDevice()->close(sram);
 			ws->canvasDevice(nullptr);
@@ -4292,7 +4296,8 @@ promise::Promise Operations::projectStop(Window*, Renderer*, Workspace* ws) {
 				ws->canvasTexture(nullptr);
 			}
 
-			ws->print("End running.");
+			if (!traceless)
+				ws->print("End running.");
 
 			const Project::Ptr &prj = ws->currentProject();
 

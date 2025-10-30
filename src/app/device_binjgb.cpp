@@ -521,11 +521,17 @@ void DeviceBinjgb::timeoutThreshold(long long val) {
 	_timeoutThreshold = val;
 }
 
-bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, bool isEditor, bool useAudioDevice, class Input* input, Bytes::Ptr sram) {
+bool DeviceBinjgb::traceless(void) const {
+	return _traceless;
+}
+
+bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, class Input* input, Bytes::Ptr sram, bool isEditor, bool useAudioDevice, bool traceless) {
 	// Prepare.
 	if (_opened)
 		return false;
 	_opened = true;
+
+	_traceless = traceless;
 
 	// Initialize the device type.
 	_enabledDeviceType = _deviceType = deviceType;

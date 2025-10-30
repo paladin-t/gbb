@@ -22,6 +22,7 @@
 class DeviceBinjgb : public Device, public virtual Object {
 private:
 	bool _opened = false;
+	bool _traceless = false;
 	Protocol* _debugListener = nullptr;
 	DeviceTypes _deviceType = DeviceTypes::COLORED; // Determined by device.
 	DeviceTypes _enabledDeviceType = DeviceTypes::COLORED; // Determined by both device and ROM.
@@ -94,7 +95,9 @@ public:
 	virtual long long timeoutThreshold(void) const override;
 	virtual void timeoutThreshold(long long val) override;
 
-	virtual bool open(Bytes::Ptr rom, DeviceTypes deviceType, bool isEditor, bool useAudioDevice, class Input* input, Bytes::Ptr sram) override;
+	virtual bool traceless(void) const override;
+
+	virtual bool open(Bytes::Ptr rom, DeviceTypes deviceType, class Input* input, Bytes::Ptr sram, bool isEditor, bool useAudioDevice, bool traceless) override;
 	virtual bool close(Bytes::Ptr sram) override;
 
 	virtual bool update(

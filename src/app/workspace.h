@@ -676,7 +676,7 @@ public:
 	void debug(void);
 	virtual void cursor(Device::CursorTypes mode) override;
 
-	virtual void run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom);
+	virtual void run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom, bool traceless);
 	virtual bool running(void) const override;
 	virtual void pause(class Window* wnd, class Renderer* rnd) override;
 	virtual void stop(class Window* wnd, class Renderer* rnd) override;

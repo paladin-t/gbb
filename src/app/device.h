@@ -138,7 +138,9 @@ public:
 	virtual long long timeoutThreshold(void) const = 0;
 	virtual void timeoutThreshold(long long val) = 0;
 
-	virtual bool open(Bytes::Ptr rom, DeviceTypes deviceType, bool isEditor, bool useAudioDevice, class Input* input /* nullable */, Bytes::Ptr sram /* nullable */) = 0;
+	virtual bool traceless(void) const = 0;
+
+	virtual bool open(Bytes::Ptr rom, DeviceTypes deviceType, class Input* input /* nullable */, Bytes::Ptr sram /* nullable */, bool isEditor, bool useAudioDevice, bool traceless) = 0;
 	virtual bool close(Bytes::Ptr sram /* nullable */) = 0;
 
 	virtual bool update(

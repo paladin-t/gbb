@@ -5484,10 +5484,15 @@ private:
 		print_("Begin compiling for music playback.");
 
 		AssetsBundle::Ptr assets(new AssetsBundle());
-		std::string src;
-		src += RES_CODE_PLAY_MUSIC;
-		if (sequence > 0)
-			src += RES_CODE_SET_MUSIC_POSITION(Text::toString(sequence));
+		std::string src = RES_CODE_PLAY_MUSIC;
+		if (sequence > 0) {
+			src += Text::format(
+				RES_CODE_SET_MUSIC_POSITION,
+				{
+					Text::toString(sequence)
+				}
+			);
+		}
 		assets->code.add(src);
 		assets->music.add(entry_);
 

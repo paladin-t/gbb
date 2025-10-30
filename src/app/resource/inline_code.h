@@ -206,12 +206,12 @@
 		"play #0\n"
 #endif /* RES_CODE_PLAY_MUSIC */
 #ifndef RES_CODE_SET_MUSIC_POSITION
-#	define RES_CODE_SET_MUSIC_POSITION(P) \
+#	define RES_CODE_SET_MUSIC_POSITION \
 		"start set_pos\n" \
 		"end\n" \
 		"set_pos:\n" \
 		"  wait 3\n" /* A few ticks later. */ \
-		"  option MUSIC_POSITION, " + (P) + "\n"
+		"  option MUSIC_POSITION, {0}\n"
 #endif /* RES_CODE_SET_MUSIC_POSITION */
 
 #ifndef RES_CODE_PLAY_SFX

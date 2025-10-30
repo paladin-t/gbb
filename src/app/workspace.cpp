@@ -1748,8 +1748,8 @@ void Workspace::cursor(Device::CursorTypes mode) {
 	canvasCursorMode(mode);
 }
 
-void Workspace::run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom) {
-	Operations::projectRun(wnd, rnd, this, rom, nullptr, false);
+void Workspace::run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom, bool traceless) {
+	Operations::projectRun(wnd, rnd, this, rom, nullptr, traceless);
 }
 
 bool Workspace::running(void) const {
@@ -1765,10 +1765,11 @@ void Workspace::pause(class Window*, class Renderer*) {
 }
 
 void Workspace::stop(class Window* wnd, class Renderer* rnd) {
+	const bool traceless = canvasDevice() && canvasDevice()->traceless();
 	Operations::projectStop(wnd, rnd, this)
 		.then(
-			[wnd, rnd, this] (bool ok, const Bytes::Ptr sram) -> void {
-				if (ok && settings().deviceSaveSramOnStop) {
+			[wnd, rnd, this, traceless] (bool ok, const Bytes::Ptr sram) -> void {
+				if (!traceless && ok && settings().deviceSaveSramOnStop) {
 					const Project::Ptr &prj = currentProject();
 
 					Operations::projectSaveSram(wnd, rnd, this, prj, sram, false);
@@ -1917,10 +1918,11 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 
 			closeFilter();
 
+			const bool traceless = canvasDevice() && canvasDevice()->traceless();
 			Operations::projectStop(wnd, rnd, this)
 				.then(
-					[wnd, rnd, this, next] (bool ok, const Bytes::Ptr sram) -> void {
-						if (ok && settings().deviceSaveSramOnStop) {
+					[wnd, rnd, this, next, traceless] (bool ok, const Bytes::Ptr sram) -> void {
+						if (!traceless && ok && settings().deviceSaveSramOnStop) {
 							const Project::Ptr &prj = currentProject();
 
 							Operations::projectSaveSram(wnd, rnd, this, prj, sram, false);
@@ -1940,10 +1942,11 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 
 			closeFilter();
 
+			const bool traceless = canvasDevice() && canvasDevice()->traceless();
 			Operations::projectStop(wnd, rnd, this)
 				.then(
-					[wnd, rnd, this, next] (bool ok, const Bytes::Ptr sram) -> void {
-						if (ok && settings().deviceSaveSramOnStop) {
+					[wnd, rnd, this, next, traceless] (bool ok, const Bytes::Ptr sram) -> void {
+						if (!traceless && ok && settings().deviceSaveSramOnStop) {
 							const Project::Ptr &prj = currentProject();
 
 							Operations::projectSaveSram(wnd, rnd, this, prj, sram, false);
@@ -1989,10 +1992,11 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 
 			closeFilter();
 
+			const bool traceless = canvasDevice() && canvasDevice()->traceless();
 			Operations::projectStop(wnd, rnd, this)
 				.then(
-					[wnd, rnd, this, next] (bool ok, const Bytes::Ptr sram) -> void {
-						if (ok && settings().deviceSaveSramOnStop) {
+					[wnd, rnd, this, next, traceless] (bool ok, const Bytes::Ptr sram) -> void {
+						if (!traceless && ok && settings().deviceSaveSramOnStop) {
 							const Project::Ptr &prj = currentProject();
 
 							Operations::projectSaveSram(wnd, rnd, this, prj, sram, false);
@@ -2016,10 +2020,11 @@ bool Workspace::quit(Window* wnd, Renderer* rnd) {
 		if (!prj || !prj->dirty()) {
 			debug();
 
+			const bool traceless = canvasDevice() && canvasDevice()->traceless();
 			Operations::projectStop(wnd, rnd, this)
 				.then(
-					[wnd, rnd, this] (bool ok, const Bytes::Ptr sram) -> void {
-						if (ok && settings().deviceSaveSramOnStop) {
+					[wnd, rnd, this, traceless] (bool ok, const Bytes::Ptr sram) -> void {
+						if (!traceless && ok && settings().deviceSaveSramOnStop) {
 							const Project::Ptr &prj = currentProject();
 
 							Operations::projectSaveSram(wnd, rnd, this, prj, sram, false)
@@ -2296,10 +2301,11 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 						}
 					);
 			};
+			const bool traceless = canvasDevice() && canvasDevice()->traceless();
 			Operations::projectStop(wnd, rnd, this)
 				.then(
-					[wnd, rnd, this, next] (bool ok, const Bytes::Ptr sram) -> void {
-						if (ok && settings().deviceSaveSramOnStop) {
+					[wnd, rnd, this, next, traceless] (bool ok, const Bytes::Ptr sram) -> void {
+						if (!traceless && ok && settings().deviceSaveSramOnStop) {
 							const Project::Ptr &prj = currentProject();
 
 							Operations::projectSaveSram(wnd, rnd, this, prj, sram, false);
@@ -4251,8 +4257,10 @@ void Workspace::destroyAudioDevice(void) {
 void Workspace::openAudioDevice(Bytes::Ptr rom) {
 	audioDevice()->open(
 		rom,
-		Device::DeviceTypes::CLASSIC, true, true, nullptr,
-		nullptr
+		Device::DeviceTypes::CLASSIC,
+		nullptr,
+		nullptr,
+		true, true, true
 	);
 }
 
@@ -12034,7 +12042,7 @@ void Workspace::runProject(Window* wnd, Renderer* rnd, Bytes::Ptr rom) {
 	Operations::projectLoadSram(wnd, rnd, this, prj, sram)
 		.always(
 			[wnd, rnd, this, rom, sram] (void) -> void {
-				Operations::projectRun(wnd, rnd, this, rom, sram, true);
+				Operations::projectRun(wnd, rnd, this, rom, sram, false);
 			}
 		);
 }
@@ -12044,10 +12052,11 @@ void Workspace::stopProject(Window* wnd, Renderer* rnd) {
 	debug();
 
 	// Stop running.
+	const bool traceless = canvasDevice() && canvasDevice()->traceless();
 	Operations::projectStop(wnd, rnd, this)
 		.then(
-			[wnd, rnd, this] (bool ok, const Bytes::Ptr sram) -> void {
-				if (ok && settings().deviceSaveSramOnStop) {
+			[wnd, rnd, this, traceless] (bool ok, const Bytes::Ptr sram) -> void {
+				if (!traceless && ok && settings().deviceSaveSramOnStop) {
 					const Project::Ptr &prj = currentProject();
 
 					Operations::projectSaveSram(wnd, rnd, this, prj, sram, false);

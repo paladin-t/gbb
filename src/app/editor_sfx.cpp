@@ -2469,8 +2469,9 @@ private:
 			if (rom_) {
 				job.device->open(
 					rom_,
-					Device::DeviceTypes::CLASSIC, true, false, nullptr,
-					nullptr
+					Device::DeviceTypes::CLASSIC, nullptr,
+					nullptr,
+					true, false, true
 				);
 				job.device->timeoutThreshold(DateTime::fromSeconds(1.0));
 				job.device->writeRam((UInt16)tools.playerIsPlayingLocation.address, (UInt8)EDITOR_SFX_HALT_BANK);
