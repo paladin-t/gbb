@@ -6465,10 +6465,14 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 		if (times) {
 			const int scale = rnd->scale() / wnd->scale();
 			Math::Vec2i size;
-			if (times == -1)
-				size = Math::Vec2i(GBBASIC_WINDOW_MIN_WIDTH * 3, GBBASIC_WINDOW_MIN_HEIGHT * 3);
-			else
-				size = Math::Vec2i(GBBASIC_WINDOW_MIN_WIDTH * scale * times, GBBASIC_WINDOW_MIN_HEIGHT * scale * times);
+			if (times == -1) {
+				size = Math::Vec2i(GBBASIC_WINDOW_MIN_WIDTH * 3, GBBASIC_WINDOW_SCALE_MIN_HEIGHT * 3);
+			} else {
+				if (times == 1)
+					size = Math::Vec2i(GBBASIC_WINDOW_MIN_WIDTH * scale * times, GBBASIC_WINDOW_MIN_HEIGHT * scale * times);
+				else
+					size = Math::Vec2i(GBBASIC_WINDOW_MIN_WIDTH * scale * times, GBBASIC_WINDOW_SCALE_MIN_HEIGHT * scale * times);
+			}
 			if (wnd->fullscreen())
 				wnd->fullscreen(false);
 			if (wnd->maximized())
