@@ -3830,8 +3830,6 @@ private:
 			assets->tiles.add(*tilesEntry);
 
 			// Add the map asset.
-			const int width = entry_->data->width();
-			const int height = entry_->data->height();
 			MapAssets::Entry mapEntry = *entry_;
 			mapEntry.ref = 0;
 			assets->maps.add(mapEntry);
@@ -3852,11 +3850,7 @@ private:
 			assets->scenes.add(sceneEntry);
 
 			// Add a dummy code asset.
-			const int n = (tilesEntry->data->width() / GBBASIC_TILE_SIZE) * (tilesEntry->data->height() / GBBASIC_TILE_SIZE);
-			const std::string src = RES_CODE_PLAY_MAP_TESTING(
-				Text::toString(width), Text::toString(height),
-				Text::toString(n)
-			);
+			const std::string src = RES_CODE_PLAY_MAP_TESTING;
 			assets->code.add(src);
 		} while (false);
 

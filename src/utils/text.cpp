@@ -517,9 +517,9 @@ std::string Text::toHex(UInt64 val, bool toupper) {
 
 std::string Text::toPageNumber(int val) {
 #if GBBASIC_ASSET_PAGE_SHOW_HEX_ENABLED
-	const std::string page = Text::toHex(val, 2, '0', true);
+	const std::string page = toHex(val, 2, '0', true);
 #else /* GBBASIC_ASSET_PAGE_SHOW_HEX_ENABLED */
-	const std::string page = Text::toString(val);
+	const std::string page = toString(val);
 #endif /* GBBASIC_ASSET_PAGE_SHOW_HEX_ENABLED */
 
 	return page;
@@ -527,32 +527,32 @@ std::string Text::toPageNumber(int val) {
 
 std::string Text::toScaledBytes(Int64 val) {
 	if (val < 1024ll) {
-		return Text::toString(val) + "B";
+		return toString(val) + "B";
 	}
 	if (val < std::pow(1024ll, 2ll)) {
 		const Double val_ = val / 1024.0;
 
-		return Text::toString(val_, 4) + "KB";
+		return toString(val_, 4) + "KB";
 	}
 	if (val < std::pow(1024ll, 3ll)) {
 		const Double val_ = (Int64)(val / 1024.0) / 1024.0;
 
-		return Text::toString(val_, 4) + "MB";
+		return toString(val_, 4) + "MB";
 	}
 	if (val < std::pow(1024ll, 4ll)) {
 		const Double val_ = (Int64)(val / std::pow(1024.0, 2.0)) / 1024.0;
 
-		return Text::toString(val_, 4) + "GB";
+		return toString(val_, 4) + "GB";
 	}
 	if (val < std::pow(1024ll, 5ll)) {
 		const Double val_ = (Int64)(val / std::pow(1024.0, 3.0)) / 1024.0;
 
-		return Text::toString(val_, 4) + "TB";
+		return toString(val_, 4) + "TB";
 	}
 
 	const Double val_ = (Int64)(val / std::pow(1024.0, 4.0)) / 1024.0;
 
-	return Text::toString(val_, 4) + "PB";
+	return toString(val_, 4) + "PB";
 }
 
 std::string Text::toNumberWithCommas(const std::string &str) {
@@ -1175,8 +1175,8 @@ std::string Text::cformat(const char* fmt, ...) {
 
 std::string Text::format(const std::string &fmt, const std::string &arg, int index) {
 	std::string result = fmt;
-	const std::string pattern = "{" + Text::toString(index) + "}";
-	result = Text::replace(result, pattern, arg, false);
+	const std::string pattern = "{" + toString(index) + "}";
+	result = replace(result, pattern, arg, true);
 
 	return result;
 }

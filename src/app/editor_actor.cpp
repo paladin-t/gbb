@@ -3789,10 +3789,12 @@ private:
 
 			Actor* newActor = nullptr;
 			entry_->data->clone(&newActor, false);
+
 			if (!newActor->updateRoutine().empty())
 				newActor->updateRoutine("");
 			if (!newActor->onHitsRoutine().empty())
 				newActor->onHitsRoutine("");
+
 			ActorAssets::Entry actorEntry_ = *entry_;
 			actorEntry_.data = Actor::Ptr(newActor);
 			assets->actors.add(actorEntry_);
@@ -3800,10 +3802,13 @@ private:
 			// Add a dummy code asset.
 			const int x = GBBASIC_SCREEN_WIDTH / 2;
 			const int y = GBBASIC_SCREEN_HEIGHT / 2;
-			const std::string src = RES_CODE_PLAY_ACTOR_TESTING(
-				Text::toString(x), Text::toString(y),
-				Text::toString(tileCount),
-				Text::toString(true)
+			const std::string src = Text::format(
+				RES_CODE_PLAY_ACTOR_TESTING,
+				{
+					Text::toString(x), Text::toString(y),
+					Text::toString(tileCount),
+					Text::toString(true)
+				}
 			);
 			assets->code.add(src);
 		} while (false);

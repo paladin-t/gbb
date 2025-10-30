@@ -6158,8 +6158,6 @@ private:
 			assets->tiles.add(*tilesEntry);
 
 			// Add the map asset.
-			const int width = entry_->data->width();
-			const int height = entry_->data->height();
 			MapAssets::Entry mapEntry_ = *mapEntry;
 			mapEntry_.ref = 0;
 			assets->maps.add(mapEntry_);
@@ -6180,7 +6178,7 @@ private:
 				}
 
 				const int idx = (int)actorMap.size();
-				actorMap[refActor] = IndexedActor(idx, actorEntry);
+				actorMap[refActor] = IndexedActor(idx, actorEntry); // Re-indexed.
 
 				const UInt8 bhvr = actorEntry->definition.behaviour;
 				if (isPlayerBehaviour(bhvr))
@@ -6198,10 +6196,12 @@ private:
 				ActorAssets::Entry* actorEntry = indexedActor.entry;
 				Actor* newActor = nullptr;
 				actorEntry->data->clone(&newActor, false);
+
 				if (!newActor->updateRoutine().empty())
 					newActor->updateRoutine("");
 				if (!newActor->onHitsRoutine().empty())
 					newActor->onHitsRoutine("");
+
 				ActorAssets::Entry actorEntry_ = *actorEntry;
 				actorEntry_.data = Actor::Ptr(newActor);
 				assets->actors.add(actorEntry_);
@@ -6237,9 +6237,11 @@ private:
 			assets->scenes.add(sceneEntry);
 
 			// Add a dummy code asset.
-			const std::string src = RES_CODE_PLAY_SCENE_TESTING(
-				Text::toString(width), Text::toString(height),
-				Text::toString(!playerCount)
+			const std::string src = Text::format(
+				RES_CODE_PLAY_SCENE_TESTING,
+				{
+					Text::toString(playerCount)
+				}
 			);
 			assets->code.add(src);
 		} while (false);
