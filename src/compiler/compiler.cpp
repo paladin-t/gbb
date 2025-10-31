@@ -222,6 +222,9 @@ namespace GBBASIC {
 #	define EXTENSION_MODE_ENTRY_NAME "ExtensionMode" // DOC: ROM SCHEMA.
 #endif /* EXTENSION_MODE_ENTRY_NAME */
 
+#ifndef DEFAULT_PALETTES_ENTRY_NAME
+#	define DEFAULT_PALETTES_ENTRY_NAME "Palettes" // DOC: ROM SCHEMA.
+#endif /* DEFAULT_PALETTES_ENTRY_NAME */
 #ifndef BACKGROUND_PALETTES_ENTRY_NAME
 #	define BACKGROUND_PALETTES_ENTRY_NAME "BackgroundPalettes" // DOC: ROM SCHEMA.
 #endif /* BACKGROUND_PALETTES_ENTRY_NAME */
@@ -254,6 +257,14 @@ namespace GBBASIC {
 #ifndef SCRIPT_MEMORY_ENTRY_NAME
 #	define SCRIPT_MEMORY_ENTRY_NAME "script_memory" // DOC: RAM SCHEMA.
 #endif /* SCRIPT_MEMORY_ENTRY_NAME */
+
+#ifndef EDITOR_PALETTE_NAMES
+#	define EDITOR_PALETTE_NAMES \
+	{ \
+		"bg0:",  "bg1:",  "bg2:",  "bg3:",  "bg4:",  "bg5:",  "bg6:",  "bg7:", \
+		"obj0:", "obj1:", "obj2:", "obj3:", "obj4:", "obj5:", "obj6:", "obj7:" \
+	}
+#endif /* EDITOR_PALETTE_NAMES */
 
 /**< Shared between the VM and the compiler. */
 
@@ -8363,6 +8374,7 @@ class NodeBankOf : public Node {
 private:
 	enum class OperationTypes {
 		NONE,
+		PALETTE,
 		TILE,
 		MAP,
 		SCENE,
@@ -8408,7 +8420,8 @@ public:
 				})) { THROW_INVALID_SYNTAX(onError); }
 			}
 			if (consume(Token::Types::KEYWORD, "get")) {
-				if (consume(Token::Types::KEYWORD, "tile")) { _type = OperationTypes::TILE; }
+				if (consume(Token::Types::KEYWORD, "palette")) { _type = OperationTypes::PALETTE; }
+				else if (consume(Token::Types::KEYWORD, "tile")) { _type = OperationTypes::TILE; }
 				else if (consume(Token::Types::KEYWORD, "map")) { _type = OperationTypes::MAP; }
 				else if (consume(Token::Types::KEYWORD, "scene")) { _type = OperationTypes::SCENE; }
 				else if (consume(Token::Types::KEYWORD, "actor")) { _type = OperationTypes::ACTOR; }
@@ -8424,16 +8437,59 @@ public:
 			}
 
 			// Check the children.
-			if (_children.empty()) {
-				THROW_TOO_FEW_ARGUMENTS(onError);
-			} else if (_children.size() == 1) {
-				// Do nothing.
+			if (_type == OperationTypes::PALETTE) {
+				if (_children.empty()) {
+					// Do nothing.
+				} else {
+					THROW_TOO_MANY_ARGUMENTS(onError);
+				}
 			} else {
-				THROW_TOO_MANY_ARGUMENTS(onError);
+				if (_children.empty()) {
+					THROW_TOO_FEW_ARGUMENTS(onError);
+				} else if (_children.size() == 1) {
+					// Do nothing.
+				} else {
+					THROW_TOO_MANY_ARGUMENTS(onError);
+				}
 			}
 
 			// Get the bank of the specific target.
 			switch (_type) {
+			case OperationTypes::PALETTE: {
+					// Prepare.
+					int bank = -1;
+
+					// Search for builtin name.
+					if (!ctx.symbols) { THROW_INVALID_ASSET_POINT(onError); }
+					const RomLocation* romLocation = ctx.symbols->find(DEFAULT_PALETTES_ENTRY_NAME);
+					if (romLocation) { // By builtin name.
+						bank = romLocation->bank;
+					}
+
+					// Set the stack footprint guard.
+					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
+					COUNTER_GUARD(ctx, stk);
+
+					// Set the expression slot guard.
+					VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
+
+					// Emit the right hand value.
+					writeRightHand(
+						bytes, context, stk,
+						[&, bank] (void) -> void {
+							// Emit a `VM_SET_CONST` instruction to set the data.
+							Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::SET_CONST]);
+							args = fill(args, (Int16)bank);
+							args = fill(args, (Int16)ARG0);
+						}, 0, true,
+						onError
+					);
+
+					// Check the stack footprint.
+					CHECK_COUNTER(ctx, onError);
+				}
+
+				break;
 			case OperationTypes::TILE: {
 					std::string name;
 					bool byName_ = false;
@@ -9024,6 +9080,7 @@ class NodeAddressOf : public Node {
 private:
 	enum class OperationTypes {
 		NONE,
+		PALETTE,
 		TILE,
 		MAP,
 		SCENE,
@@ -9069,7 +9126,8 @@ public:
 				})) { THROW_INVALID_SYNTAX(onError); }
 			}
 			if (consume(Token::Types::KEYWORD, "get")) {
-				if (consume(Token::Types::KEYWORD, "tile")) { _type = OperationTypes::TILE; }
+				if (consume(Token::Types::KEYWORD, "palette")) { _type = OperationTypes::PALETTE; }
+				else if (consume(Token::Types::KEYWORD, "tile")) { _type = OperationTypes::TILE; }
 				else if (consume(Token::Types::KEYWORD, "map")) { _type = OperationTypes::MAP; }
 				else if (consume(Token::Types::KEYWORD, "scene")) { _type = OperationTypes::SCENE; }
 				else if (consume(Token::Types::KEYWORD, "actor")) { _type = OperationTypes::ACTOR; }
@@ -9085,16 +9143,59 @@ public:
 			}
 
 			// Check the children.
-			if (_children.empty()) {
-				THROW_TOO_FEW_ARGUMENTS(onError);
-			} else if (_children.size() == 1) {
-				// Do nothing.
+			if (_type == OperationTypes::PALETTE) {
+				if (_children.empty()) {
+					// Do nothing.
+				} else {
+					THROW_TOO_MANY_ARGUMENTS(onError);
+				}
 			} else {
-				THROW_TOO_MANY_ARGUMENTS(onError);
+				if (_children.empty()) {
+					THROW_TOO_FEW_ARGUMENTS(onError);
+				} else if (_children.size() == 1) {
+					// Do nothing.
+				} else {
+					THROW_TOO_MANY_ARGUMENTS(onError);
+				}
 			}
 
 			// Get the address of the specific target.
 			switch (_type) {
+			case OperationTypes::PALETTE: {
+					// Prepare.
+					int address = -1;
+
+					// Search for builtin name.
+					if (!ctx.symbols) { THROW_INVALID_ASSET_POINT(onError); }
+					const RomLocation* romLocation = ctx.symbols->find(DEFAULT_PALETTES_ENTRY_NAME);
+					if (romLocation) { // By builtin name.
+						address = romLocation->address;
+					}
+
+					// Set the stack footprint guard.
+					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
+					COUNTER_GUARD(ctx, stk);
+
+					// Set the expression slot guard.
+					VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
+
+					// Emit the right hand value.
+					writeRightHand(
+						bytes, context, stk,
+						[&, address] (void) -> void {
+							// Emit a `VM_SET_CONST` instruction to set the data.
+							Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::SET_CONST]);
+							args = fill(args, (Int16)address);
+							args = fill(args, (Int16)ARG0);
+						}, 0, true,
+						onError
+					);
+
+					// Check the stack footprint.
+					CHECK_COUNTER(ctx, onError);
+				}
+
+				break;
 			case OperationTypes::TILE: {
 					std::string name;
 					bool byName_ = false;
@@ -16514,10 +16615,7 @@ public:
 				usingColoredFeature(ctx, onError);
 
 				// Find the palette asset.
-				constexpr const char* PALETTE_NAMES[] = {
-					 "bg0:",  "bg1:",  "bg2:",  "bg3:",  "bg4:",  "bg5:",  "bg6:",  "bg7:",
-					"obj0:", "obj1:", "obj2:", "obj3:", "obj4:", "obj5:", "obj6:", "obj7:"
-				};
+				constexpr const char* PALETTE_NAMES[] = EDITOR_PALETTE_NAMES;
 				const char* const* PALETTE_END = PALETTE_NAMES + GBBASIC_COUNTOF(PALETTE_NAMES);
 
 				int page = -1;
@@ -31392,7 +31490,7 @@ private:
 			if (!must(Token::Types::KEYWORD, "get")(q1)) return false;
 			if (!(id = must(Token::Types::SYMBOL)(q1))) return false;
 			else name = (std::string)id->data();
-			if (name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile" || name == "music" || name == "sfx") {
+			if (name == "palette" || name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile" || name == "music" || name == "sfx") {
 				if (forward(Token::Types::KEYWORD, "bankof")(q1.index)) {
 					any()(q1);
 				}
@@ -31441,7 +31539,7 @@ private:
 			if (!must(Token::Types::KEYWORD, "get")(q1)) return false;
 			if (!(id = must(Token::Types::SYMBOL)(q1))) return false;
 			else name = (std::string)id->data();
-			if (name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile" || name == "music" || name == "sfx") {
+			if (name == "palette" || name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile" || name == "music" || name == "sfx") {
 				if (forward(Token::Types::KEYWORD, "addressof")(q1.index)) {
 					any()(q1);
 				}
@@ -31939,6 +32037,7 @@ private:
 					}
 					if (name == "get") { // Bank getting.
 						const bool targets =
+							!!forwardN(2, Token::Types::KEYWORD, "palette")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "tile")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "map")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "scene")(q.index) ||
@@ -31957,6 +32056,7 @@ private:
 					}
 					if (name == "get") { // Address getting.
 						const bool targets =
+							!!forwardN(2, Token::Types::KEYWORD, "palette")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "tile")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "map")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "scene")(q.index) ||

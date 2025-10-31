@@ -9,6 +9,11 @@
     "offset": 0
   },
 
+  "Palettes": {
+    "ref": "BackgroundPalettes",
+    "offset": 0
+  },
+
   "Card0Tiles": {
     "ref": "CardTiles",
     "offset": 0
@@ -79,12 +84,24 @@
     "offset": 8
   },
 
+  "PEEK_BANKED": {
+    "ref": "peek_banked",
+    "offset": 0
+  },
+  "CLEAR_TEXT": {
+    "ref": "clear_text",
+    "offset": 0
+  },
   "WAIT_FOR": {
     "ref": "wait_for",
     "offset": 0
   },
   "WAIT_UNTIL_CONFIRM": {
     "ref": "wait_until_confirm",
+    "offset": 0
+  },
+  "SET_SGB_BORDER": {
+    "ref": "set_sgb_border",
     "offset": 0
   },
   "ERROR": {
