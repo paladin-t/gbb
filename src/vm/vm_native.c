@@ -15,6 +15,23 @@
 
 BANKREF(VM_NATIVE)
 
+BOOLEAN peek_banked(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)start;
+    (void)stack_frame;
+
+    SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
+    const UINT8 bank   = (UINT8)*(--THIS_->stack_ptr);
+    const UINT16 addr  = (UINT16)*(--THIS_->stack_ptr);
+    const BOOLEAN word = (BOOLEAN)*(--THIS_->stack_ptr);
+
+    const UINT16 val = word ?
+        get_uint16(bank, (UINT8 *)addr) :
+        get_uint8 (bank, (UINT8 *)addr);
+    *(THIS_->stack_ptr++) = val;
+
+    return TRUE;
+}
+
 // Clears the screen for the text mode.
 BOOLEAN clear_text(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS;
