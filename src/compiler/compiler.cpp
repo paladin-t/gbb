@@ -237,6 +237,9 @@ namespace GBBASIC {
 #	define PERSISTENCE_SIGNATURE_ENTRY_NAME "PERSISTENCE_SIGNATURE" // DOC: ROM SCHEMA.
 #endif /* PERSISTENCE_SIGNATURE_ENTRY_NAME */
 
+#ifndef PEEK_BANKED_ENTRY_NAME
+#	define PEEK_BANKED_ENTRY_NAME "peek_banked" // DOC: ROM SCHEMA.
+#endif /* PEEK_BANKED_ENTRY_NAME */
 #ifndef CLS_ENTRY_NAME
 #	define CLS_ENTRY_NAME "clear_text" // DOC: ROM SCHEMA.
 #endif /* CLS_ENTRY_NAME */
@@ -8437,10 +8440,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const TilesAssets &tiles = ctx.assets->tiles;
@@ -8490,10 +8498,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const MapAssets &maps = ctx.assets->maps;
@@ -8543,10 +8556,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const SceneAssets &scenes = ctx.assets->scenes;
@@ -8596,10 +8614,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const ActorAssets &actors = ctx.assets->actors;
@@ -8649,10 +8672,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const ActorAssets &actors = ctx.assets->actors;
@@ -8702,10 +8730,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const MusicAssets &music = ctx.assets->music;
@@ -8755,10 +8788,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const SfxAssets &sfx = ctx.assets->sfx;
@@ -9063,10 +9101,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const TilesAssets &tiles = ctx.assets->tiles;
@@ -9116,10 +9159,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const MapAssets &maps = ctx.assets->maps;
@@ -9169,10 +9217,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const SceneAssets &scenes = ctx.assets->scenes;
@@ -9222,10 +9275,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const ActorAssets &actors = ctx.assets->actors;
@@ -9275,10 +9333,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const ActorAssets &actors = ctx.assets->actors;
@@ -9328,10 +9391,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const MusicAssets &music = ctx.assets->music;
@@ -9381,10 +9449,15 @@ public:
 					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
 					Generator_Void_Byteptr opcodes = nullptr;
-					Generator_Int_Counter argf = [] (Counter &) -> int {
-						// Do nothing.
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						const bool withDeclaring = ctx.declaration.declaring != -1;
+						GBBASIC_ASSERT(withDeclaring && "Impossible.");
 
-						return 0;
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
 					};
 					if (byName_) {
 						const SfxAssets &sfx = ctx.assets->sfx;
@@ -12736,32 +12809,81 @@ public:
 				address = romLocation->address;
 			}
 
-			// Set the stack footprint guard.
-			VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
-			COUNTER_GUARD(ctx, stk);
+			// Emit the invoking.
+			const bool withDeclaring = ctx.declaration.declaring != -1;
+			if (caseSensitiveFunctionName == PEEK_BANKED_ENTRY_NAME) { // Specialized for this known function.
+				if (withDeclaring) {
+					// Set the stack footprint guard.
+					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
+					COUNTER_GUARD(ctx, stk);
 
-			// Emit the evaluations.
-			if (!_children.empty())
-				writeChildren(bytes, context, Range(0, (int)_children.size() - 1), stk, onError);
+					// Set the expression slot guard.
+					VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
 
-			// Emit a `VM_INVOKE_FN` instruction.
-			Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
-			if (_children.empty()) {
+					// Check the children.
+					if (_children.empty()) {
+						THROW_TOO_FEW_ARGUMENTS(onError);
+					} else if (_children.size() == 3) {
+						// Do nothing.
+					} else {
+						THROW_TOO_MANY_ARGUMENTS(onError);
+					}
+
+					// Emit the evaluations.
+					writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
+
+					// Emit a `VM_INVOKE_FN` instruction.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size()); INC_COUNTER(stk, 2);
+					args = fill(args, (Int16)(-(int)_children.size())); // Offset from `ARG0`.
+					args = fill(args, (UInt8)0);
+					args = fill(args, (UInt16)address);
+					args = fill(args, (UInt8)bank);
+
+					// Check the stack footprint.
+					CHECK_COUNTER(ctx, onError);
+				} else {
+					// No effect.
+					// Do nothing.
+				}
+			} else if (_children.empty()) {
+				// Set the stack footprint guard.
+				VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
+				COUNTER_GUARD(ctx, stk);
+
+				// Emit the evaluations.
+				if (!_children.empty())
+					writeChildren(bytes, context, Range(0, (int)_children.size() - 1), stk, onError);
+
+				// Emit a `VM_INVOKE_FN` instruction.
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
 				args = fill(args, (Int16)0);
 				args = fill(args, (UInt8)0);
 				args = fill(args, (UInt16)address);
 				args = fill(args, (UInt8)bank);
+
+				// Check the stack footprint.
+				CHECK_COUNTER(ctx, onError);
 			} else if (_children.size() <= 255) {
+				// Set the stack footprint guard.
+				VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
+				COUNTER_GUARD(ctx, stk);
+
+				// Emit the evaluations.
+				if (!_children.empty())
+					writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
+
+				// Emit a `VM_INVOKE_FN` instruction.
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size());
 				args = fill(args, (Int16)(-(int)_children.size())); // Offset from `ARG0`.
 				args = fill(args, (UInt8)(_children.size()));
 				args = fill(args, (UInt16)address);
 				args = fill(args, (UInt8)bank);
+
+				// Check the stack footprint.
+				CHECK_COUNTER(ctx, onError);
 			} else {
 				THROW_TOO_MANY_ARGUMENTS(onError);
 			}
-
-			// Check the stack footprint.
-			CHECK_COUNTER(ctx, onError);
 		};
 
 		write(bytes, context, generator, false, onError);
@@ -14284,7 +14406,7 @@ public:
 			// Check the children.
 			if (_children.empty()) {
 				THROW_TOO_FEW_ARGUMENTS(onError);
-			} else if (_children.size() == 1) {
+			} else if (_children.size() == 1 || _children.size() == 2) {
 				// Do nothing.
 			} else {
 				THROW_TOO_MANY_ARGUMENTS(onError);
@@ -14298,20 +14420,51 @@ public:
 			VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
 
 			// Emit the right hand value.
-			writeRightHand(
-				bytes, context, stk,
-				[&] (void) -> void {
-					// Emit the arguments.
-					writeChildren(bytes, context, Range(0), stk, onError);
+			const bool isBanked = _children.size() == 2;
+			if (isBanked) { // `=PEEK(bank, addr)` or `=PEEK INT(bank, addr)`.
+				// Get the native function pointer in the ROM.
+				if (!ctx.symbols) { THROW_INVALID_NATIVE_SYMBOL(onError); }
+				const RomLocation* romLocation = ctx.symbols->find(PEEK_BANKED_ENTRY_NAME);
+				if (!romLocation) {
+					THROW_INVALID_NATIVE_SYMBOL(onError);
+				}
+				const int bank = romLocation->bank;
+				const int address = romLocation->address;
 
-					// Emit a `VM_PEEK` instruction.
-					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PEEK]);
-					args = fill(args, (UInt8)BOOLEAN(_withInt));
-					args = fill(args, (Int16)ARG0);
-					args = fill(args, (Int16)ARG1);
-				}, 1, true,
-				onError
-			);
+				const bool withDeclaring = ctx.declaration.declaring != -1;
+				writeRightHand(
+					bytes, context, stk,
+					[&] (void) -> void {
+						// Emit the arguments.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)BOOLEAN(_withInt));
+						writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
+
+						// Emit a `VM_INVOKE_FN` instruction.
+						args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * 3); INC_COUNTER(stk, 2);
+						args = fill(args, (Int16)-((int)_children.size() + 1));
+						args = fill(args, (UInt8)0);
+						args = fill(args, (UInt16)address);
+						args = fill(args, (UInt8)bank);
+					}, withDeclaring ? 0 : 1, false,
+					onError
+				);
+			} else { // `=PEEK(pos)` or `=PEEK INT(pos)`.
+				writeRightHand(
+					bytes, context, stk,
+					[&] (void) -> void {
+						// Emit the arguments.
+						writeChildren(bytes, context, Range(0), stk, onError);
+
+						// Emit a `VM_PEEK` instruction.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PEEK]);
+						args = fill(args, (UInt8)BOOLEAN(_withInt));
+						args = fill(args, (Int16)ARG0);
+						args = fill(args, (Int16)ARG1);
+					}, 1, true,
+					onError
+				);
+			}
 
 			// Check the stack footprint.
 			CHECK_COUNTER(ctx, onError);
@@ -30776,6 +30929,48 @@ private:
 
 			return true;
 		};
+		auto InvokingNative = [&] (State &q, Node::Array &children, bool expEol) -> bool { // A native invoking sequence.
+			State q1 = begin();
+			q1.index = q.index;
+			Node::Array children_;
+			Token::Ptr id = nullptr;
+			std::string name;
+
+			if (!must(Token::Types::KEYWORD, "call")(q1)) return false;
+			if (!(id = must(Token::Types::SYMBOL)(q1))) return false;
+			else name = (std::string)id->data();
+			if (must(Token::Types::OPERATOR, "(")(q1)) {
+				if (!forward(Token::Types::OPERATOR, ")")(q1.index)) {
+					Arguments(q1, children_);
+					CHECK_UNEXPECTED(q1);
+				}
+				if (!must(Token::Types::OPERATOR, ")")(q1)) return false;
+			} else {
+				Arguments(q1, children_);
+				CHECK_UNEXPECTED(q1);
+			}
+			if (expEol) {
+				maybe(Token::Types::OPERATOR, ";")(q1);
+				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+			}
+
+			Node::Ptr node = createNode(
+				"call", id->data(),
+				{
+					{ "allow_call", true }
+				}
+			);
+			if (!node) return false;
+			node->concat(q1.tokens);
+			node->add(children_);
+			children.push_back(node);
+
+			q1.success = true;
+			end(q1);
+			q.index = q1.index;
+
+			return true;
+		};
 		auto Invoking = [&] (State &q, Node::Array &children, bool expEol) -> bool { // An invoking sequence.
 			State q1 = begin();
 			q1.index = q.index;
@@ -31606,6 +31801,15 @@ private:
 					if (name == "peek") {
 						const int qi = q.index;
 						if (PeekAt(q, children, false)) {
+							Intermedia(q, children, Token::Types::STATEMENT);
+							n += q.index - qi;
+
+							continue;
+						}
+					}
+					if (name == "call") { // Native call with return value.
+						const int qi = q.index;
+						if (InvokingNative(q, children, false)) {
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
 

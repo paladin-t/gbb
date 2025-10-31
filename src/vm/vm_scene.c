@@ -265,14 +265,14 @@ void scene_get_trigger(
 // Shake camera.
 UINT8 camera_shake(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     if (start) *((SCRIPT_CTX *)THIS)->stack_ptr = sys_time;
-    if (((UINT16)sys_time - *((SCRIPT_CTX *)THIS)->stack_ptr) < stack_frame[0]) {
-        if (stack_frame[1] & SCENE_CAMERA_SHAKE_X) {
+    if (((UINT16)sys_time - *((SCRIPT_CTX *)THIS)->stack_ptr) < stack_frame[1]) {
+        if (stack_frame[0] & SCENE_CAMERA_SHAKE_X) {
             UINT8 value = rand() & 0x0F;
             if (value > 13) value -= 13;
             else if (value > 7) value -= 7;
             scene_camera_shake_x = value - 3;
         }
-        if (stack_frame[1] & SCENE_CAMERA_SHAKE_Y) {
+        if (stack_frame[0] & SCENE_CAMERA_SHAKE_Y) {
             UINT8 value = rand() & 0x0F;
             if (value > 13) value -= 13;
             else if (value > 7) value -= 7;

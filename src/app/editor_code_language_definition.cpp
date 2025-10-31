@@ -307,6 +307,8 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 		"time",
 
 		// Invokables.
+		"peek_banked",
+		"clear_text",
 		"wait_for", "wait_until_confirm",
 		/* "error", */
 		"camera_shake"
