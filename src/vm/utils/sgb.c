@@ -28,10 +28,10 @@
         call_v_bbp_oldcall((F), (N), (BANK), (PTR), (FUNC)); \
     } while (0)
 
-void set_sgb_border(
+void sgb_set_border(
     UINT8 tiledata_bank, const UINT8 * tiledata, UINT16 tiledata_size,
-    UINT8 tilemap_bank,  const UINT8 * tilemap,  UINT16 tilemap_size,
-    UINT8 palette_bank,  const UINT8 * palette,  UINT16 palette_size
+    UINT8 tilemap_bank, const UINT8 * tilemap, UINT16 tilemap_size,
+    UINT8 palette_bank, const UINT8 * palette, UINT16 palette_size
 ) BANKED {
     UINT8 map_buf[20];
     memset(map_buf, 0, sizeof(map_buf));

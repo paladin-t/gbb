@@ -6,6 +6,7 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
+#include "utils/sgb.h"
 #include "utils/utils.h"
 
 #include "vm_device.h"
@@ -15,6 +16,7 @@
 
 BANKREF(VM_NATIVE)
 
+// Gets the value at the specific banked memory address.
 BOOLEAN peek_banked(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)start;
     (void)stack_frame;
@@ -81,6 +83,31 @@ BOOLEAN wait_until_confirm(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
     ((SCRIPT_CTX *)THIS)->waitable = TRUE; // No input, wait.
 
     return FALSE;
+}
+
+// Sets border frame for SGB devices.
+BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)start;
+    (void)stack_frame;
+
+    SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
+    const UINT8 tiledata_bank  = (UINT8)*(--THIS_->stack_ptr);
+    const UINT16 tiledata      = (UINT16)*(--THIS_->stack_ptr);
+    const UINT16 tiledata_size = (UINT16)*(--THIS_->stack_ptr);
+    const UINT8 tilemap_bank   = (UINT8)*(--THIS_->stack_ptr);
+    const UINT16 tilemap       = (UINT16)*(--THIS_->stack_ptr);
+    const UINT16 tilemap_size  = (UINT16)*(--THIS_->stack_ptr);
+    const UINT8 palette_bank   = (UINT8)*(--THIS_->stack_ptr);
+    const UINT16 palette       = (UINT16)*(--THIS_->stack_ptr);
+    const UINT16 palette_size  = (UINT16)*(--THIS_->stack_ptr);
+
+    sgb_set_border(
+        tiledata_bank, (const UINT8 *)tiledata, tiledata_size,
+        tilemap_bank, (const UINT8 *)tilemap, tilemap_size,
+        palette_bank, (const UINT8 *)palette, palette_size
+    );
+
+    return TRUE;
 }
 
 // Triggers an error.
