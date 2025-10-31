@@ -2881,10 +2881,12 @@ private:
 				const bool ok = clusterIndex != -1 ?                                                      // With prefered cluster?
 					_allocator.allocate(clusterIndex, (int)chunk.bytes->count(), &bank, &addressCursor) : // Allocate from the prefered cluster, or
 					_allocator.allocate((int)chunk.bytes->count(), &bank, &addressCursor);                // allocate from available space.
-				if (ok) {
+				if (ok) { // Allocated.
+					// Determine the bank and address of the chunk.
 					chunk.bank = bank;
 					chunk.address = _startAddress + addressCursor;
 
+					// Determine the space of the final ROM.
 					const int begin = (bank - _startBank) * _bankSize + addressCursor;
 					const int end = begin + (int)chunk.bytes->count();
 					_bytes->resize(Math::max(end, (int)_bytes->count()));
@@ -2896,6 +2898,7 @@ private:
 							*_addressCursor = end;
 					}
 				} else { // ROM overflow.
+					// Report the overflow.
 					const std::string cat = AssetsBundle::nameOf(src.category);
 					const std::string page = Text::toPageNumber(src.page);
 					const std::string msg = Text::format("Cannot allocate ROM space for {0} at page {1}.", { cat, page });
