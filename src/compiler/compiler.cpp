@@ -8357,6 +8357,22 @@ public:
 };
 
 class NodeBankOf : public Node {
+private:
+	enum class OperationTypes {
+		NONE,
+		TILE,
+		MAP,
+		SCENE,
+		ACTOR,
+		PROJECTILE,
+		MUSIC,
+		SOUND
+	};
+
+private:
+	Scheduled _scheduled;
+	OperationTypes _type = OperationTypes::NONE;
+
 public:
 	NodeBankOf() {
 	}
@@ -8378,13 +8394,28 @@ public:
 			state.inRom.address = ctx.addressCursor;
 			state.inRom.size = 0;
 
+			// Reset the states.
+			_scheduled = Scheduled();
+			_type = OperationTypes::NONE;
+
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
 					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
 				})) { THROW_INVALID_SYNTAX(onError); }
 			}
-			if (!consume(Token::Types::KEYWORD, "bankof")) { THROW_INVALID_SYNTAX(onError); }
+			if (consume(Token::Types::KEYWORD, "get")) {
+				if (consume(Token::Types::KEYWORD, "tile")) { _type = OperationTypes::TILE; }
+				else if (consume(Token::Types::KEYWORD, "map")) { _type = OperationTypes::MAP; }
+				else if (consume(Token::Types::KEYWORD, "scene")) { _type = OperationTypes::SCENE; }
+				else if (consume(Token::Types::KEYWORD, "actor")) { _type = OperationTypes::ACTOR; }
+				else if (consume(Token::Types::KEYWORD, "projectile")) { _type = OperationTypes::PROJECTILE; }
+				else if (consume(Token::Types::KEYWORD, "music")) { _type = OperationTypes::MUSIC; }
+				else if (consume(Token::Types::KEYWORD, "sfx")) { _type = OperationTypes::SOUND; }
+				if (!consume(Token::Types::KEYWORD, "bankof")) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				if (!consume(Token::Types::KEYWORD, "bankof")) { THROW_INVALID_SYNTAX(onError); }
+			}
 			if (consume(Token::Types::OPERATOR, "(")) {
 				if (!consume(Token::Types::OPERATOR, ")")) { THROW_INVALID_SYNTAX(onError); }
 			}
@@ -8399,68 +8430,545 @@ public:
 			}
 
 			// Get the bank of the specific target.
-			int page = -1;
-			Destination dest(0);
-			const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
-			if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
+			switch (_type) {
+			case OperationTypes::TILE: {
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
-			int bank = 0;
-			do {
-				// Prepare.
-				if (!dest.isRight())
-					break;
+					Generator_Void_Byteptr opcodes = nullptr;
+					Generator_Int_Counter argf = [] (Counter &) -> int {
+						// Do nothing.
 
-				// Search for builtin name.
-				const std::string name = dest.right().get();
-				if (!ctx.symbols) { THROW_INVALID_ASSET_POINT(onError); }
-				const RomLocation* romLocation = ctx.symbols->find(name);
-				if (romLocation) { // By builtin name.
-					bank = romLocation->bank;
+						return 0;
+					};
+					if (byName_) {
+						const TilesAssets &tiles = ctx.assets->tiles;
+						int pageIndex = -1;
+						const TilesAssets::Entry* tilesEntry = tiles.find(name, &pageIndex); // By asset name.
+						if (tilesEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-					break;
+							opcodes = [&] (Byte* &args) -> void {
+								const SourceLocation target(pageIndex);
+								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+								args = fill(args, (Int16)ARG0);
+							};
+						} else {
+							std::string fuzzyName;
+							if (tiles.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						int page = -1;
+						Destination dest(0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						opcodes = [&] (Byte* &args) -> void {
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+							args = fill(args, (Int16)ARG0);
+						};
+					}
+					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
 				}
 
-				// Search for identifier.
-				const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
-				const RamLocation* ramLocation = ctx.findPageAndGlobal(name);
-				const Context::Array::Dimensions* dimensions = ctx.array->find(name);
-				if (scriptMemoryRamLocation && ramLocation) {
-					if (dimensions) { // By array name.
-						bank = scriptMemoryRamLocation->bank;
+				break;
+			case OperationTypes::MAP: {
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, nullptr)) byName_ = true;
 
+					Generator_Void_Byteptr opcodes = nullptr;
+					Generator_Int_Counter argf = [] (Counter &) -> int {
+						// Do nothing.
+
+						return 0;
+					};
+					if (byName_) {
+						const MapAssets &maps = ctx.assets->maps;
+						int pageIndex = -1;
+						const MapAssets::Entry* mapEntry = maps.find(name, &pageIndex); // By asset name.
+						if (mapEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::MAP, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							opcodes = [&] (Byte* &args) -> void {
+								const SourceLocation target(pageIndex);
+								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+								args = fill(args, (Int16)ARG0);
+							};
+						} else {
+							std::string fuzzyName;
+							if (maps.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						int page = -1;
+						Destination dest(0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::MAP, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						opcodes = [&] (Byte* &args) -> void {
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+							args = fill(args, (Int16)ARG0);
+						};
+					}
+					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
+				}
+
+				break;
+			case OperationTypes::SCENE: {
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, nullptr)) byName_ = true;
+
+					Generator_Void_Byteptr opcodes = nullptr;
+					Generator_Int_Counter argf = [] (Counter &) -> int {
+						// Do nothing.
+
+						return 0;
+					};
+					if (byName_) {
+						const SceneAssets &scenes = ctx.assets->scenes;
+						int pageIndex = -1;
+						const SceneAssets::Entry* sceneEntry = scenes.find(name, &pageIndex); // By asset name.
+						if (sceneEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::SCENE, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							opcodes = [&] (Byte* &args) -> void {
+								const SourceLocation target(pageIndex);
+								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+								args = fill(args, (Int16)ARG0);
+							};
+						} else {
+							std::string fuzzyName;
+							if (scenes.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						int page = -1;
+						Destination dest(0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::SCENE, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						opcodes = [&] (Byte* &args) -> void {
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+							args = fill(args, (Int16)ARG0);
+						};
+					}
+					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
+				}
+
+				break;
+			case OperationTypes::ACTOR: {
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, nullptr)) byName_ = true;
+
+					Generator_Void_Byteptr opcodes = nullptr;
+					Generator_Int_Counter argf = [] (Counter &) -> int {
+						// Do nothing.
+
+						return 0;
+					};
+					if (byName_) {
+						const ActorAssets &actors = ctx.assets->actors;
+						int pageIndex = -1;
+						const ActorAssets::Entry* actorEntry = actors.find(name, &pageIndex); // By asset name.
+						if (actorEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::ACTOR, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							opcodes = [&] (Byte* &args) -> void {
+								const SourceLocation target(pageIndex);
+								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+								args = fill(args, (Int16)ARG0);
+							};
+						} else {
+							std::string fuzzyName;
+							if (actors.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						int page = -1;
+						Destination dest(0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::ACTOR, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						opcodes = [&] (Byte* &args) -> void {
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+							args = fill(args, (Int16)ARG0);
+						};
+					}
+					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
+				}
+
+				break;
+			case OperationTypes::PROJECTILE: {
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, nullptr)) byName_ = true;
+
+					Generator_Void_Byteptr opcodes = nullptr;
+					Generator_Int_Counter argf = [] (Counter &) -> int {
+						// Do nothing.
+
+						return 0;
+					};
+					if (byName_) {
+						const ActorAssets &actors = ctx.assets->actors;
+						int pageIndex = -1;
+						const ActorAssets::Entry* actorEntry = actors.find(name, &pageIndex); // By asset name.
+						if (actorEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::PROJECTILE, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							opcodes = [&] (Byte* &args) -> void {
+								const SourceLocation target(pageIndex);
+								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+								args = fill(args, (Int16)ARG0);
+							};
+						} else {
+							std::string fuzzyName;
+							if (actors.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						int page = -1;
+						Destination dest(0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::PROJECTILE, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						opcodes = [&] (Byte* &args) -> void {
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+							args = fill(args, (Int16)ARG0);
+						};
+					}
+					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
+				}
+
+				break;
+			case OperationTypes::MUSIC: {
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, nullptr)) byName_ = true;
+
+					Generator_Void_Byteptr opcodes = nullptr;
+					Generator_Int_Counter argf = [] (Counter &) -> int {
+						// Do nothing.
+
+						return 0;
+					};
+					if (byName_) {
+						const MusicAssets &music = ctx.assets->music;
+						int pageIndex = -1;
+						const MusicAssets::Entry* musicEntry = music.find(name, &pageIndex); // By asset name.
+						if (musicEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::MUSIC, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							opcodes = [&] (Byte* &args) -> void {
+								const SourceLocation target(pageIndex);
+								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+								args = fill(args, (Int16)ARG0);
+							};
+						} else {
+							std::string fuzzyName;
+							if (music.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						int page = -1;
+						Destination dest(0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::MUSIC, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						opcodes = [&] (Byte* &args) -> void {
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+							args = fill(args, (Int16)ARG0);
+						};
+					}
+					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
+				}
+
+				break;
+			case OperationTypes::SOUND: {
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, nullptr)) byName_ = true;
+
+					Generator_Void_Byteptr opcodes = nullptr;
+					Generator_Int_Counter argf = [] (Counter &) -> int {
+						// Do nothing.
+
+						return 0;
+					};
+					if (byName_) {
+						const SfxAssets &sfx = ctx.assets->sfx;
+						int pageIndex = -1;
+						const SfxAssets::Entry* sfxEntry = sfx.find(name, &pageIndex); // By asset name.
+						if (sfxEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::SFX, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							opcodes = [&] (Byte* &args) -> void {
+								const SourceLocation target(pageIndex);
+								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+								args = fill(args, (Int16)ARG0);
+							};
+						} else {
+							std::string fuzzyName;
+							if (sfx.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						int page = -1;
+						Destination dest(0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::SFX, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						opcodes = [&] (Byte* &args) -> void {
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+							args = fill(args, (Int16)ARG0);
+						};
+					}
+					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
+				}
+
+				break;
+			default: {
+					// Prepare.
+					int page = -1;
+					Destination dest(0);
+					const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
+					if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
+
+					if (!dest.isRight())
 						break;
-					} else { // By variable name.
-						bank = scriptMemoryRamLocation->bank;
+
+					int bank = 0;
+
+					// Search for builtin name.
+					const std::string name = dest.right().get();
+					if (!ctx.symbols) { THROW_INVALID_ASSET_POINT(onError); }
+					const RomLocation* romLocation = ctx.symbols->find(name);
+					if (romLocation) { // By builtin name.
+						bank = romLocation->bank;
 
 						break;
 					}
+
+					// Search for identifier.
+					const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+					const RamLocation* ramLocation = ctx.findPageAndGlobal(name);
+					const Context::Array::Dimensions* dimensions = ctx.array->find(name);
+					if (scriptMemoryRamLocation && ramLocation) {
+						if (dimensions) { // By array name.
+							bank = scriptMemoryRamLocation->bank;
+						} else { // By variable name.
+							bank = scriptMemoryRamLocation->bank;
+						}
+					}
+
+					// Set the stack footprint guard.
+					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
+					COUNTER_GUARD(ctx, stk);
+
+					// Set the expression slot guard.
+					VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
+
+					// Emit the right hand value.
+					writeRightHand(
+						bytes, context, stk,
+						[&] (void) -> void {
+							// Emit a `VM_SET_CONST` instruction to set the data.
+							Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::SET_CONST]);
+							args = fill(args, (Int16)bank);
+							args = fill(args, (Int16)ARG0);
+						}, 0, true,
+						onError
+					);
+
+					// Check the stack footprint.
+					CHECK_COUNTER(ctx, onError);
 				}
-			} while (false);
 
-			// Set the stack footprint guard.
-			COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
-			COUNTER_GUARD(ctx, stk);
-
-			// Set the expression slot guard.
-			VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
-
-			// Emit the right hand value.
-			writeRightHand(
-				bytes, context, stk,
-				[&] (void) -> void {
-					// Emit a `VM_SET_CONST` instruction to set the data.
-					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::SET_CONST]);
-					args = fill(args, (Int16)bank);
-					args = fill(args, (Int16)ARG0);
-				}, 0, true,
-				onError
-			);
-
-			// Check the stack footprint.
-			CHECK_COUNTER(ctx, onError);
+				break;
+			}
 		};
 
 		write(bytes, context, generator, false, onError);
+	}
+	virtual void post(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		Context &ctx = context.top();
+
+		if (!_scheduled.pending())
+			return;
+
+		switch (_type) {
+		case OperationTypes::TILE: {
+				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+				Pipeline::Resource::Array locations;
+				if (!ctx.pipeline->lookup(AssetsBundle::Categories::TILES, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
+				const int bank = locations.front().bank;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (Int16)bank);
+			}
+
+			break;
+		case OperationTypes::MAP: {
+				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+				Pipeline::Resource::Array locations;
+				if (!ctx.pipeline->lookup(AssetsBundle::Categories::MAP, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
+				const Pipeline::Resource &loc = locations[_scheduled.target.sub];
+				const int bank = loc.bank;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (Int16)bank);
+			}
+
+			break;
+		case OperationTypes::SCENE: {
+				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+				Pipeline::Resource::Array locations;
+				if (!ctx.pipeline->lookup(AssetsBundle::Categories::SCENE, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
+				const Pipeline::Resource &loc = locations[_scheduled.target.sub];
+				const int bank = loc.bank;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (Int16)bank);
+			}
+
+			break;
+		case OperationTypes::ACTOR: {
+				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+				Pipeline::Resource::Array locations;
+				if (!ctx.pipeline->lookup(AssetsBundle::Categories::ACTOR, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
+				const Pipeline::Resource &loc = locations[_scheduled.target.sub];
+				const int bank = loc.bank;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (Int16)bank);
+			}
+
+			break;
+		case OperationTypes::PROJECTILE: {
+				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+				Pipeline::Resource::Array locations;
+				if (!ctx.pipeline->lookup(AssetsBundle::Categories::PROJECTILE, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
+				const Pipeline::Resource &loc = locations[_scheduled.target.sub];
+				const int bank = loc.bank;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (Int16)bank);
+			}
+
+			break;
+		case OperationTypes::MUSIC: {
+				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+				Pipeline::Resource::Array locations;
+				if (!ctx.pipeline->lookup(AssetsBundle::Categories::MUSIC, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+				if (locations.size() != 6) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
+				const Pipeline::Resource &loc = locations[_scheduled.target.sub];
+				const int bank = loc.bank;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (Int16)bank);
+			}
+
+			break;
+		case OperationTypes::SOUND: {
+				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+				Pipeline::Resource::Array locations;
+				if (!ctx.pipeline->lookup(AssetsBundle::Categories::SFX, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+				if (locations.size() != 1) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
+				const Pipeline::Resource &loc = locations[_scheduled.target.sub];
+				const int bank = loc.bank;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (Int16)bank);
+			}
+
+			break;
+		default:
+			GBBASIC_ASSERT(false && "Impossible.");
+
+			break;
+		}
 	}
 
 	virtual Abstract abstract(void) const override {
@@ -8513,6 +9021,7 @@ public:
 			state.inRom.size = 0;
 
 			// Reset the states.
+			_scheduled = Scheduled();
 			_type = OperationTypes::NONE;
 
 			// Consume the tokens.
@@ -8585,8 +9094,7 @@ public:
 						int page = -1;
 						Destination dest(0);
 						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
-						if (tks.size() == 1) { /* Do nothing. */ }
-						else if (!dest.isLeft()) { THROW_INVALID_ASSET_POINT(onError); }
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
 
 						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
@@ -9000,7 +9508,7 @@ public:
 				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 				Pipeline::Resource::Array locations;
 				if (!ctx.pipeline->lookup(AssetsBundle::Categories::TILES, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
-				if (locations.size() != 1) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
 				const int address = locations.front().address;
 				const int size = locations.front().size;
 				const int offset = _scheduled.target.sub * 8 * 2;
@@ -31215,9 +31723,28 @@ private:
 							!!forwardN(2, Token::Types::KEYWORD, "window")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "sprite")(q.index);
 						const bool prop = !!forwardN(3, Token::Types::KEYWORD, "property")(q.index);
+						const bool bank = !!forwardN(3, Token::Types::KEYWORD, "bankof")(q.index);
 						const bool addr = !!forwardN(3, Token::Types::KEYWORD, "addressof")(q.index);
 						const int qi = q.index;
-						if (targets && !prop && !addr && TileR(q, children, false)) {
+						if (targets && !prop && (!bank && !addr) && TileR(q, children, false)) {
+							Intermedia(q, children, Token::Types::STATEMENT);
+							n += q.index - qi;
+
+							continue;
+						}
+					}
+					if (name == "get") { // Bank getting.
+						const bool targets =
+							!!forwardN(2, Token::Types::KEYWORD, "tile")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "map")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "scene")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "actor")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "projectile")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "music")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "sfx")(q.index);
+						const bool bank = !!forwardN(3, Token::Types::KEYWORD, "bankof")(q.index);
+						const int qi = q.index;
+						if (targets && bank && BankR(q, children, false)) {
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
 
