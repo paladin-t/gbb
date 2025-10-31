@@ -12809,37 +12809,81 @@ public:
 				address = romLocation->address;
 			}
 
-			// Set the stack footprint guard.
-			VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
-			COUNTER_GUARD(ctx, stk);
-
-			// Emit the evaluations.
-			if (!_children.empty())
-				writeChildren(bytes, context, Range(0, (int)_children.size() - 1), stk, onError);
-
-			// Emit a `VM_INVOKE_FN` instruction.
-			Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
+			// Emit the invoking.
+			const bool withDeclaring = ctx.declaration.declaring != -1;
 			if (caseSensitiveFunctionName == PEEK_BANKED_ENTRY_NAME) { // Specialized for this known function.
-				args = fill(args, (Int16)(-(int)_children.size())); // Offset from `ARG0`.
-				args = fill(args, (UInt8)0);
-				args = fill(args, (UInt16)address);
-				args = fill(args, (UInt8)bank);
+				if (withDeclaring) {
+					// Set the stack footprint guard.
+					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
+					COUNTER_GUARD(ctx, stk);
+
+					// Set the expression slot guard.
+					VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
+
+					// Check the children.
+					if (_children.empty()) {
+						THROW_TOO_FEW_ARGUMENTS(onError);
+					} else if (_children.size() == 3) {
+						// Do nothing.
+					} else {
+						THROW_TOO_MANY_ARGUMENTS(onError);
+					}
+
+					// Emit the evaluations.
+					writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
+
+					// Emit a `VM_INVOKE_FN` instruction.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size()); INC_COUNTER(stk, 2);
+					args = fill(args, (Int16)(-(int)_children.size())); // Offset from `ARG0`.
+					args = fill(args, (UInt8)0);
+					args = fill(args, (UInt16)address);
+					args = fill(args, (UInt8)bank);
+
+					// Check the stack footprint.
+					CHECK_COUNTER(ctx, onError);
+				} else {
+					// No effect.
+					// Do nothing.
+				}
 			} else if (_children.empty()) {
+				// Set the stack footprint guard.
+				VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
+				COUNTER_GUARD(ctx, stk);
+
+				// Emit the evaluations.
+				if (!_children.empty())
+					writeChildren(bytes, context, Range(0, (int)_children.size() - 1), stk, onError);
+
+				// Emit a `VM_INVOKE_FN` instruction.
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
 				args = fill(args, (Int16)0);
 				args = fill(args, (UInt8)0);
 				args = fill(args, (UInt16)address);
 				args = fill(args, (UInt8)bank);
+
+				// Check the stack footprint.
+				CHECK_COUNTER(ctx, onError);
 			} else if (_children.size() <= 255) {
+				// Set the stack footprint guard.
+				VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
+				COUNTER_GUARD(ctx, stk);
+
+				// Emit the evaluations.
+				if (!_children.empty())
+					writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
+
+				// Emit a `VM_INVOKE_FN` instruction.
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size());
 				args = fill(args, (Int16)(-(int)_children.size())); // Offset from `ARG0`.
 				args = fill(args, (UInt8)(_children.size()));
 				args = fill(args, (UInt16)address);
 				args = fill(args, (UInt8)bank);
+
+				// Check the stack footprint.
+				CHECK_COUNTER(ctx, onError);
 			} else {
 				THROW_TOO_MANY_ARGUMENTS(onError);
 			}
-
-			// Check the stack footprint.
-			CHECK_COUNTER(ctx, onError);
 		};
 
 		write(bytes, context, generator, false, onError);
@@ -30885,6 +30929,48 @@ private:
 
 			return true;
 		};
+		auto InvokingNative = [&] (State &q, Node::Array &children, bool expEol) -> bool { // A native invoking sequence.
+			State q1 = begin();
+			q1.index = q.index;
+			Node::Array children_;
+			Token::Ptr id = nullptr;
+			std::string name;
+
+			if (!must(Token::Types::KEYWORD, "call")(q1)) return false;
+			if (!(id = must(Token::Types::SYMBOL)(q1))) return false;
+			else name = (std::string)id->data();
+			if (must(Token::Types::OPERATOR, "(")(q1)) {
+				if (!forward(Token::Types::OPERATOR, ")")(q1.index)) {
+					Arguments(q1, children_);
+					CHECK_UNEXPECTED(q1);
+				}
+				if (!must(Token::Types::OPERATOR, ")")(q1)) return false;
+			} else {
+				Arguments(q1, children_);
+				CHECK_UNEXPECTED(q1);
+			}
+			if (expEol) {
+				maybe(Token::Types::OPERATOR, ";")(q1);
+				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+			}
+
+			Node::Ptr node = createNode(
+				"call", id->data(),
+				{
+					{ "allow_call", true }
+				}
+			);
+			if (!node) return false;
+			node->concat(q1.tokens);
+			node->add(children_);
+			children.push_back(node);
+
+			q1.success = true;
+			end(q1);
+			q.index = q1.index;
+
+			return true;
+		};
 		auto Invoking = [&] (State &q, Node::Array &children, bool expEol) -> bool { // An invoking sequence.
 			State q1 = begin();
 			q1.index = q.index;
@@ -31715,6 +31801,15 @@ private:
 					if (name == "peek") {
 						const int qi = q.index;
 						if (PeekAt(q, children, false)) {
+							Intermedia(q, children, Token::Types::STATEMENT);
+							n += q.index - qi;
+
+							continue;
+						}
+					}
+					if (name == "call") { // Native call with return value.
+						const int qi = q.index;
+						if (InvokingNative(q, children, false)) {
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
 
