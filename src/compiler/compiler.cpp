@@ -8401,7 +8401,7 @@ public:
 			// Get the bank of the specific target.
 			int page = -1;
 			Destination dest(0);
-			Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
+			const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
 			if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 
 			int bank = 0;
@@ -8479,7 +8479,10 @@ private:
 	enum class OperationTypes {
 		NONE,
 		TILE,
-		MAP
+		MAP,
+		SCENE,
+		ACTOR,
+		PROJECTILE
 	};
 
 private:
@@ -8519,6 +8522,9 @@ public:
 			if (consume(Token::Types::KEYWORD, "get")) {
 				if (consume(Token::Types::KEYWORD, "tile")) { _type = OperationTypes::TILE; }
 				else if (consume(Token::Types::KEYWORD, "map")) { _type = OperationTypes::MAP; }
+				else if (consume(Token::Types::KEYWORD, "scene")) { _type = OperationTypes::SCENE; }
+				else if (consume(Token::Types::KEYWORD, "actor")) { _type = OperationTypes::ACTOR; }
+				else if (consume(Token::Types::KEYWORD, "projectile")) { _type = OperationTypes::PROJECTILE; }
 				if (!consume(Token::Types::KEYWORD, "addressof")) { THROW_INVALID_SYNTAX(onError); }
 			} else {
 				if (!consume(Token::Types::KEYWORD, "addressof")) { THROW_INVALID_SYNTAX(onError); }
@@ -8558,7 +8564,7 @@ public:
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
 							opcodes = [&] (Byte* &args) -> void {
-								SourceLocation target(pageIndex);
+								const SourceLocation target(pageIndex);
 								_scheduled = Scheduled(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
@@ -8574,7 +8580,7 @@ public:
 					} else /* From asset. */ {
 						int page = -1;
 						Destination dest(0);
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
 						if (tks.size() == 1) { /* Do nothing. */ }
 						else if (!dest.isLeft()) { THROW_INVALID_ASSET_POINT(onError); }
 
@@ -8582,7 +8588,7 @@ public:
 						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
 						opcodes = [&] (Byte* &args) -> void {
-							SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
 							_scheduled = Scheduled(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
@@ -8612,7 +8618,7 @@ public:
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::MAP, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
 							opcodes = [&] (Byte* &args) -> void {
-								SourceLocation target(pageIndex);
+								const SourceLocation target(pageIndex);
 								_scheduled = Scheduled(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
@@ -8628,14 +8634,173 @@ public:
 					} else /* From asset. */ {
 						int page = -1;
 						Destination dest(0);
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
 						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
 
 						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::MAP, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
 						opcodes = [&] (Byte* &args) -> void {
-							SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+							args = fill(args, (Int16)ARG0);
+						};
+					}
+					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
+				}
+
+				break;
+			case OperationTypes::SCENE: {
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, nullptr)) byName_ = true;
+
+					Generator_Void_Byteptr opcodes = nullptr;
+					Generator_Int_Counter argf = [] (Counter &) -> int {
+						// Do nothing.
+
+						return 0;
+					};
+					if (byName_) {
+						const SceneAssets &scenes = ctx.assets->scenes;
+						int pageIndex = -1;
+						const SceneAssets::Entry* sceneEntry = scenes.find(name, &pageIndex); // By asset name.
+						if (sceneEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::SCENE, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							opcodes = [&] (Byte* &args) -> void {
+								const SourceLocation target(pageIndex);
+								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+								args = fill(args, (Int16)ARG0);
+							};
+						} else {
+							std::string fuzzyName;
+							if (scenes.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						int page = -1;
+						Destination dest(0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::SCENE, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						opcodes = [&] (Byte* &args) -> void {
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+							args = fill(args, (Int16)ARG0);
+						};
+					}
+					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
+				}
+
+				break;
+			case OperationTypes::ACTOR: {
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, nullptr)) byName_ = true;
+
+					Generator_Void_Byteptr opcodes = nullptr;
+					Generator_Int_Counter argf = [] (Counter &) -> int {
+						// Do nothing.
+
+						return 0;
+					};
+					if (byName_) {
+						const ActorAssets &actors = ctx.assets->actors;
+						int pageIndex = -1;
+						const ActorAssets::Entry* actorEntry = actors.find(name, &pageIndex); // By asset name.
+						if (actorEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::ACTOR, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							opcodes = [&] (Byte* &args) -> void {
+								const SourceLocation target(pageIndex);
+								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+								args = fill(args, (Int16)ARG0);
+							};
+						} else {
+							std::string fuzzyName;
+							if (actors.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						int page = -1;
+						Destination dest(0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::ACTOR, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						opcodes = [&] (Byte* &args) -> void {
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+							args = fill(args, (Int16)ARG0);
+						};
+					}
+					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
+				}
+
+				break;
+			case OperationTypes::PROJECTILE: {
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, nullptr)) byName_ = true;
+
+					Generator_Void_Byteptr opcodes = nullptr;
+					Generator_Int_Counter argf = [] (Counter &) -> int {
+						// Do nothing.
+
+						return 0;
+					};
+					if (byName_) {
+						const ActorAssets &actors = ctx.assets->actors;
+						int pageIndex = -1;
+						const ActorAssets::Entry* actorEntry = actors.find(name, &pageIndex); // By asset name.
+						if (actorEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::PROJECTILE, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							opcodes = [&] (Byte* &args) -> void {
+								const SourceLocation target(pageIndex);
+								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+								args = fill(args, (Int16)ARG0);
+							};
+						} else {
+							std::string fuzzyName;
+							if (actors.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						int page = -1;
+						Destination dest(0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::PROJECTILE, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						opcodes = [&] (Byte* &args) -> void {
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
 							_scheduled = Scheduled(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
@@ -8649,7 +8814,7 @@ public:
 					// Prepare.
 					int page = -1;
 					Destination dest(0);
-					Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
+					const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
 					if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 
 					if (!dest.isRight())
@@ -8740,6 +8905,45 @@ public:
 				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 				Pipeline::Resource::Array locations;
 				if (!ctx.pipeline->lookup(AssetsBundle::Categories::MAP, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
+				const Pipeline::Resource &loc = locations[_scheduled.target.sub];
+				const int address = loc.address;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (UInt16)address);
+			}
+
+			break;
+		case OperationTypes::SCENE: {
+				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+				Pipeline::Resource::Array locations;
+				if (!ctx.pipeline->lookup(AssetsBundle::Categories::SCENE, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
+				const Pipeline::Resource &loc = locations[_scheduled.target.sub];
+				const int address = loc.address;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (UInt16)address);
+			}
+
+			break;
+		case OperationTypes::ACTOR: {
+				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+				Pipeline::Resource::Array locations;
+				if (!ctx.pipeline->lookup(AssetsBundle::Categories::ACTOR, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
+				const Pipeline::Resource &loc = locations[_scheduled.target.sub];
+				const int address = loc.address;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (UInt16)address);
+			}
+
+			break;
+		case OperationTypes::PROJECTILE: {
+				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+				Pipeline::Resource::Array locations;
+				if (!ctx.pipeline->lookup(AssetsBundle::Categories::PROJECTILE, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
 				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
 				const Pipeline::Resource &loc = locations[_scheduled.target.sub];
 				const int address = loc.address;
@@ -10045,7 +10249,7 @@ public:
 					for (int i = 1; i < (int)_children.size(); ++i) {
 						int page = -1;
 						Destination dest(0);
-						Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, i, false);
+						const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, i, false);
 						if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 						pages.push_back(page);
 						dests.push_back(dest);
@@ -10063,7 +10267,7 @@ public:
 				} else if (_children.size() <= 2) {
 					int page = -1;
 					Destination dest(Left<int>(0));
-					Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, (int)_children.size() - 1, false);
+					const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, (int)_children.size() - 1, false);
 					if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 					pages.push_back(page);
 					dests.push_back(dest);
@@ -10080,7 +10284,7 @@ public:
 				} else if (_children.size() == 1) {
 					int page = -1;
 					Destination dest(Left<int>(0));
-					Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, (int)_children.size() - 1, false);
+					const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, (int)_children.size() - 1, false);
 					if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 					pages.push_back(page);
 					dests.push_back(dest);
@@ -11517,7 +11721,7 @@ public:
 			if (_children.empty()) {
 				THROW_TOO_FEW_ARGUMENTS(onError);
 			} else if (_children.size() == 1) {
-				Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
+				const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
 				if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 			} else {
 				THROW_TOO_MANY_ARGUMENTS(onError);
@@ -11637,7 +11841,7 @@ public:
 			if (_children.empty()) {
 				THROW_TOO_FEW_ARGUMENTS(onError);
 			} else if (_children.size() == 1) {
-				Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
+				const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
 				if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 			} else {
 				THROW_TOO_MANY_ARGUMENTS(onError);
@@ -12003,7 +12207,7 @@ public:
 			if (_children.empty()) {
 				THROW_TOO_FEW_ARGUMENTS(onError);
 			} else if (_children.size() <= 1 + THREAD_PARAMETER_MAX_COUNT) {
-				Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
+				const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
 				if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 				_arguments = (int)_children.size() - 1;
 			} else {
@@ -15096,7 +15300,7 @@ public:
 			if (_children.empty()) {
 				noargs = true;
 			} else if (_children.size() == 1) {
-				Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
+				const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
 				if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 			} else {
 				THROW_TOO_MANY_ARGUMENTS(onError);
@@ -15519,7 +15723,7 @@ public:
 
 				int page = -1;
 				Destination dest(0);
-				Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, (int)_children.size() - 1, true);
+				const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, (int)_children.size() - 1, true);
 				if (dest.isLeft()) {
 					if (tks.size() == 3) { /* Do nothing. */ }
 					else { THROW_INVALID_ASSET_POINT(onError); }
@@ -16218,7 +16422,7 @@ public:
 									return 6;
 								},
 								[&] (Counter &) -> void {
-									SourceLocation target(pageIndex);
+									const SourceLocation target(pageIndex);
 									const int offset = (int)bytes->peek();
 									_scheduled.push_back(Scheduled(target, bytes->pointer(), bytes->pointer() + offset, false));
 									emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
@@ -16260,14 +16464,14 @@ public:
 							[&] (Counter &) -> void {
 								int page = -1;
 								Destination dest(0);
-								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 								if (tks.size() == 1) { /* Do nothing. */ }
 								else if (!dest.isLeft()) { THROW_INVALID_ASSET_POINT(onError); }
 
 								if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 								if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-								SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+								const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
 								const int offset = (int)bytes->peek();
 								emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 								emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -16340,7 +16544,7 @@ public:
 					// Find the map asset.
 					int page = -1;
 					Destination dest(0);
-					Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, (int)_children.size() - 1, true);
+					const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, (int)_children.size() - 1, true);
 					if (tks.size() == 1) { /* Do nothing. */ }
 					else { THROW_INVALID_ASSET_POINT(onError); }
 					if (page == -1 && dest.isRight()) {
@@ -16404,7 +16608,7 @@ public:
 							return 2;
 						},
 						[&] (Counter &) -> void {
-							SourceLocation target(tilesPage); // `#pg`. By page number.
+							const SourceLocation target(tilesPage); // `#pg`. By page number.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -16482,7 +16686,7 @@ public:
 								return 7;
 							},
 							[&] (Counter &) -> void {
-								SourceLocation target(page, 1); // `#pg`. By page number.
+								const SourceLocation target(page, 1); // `#pg`. By page number.
 								const int offset = (int)bytes->peek();
 								emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 								emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -16543,7 +16747,7 @@ public:
 							return 7;
 						},
 						[&] (Counter &) -> void {
-							SourceLocation target(page); // `#pg`. By page number.
+							const SourceLocation target(page); // `#pg`. By page number.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -16845,7 +17049,7 @@ public:
 								return 2;
 							},
 							[&] (Counter &) -> void {
-								SourceLocation target(pageIndex);
+								const SourceLocation target(pageIndex);
 								const int offset = (int)bytes->peek();
 								_scheduled = Scheduled(target, bytes->pointer(), bytes->pointer() + offset, false);
 								emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
@@ -16873,14 +17077,14 @@ public:
 						[&] (Counter &) -> void {
 							int page = -1;
 							Destination dest(0);
-							Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
+							const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
 							if (tks.size() == 1) { /* Do nothing. */ }
 							else if (!dest.isLeft()) { THROW_INVALID_ASSET_POINT(onError); }
 
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -16900,7 +17104,7 @@ public:
 						tiles.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (tiles.fuzzy(name, nullptr, fuzzyName)) {
@@ -17149,7 +17353,7 @@ public:
 								return 2;
 							},
 							[&] (Counter &) -> void {
-								SourceLocation target(pageIndex);
+								const SourceLocation target(pageIndex);
 								const int offset = (int)bytes->peek();
 								_scheduled = Scheduled(target, bytes->pointer(), bytes->pointer() + offset, false);
 								emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
@@ -17178,14 +17382,14 @@ public:
 						[&] (Counter &) -> void {
 							int page = -1;
 							Destination dest(0);
-							Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
+							const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
 							if (tks.size() == 1) { /* Do nothing. */ }
 							else if (!dest.isLeft()) { THROW_INVALID_ASSET_POINT(onError); }
 
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -17283,7 +17487,7 @@ public:
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::MAP, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
 							argi = [&] (Counter &) -> void {
-								SourceLocation target(pageIndex);
+								const SourceLocation target(pageIndex);
 								const int offset = (int)bytes->peek();
 								_scheduled = Scheduled(target, bytes->pointer(), bytes->pointer() + offset, false);
 								emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
@@ -17313,14 +17517,14 @@ public:
 						argi = [&] (Counter &) -> void {
 							int page = -1;
 							Destination dest(0);
-							Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+							const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 							if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!dest.isLeft()) { THROW_INVALID_ASSET_POINT(onError); }
 
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::MAP, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and layer.
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and layer.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -17357,7 +17561,7 @@ public:
 						maps.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (maps.fuzzy(name, nullptr, fuzzyName)) {
@@ -17411,7 +17615,7 @@ public:
 						maps.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (maps.fuzzy(name, nullptr, fuzzyName)) {
@@ -17688,7 +17892,7 @@ public:
 								return 2;
 							},
 							[&] (Counter &) -> void {
-								SourceLocation target(pageIndex);
+								const SourceLocation target(pageIndex);
 								const int offset = (int)bytes->peek();
 								_scheduled = Scheduled(target, bytes->pointer(), bytes->pointer() + offset, false);
 								emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
@@ -17717,14 +17921,14 @@ public:
 						[&] (Counter &) -> void {
 							int page = -1;
 							Destination dest(0);
-							Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
+							const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
 							if (tks.size() == 1) { /* Do nothing. */ }
 							else if (!dest.isLeft()) { THROW_INVALID_ASSET_POINT(onError); }
 
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -17822,7 +18026,7 @@ public:
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::MAP, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
 							argi = [&] (Counter &) -> void {
-								SourceLocation target(pageIndex);
+								const SourceLocation target(pageIndex);
 								const int offset = (int)bytes->peek();
 								_scheduled = Scheduled(target, bytes->pointer(), bytes->pointer() + offset, false);
 								emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
@@ -17852,14 +18056,14 @@ public:
 						argi = [&] (Counter &) -> void {
 							int page = -1;
 							Destination dest(0);
-							Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+							const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 							if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!dest.isLeft()) { THROW_INVALID_ASSET_POINT(onError); }
 
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::MAP, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and layer.
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and layer.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -17896,7 +18100,7 @@ public:
 						maps.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (maps.fuzzy(name, nullptr, fuzzyName)) {
@@ -17950,7 +18154,7 @@ public:
 						maps.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (maps.fuzzy(name, nullptr, fuzzyName)) {
@@ -18213,7 +18417,7 @@ public:
 								return 2;
 							},
 							[&] (Counter &) -> void {
-								SourceLocation target(pageIndex);
+								const SourceLocation target(pageIndex);
 								const int offset = (int)bytes->peek();
 								_scheduled = Scheduled(target, bytes->pointer(), bytes->pointer() + offset, false);
 								emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
@@ -18241,14 +18445,14 @@ public:
 						[&] (Counter &) -> void {
 							int page = -1;
 							Destination dest(0);
-							Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
+							const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
 							if (tks.size() == 1) { /* Do nothing. */ }
 							else if (!dest.isLeft()) { THROW_INVALID_ASSET_POINT(onError); }
 
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -18430,13 +18634,13 @@ public:
 					args = fill(args, (UInt16)address);
 					args = fill(args, (UInt8)bank);
 				} else {
-					SourceLocation target(page);
+					const SourceLocation target(page);
 					_scheduled = Scheduled(target, bytes->pointer(), args, false);
 				}
 			} else /* if (byAsset) */ {
 				if (page == -1) {
 					Destination dest(0);
-					Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+					const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
 					if (tks.size() == 1) { /* Do nothing. */ }
 					else if (!dest.isLeft()) { THROW_INVALID_ASSET_POINT(onError); }
 				}
@@ -18444,7 +18648,7 @@ public:
 				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 				if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::MUSIC, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-				SourceLocation target(page);
+				const SourceLocation target(page);
 				_scheduled = Scheduled(target, bytes->pointer(), args, false);
 			}
 
@@ -18547,7 +18751,7 @@ public:
 			} else if (_children.size() == 1) {
 				int page = -1;
 				Destination dest(0);
-				Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true);
+				const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true);
 				if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 				if (dest.isLeft())
 					target = SourceLocation(page); // `#pg`. By page number.
@@ -18595,7 +18799,7 @@ public:
 			} else if (_children.size() == 2) {
 				int page = -1;
 				Destination dest(0);
-				Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true);
+				const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true);
 				if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 				if (dest.isLeft())
 					target = SourceLocation(page); // `#pg`. By page number.
@@ -19466,7 +19670,7 @@ public:
 						// Get the arguments.
 						int page = -1;
 						Destination dest(0);
-						Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, argn, true);
+						const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, argn, true);
 						if (tks.size() == 1) { /* Do nothing. */ }
 						if (page == -1 && dest.isRight()) {
 							const std::string name = dest.right().get();
@@ -19507,7 +19711,7 @@ public:
 						VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
 
 						// Emit the arguments.
-						SourceLocation target(page, tks.size() == 1 ? 0 : dest.left().get()); // `#pg:n`. By page number and index.
+						const SourceLocation target(page, tks.size() == 1 ? 0 : dest.left().get()); // `#pg:n`. By page number and index.
 						if (argn == 3) {
 							writeChildren(bytes, context, Range(2), stk, onError); // `offset`.
 						} else {
@@ -19553,7 +19757,7 @@ public:
 						// Get the arguments.
 						int page = -1;
 						Destination dest(0);
-						Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, argn, true);
+						const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, argn, true);
 						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
 						if (page == -1 && dest.isRight()) {
 							const std::string name = dest.right().get();
@@ -19594,7 +19798,7 @@ public:
 						VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
 
 						// Emit the arguments.
-						SourceLocation target(page, tks.size() == 1 ? 0 : dest.left().get()); // `#pg:n`. By page number and index.
+						const SourceLocation target(page, tks.size() == 1 ? 0 : dest.left().get()); // `#pg:n`. By page number and index.
 						if (argn == 3) {
 							writeChildren(bytes, context, Range(2), stk, onError); // `offset`.
 						} else {
@@ -19972,7 +20176,7 @@ public:
 			// Get the width of GUI text.
 			int page = -1;
 			Destination dest(0);
-			Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true);
+			const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true);
 			if (tks.size() != 1) { THROW_INVALID_ASSET_POINT(onError); }
 			if (dest.isRight()) {
 				const std::string name = dest.right().get();
@@ -20171,7 +20375,7 @@ public:
 			// Get the height of GUI text.
 			int page = -1;
 			Destination dest(0);
-			Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true);
+			const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true);
 			if (tks.size() != 1) { THROW_INVALID_ASSET_POINT(onError); }
 			if (dest.isRight()) {
 				const std::string name = dest.right().get();
@@ -20764,7 +20968,7 @@ public:
 								scenes.indexOf(name) : // By asset name.
 								-1;
 							if (page == -1) {
-								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 								if (tks.size() == 1) { /* Do nothing. */ }
 								else { THROW_INVALID_ASSET_POINT(onError); }
 							}
@@ -20772,7 +20976,7 @@ public:
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::SCENE, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page, dest.left().get());
+							const SourceLocation target(page, dest.left().get());
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -20860,7 +21064,7 @@ public:
 								-1;
 							if (page == -1) {
 								Destination dest(0);
-								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 								if (tks.size() == 1) { /* Do nothing. */ }
 								else {
 									std::string fuzzyName;
@@ -20891,7 +21095,7 @@ public:
 							// Emit the undetermined arguments.
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::SCENE, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page); // `#pg`. By page number.
+							const SourceLocation target(page); // `#pg`. By page number.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);          // The tiles count.
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);          // The tiles bank.
@@ -20985,7 +21189,7 @@ public:
 						scenes.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (scenes.fuzzy(name, nullptr, fuzzyName)) {
@@ -21039,7 +21243,7 @@ public:
 						scenes.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (scenes.fuzzy(name, nullptr, fuzzyName)) {
@@ -21520,7 +21724,7 @@ public:
 								actors.indexOf(name) : // By asset name.
 								-1;
 							if (page == -1) {
-								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
 								if (tks.size() == 1) { /* Do nothing. */ }
 								else {
 									std::string fuzzyName;
@@ -21539,7 +21743,7 @@ public:
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::ACTOR, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -21605,7 +21809,7 @@ public:
 								actors.indexOf(name) : // By asset name.
 								-1;
 							if (page == -1) {
-								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 								if (tks.size() == 1) { /* Do nothing. */ }
 								else {
 									std::string fuzzyName;
@@ -21624,7 +21828,7 @@ public:
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::ACTOR, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page); // `#pg`. By page number.
+							const SourceLocation target(page); // `#pg`. By page number.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -21758,7 +21962,7 @@ public:
 								actors.indexOf(name) : // By asset name.
 								-1;
 							if (page == -1) {
-								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 								if (tks.size() == 1) { /* Do nothing. */ }
 								else {
 									std::string fuzzyName;
@@ -21777,7 +21981,7 @@ public:
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::ACTOR, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page); // `#pg`. By page number.
+							const SourceLocation target(page); // `#pg`. By page number.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -21824,7 +22028,7 @@ public:
 								actors.indexOf(name) : // By asset name.
 								-1;
 							if (page == -1) {
-								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 								if (tks.size() == 1) { /* Do nothing. */ }
 								else {
 									std::string fuzzyName;
@@ -21843,7 +22047,7 @@ public:
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::ACTOR, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page); // `#pg`. By page number.
+							const SourceLocation target(page); // `#pg`. By page number.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -21866,7 +22070,7 @@ public:
 						actors.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (actors.fuzzy(name, nullptr, fuzzyName)) {
@@ -21921,7 +22125,7 @@ public:
 						actors.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (actors.fuzzy(name, nullptr, fuzzyName)) {
@@ -21980,7 +22184,7 @@ public:
 						actors.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (actors.fuzzy(name, nullptr, fuzzyName)) {
@@ -22035,7 +22239,7 @@ public:
 					UInt8 filterTmp = 0;
 					int page = -1;
 					Destination dest(0);
-					Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true /* for page number (`#PgNo`) */);
+					const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true /* for page number (`#PgNo`) */);
 					if (tks.size() == 1) {
 						const ActorAssets &actors = ctx.assets->actors;
 						if (dest.isLeft()) {
@@ -22317,7 +22521,7 @@ public:
 					if (_children.size() < 2) {
 						THROW_TOO_FEW_ARGUMENTS(onError);
 					} else if (_children.size() == 2) {
-						Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 1, false);
+						const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 1, false);
 						if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 					} else {
 						THROW_TOO_MANY_ARGUMENTS(onError);
@@ -22411,7 +22615,7 @@ public:
 					if (_children.size() < 2) {
 						THROW_TOO_FEW_ARGUMENTS(onError);
 					} else if (_children.size() == 2) {
-						Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 1, false);
+						const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 1, false);
 						if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 					} else {
 						THROW_TOO_MANY_ARGUMENTS(onError);
@@ -22863,7 +23067,7 @@ public:
 					if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
 					argi = [&] (Counter &) -> void {
-						SourceLocation target(pageIndex);
+						const SourceLocation target(pageIndex);
 						const int offset = (int)bytes->peek();
 						_scheduled = Scheduled(target, bytes->pointer(), bytes->pointer() + offset, false);
 						emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
@@ -22882,14 +23086,14 @@ public:
 				argi = [&] (Counter &) -> void {
 					int page = -1;
 					Destination dest(0);
-					Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
+					const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
 					if (tks.size() == 1) { /* Do nothing. */ }
 					else if (!dest.isLeft()) { THROW_INVALID_ASSET_POINT(onError); }
 
 					if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 					if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-					SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+					const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
 					const int offset = (int)bytes->peek();
 					emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 					emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -23175,7 +23379,7 @@ public:
 								actors.indexOf(name) : // By asset name.
 								-1;
 							if (page == -1) {
-								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 2);
 								if (tks.size() == 1) { /* Do nothing. */ }
 								else {
 									std::string fuzzyName;
@@ -23194,7 +23398,7 @@ public:
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::PROJECTILE, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -23300,7 +23504,7 @@ public:
 							Generator_Void_Counter argi = [&] (Counter &) -> void {
 								int page = -1;
 								Destination dest(0);
-								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 								if (tks.size() == 1) { /* Do nothing. */ }
 								else { THROW_INVALID_ASSET_POINT(onError); }
 
@@ -23312,7 +23516,7 @@ public:
 								if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 								if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::PROJECTILE, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-								SourceLocation target(page); // `#pg`. By page number.
+								const SourceLocation target(page); // `#pg`. By page number.
 								const int offset = (int)bytes->peek();
 								emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 								emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -23374,7 +23578,7 @@ public:
 								actors.indexOf(name) : // By asset name.
 								-1;
 							if (page == -1) {
-								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 								if (tks.size() == 1) { /* Do nothing. */ }
 								else {
 									std::string fuzzyName;
@@ -23393,7 +23597,7 @@ public:
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::PROJECTILE, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page); // `#pg`. By page number.
+							const SourceLocation target(page); // `#pg`. By page number.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -23504,7 +23708,7 @@ public:
 								actors.indexOf(name) : // By asset name.
 								-1;
 							if (page == -1) {
-								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 								if (tks.size() == 1) { /* Do nothing. */ }
 								else {
 									std::string fuzzyName;
@@ -23523,7 +23727,7 @@ public:
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::PROJECTILE, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page); // `#pg`. By page number.
+							const SourceLocation target(page); // `#pg`. By page number.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -23570,7 +23774,7 @@ public:
 								actors.indexOf(name) : // By asset name.
 								-1;
 							if (page == -1) {
-								Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 								if (tks.size() == 1) { /* Do nothing. */ }
 								else {
 									std::string fuzzyName;
@@ -23589,7 +23793,7 @@ public:
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::PROJECTILE, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page); // `#pg`. By page number.
+							const SourceLocation target(page); // `#pg`. By page number.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -23612,7 +23816,7 @@ public:
 						actors.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (actors.fuzzy(name, nullptr, fuzzyName)) {
@@ -23667,7 +23871,7 @@ public:
 						actors.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (actors.fuzzy(name, nullptr, fuzzyName)) {
@@ -23726,7 +23930,7 @@ public:
 						actors.indexOf(name) : // By asset name.
 						-1;
 					if (page == -1) {
-						Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, (int)_children.size() - 1);
 						if (tks.empty()) {
 							std::string fuzzyName;
 							if (actors.fuzzy(name, nullptr, fuzzyName)) {
@@ -24174,7 +24378,7 @@ public:
 					if (_children.size() < 3) {
 						THROW_TOO_FEW_ARGUMENTS(onError);
 					} else if (_children.size() == 3) {
-						Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 2, false);
+						const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 2, false);
 						if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 					} else {
 						THROW_TOO_MANY_ARGUMENTS(onError);
@@ -24578,7 +24782,7 @@ public:
 
 						int page = -1;
 						Destination dest(0);
-						Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true);
+						const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true);
 						if (tks.size() == 1) { /* Do nothing. */ }
 						else { THROW_INVALID_ASSET_POINT(onError); }
 
@@ -25355,7 +25559,7 @@ public:
 
 						int page = -1;
 						Destination dest(0);
-						Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true);
+						const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, true);
 						if (tks.size() == 1) { /* Do nothing. */ }
 						else { THROW_INVALID_ASSET_POINT(onError); }
 
@@ -25551,7 +25755,7 @@ public:
 					if (_children.size() < 1) {
 						THROW_TOO_FEW_ARGUMENTS(onError);
 					} else if (_children.size() == 1) {
-						Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
+						const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
 						if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
 					} else {
 						THROW_TOO_MANY_ARGUMENTS(onError);
@@ -25961,7 +26165,7 @@ public:
 						{
 							int page = -1;
 							Destination dest(0);
-							Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 2 + i * M + 2, true);
+							const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 2 + i * M + 2, true);
 							if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
 							if (page == -1 && dest.isRight()) {
 								const std::string name = dest.right().get();
@@ -25984,7 +26188,7 @@ public:
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page, tks.size() == 1 ? 0 : dest.left().get()); // `#pg:n`. By page number and index.
+							const SourceLocation target(page, tks.size() == 1 ? 0 : dest.left().get()); // `#pg:n`. By page number and index.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -25995,7 +26199,7 @@ public:
 						{
 							int page = -1;
 							Destination dest(0);
-							Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 2 + i * M + 3, true);
+							const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 2 + i * M + 3, true);
 							if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
 							if (page == -1 && dest.isRight()) {
 								const std::string name = dest.right().get();
@@ -26018,7 +26222,7 @@ public:
 							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
 
-							SourceLocation target(page, tks.size() == 1 ? 0 : dest.left().get()); // `#pg:n`. By page number and index.
+							const SourceLocation target(page, tks.size() == 1 ? 0 : dest.left().get()); // `#pg:n`. By page number and index.
 							const int offset = (int)bytes->peek();
 							emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
 							emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
@@ -30347,7 +30551,7 @@ private:
 			if (!must(Token::Types::KEYWORD, "get")(q1)) return false;
 			if (!(id = must(Token::Types::SYMBOL)(q1))) return false;
 			else name = (std::string)id->data();
-			if (name == "tile" || name == "map") {
+			if (name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile") {
 				if (forward(Token::Types::KEYWORD, "addressof")(q1.index)) {
 					any()(q1);
 				}
@@ -30836,7 +31040,10 @@ private:
 					if (name == "get") { // Address getting.
 						const bool targets =
 							!!forwardN(2, Token::Types::KEYWORD, "tile")(q.index) ||
-							!!forwardN(2, Token::Types::KEYWORD, "map")(q.index);
+							!!forwardN(2, Token::Types::KEYWORD, "map")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "scene")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "actor")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "projectile")(q.index);
 						const bool addr = !!forwardN(3, Token::Types::KEYWORD, "addressof")(q.index);
 						const int qi = q.index;
 						if (targets && addr && AddressR(q, children, false)) {
