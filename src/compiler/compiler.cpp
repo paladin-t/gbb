@@ -223,7 +223,7 @@ namespace GBBASIC {
 #endif /* EXTENSION_MODE_ENTRY_NAME */
 
 #ifndef DEFAULT_PALETTES_ENTRY_NAME
-#	define DEFAULT_PALETTES_ENTRY_NAME "Palettes" // DOC: ROM SCHEMA.
+#	define DEFAULT_PALETTES_ENTRY_NAME "Palettes" // DOC: ROM SCHEMA. Alias of `BackgroundPalettes`.
 #endif /* DEFAULT_PALETTES_ENTRY_NAME */
 #ifndef BACKGROUND_PALETTES_ENTRY_NAME
 #	define BACKGROUND_PALETTES_ENTRY_NAME "BackgroundPalettes" // DOC: ROM SCHEMA.
@@ -240,13 +240,6 @@ namespace GBBASIC {
 #	define PERSISTENCE_SIGNATURE_ENTRY_NAME "PERSISTENCE_SIGNATURE" // DOC: ROM SCHEMA.
 #endif /* PERSISTENCE_SIGNATURE_ENTRY_NAME */
 
-#ifndef PEEK_BANKED_ENTRY_NAME
-#	define PEEK_BANKED_ENTRY_NAME "peek_banked" // DOC: ROM SCHEMA.
-#endif /* PEEK_BANKED_ENTRY_NAME */
-#ifndef CLS_ENTRY_NAME
-#	define CLS_ENTRY_NAME "clear_text" // DOC: ROM SCHEMA.
-#endif /* CLS_ENTRY_NAME */
-
 #ifndef BOOTSTRAP_ENTRY_NAME
 #	define BOOTSTRAP_ENTRY_NAME "BOOTSTRAP" // DOC: ROM SCHEMA.
 #endif /* BOOTSTRAP_ENTRY_NAME */
@@ -258,6 +251,18 @@ namespace GBBASIC {
 #	define SCRIPT_MEMORY_ENTRY_NAME "script_memory" // DOC: RAM SCHEMA.
 #endif /* SCRIPT_MEMORY_ENTRY_NAME */
 
+// Native functions.
+#ifndef PEEK_BANKED_FUNCTION_NAME
+#	define PEEK_BANKED_FUNCTION_NAME "peek_banked" // DOC: ROM SCHEMA.
+#endif /* PEEK_BANKED_FUNCTION_NAME */
+#ifndef CLEAR_TEXT_FUNCTION_NAME
+#	define CLEAR_TEXT_FUNCTION_NAME "clear_text" // DOC: ROM SCHEMA.
+#endif /* CLEAR_TEXT_FUNCTION_NAME */
+#ifndef SET_SGB_BORDER_FUNCTION_NAME
+#	define SET_SGB_BORDER_FUNCTION_NAME "set_sgb_border" // DOC: ROM SCHEMA.
+#endif /* SET_SGB_BORDER_FUNCTION_NAME */
+
+// Compiler convention of palette names.
 #ifndef EDITOR_PALETTE_NAMES
 #	define EDITOR_PALETTE_NAMES \
 	{ \
@@ -1310,6 +1315,9 @@ int Macro::compare(const Macro &other) const {
 		return 1;
 
 	return 0;
+}
+
+FeatureUsages::FeatureUsages() {
 }
 
 struct SymbolTable {
@@ -3873,8 +3881,78 @@ public:
 			return result;
 		}
 	};
+	struct UsingFeatures {
+	private:
+		// Stores "feature" to "count" mapping.
+		FeatureUsages _featureUsages;
 
-	struct Context : public RomAllocator, public RamAllocator {
+	public:
+		UsingFeatures() {
+		}
+
+		const FeatureUsages &featureUsages(void) const {
+			return _featureUsages;
+		}
+		int countColoredFeatureUsages(void) const {
+			return (int)_featureUsages.coloredFeatureUsages.size();
+		}
+		int countColoredFeatureUsages(const std::string &feat) const {
+			FeatureUsages::Dictionary::const_iterator it = _featureUsages.coloredFeatureUsages.find(feat);
+			if (it == _featureUsages.coloredFeatureUsages.end())
+				return 0;
+
+			return it->second;
+		}
+		int usingColoredFeature(const std::string &feat) {
+			FeatureUsages::Dictionary::iterator it = _featureUsages.coloredFeatureUsages.find(feat);
+			if (it != _featureUsages.coloredFeatureUsages.end())
+				return ++it->second;
+
+			_featureUsages.coloredFeatureUsages.insert(std::make_pair(feat, 1));
+
+			return 1;
+		}
+		int countSuperFeatureUsages(void) const {
+			return (int)_featureUsages.superFeatureUsages.size();
+		}
+		int countSuperFeatureUsages(const std::string &feat) const {
+			FeatureUsages::Dictionary::const_iterator it = _featureUsages.superFeatureUsages.find(feat);
+			if (it == _featureUsages.superFeatureUsages.end())
+				return 0;
+
+			return it->second;
+		}
+		int usingSuperFeature(const std::string &feat) {
+			FeatureUsages::Dictionary::iterator it = _featureUsages.superFeatureUsages.find(feat);
+			if (it != _featureUsages.superFeatureUsages.end())
+				return ++it->second;
+
+			_featureUsages.superFeatureUsages.insert(std::make_pair(feat, 1));
+
+			return 1;
+		}
+		int countExtensionFeatureUsages(void) const {
+			return (int)_featureUsages.extensionFeatureUsages.size();
+		}
+		int countExtensionFeatureUsages(const std::string &feat) const {
+			FeatureUsages::Dictionary::const_iterator it = _featureUsages.extensionFeatureUsages.find(feat);
+			if (it == _featureUsages.extensionFeatureUsages.end())
+				return 0;
+
+			return it->second;
+		}
+		int usingExtensionFeature(const std::string &feat) {
+			FeatureUsages::Dictionary::iterator it = _featureUsages.extensionFeatureUsages.find(feat);
+			if (it != _featureUsages.extensionFeatureUsages.end())
+				return ++it->second;
+
+			_featureUsages.extensionFeatureUsages.insert(std::make_pair(feat, 1));
+
+			return 1;
+		}
+	};
+
+	struct Context : public RomAllocator, public RamAllocator, public UsingFeatures {
 		/**< Type declarations. */
 
 		typedef std::stack<Context> Stack;
@@ -6319,7 +6397,9 @@ public:
 
 	/**< Compatibility checking. */
 
-	bool usingColoredFeature(const Context &ctx, Error::Handler onError, Token::Ptr tk = nullptr) {
+	bool usingColoredFeature(Context &ctx, const std::string &feat, Error::Handler onError, Token::Ptr tk = nullptr) {
+		ctx.usingColoredFeature(feat);
+
 #if REPORT_MISUSING_COLORED_FEATURE_ENABLED
 		if ((ctx.compatibility & GBBASIC::Options::Strategies::Compatibilities::COLORED) != GBBASIC::Options::Strategies::Compatibilities::NONE)
 			return true;
@@ -6328,14 +6408,20 @@ public:
 
 		return false;
 #else /* REPORT_MISUSING_COLORED_FEATURE_ENABLED */
-		(void)ctx;
 		(void)onError;
 		(void)tk;
 
 		return true;
 #endif /* REPORT_MISUSING_COLORED_FEATURE_ENABLED */
 	}
-	bool usingExtensionFeature(const Context &ctx, Error::Handler onError, Token::Ptr tk = nullptr) {
+	bool usingSuperFeature(Context &ctx, const std::string &feat) {
+		ctx.usingSuperFeature(feat);
+
+		return true;
+	}
+	bool usingExtensionFeature(Context &ctx, const std::string &feat, Error::Handler onError, Token::Ptr tk = nullptr) {
+		ctx.usingExtensionFeature(feat);
+
 #if REPORT_MISUSING_EXTENSION_FEATURE_ENABLED
 		if ((ctx.compatibility & GBBASIC::Options::Strategies::Compatibilities::EXTENSION) != GBBASIC::Options::Strategies::Compatibilities::NONE)
 			return true;
@@ -6344,7 +6430,6 @@ public:
 
 		return false;
 #else /* REPORT_MISUSING_EXTENSION_FEATURE_ENABLED */
-		(void)ctx;
 		(void)onError;
 		(void)tk;
 
@@ -11203,7 +11288,7 @@ public:
 					THROW_TOO_MANY_ARGUMENTS(onError);
 				}
 
-				usingExtensionFeature(ctx, onError); // Check for feature compatibility.
+				usingExtensionFeature(ctx, "on touch", onError); // Check for feature compatibility.
 
 				break;
 			default:
@@ -11521,7 +11606,7 @@ public:
 					THROW_TOO_MANY_ARGUMENTS(onError);
 				}
 
-				usingExtensionFeature(ctx, onError); // Check for feature compatibility.
+				usingExtensionFeature(ctx, "off touch", onError); // Check for feature compatibility.
 
 				break;
 			default:
@@ -13002,42 +13087,47 @@ public:
 			}
 
 			// Emit the invoking.
-			const bool withDeclaring = ctx.declaration.declaring != -1;
-			if (caseSensitiveFunctionName == PEEK_BANKED_ENTRY_NAME) { // Specialized for this known function.
-				if (withDeclaring) {
-					// Set the stack footprint guard.
-					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
-					COUNTER_GUARD(ctx, stk);
+			bool ok = false;
+			if (generateSpecialized(bytes, context, INSTRUCTIONS, caseSensitiveFunctionName, bank, address, &ok, onError)) { // Specialized for this known function.
+				if (!ok)
+					return;
+			}
+			ok = false;
+			if (generateGeneric(bytes, context, INSTRUCTIONS, bank, address, &ok, onError)) {
+				if (!ok)
+					return;
+			}
+		};
 
-					// Set the expression slot guard.
-					VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
+		write(bytes, context, generator, false, onError);
+	}
 
-					// Check the children.
-					if (_children.empty()) {
-						THROW_TOO_FEW_ARGUMENTS(onError);
-					} else if (_children.size() == 3) {
-						// Do nothing.
-					} else {
-						THROW_TOO_MANY_ARGUMENTS(onError);
-					}
+	virtual Abstract abstract(void) const override {
+		return abstract("CALL");
+	}
+	using Node::abstract;
 
-					// Emit the evaluations.
-					writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "CALL");
+	}
+	using Node::dump;
 
-					// Emit a `VM_INVOKE_FN` instruction.
-					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size()); INC_COUNTER(stk, 2);
-					args = fill(args, (Int16)(-(int)_children.size())); // Offset from `ARG0`.
-					args = fill(args, (UInt8)0);
-					args = fill(args, (UInt16)address);
-					args = fill(args, (UInt8)bank);
+private:
+	bool generateGeneric(
+		Bytes::Ptr &bytes, Context::Stack &context,
+		const Asm::Instructions &INSTRUCTIONS,
+		int bank, int address,
+		bool* ret,
+		Error::Handler onError
+	) {
+		bool ok = false;
 
-					// Check the stack footprint.
-					CHECK_COUNTER(ctx, onError);
-				} else {
-					// No effect.
-					// Do nothing.
-				}
-			} else if (_children.empty()) {
+		*ret = false;
+
+		auto generator = [&] (void) -> void {
+			Context &ctx = context.top();
+
+			if (_children.empty()) {
 				// Set the stack footprint guard.
 				VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
 				COUNTER_GUARD(ctx, stk);
@@ -13076,20 +13166,83 @@ public:
 			} else {
 				THROW_TOO_MANY_ARGUMENTS(onError);
 			}
+
+			ok = true;
 		};
 
-		write(bytes, context, generator, false, onError);
-	}
+		generator();
 
-	virtual Abstract abstract(void) const override {
-		return abstract("CALL");
-	}
-	using Node::abstract;
+		*ret = ok;
 
-	virtual std::string dump(int depth) const override {
-		return dump(depth, "CALL");
+		return true;
 	}
-	using Node::dump;
+	bool generateSpecialized(
+		Bytes::Ptr &bytes, Context::Stack &context,
+		const Asm::Instructions &INSTRUCTIONS,
+		const std::string &caseSensitiveFunctionName, int bank, int address,
+		bool* ret,
+		Error::Handler onError
+	) {
+		bool spaclialized = true;
+		bool ok = false;
+
+		*ret = false;
+
+		auto generator = [&] (void) -> void {
+			Context &ctx = context.top();
+
+			const bool withDeclaring = ctx.declaration.declaring != -1;
+			if (caseSensitiveFunctionName == PEEK_BANKED_FUNCTION_NAME) { // `peek_banked`.
+				if (withDeclaring) {
+					// Set the stack footprint guard.
+					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
+					COUNTER_GUARD(ctx, stk);
+
+					// Set the expression slot guard.
+					VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
+
+					// Check the children.
+					if (_children.empty()) {
+						THROW_TOO_FEW_ARGUMENTS(onError);
+					} else if (_children.size() == 3) {
+						// Do nothing.
+					} else {
+						THROW_TOO_MANY_ARGUMENTS(onError);
+					}
+
+					// Emit the evaluations.
+					writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
+
+					// Emit a `VM_INVOKE_FN` instruction.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size()); INC_COUNTER(stk, 2);
+					args = fill(args, (Int16)(-(int)_children.size())); // Offset from `ARG0`.
+					args = fill(args, (UInt8)0);
+					args = fill(args, (UInt16)address);
+					args = fill(args, (UInt8)bank);
+
+					// Check the stack footprint.
+					CHECK_COUNTER(ctx, onError);
+				} else {
+					// No effect.
+					// Do nothing.
+				}
+
+				ok = true;
+			} else if (caseSensitiveFunctionName == SET_SGB_BORDER_FUNCTION_NAME) { // `set_sgb_border`.
+				usingSuperFeature(ctx, SET_SGB_BORDER_FUNCTION_NAME);
+
+				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, &ok, onError);
+			} else {
+				spaclialized = false;
+			}
+		};
+
+		generator();
+
+		*ret = ok;
+
+		return spaclialized;
+	}
 };
 
 /* ===========================================================================} */
@@ -14525,7 +14678,7 @@ public:
 
 			// Get the native function pointer in the ROM.
 			if (!ctx.symbols) { THROW_INVALID_NATIVE_SYMBOL(onError); }
-			const RomLocation* romLocation = ctx.symbols->find(CLS_ENTRY_NAME);
+			const RomLocation* romLocation = ctx.symbols->find(CLEAR_TEXT_FUNCTION_NAME);
 			if (!romLocation) {
 				THROW_INVALID_NATIVE_SYMBOL(onError);
 			}
@@ -14616,7 +14769,7 @@ public:
 			if (isBanked) { // `=PEEK(bank, addr)` or `=PEEK INT(bank, addr)`.
 				// Get the native function pointer in the ROM.
 				if (!ctx.symbols) { THROW_INVALID_NATIVE_SYMBOL(onError); }
-				const RomLocation* romLocation = ctx.symbols->find(PEEK_BANKED_ENTRY_NAME);
+				const RomLocation* romLocation = ctx.symbols->find(PEEK_BANKED_FUNCTION_NAME);
 				if (!romLocation) {
 					THROW_INVALID_NATIVE_SYMBOL(onError);
 				}
@@ -16703,7 +16856,7 @@ public:
 			bool fromAsset = false;
 			if (_children.size() == 4) {
 				// Check for feature compatibility.
-				usingColoredFeature(ctx, onError);
+				usingColoredFeature(ctx, "palette", onError);
 
 				// Find the palette asset.
 				constexpr const char* PALETTE_NAMES[] = EDITOR_PALETTE_NAMES;
@@ -17620,7 +17773,7 @@ public:
 
 					// Define the map.
 					if (mapEntry->hasAttributes) {
-						usingColoredFeature(ctx, onError); // Check for feature compatibility.
+						usingColoredFeature(ctx, "image", onError); // Check for feature compatibility.
 
 						do { // `OPTION VRAM_USAGE, VRAM_ATTRIBUTES`.
 							// Set the stack footprint guard.
@@ -20069,7 +20222,7 @@ public:
 			}
 
 			// Check for feature compatibility.
-			usingExtensionFeature(ctx, onError);
+			usingExtensionFeature(ctx, "touch", onError);
 
 			// Set the stack footprint guard.
 			COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
@@ -23914,7 +24067,7 @@ public:
 							return 6;
 						};
 					} else if (argn == 5) {
-						usingColoredFeature(ctx, onError); // Check for feature compatibility.
+						usingColoredFeature(ctx, "emote", onError); // Check for feature compatibility.
 
 						argf = [&] (Counter &stk) -> int {
 							Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
@@ -24000,7 +24153,7 @@ public:
 							return 6;
 						};
 					} else if (argn == 6) {
-						usingColoredFeature(ctx, onError); // Check for feature compatibility.
+						usingColoredFeature(ctx, "emote", onError); // Check for feature compatibility.
 
 						argf = [&] (Counter &stk) -> int {
 							writeChildren(bytes, context, Range(5, 0), stk, onError); // X, y, base tile, mirrored, actor, palette.
@@ -26989,13 +27142,13 @@ public:
 						args = fill(args, (UInt16)0);
 						writeChildren(bytes, context, Range((int)_children.size() - 1), stk, onError); // Tile.
 					} else if (arge == 2) {
-						usingColoredFeature(ctx, onError); // Check for feature compatibility.
+						usingColoredFeature(ctx, "scroll", onError); // Check for feature compatibility.
 
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2); // Direction.
 						args = fill(args, (UInt16)DIRECTION_UP);
 						writeChildren(bytes, context, Range((int)_children.size() - 1, (int)_children.size() - 2), stk, onError); // Tile, attributes.
 					} else if (arge == 3) {
-						usingColoredFeature(ctx, onError); // Check for feature compatibility.
+						usingColoredFeature(ctx, "scroll", onError); // Check for feature compatibility.
 
 						writeChildren(bytes, context, Range((int)_children.size() - 1, (int)_children.size() - 3), stk, onError); // Tile, attributes, direction.
 					}
@@ -27265,7 +27418,7 @@ public:
 					emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::FX]); DEC_COUNTER(stk, 2 * (int)(_children.size() + 1));
 				} else if (_children.size() == 2) {
 					// Check for feature compatibility.
-					usingColoredFeature(ctx, onError);
+					usingColoredFeature(ctx, "fx", onError);
 
 					// Emit the effect switch/argument count, and effect type.
 					writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
@@ -28020,7 +28173,7 @@ public:
 			}
 
 			// Check for feature compatibility.
-			usingExtensionFeature(ctx, onError);
+			usingExtensionFeature(ctx, "stream", onError);
 
 			// Set the stack footprint guard.
 			VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
@@ -28095,7 +28248,7 @@ public:
 			}
 
 			// Check for feature compatibility.
-			usingExtensionFeature(ctx, onError);
+			usingExtensionFeature(ctx, "shell", onError);
 
 			// Set the stack footprint guard.
 			VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
@@ -37515,7 +37668,7 @@ public:
 		return _bytes;
 	}
 
-	bool process(const Node::Ptr &ast, AssetsBundle::Ptr assets, Pipeline::Ptr pipeline, RamLocation::Dictionary* allocations, int* compiledSize, Error::Handler onError) {
+	bool process(const Node::Ptr &ast, AssetsBundle::Ptr assets, Pipeline::Ptr pipeline, RamLocation::Dictionary* allocations, FeatureUsages* featureUsages, int* compiledSize, Error::Handler onError) {
 		// Prepare.
 		_bytes = nullptr;
 		if (!ast)
@@ -37545,6 +37698,7 @@ public:
 			_assets,
 			pipeline,
 			allocations,
+			featureUsages,
 			compiledSize,
 			gotError
 		);
@@ -37580,6 +37734,7 @@ private:
 		AssetsBundle::Ptr assets,
 		Pipeline::Ptr pipeline,
 		RamLocation::Dictionary* allocations,
+		FeatureUsages* featureUsages,
 		int* compiledSize,
 		Error::Handler onError
 	) {
@@ -37683,6 +37838,7 @@ private:
 
 		// Finish.
 		*allocations = context.top().allocations();
+		*featureUsages = context.top().featureUsages();
 
 		return bytes;
 	}
@@ -37863,7 +38019,7 @@ public:
 		return _bytes;
 	}
 
-	bool process(const Bytes::Ptr &rom, const Bytes::Ptr &compiled, Error::Handler onError) {
+	bool process(const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const FeatureUsages &featureUsages, Error::Handler onError) {
 		// Prepare.
 		_bytes = nullptr;
 		if (!rom || !compiled)
@@ -37877,14 +38033,14 @@ public:
 		};
 
 		// Program the ROM with the specific bytes.
-		_bytes = program(rom, compiled, _options, _symbols, gotError);
+		_bytes = program(rom, compiled, featureUsages, _options, _symbols, gotError);
 
 		// Finish.
 		return errorCount == 0;
 	}
 
 private:
-	static Bytes::Ptr program(const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const Options &options, const SymbolTable &symbols, Error::Handler onError) {
+	static Bytes::Ptr program(const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const FeatureUsages &featureUsages, const Options &options, const SymbolTable &symbols, Error::Handler onError) {
 		// Prepare.
 		Bytes::Ptr bytes(Bytes::create());
 
@@ -38065,6 +38221,10 @@ private:
 					header.setColoredSupportOnly(extension);
 			} else {
 				header.setClassicSupportOnly(extension);
+			}
+			if (!featureUsages.superFeatureUsages.empty()) {
+				header.setSuperSupport(true);
+				header.setOldLicenseCode("33");
 			}
 
 			// DOC: CARTRIDGE SCHEMA.
@@ -38694,9 +38854,11 @@ bool compile(Program &program, const Options &options) {
 
 		// Compile.
 		RamLocation::Dictionary allocations;
+		FeatureUsages featureUsages;
 		int compiledSize = 0;
-		if (!compiler.process(organizer.ast(), program.assets, pipeline, &allocations, &compiledSize, onError)) {
-			program.compiled.allocations = allocations;
+		if (!compiler.process(organizer.ast(), program.assets, pipeline, &allocations, &featureUsages, &compiledSize, onError)) {
+			std::swap(program.compiled.allocations, allocations);
+			std::swap(program.compiled.featureUsages, featureUsages);
 
 			onError_("Failed to compile the source code.", false, -1, -1, -1);
 			++errors;
@@ -38705,7 +38867,8 @@ bool compile(Program &program, const Options &options) {
 		}
 		const int fontSize = pipeline->effectiveSize().font();
 		const int codeSize = compiledSize - fontSize; // Minus font size because it also counts in the `bytes`.
-		program.compiled.allocations = allocations;
+		std::swap(program.compiled.allocations, allocations);
+		std::swap(program.compiled.featureUsages, featureUsages);
 		program.compiled.effectiveSize.addCode(codeSize);
 		program.compiled.effectiveSize += pipeline->effectiveSize();
 
@@ -38726,7 +38889,7 @@ bool compile(Program &program, const Options &options) {
 			break;
 
 		// Program the ROM.
-		if (!programmer.process(program.rom, compiler.bytes(), onError)) {
+		if (!programmer.process(program.rom, compiler.bytes(), program.compiled.featureUsages, onError)) {
 			onError_("Failed to program the ROM.", false, -1, -1, -1);
 			++errors;
 

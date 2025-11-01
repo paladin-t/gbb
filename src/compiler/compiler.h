@@ -298,6 +298,19 @@ struct Macro { // FEAT: MACRO.
 	int compare(const Macro &other) const;
 };
 
+/**
+ * @brief Feature usages.
+ */
+struct FeatureUsages {
+	typedef std::map<std::string, int> Dictionary;
+
+	Dictionary coloredFeatureUsages;
+	Dictionary superFeatureUsages;
+	Dictionary extensionFeatureUsages;
+
+	FeatureUsages();
+};
+
 }
 
 /* ===========================================================================} */
@@ -554,6 +567,10 @@ struct Program {
 		 * @brief The RAM allocations on the heap.
 		 */
 		RamLocation::Dictionary allocations;
+		/**
+		 * @brief Feature usages. Filled by compiler.
+		 */
+		FeatureUsages featureUsages;
 		/**
 		 * @brief The compiled ROM.
 		 */
