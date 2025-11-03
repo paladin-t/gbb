@@ -891,6 +891,64 @@ public:
 
 		return true;
 	}
+	virtual bool parseTile(int tw, int th, int tx, int ty, int &tk, TileCountParser parseCount, TileDataParser parseData) override {
+		if (!paletted())
+			return false;
+
+		if (tw == 0 || th == 0)
+			return false;
+
+		if (!parseCount || !parseData)
+			return true;
+
+		const int n = parseCount();
+		if (tk >= n || tk + 1 >= n)
+			return false;
+
+		for (int y = 0; y < th; ++y) {
+			if (tk >= n || tk + 1 >= n)
+				break;
+
+			Int64 ln0 = parseData(tk++);
+			Int64 ln1 = parseData(tk++);
+			for (int x = tw - 1; x >= 0; --x) {
+				int idx = (int)((ln0 & 0x01) | ((ln1 & 0x01) << 1));
+				idx = Math::clamp(idx, 0, (int)Math::pow(2, paletted()) - 1);
+				set(tx * tw + x, ty * th + y, idx);
+				ln0 >>= 1;
+				ln1 >>= 1;
+			}
+		}
+
+		return true;
+	}
+	virtual bool parseTiles(int tw, int th, TileCountParser parseCount, TileDataParser parseData) override {
+		if (!paletted())
+			return false;
+
+		if (tw == 0 || th == 0)
+			return false;
+
+		if (!parseCount || !parseData)
+			return true;
+
+		const int n = parseCount();
+
+		int k = 0;
+		const int w = width() / tw;
+		const int h = height() / th;
+		for (int j = 0; j < h; ++j) {
+			for (int i = 0; i < w; ++i) {
+				if (!parseTile(tw, th, i, j, k, parseCount, parseData))
+					break;
+			}
+
+			if (k >= n)
+				break;
+		}
+
+		return true;
+	}
 
 	virtual bool fromBlank(int width, int height, int paletted) override {
 		clear();

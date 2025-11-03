@@ -3055,33 +3055,15 @@ bool TilesAssets::Entry::parseDataSequence(Image::Ptr &img, const std::string &v
 	img = Image::Ptr(ptr);
 
 	if (img->paletted()) {
-		int k = 0;
-		const int w = img->width() / GBBASIC_TILE_SIZE;
-		const int h = img->height() / GBBASIC_TILE_SIZE;
-		for (int j = 0; j < h; ++j) {
-			for (int i = 0; i < w; ++i) {
-				if (k >= (int)bytes.size() || k + 1 >= (int)bytes.size())
-					break;
-
-				for (int y = 0; y < GBBASIC_TILE_SIZE; ++y) {
-					if (k >= (int)bytes.size() || k + 1 >= (int)bytes.size())
-						break;
-
-					Int64 ln0 = bytes[k++];
-					Int64 ln1 = bytes[k++];
-					for (int x = GBBASIC_TILE_SIZE - 1; x >= 0; --x) {
-						int idx = (int)((ln0 & 0x01) | ((ln1 & 0x01) << 1));
-						idx = Math::clamp(idx, 0, (int)Math::pow(2, img->paletted()) - 1);
-						img->set(i * GBBASIC_TILE_SIZE + x, j * GBBASIC_TILE_SIZE + y, idx);
-						ln0 >>= 1;
-						ln1 >>= 1;
-					}
-				}
+		img->parseTiles(
+			GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+			[&] (void) -> int {
+				return (int)bytes.size();
+			},
+			[&] (int idx) -> Int64 {
+				return bytes[idx];
 			}
-
-			if (k >= (int)bytes.size())
-				break;
-		}
+		);
 	} else {
 		int k = 0;
 		for (int j = 0; j < img->height(); ++j) {
@@ -6064,55 +6046,24 @@ bool ActorAssets::Entry::parseDataSequence(int frame, Image::Ptr &img, const std
 	if (!img->paletted())
 		return false;
 
-	auto parse = [] (Image::Ptr &img, int i, int j, int &k, int tx, int ty, Data &bytes) -> bool {
-		if (k >= (int)bytes.size() || k + 1 >= (int)bytes.size())
-			return false;
-
-		for (int y = 0; y < ty; ++y) {
-			if (k >= (int)bytes.size() || k + 1 >= (int)bytes.size())
-				break;
-
-			Int64 ln0 = bytes[k++];
-			Int64 ln1 = bytes[k++];
-			for (int x = tx - 1; x >= 0; --x) {
-				int idx = (int)((ln0 & 0x01) | ((ln1 & 0x01) << 1));
-				idx = Math::clamp(idx, 0, (int)Math::pow(2, img->paletted()) - 1);
-				img->set(i * tx + x, j * ty + y, idx);
-				ln0 >>= 1;
-				ln1 >>= 1;
-			}
-		}
-
-		return true;
-	};
-
+	int tw = 0;
+	int th = 0;
 	if (data->is8x16()) {
-		int k = 0;
-		const int w = img->width() / 8;
-		const int h = img->height() / 16;
-		for (int j = 0; j < h; ++j) {
-			for (int i = 0; i < w; ++i) {
-				if (!parse(img, i, j, k, 8, 16, bytes))
-					break;
-			}
-
-			if (k >= (int)bytes.size())
-				break;
-		}
+		tw = 8;
+		th = 16;
 	} else {
-		int k = 0;
-		const int w = img->width() / GBBASIC_TILE_SIZE;
-		const int h = img->height() / GBBASIC_TILE_SIZE;
-		for (int j = 0; j < h; ++j) {
-			for (int i = 0; i < w; ++i) {
-				if (!parse(img, i, j, k, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, bytes))
-					break;
-			}
-
-			if (k >= (int)bytes.size())
-				break;
-		}
+		tw = GBBASIC_TILE_SIZE;
+		th = GBBASIC_TILE_SIZE;
 	}
+	img->parseTiles(
+		tw, th,
+		[&] (void) -> int {
+			return (int)bytes.size();
+		},
+		[&] (int idx) -> Int64 {
+			return bytes[idx];
+		}
+	);
 
 	// Finish.
 	return true;
