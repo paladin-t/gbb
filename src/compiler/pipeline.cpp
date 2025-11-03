@@ -266,28 +266,15 @@ static bool generate_toBytes(const TilesAssets::Entry* entry, Pipeline* pipeline
 	// Generate the bytes.
 	Bytes::Ptr bytes(Bytes::create());
 	if (inuse) {
-		const int w = data->width() / GBBASIC_TILE_SIZE;
-		const int h = data->height() / GBBASIC_TILE_SIZE;
-		for (int j = 0; j < h; ++j) {
-			for (int i = 0; i < w; ++i) {
-				for (int y = 0; y < GBBASIC_TILE_SIZE; ++y) {
-					UInt8 ln0 = 0;
-					UInt8 ln1 = 0;
-					for (int x = 0; x < GBBASIC_TILE_SIZE; ++x) {
-						int idx = 0;
-						data->get(i * GBBASIC_TILE_SIZE + x, j * GBBASIC_TILE_SIZE + y, idx);
-						const bool px0 = !!(idx % GBBASIC_PALETTE_DEPTH);
-						const bool px1 = !!(idx / GBBASIC_PALETTE_DEPTH);
-						ln0 <<= 1;
-						ln0 |= px0 ? 0x01 : 0x00;
-						ln1 <<= 1;
-						ln1 |= px1 ? 0x01 : 0x00;
-					}
-					bytes->writeUInt8(ln0); // The low bits of a line.
-					bytes->writeUInt8(ln1); // The high bits of a line.
-				}
+		data->serializeTiles(
+			GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+			nullptr,
+			nullptr,
+			[&] (int /* y */, int /* lineno */, int /* tx */, int /* ty */, UInt8 ln0, UInt8 ln1) -> void {
+				bytes->writeUInt8(ln0); // The low bits of a line.
+				bytes->writeUInt8(ln1); // The high bits of a line.
 			}
-		}
+		);
 	}
 
 	// Fill in with the destination data.
@@ -1029,30 +1016,15 @@ static bool generate_toBytes(const ActorAssets::Entry* entry, Pipeline* pipeline
 			for (int k = 0; k < (int)slices.size(); ++k) {
 				const Actor::Slice &slice = slices[k];
 				const Image::Ptr &img = slice.image;
-				const int sw = img->width();
-				const int sh = img->height();
-				const int w = sw / GBBASIC_TILE_SIZE;
-				const int h = sh / GBBASIC_TILE_SIZE;
-				for (int j = 0; j < h; ++j) {
-					for (int i = 0; i < w; ++i) {
-						for (int y = 0; y < GBBASIC_TILE_SIZE; ++y) {
-							UInt8 ln0 = 0;
-							UInt8 ln1 = 0;
-							for (int x = 0; x < GBBASIC_TILE_SIZE; ++x) {
-								int idx = 0;
-								img->get(i * GBBASIC_TILE_SIZE + x, j * GBBASIC_TILE_SIZE + y, idx);
-								const bool px0 = !!(idx % GBBASIC_PALETTE_DEPTH);
-								const bool px1 = !!(idx / GBBASIC_PALETTE_DEPTH);
-								ln0 <<= 1;
-								ln0 |= px0 ? 0x01 : 0x00;
-								ln1 <<= 1;
-								ln1 |= px1 ? 0x01 : 0x00;
-							}
-							bytes->writeUInt8(ln0); // The low bits of a line.
-							bytes->writeUInt8(ln1); // The high bits of a line.
-						}
+				img->serializeTiles(
+					GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+					nullptr,
+					nullptr,
+					[&] (int /* y */, int /* lineno */, int /* tx */, int /* ty */, UInt8 ln0, UInt8 ln1) -> void {
+						bytes->writeUInt8(ln0); // The low bits of a line.
+						bytes->writeUInt8(ln1); // The high bits of a line.
 					}
-				}
+				);
 			}
 		}
 

@@ -2951,47 +2951,35 @@ bool TilesAssets::Entry::serializeDataSequence(std::string &val, int base) const
 
 	// Serialize the pixels.
 	if (data->paletted()) {
-		const int w = data->width() / GBBASIC_TILE_SIZE;
-		const int h = data->height() / GBBASIC_TILE_SIZE;
-		for (int j = 0; j < h; ++j) {
-			for (int i = 0; i < w; ++i) {
+		data->serializeTiles(
+			GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+			[&] (int /* tx */, int /* ty */) -> void {
 				val += "data ";
-				for (int y = 0; y < GBBASIC_TILE_SIZE; ++y) {
-					Byte ln0 = 0;
-					Byte ln1 = 0;
-					for (int x = 0; x < GBBASIC_TILE_SIZE; ++x) {
-						int idx = 0;
-						data->get(i * GBBASIC_TILE_SIZE + x, j * GBBASIC_TILE_SIZE + y, idx);
-						const bool px0 = !!(idx % GBBASIC_PALETTE_DEPTH);
-						const bool px1 = !!(idx / GBBASIC_PALETTE_DEPTH);
-						ln0 <<= 1;
-						ln0 |= px0 ? 0x01 : 0x00;
-						ln1 <<= 1;
-						ln1 |= px1 ? 0x01 : 0x00;
-					}
-
-					if (base == 16) {
-						val += "0x" + Text::toHex(ln0, 2, '0', false);
-						val += ", ";
-						val += "0x" + Text::toHex(ln1, 2, '0', false);
-					} else if (base == 10) {
-						val += Text::toString(ln0);
-						val += ", ";
-						val += Text::toString(ln1);
-					} else if (base == 2) {
-						val += "0b" + Text::toBin(ln0);
-						val += ", ";
-						val += "0b" + Text::toHex(ln1);
-					} else {
-						GBBASIC_ASSERT(false && "Not supported.");
-					}
-
-					if (y != GBBASIC_TILE_SIZE - 1)
-						val += ", ";
-				}
+			},
+			[&] (int /* tx */, int /* ty */) -> void {
 				val += "\n";
+			},
+			[&] (int y, int /* lineno */, int /* tx */, int /* ty */, UInt8 ln0, UInt8 ln1) -> void {
+				if (base == 16) {
+					val += "0x" + Text::toHex(ln0, 2, '0', false);
+					val += ", ";
+					val += "0x" + Text::toHex(ln1, 2, '0', false);
+				} else if (base == 10) {
+					val += Text::toString(ln0);
+					val += ", ";
+					val += Text::toString(ln1);
+				} else if (base == 2) {
+					val += "0b" + Text::toBin(ln0);
+					val += ", ";
+					val += "0b" + Text::toHex(ln1);
+				} else {
+					GBBASIC_ASSERT(false && "Not supported.");
+				}
+
+				if (y != GBBASIC_TILE_SIZE - 1)
+					val += ", ";
 			}
-		}
+		);
 	} else {
 		for (int j = 0; j < data->height(); ++j) {
 			val += "data ";
@@ -5978,22 +5966,24 @@ bool ActorAssets::Entry::serializeDataSequence(int frame, std::string &val, int 
 	if (!pixels->paletted())
 		return false;
 
-	auto serialize = [] (const Image::Ptr &pixels, int i, int j, int tx, int ty, std::string &val, int base) -> void {
-		val += "data ";
-		for (int y = 0; y < ty; ++y) {
-			Byte ln0 = 0;
-			Byte ln1 = 0;
-			for (int x = 0; x < tx; ++x) {
-				int idx = 0;
-				pixels->get(i * tx + x, j * ty + y, idx);
-				const bool px0 = !!(idx % GBBASIC_PALETTE_DEPTH);
-				const bool px1 = !!(idx / GBBASIC_PALETTE_DEPTH);
-				ln0 <<= 1;
-				ln0 |= px0 ? 0x01 : 0x00;
-				ln1 <<= 1;
-				ln1 |= px1 ? 0x01 : 0x00;
-			}
-
+	int tw = 0;
+	int th = 0;
+	if (data->is8x16()) {
+		tw = 8;
+		th = 16;
+	} else {
+		tw = GBBASIC_TILE_SIZE;
+		th = GBBASIC_TILE_SIZE;
+	}
+	pixels->serializeTiles(
+		tw, th,
+		[&] (int /* tx */, int /* ty */) -> void {
+			val += "data ";
+		},
+		[&] (int /* tx */, int /* ty */) -> void {
+			val += "\n";
+		},
+		[&] (int y, int /* lineno */, int /* tx */, int /* ty */, UInt8 ln0, UInt8 ln1) -> void {
 			if (base == 16) {
 				val += "0x" + Text::toHex(ln0, 2, '0', false);
 				val += ", ";
@@ -6010,29 +6000,10 @@ bool ActorAssets::Entry::serializeDataSequence(int frame, std::string &val, int 
 				GBBASIC_ASSERT(false && "Not supported.");
 			}
 
-			if (y != ty - 1)
+			if (y != th - 1)
 				val += ", ";
 		}
-		val += "\n";
-	};
-
-	if (data->is8x16()) {
-		const int w = pixels->width() / 8;
-		const int h = pixels->height() / 16;
-		for (int j = 0; j < h; ++j) {
-			for (int i = 0; i < w; ++i) {
-				serialize(pixels, i, j, 8, 16, val, base);
-			}
-		}
-	} else {
-		const int w = pixels->width() / GBBASIC_TILE_SIZE;
-		const int h = pixels->height() / GBBASIC_TILE_SIZE;
-		for (int j = 0; j < h; ++j) {
-			for (int i = 0; i < w; ++i) {
-				serialize(pixels, i, j, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, val, base);
-			}
-		}
-	}
+	);
 
 	// Finish.
 	return true;

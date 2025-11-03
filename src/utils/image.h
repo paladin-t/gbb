@@ -48,6 +48,10 @@ public:
 
 	typedef std::function<Colour(int, int, Byte)> PaletteResolver;
 
+	typedef std::function<void(int /* tx */, int /* ty */)> TileBeginingSerializer;
+	typedef std::function<void(int /* tx */, int /* ty */)> TileEndingSerializer;
+	typedef std::function<void(int /* tlineno */, int /* lineno */, int /* tx */, int /* ty */, UInt8 /* ln0 */, UInt8 /* ln1 */)> TileLineSerializer;
+
 public:
 	GBBASIC_CLASS_TYPE('I', 'M', 'G', 'A')
 
@@ -122,6 +126,9 @@ public:
 	 * @param[out] dst
 	 */
 	virtual bool blit(Image* dst, int x, int y, int w, int h, int sx, int sy) const = 0;
+
+	virtual bool serializeTile(int tw, int th, int tx, int ty, TileLineSerializer serializeLine /* nullable */) const = 0;
+	virtual bool serializeTiles(int tw, int th, TileBeginingSerializer serializeBegining /* nullable */, TileEndingSerializer serializeEnding /* nullable */, TileLineSerializer serializeLine /* nullable */) const = 0;
 
 	virtual bool fromBlank(int width, int height, int paletted) = 0;
 

@@ -834,6 +834,64 @@ public:
 		return blit(dst, x, y, w, h, sx, sy, false, false);
 	}
 
+	virtual bool serializeTile(int tw, int th, int tx, int ty, TileLineSerializer serializeLine) const override {
+		if (!paletted())
+			return false;
+
+		if (tw == 0 || th == 0)
+			return false;
+
+		if (!serializeLine)
+			return true;
+
+		for (int y = 0; y < th; ++y) {
+			UInt8 ln0 = 0;
+			UInt8 ln1 = 0;
+			const int lineno = ty * th + y;
+			for (int x = 0; x < tw; ++x) {
+				int idx = 0;
+				const int colno = tx * tw + x;
+				get(colno, lineno, idx);
+				const bool px0 = !!(idx % GBBASIC_PALETTE_DEPTH);
+				const bool px1 = !!(idx / GBBASIC_PALETTE_DEPTH);
+				ln0 <<= 1;
+				ln0 |= px0 ? 0x01 : 0x00;
+				ln1 <<= 1;
+				ln1 |= px1 ? 0x01 : 0x00;
+			}
+
+			serializeLine(y, lineno, tx, ty, ln0, ln1);
+		}
+
+		return true;
+	}
+	virtual bool serializeTiles(int tw, int th, TileBeginingSerializer serializeBegining, TileEndingSerializer serializeEnding, TileLineSerializer serializeLine) const override {
+		if (!paletted())
+			return false;
+
+		if (tw == 0 || th == 0)
+			return false;
+
+		if (!serializeBegining && !serializeEnding && !serializeLine)
+			return true;
+
+		const int w = width() / tw;
+		const int h = height() / th;
+		for (int j = 0; j < h; ++j) {
+			for (int i = 0; i < w; ++i) {
+				if (serializeBegining)
+					serializeBegining(i, j);
+
+				serializeTile(tw, th, i, j, serializeLine);
+
+				if (serializeEnding)
+					serializeEnding(i, j);
+			}
+		}
+
+		return true;
+	}
+
 	virtual bool fromBlank(int width, int height, int paletted) override {
 		clear();
 

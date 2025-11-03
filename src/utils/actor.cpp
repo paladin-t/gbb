@@ -490,44 +490,32 @@ public:
 			const int sh = img->height();
 			const int w = sw / GBBASIC_TILE_SIZE;
 			const int h = sh / GBBASIC_TILE_SIZE;
-			for (int j = 0; j < h; ++j) {
-				for (int i = 0; i < w; ++i) {
-					for (int y = 0; y < GBBASIC_TILE_SIZE; ++y) {
-						UInt8 ln0 = 0;
-						UInt8 ln1 = 0;
-						for (int x = 0; x < GBBASIC_TILE_SIZE; ++x) {
-							int idx = 0;
-							img->get(i * GBBASIC_TILE_SIZE + x, j * GBBASIC_TILE_SIZE + y, idx);
-							const bool px0 = !!(idx % GBBASIC_PALETTE_DEPTH);
-							const bool px1 = !!(idx / GBBASIC_PALETTE_DEPTH);
-							ln0 <<= 1;
-							ln0 |= px0 ? 0x01 : 0x00;
-							ln1 <<= 1;
-							ln1 |= px1 ? 0x01 : 0x00;
-						}
-
-						if (m % 2 == 0) {
-							val_ += "    ";
-						}
-						val_ += "0x" + Text::toHex(ln0, 2, '0', true); // The low bits of a line.
+			img->serializeTiles(
+				GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+				nullptr,
+				nullptr,
+				[&] (int y, int /* lineno */, int tx, int ty, UInt8 ln0, UInt8 ln1) -> void {
+					if (m % 2 == 0) {
+						val_ += "    ";
+					}
+					val_ += "0x" + Text::toHex(ln0, 2, '0', true); // The low bits of a line.
+					val_ += ",";
+					val_ += "0x" + Text::toHex(ln1, 2, '0', true); // The high bits of a line.
+					const bool isFinal =
+						y == GBBASIC_TILE_SIZE - 1 &&
+						tx == w - 1 && ty == h - 1 &&
+						k == (int)slices.size() - 1;
+					if (!isFinal) {
 						val_ += ",";
-						val_ += "0x" + Text::toHex(ln1, 2, '0', true); // The high bits of a line.
-						const bool isFinal =
-							y == GBBASIC_TILE_SIZE - 1 &&
-							i == w - 1 && j == h - 1 &&
-							k == (int)slices.size() - 1;
-						if (!isFinal) {
-							val_ += ",";
-						}
-						if (++m % 2 == 0) {
-							val_ += "\n";
-						}
-						if (m % 8 == 0 && !isFinal) {
-							val_ += "\n";
-						}
+					}
+					if (++m % 2 == 0) {
+						val_ += "\n";
+					}
+					if (m % 8 == 0 && !isFinal) {
+						val_ += "\n";
 					}
 				}
-			}
+			);
 		}
 		val_ += "};\n";
 		val += Text::format(val_, { Text::toString(m * 2) });
