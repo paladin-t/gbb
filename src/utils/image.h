@@ -52,6 +52,8 @@ public:
 	typedef std::function<void(int /* tx */, int /* ty */)> TileEndingSerializer;
 	typedef std::function<void(int /* tlineno */, int /* lineno */, int /* tx */, int /* ty */, UInt8 /* ln0 */, UInt8 /* ln1 */)> TileLineSerializer;
 
+	typedef std::function<int(void)> TileParserStepGetter;
+	typedef std::function<void(int)> TileParserStepSetter;
 	typedef std::function<int(void)> TileCountParser;
 	typedef std::function<Int64(int /* idx */)> TileDataParser;
 
@@ -132,7 +134,7 @@ public:
 
 	virtual bool serializeTile(int tw, int th, int tx, int ty, TileLineSerializer serializeLine /* nullable */) const = 0;
 	virtual bool serializeTiles(int tw, int th, TileBeginingSerializer serializeBegining /* nullable */, TileEndingSerializer serializeEnding /* nullable */, TileLineSerializer serializeLine /* nullable */) const = 0;
-	virtual bool parseTile(int tw, int th, int tx, int ty, int &tk, TileCountParser parseCount /* nullable */, TileDataParser parseData /* nullable */) = 0;
+	virtual bool parseTile(int tw, int th, int tx, int ty, TileParserStepGetter getParserStep /* nullable */, TileParserStepSetter setParserStep /* nullable */, TileCountParser parseCount /* nullable */, TileDataParser parseData /* nullable */) = 0;
 	virtual bool parseTiles(int tw, int th, TileCountParser parseCount /* nullable */, TileDataParser parseData /* nullable */) = 0;
 
 	virtual bool fromBlank(int width, int height, int paletted) = 0;

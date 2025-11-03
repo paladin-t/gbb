@@ -891,26 +891,26 @@ public:
 
 		return true;
 	}
-	virtual bool parseTile(int tw, int th, int tx, int ty, int &tk, TileCountParser parseCount, TileDataParser parseData) override {
+	virtual bool parseTile(int tw, int th, int tx, int ty, TileParserStepGetter getParserStep, TileParserStepSetter setParserStep, TileCountParser parseCount, TileDataParser parseData) override {
 		if (!paletted())
 			return false;
 
 		if (tw == 0 || th == 0)
 			return false;
 
-		if (!parseCount || !parseData)
+		if (!getParserStep || !setParserStep || !parseCount || !parseData)
 			return true;
 
 		const int n = parseCount();
-		if (tk >= n || tk + 1 >= n)
+		if (getParserStep() >= n || getParserStep() + 1 >= n)
 			return false;
 
 		for (int y = 0; y < th; ++y) {
-			if (tk >= n || tk + 1 >= n)
+			if (getParserStep() >= n || getParserStep() + 1 >= n)
 				break;
 
-			Int64 ln0 = parseData(tk++);
-			Int64 ln1 = parseData(tk++);
+			Int64 ln0 = parseData(getParserStep()); setParserStep(getParserStep() + 1);
+			Int64 ln1 = parseData(getParserStep()); setParserStep(getParserStep() + 1);
 			for (int x = tw - 1; x >= 0; --x) {
 				int idx = (int)((ln0 & 0x01) | ((ln1 & 0x01) << 1));
 				idx = Math::clamp(idx, 0, (int)Math::pow(2, paletted()) - 1);
@@ -939,7 +939,18 @@ public:
 		const int h = height() / th;
 		for (int j = 0; j < h; ++j) {
 			for (int i = 0; i < w; ++i) {
-				if (!parseTile(tw, th, i, j, k, parseCount, parseData))
+				const bool ret = parseTile(
+					tw, th,
+					i, j,
+					[&] (void) -> int {
+						return k;
+					},
+					[&] (int k_) -> void {
+						k = k_;
+					},
+					parseCount, parseData
+				);
+				if (!ret)
 					break;
 			}
 

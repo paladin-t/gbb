@@ -8,9 +8,9 @@
 #endif /* __SDCC */
 
 void sgb_set_border(
+    UINT8 palette_bank, const UINT8 * palette, UINT16 palette_size,
     UINT8 tiledata_bank, const UINT8 * tiledata, UINT16 tiledata_size,
-    UINT8 tilemap_bank, const UINT8 * tilemap, UINT16 tilemap_size,
-    UINT8 palette_bank, const UINT8 * palette, UINT16 palette_size
+    UINT8 tilemap_bank, const UINT8 * tilemap, UINT16 tilemap_size
 ) BANKED;
 
 #endif /* __SGB_H__ */

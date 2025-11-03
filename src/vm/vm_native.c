@@ -91,20 +91,20 @@ BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCAL
     (void)stack_frame;
 
     SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
+    const UINT8 palette_bank   = (UINT8)*(--THIS_->stack_ptr);
+    const UINT16 palette       = (UINT16)*(--THIS_->stack_ptr);
+    const UINT16 palette_size  = (UINT16)*(--THIS_->stack_ptr);
     const UINT8 tiledata_bank  = (UINT8)*(--THIS_->stack_ptr);
     const UINT16 tiledata      = (UINT16)*(--THIS_->stack_ptr);
     const UINT16 tiledata_size = (UINT16)*(--THIS_->stack_ptr);
     const UINT8 tilemap_bank   = (UINT8)*(--THIS_->stack_ptr);
     const UINT16 tilemap       = (UINT16)*(--THIS_->stack_ptr);
     const UINT16 tilemap_size  = (UINT16)*(--THIS_->stack_ptr);
-    const UINT8 palette_bank   = (UINT8)*(--THIS_->stack_ptr);
-    const UINT16 palette       = (UINT16)*(--THIS_->stack_ptr);
-    const UINT16 palette_size  = (UINT16)*(--THIS_->stack_ptr);
 
     sgb_set_border(
+        palette_bank, (const UINT8 *)palette, palette_size,
         tiledata_bank, (const UINT8 *)tiledata, tiledata_size,
-        tilemap_bank, (const UINT8 *)tilemap, tilemap_size,
-        palette_bank, (const UINT8 *)palette, palette_size
+        tilemap_bank, (const UINT8 *)tilemap, tilemap_size
     );
 
     return TRUE;
