@@ -8468,7 +8468,8 @@ private:
 		ACTOR,
 		PROJECTILE,
 		MUSIC,
-		SOUND
+		SOUND,
+		READ
 	};
 
 private:
@@ -8518,13 +8519,15 @@ public:
 				if (!consume(Token::Types::KEYWORD, "bankof")) { THROW_INVALID_SYNTAX(onError); }
 			} else {
 				if (!consume(Token::Types::KEYWORD, "bankof")) { THROW_INVALID_SYNTAX(onError); }
+				if (consume(Token::Types::KEYWORD, "read")) { _type = OperationTypes::READ; }
 			}
 			if (consume(Token::Types::OPERATOR, "(")) {
 				if (!consume(Token::Types::OPERATOR, ")")) { THROW_INVALID_SYNTAX(onError); }
 			}
 
 			// Check the children.
-			if (_type == OperationTypes::PALETTE) {
+			switch (_type) {
+			case OperationTypes::PALETTE:
 				if (_children.empty()) {
 					// Do nothing.
 				} else if (_children.size() == 1) {
@@ -8532,7 +8535,17 @@ public:
 				} else {
 					THROW_TOO_MANY_ARGUMENTS(onError);
 				}
-			} else {
+
+				break;
+			case OperationTypes::READ:
+				if (_children.empty()) {
+					// Do nothing.
+				} else {
+					THROW_TOO_MANY_ARGUMENTS(onError);
+				}
+
+				break;
+			default:
 				if (_children.empty()) {
 					THROW_TOO_FEW_ARGUMENTS(onError);
 				} else if (_children.size() == 1) {
@@ -8540,6 +8553,8 @@ public:
 				} else {
 					THROW_TOO_MANY_ARGUMENTS(onError);
 				}
+
+				break;
 			}
 
 			// Get the bank of the specific target.
@@ -9030,6 +9045,31 @@ public:
 				}
 
 				break;
+			case OperationTypes::READ: {
+					// Set the stack footprint guard.
+					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
+					COUNTER_GUARD(ctx, stk);
+
+					// Set the expression slot guard.
+					VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
+
+					// Emit the right hand value.
+					writeRightHand(
+						bytes, context, stk,
+						[&] (void) -> void {
+							// Emit a `VM_DATA_PTR` instruction to set the data.
+							Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::DATA_PTR]);
+							args = fill(args, (UInt8)TRUE);
+							args = fill(args, (Int16)ARG0);
+						}, 0, true,
+						onError
+					);
+
+					// Check the stack footprint.
+					CHECK_COUNTER(ctx, onError);
+				}
+
+				break;
 			default: {
 					// Prepare.
 					int page = -1;
@@ -9221,7 +9261,8 @@ private:
 		ACTOR,
 		PROJECTILE,
 		MUSIC,
-		SOUND
+		SOUND,
+		READ
 	};
 
 private:
@@ -9271,13 +9312,15 @@ public:
 				if (!consume(Token::Types::KEYWORD, "addressof")) { THROW_INVALID_SYNTAX(onError); }
 			} else {
 				if (!consume(Token::Types::KEYWORD, "addressof")) { THROW_INVALID_SYNTAX(onError); }
+				if (consume(Token::Types::KEYWORD, "read")) { _type = OperationTypes::READ; }
 			}
 			if (consume(Token::Types::OPERATOR, "(")) {
 				if (!consume(Token::Types::OPERATOR, ")")) { THROW_INVALID_SYNTAX(onError); }
 			}
 
 			// Check the children.
-			if (_type == OperationTypes::PALETTE) {
+			switch (_type) {
+			case OperationTypes::PALETTE:
 				if (_children.empty()) {
 					// Do nothing.
 				} else if (_children.size() == 1) {
@@ -9285,7 +9328,17 @@ public:
 				} else {
 					THROW_TOO_MANY_ARGUMENTS(onError);
 				}
-			} else {
+
+				break;
+			case OperationTypes::READ:
+				if (_children.empty()) {
+					// Do nothing.
+				} else {
+					THROW_TOO_MANY_ARGUMENTS(onError);
+				}
+
+				break;
+			default:
 				if (_children.empty()) {
 					THROW_TOO_FEW_ARGUMENTS(onError);
 				} else if (_children.size() == 1) {
@@ -9293,6 +9346,8 @@ public:
 				} else {
 					THROW_TOO_MANY_ARGUMENTS(onError);
 				}
+
+				break;
 			}
 
 			// Get the address of the specific target.
@@ -9777,6 +9832,31 @@ public:
 						};
 					}
 					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
+				}
+
+				break;
+			case OperationTypes::READ: {
+					// Set the stack footprint guard.
+					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
+					COUNTER_GUARD(ctx, stk);
+
+					// Set the expression slot guard.
+					VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
+
+					// Emit the right hand value.
+					writeRightHand(
+						bytes, context, stk,
+						[&] (void) -> void {
+							// Emit a `VM_DATA_PTR` instruction to set the data.
+							Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::DATA_PTR]);
+							args = fill(args, (UInt8)FALSE);
+							args = fill(args, (Int16)ARG0);
+						}, 0, true,
+						onError
+					);
+
+					// Check the stack footprint.
+					CHECK_COUNTER(ctx, onError);
 				}
 
 				break;
@@ -31227,6 +31307,90 @@ private:
 
 			return true;
 		};
+		auto BankOfAt = [&] (State &q, Node::Array &children, bool expEol) -> bool { // BankOf at.
+			State q1 = begin();
+			q1.index = q.index;
+			Node::Array children_;
+
+			if (!must(Token::Types::KEYWORD, "bankof")(q1)) return false;
+			if (forward(Token::Types::KEYWORD, "read")(q1.index)) {
+				any()(q1);
+			} else {
+				if (must(Token::Types::OPERATOR, "(")(q1)) {
+					if (!forward(Token::Types::OPERATOR, ")")(q1.index)) {
+						Arguments(q1, children_);
+						CHECK_UNEXPECTED(q1);
+					}
+					if (!must(Token::Types::OPERATOR, ")")(q1)) return false;
+				} else {
+					Arguments(q1, children_);
+					CHECK_UNEXPECTED(q1);
+				}
+			}
+			if (expEol) {
+				maybe(Token::Types::OPERATOR, ";")(q1);
+				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+			}
+
+			Node::Ptr node = createNode(
+				"bankof", "_",
+				{
+					{ "allow_call", true }
+				}
+			);
+			if (!node) return false;
+			node->concat(q1.tokens);
+			node->add(children_);
+			children.push_back(node);
+
+			q1.success = true;
+			end(q1);
+			q.index = q1.index;
+
+			return true;
+		};
+		auto AddressOfAt = [&] (State &q, Node::Array &children, bool expEol) -> bool { // AddressOf at.
+			State q1 = begin();
+			q1.index = q.index;
+			Node::Array children_;
+
+			if (!must(Token::Types::KEYWORD, "addressof")(q1)) return false;
+			if (forward(Token::Types::KEYWORD, "read")(q1.index)) {
+				any()(q1);
+			} else {
+				if (must(Token::Types::OPERATOR, "(")(q1)) {
+					if (!forward(Token::Types::OPERATOR, ")")(q1.index)) {
+						Arguments(q1, children_);
+						CHECK_UNEXPECTED(q1);
+					}
+					if (!must(Token::Types::OPERATOR, ")")(q1)) return false;
+				} else {
+					Arguments(q1, children_);
+					CHECK_UNEXPECTED(q1);
+				}
+			}
+			if (expEol) {
+				maybe(Token::Types::OPERATOR, ";")(q1);
+				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+			}
+
+			Node::Ptr node = createNode(
+				"addressof", "_",
+				{
+					{ "allow_call", true }
+				}
+			);
+			if (!node) return false;
+			node->concat(q1.tokens);
+			node->add(children_);
+			children.push_back(node);
+
+			q1.success = true;
+			end(q1);
+			q.index = q1.index;
+
+			return true;
+		};
 		auto PeekAt = [&] (State &q, Node::Array &children, bool expEol) -> bool { // Peek at.
 			State q1 = begin();
 			q1.index = q.index;
@@ -32140,6 +32304,24 @@ private:
 				}
 				if ((id = forward(Token::Types::SYMBOL)(q.index))) {
 					name = (std::string)id->data();
+					if (name == "bankof") {
+						const int qi = q.index;
+						if (BankOfAt(q, children, false)) {
+							Intermedia(q, children, Token::Types::STATEMENT);
+							n += q.index - qi;
+
+							continue;
+						}
+					}
+					if (name == "addressof") {
+						const int qi = q.index;
+						if (AddressOfAt(q, children, false)) {
+							Intermedia(q, children, Token::Types::STATEMENT);
+							n += q.index - qi;
+
+							continue;
+						}
+					}
 					if (name == "peek") {
 						const int qi = q.index;
 						if (PeekAt(q, children, false)) {
@@ -34849,6 +35031,90 @@ private:
 				return true;
 			}
 		);
+		const Combinator BankOf( // `BANKOF`.
+			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				State q = begin();
+				Node::Array children;
+
+				if (!LineNumber(q, opts)) return false;
+				if (!must(Token::Types::KEYWORD, "bankof")(q)) return false;
+				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
+					any()(q);
+				} else {
+					if (must(Token::Types::OPERATOR, "(")(q)) {
+						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
+							Arguments(q, children);
+							CHECK_UNEXPECTED(q);
+						}
+						if (!must(Token::Types::OPERATOR, ")")(q)) return false;
+					} else {
+						Arguments(q, children);
+						CHECK_UNEXPECTED(q);
+					}
+				}
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+
+				Node::Ptr node = createNode(
+					"bankof", "_",
+					{
+						{ "allow_call", false }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				node->add(children);
+
+				return true;
+			}
+		);
+		const Combinator AddressOf( // `ADDRESSOF`.
+			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				State q = begin();
+				Node::Array children;
+
+				if (!LineNumber(q, opts)) return false;
+				if (!must(Token::Types::KEYWORD, "addressof")(q)) return false;
+				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
+					any()(q);
+				} else {
+					if (must(Token::Types::OPERATOR, "(")(q)) {
+						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
+							Arguments(q, children);
+							CHECK_UNEXPECTED(q);
+						}
+						if (!must(Token::Types::OPERATOR, ")")(q)) return false;
+					} else {
+						Arguments(q, children);
+						CHECK_UNEXPECTED(q);
+					}
+				}
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+
+				Node::Ptr node = createNode(
+					"addressof", "_",
+					{
+						{ "allow_call", false }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				node->add(children);
+
+				return true;
+			}
+		);
 		const Combinator Peek( // `PEEK`.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				State q = begin();
@@ -37107,6 +37373,10 @@ private:
 			DefIdentifierAlias,
 			DefStackN,
 			DefExpression,
+
+			/**< Bank/address of. */
+
+			BankOf, AddressOf,
 
 			/**< Peek and poke. */
 
