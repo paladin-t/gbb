@@ -180,6 +180,7 @@ void vm_set_tlocal(SCRIPT_CTX * THIS, INT16 idxA, INT16 idxB) OLDCALL BANKED;
 void vm_pack(SCRIPT_CTX * THIS, INT16 idx, INT16 idx0, INT16 idx1, INT16 idx2, INT16 idx3, BOOLEAN n) OLDCALL BANKED;
 void vm_unpack(SCRIPT_CTX * THIS, INT16 idx, INT16 idx0, INT16 idx1, INT16 idx2, INT16 idx3, BOOLEAN n) OLDCALL BANKED;
 void vm_swap(SCRIPT_CTX * THIS, INT16 idxA, INT16 idxB) OLDCALL BANKED;
+void vm_data_ptr(SCRIPT_CTX * THIS, INT16 idx, BOOLEAN for_bank) OLDCALL BANKED;
 void vm_read(SCRIPT_CTX * THIS, INT16 idx, UINT16 size, BOOLEAN copy) OLDCALL BANKED;
 void vm_restore(SCRIPT_CTX * THIS, UINT8 bank, INT16 idx) OLDCALL BANKED;
 void vm_begin_thread(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * pc, BOOLEAN put, INT16 idx, UINT8 nargs) OLDCALL BANKED;

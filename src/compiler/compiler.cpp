@@ -1519,6 +1519,7 @@ struct Asm {
 		PACK,
 		UNPACK,
 		SWAP,
+		DATA_PTR,
 		READ,
 		RESTORE,
 
@@ -1847,6 +1848,7 @@ const Asm::Instructions Asm::INSTRUCTIONS = array(
 	Asm(Asm::Types::PACK,                 11),
 	Asm(Asm::Types::UNPACK,               11),
 	Asm(Asm::Types::SWAP,                  4),
+	Asm(Asm::Types::DATA_PTR,              3),
 	Asm(Asm::Types::READ,                  5),
 	Asm(Asm::Types::RESTORE,               3),
 

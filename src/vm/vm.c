@@ -496,6 +496,16 @@ void vm_swap(SCRIPT_CTX * THIS, INT16 idxA, INT16 idxB) OLDCALL BANKED {
 UINT8 current_data_bank = BANK(BOOTSTRAP);
 UINT16 current_data_address = BROM_ADDRESS + DATA_OFFSET /* skip the head `VM_JUMP_FAR` instruction */;
 
+// Sets the cursor of the data reading stream. Returns the bank if `for_bank` is `true`, otherwise returns the address.
+void vm_data_ptr(SCRIPT_CTX * THIS, INT16 idx, BOOLEAN for_bank) OLDCALL BANKED {
+    UINT16 * A;
+    A = VM_REF_TO_PTR(idx);
+    if (for_bank)
+        *A = current_data_bank;
+    else
+        *A = current_data_address;
+}
+
 // Reads an `UINT8` or `INT16` from the current data reading stream.
 void vm_read(SCRIPT_CTX * THIS, INT16 idx, UINT16 size, BOOLEAN copy) OLDCALL BANKED {
     if (!copy) {
