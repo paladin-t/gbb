@@ -697,6 +697,10 @@ bool Theme::open(class Renderer* rnd) {
 	tabPreferences_Main("Main");
 	tabPreferences_Misc("Misc.");
 
+	tabProjectProperty_Advanced("Advanced");
+	tabProjectProperty_Compiling("Compiling");
+	tabProjectProperty_Project("Project");
+
 	tabMusic_Piano("Piano");
 	tabMusic_Tracker("Tracker");
 	tabMusic_Waves("Waves");
@@ -709,16 +713,6 @@ bool Theme::open(class Renderer* rnd) {
 	windowBuildingSettings_CartridgeTypeOfOutputRom("Cartridge type of output ROM:");
 	windowBuildingSettings_Sram("SRAM");
 	windowBuildingSettings_Rtc ("RTC");
-
-	windowProperty("Property");
-	windowProperty_Title     ("  Title"); windowProperty_Path              ("Path ");
-	windowProperty_Cart      ("   Cart");
-	windowProperty_Sram      ("   SRAM"); windowProperty_Rtc               ("RTC  ");
-	windowProperty_Parser    (" Parser"); windowProperty_CaseInsensitive   ("Case-insensitive");
-	windowProperty_Desc      ("   Desc");
-	windowProperty_Author    (" Author"); windowProperty_Genre             ("Genre");
-	windowProperty_Version   ("Version"); windowProperty_Url               ("URL  ");
-	windowProperty_Icon      ("   Icon");
 
 	windowPreferences("Preferences");
 	windowPreferences_Main_2Spaces("2 spaces");
@@ -775,6 +769,18 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Input_Onscreen_Scale("    Scale");
 	windowPreferences_Input_Onscreen_SwapAB("Swap A/B");
 	windowPreferences_Input_WaitingForInput("Waiting for input...");
+
+	windowProjectProperty("Property");
+	windowProjectProperty_Title("  Title");    windowProjectProperty_Path("Path ");
+	windowProjectProperty_Cart("   Cart");
+	windowProjectProperty_Sram("   SRAM");      windowProjectProperty_Rtc("RTC  ");
+	windowProjectProperty_Desc("   Desc");
+	windowProjectProperty_Author(" Author");  windowProjectProperty_Genre("Genre");
+	windowProjectProperty_Version("Version");   windowProjectProperty_Url("URL  ");
+	windowProjectProperty_Icon("   Icon");
+	windowProjectProperty_Main_Parser("Parser:");
+	windowProjectProperty_CaseInsensitive("Case-insensitive");
+	windowProjectProperty_Advanced_SuperFeatures("\"Super\" features:");
 
 	windowPalette("Palette");
 

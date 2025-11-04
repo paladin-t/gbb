@@ -29,7 +29,7 @@ BANKREF_EXTERN(BUILTIN)
 
 /**< Common. */
 
-extern const unsigned char Font[];
+extern const unsigned char Font[]; // From builtin inline data.
 
 const BOOLEAN ExtensionMode = TRUE; // Can be overwritten by compiler.
 

@@ -1138,7 +1138,7 @@ public:
 			};
 			auto findOrCreateSubPalette = [] (const PaletteSet &pal, Palettes &palettes, int colorsPerPal) -> int {
 				// Return -1 if colors can't even fit in sub-palette hardware limit.
-				if (pal.size() > colorsPerPal)
+				if ((int)pal.size() > colorsPerPal)
 					return -1;
 
 				// Check if it matches any palettes or create a new one.
@@ -1148,8 +1148,8 @@ public:
 					// equal is not enough since the palettes can have less than 4 colors).
 					PaletteSet merged(palettes[i]);
 					merged.insert(pal.begin(), pal.end());
-					if (merged.size() <= colorsPerPal) {
-						if (palettes[i].size() <= colorsPerPal)
+					if ((int)merged.size() <= colorsPerPal) {
+						if ((int)palettes[i].size() <= colorsPerPal)
 							palettes[i] = merged; // Increase colors with this palette (it has less than 4 colors).
 
 						return i; // Found palette.

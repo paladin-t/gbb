@@ -3513,424 +3513,443 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
 		Project* prj = _projectShadow;
 
-		PushID("#Title");
-		{
-			const float x = GetCursorPosX();
-			const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
-
-			AlignTextToFramePadding();
-			TextUnformatted(_theme->windowProperty_Title());
-
-			SameLine();
-
-			const float u = GetCursorPosX() - x;
-			SetNextItemWidth(w * 0.5f - u);
-			if (InputText("", _buffer, sizeof(_buffer), ImGuiInputTextFlags_AutoSelectAll))
-				prj->title(_buffer);
-		}
-		PopID();
-
-		PushID("#Path");
-		{
-			SameLine();
-			TextUnformatted(_theme->windowProperty_Path());
-
-			SameLine();
-
-			SetNextItemWidth(GetContentRegionAvail().x);
-			const std::string &txt = prj->path();
-			PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled));
-			InputText("", (char*)txt.c_str(), txt.length(), ImGuiInputTextFlags_ReadOnly);
-			PopStyleColor();
-		}
-		PopID();
-
-		PushID("#CrtTyp");
-		{
-			AlignTextToFramePadding();
-			TextUnformatted(_theme->windowProperty_Cart());
-
-			SameLine();
-
-			const char* items[] = {
-				PROJECT_CARTRIDGE_TYPE_CLASSIC,
-				PROJECT_CARTRIDGE_TYPE_COLORED,
-				PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED,
-				PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION,
-				PROJECT_CARTRIDGE_TYPE_COLORED PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION,
-				PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION
-			};
-			int pref = 0;
-			for (int i = 0; i < GBBASIC_COUNTOF(items); ++i) {
-				if (prj->cartridgeType() == items[i]) {
-					pref = i;
-
-					break;
-				}
-			}
-			SetNextItemWidth(GetContentRegionAvail().x);
-			if (Combo("", &pref, items, GBBASIC_COUNTOF(items)))
-				prj->cartridgeType(items[pref]);
-		}
-		PopID();
-
-		PushID("#SrmTyp");
-		{
-			const float x = GetCursorPosX();
-			const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
-
-			AlignTextToFramePadding();
-			TextUnformatted(_theme->windowProperty_Sram());
-
-			SameLine();
-
-			const char* items[] = {
-				"0KB (None)",
-				"2KB",
-				"8KB",
-				"32KB",
-				"128KB"
-			};
-			int pref = 0;
-			if (!Text::fromString(prj->sramType(), pref))
-				pref = 3;
-			const float u = GetCursorPosX() - x;
-			SetNextItemWidth(w * 0.5f - u);
-			if (Combo("", &pref, items, GBBASIC_COUNTOF(items)))
-				prj->sramType(Text::toString(pref));
-		}
-		PopID();
-
-		PushID("#HasRtc");
-		{
-			SameLine();
-			TextUnformatted(_theme->windowProperty_Rtc());
-
-			SameLine();
-
-			bool pref = prj->hasRtc();
-			if (Checkbox(_theme->generic_Enabled(), &pref))
-				prj->hasRtc(pref);
-		}
-		PopID();
-
-		PushID("#CsIns");
-		{
-			AlignTextToFramePadding();
-			TextUnformatted(_theme->windowProperty_Parser());
-
-			SameLine();
-
-			bool pref = prj->caseInsensitive();
-			if (Checkbox(_theme->windowProperty_CaseInsensitive(), &pref))
-				prj->caseInsensitive(pref);
-		}
-		PopID();
-
-		PushID("#Desc");
-		{
-			AlignTextToFramePadding();
-			TextUnformatted(_theme->windowProperty_Desc());
-
-			SameLine();
-
-			SetNextItemWidth(GetContentRegionAvail().x);
-			std::string &txt = prj->description();
-			char buf[WIDGETS_TEXT_BUFFER_SIZE];
-			const size_t n = Math::min(sizeof(buf) - 1, txt.length());
-			memcpy(buf, txt.c_str(), n);
-			buf[n] = '\0';
-			if (InputText("", (char*)buf, sizeof(buf), ImGuiInputTextFlags_None)) {
-				txt = buf;
-			}
-		}
-		PopID();
-
-		PushID("#Athr");
-		{
-			const float x = GetCursorPosX();
-			const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
-
-			AlignTextToFramePadding();
-			TextUnformatted(_theme->windowProperty_Author());
-
-			SameLine();
-
-			const float u = GetCursorPosX() - x;
-			SetNextItemWidth(w * 0.5f - u);
-			std::string &txt = prj->author();
-			char buf[WIDGETS_TEXT_BUFFER_SIZE];
-			const size_t n = Math::min(sizeof(buf) - 1, txt.length());
-			memcpy(buf, txt.c_str(), n);
-			buf[n] = '\0';
-			if (InputText("", (char*)buf, sizeof(buf), ImGuiInputTextFlags_None)) {
-				txt = buf;
-			}
-		}
-		PopID();
-
-		PushID("#Gnr");
-		{
-			SameLine();
-			TextUnformatted(_theme->windowProperty_Genre());
-
-			SameLine();
-
-			SetNextItemWidth(GetContentRegionAvail().x);
-			std::string &txt = prj->genre();
-			char buf[WIDGETS_TEXT_BUFFER_SIZE];
-			const size_t n = Math::min(sizeof(buf) - 1, txt.length());
-			memcpy(buf, txt.c_str(), n);
-			buf[n] = '\0';
-			if (InputText("", (char*)buf, sizeof(buf), ImGuiInputTextFlags_None)) {
-				txt = buf;
-			}
-		}
-		PopID();
-
-		PushID("#Ver");
-		{
-			const float x = GetCursorPosX();
-			const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
-
-			AlignTextToFramePadding();
-			TextUnformatted(_theme->windowProperty_Version());
-
-			SameLine();
-
-			const float u = GetCursorPosX() - x;
-			SetNextItemWidth(w * 0.5f - u);
-			std::string &txt = prj->version();
-			char buf[WIDGETS_TEXT_BUFFER_SIZE];
-			const size_t n = Math::min(sizeof(buf) - 1, txt.length());
-			memcpy(buf, txt.c_str(), n);
-			buf[n] = '\0';
-			if (InputText("", (char*)buf, sizeof(buf), ImGuiInputTextFlags_None)) {
-				txt = buf;
-			}
-		}
-		PopID();
-
-		float firstColumnEndX = 0.0f;
-		PushID("#Url");
-		{
-			SameLine();
-			firstColumnEndX = GetCursorPosX() - style.ItemSpacing.x;
-			TextUnformatted(_theme->windowProperty_Url());
-
-			SameLine();
-
-			SetNextItemWidth(GetContentRegionAvail().x);
-			std::string &txt = prj->url();
-			char buf[WIDGETS_TEXT_BUFFER_SIZE];
-			const size_t n = Math::min(sizeof(buf) - 1, txt.length());
-			memcpy(buf, txt.c_str(), n);
-			buf[n] = '\0';
-			if (InputText("", (char*)buf, sizeof(buf), ImGuiInputTextFlags_None)) {
-				txt = buf;
-			}
-		}
-		PopID();
-
-		float secondColumnEndX = 0.0f;
-		SameLine();
-		secondColumnEndX = GetCursorPosX() - style.ItemSpacing.x;
-		NewLine();
-
-		PushID("#Icon");
-		{
-			AlignTextToFramePadding();
-			TextUnformatted(_theme->windowProperty_Icon());
-
-			SameLine();
-
-			{
-				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
-
-				PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1);
-				BeginChild("@Col", ImVec2(36.0f, 36.0f), true, ImGuiWindowFlags_NoScrollbar);
+		if (BeginTabBar("@Prj")) {
+			if (BeginTabItem(_theme->tabProjectProperty_Project(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
+				PushID("#Title");
 				{
-					void* iconTex = nullptr;
-					if (prj->contentType() == Project::ContentTypes::BASIC) {
-						if (prj->touchIconTexture())
-							iconTex = prj->touchIconTexture()->pointer(_renderer);
-						else if (prj->isExample())
-							iconTex = _theme->iconExample()->pointer(_renderer);
-						else if (prj->isPlain())
-							iconTex = _theme->iconPlainCode()->pointer(_renderer);
-						else
-							iconTex = _theme->iconProjectOmitted()->pointer(_renderer);
-					} else {
-						iconTex = _theme->iconRom()->pointer(_renderer);
+					const float x = GetCursorPosX();
+					const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
+
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Title());
+
+					SameLine();
+
+					const float u = GetCursorPosX() - x;
+					SetNextItemWidth(w * 0.5f - u);
+					if (InputText("", _buffer, sizeof(_buffer), ImGuiInputTextFlags_AutoSelectAll))
+						prj->title(_buffer);
+				}
+				PopID();
+
+				PushID("#Path");
+				{
+					SameLine();
+					TextUnformatted(_theme->windowProjectProperty_Path());
+
+					SameLine();
+
+					SetNextItemWidth(GetContentRegionAvail().x);
+					const std::string &txt = prj->path();
+					PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled));
+					InputText("", (char*)txt.c_str(), txt.length(), ImGuiInputTextFlags_ReadOnly);
+					PopStyleColor();
+				}
+				PopID();
+
+				PushID("#CrtTyp");
+				{
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Cart());
+
+					SameLine();
+
+					const char* items[] = {
+						PROJECT_CARTRIDGE_TYPE_CLASSIC,
+						PROJECT_CARTRIDGE_TYPE_COLORED,
+						PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED,
+						PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION,
+						PROJECT_CARTRIDGE_TYPE_COLORED PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION,
+						PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION
+					};
+					int pref = 0;
+					for (int i = 0; i < GBBASIC_COUNTOF(items); ++i) {
+						if (prj->cartridgeType() == items[i]) {
+							pref = i;
+
+							break;
+						}
 					}
-					SetCursorPos(GetCursorPos() + ImVec2(2, 2));
-					Image(iconTex, ImVec2(32.0f, 32.0f));
+					SetNextItemWidth(GetContentRegionAvail().x);
+					if (Combo("", &pref, items, GBBASIC_COUNTOF(items)))
+						prj->cartridgeType(items[pref]);
 				}
-				EndChild();
-				PopStyleVar();
-			}
-			if (IsItemHovered() && !ws->bubble()) {
-				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+				PopID();
 
-				SetTooltip(_theme->tooltipProperty_ProjectIconDetails());
-			}
-
-			SameLine();
-			{
-				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
-
-				PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1);
-				BeginChild("@2Bpp", ImVec2(36.0f, 36.0f), true, ImGuiWindowFlags_NoScrollbar);
+				PushID("#SrmTyp");
 				{
-					void* iconTex = nullptr;
-					if (prj->touchIconTexture2Bpp()) {
-						iconTex = prj->touchIconTexture2Bpp()->pointer(_renderer);
-						SetCursorPos(GetCursorPos() + ImVec2(2, 2));
-						Image(iconTex, ImVec2(32.0f, 32.0f));
-						if (IsItemHovered() && IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-							do {
-								Bytes::Ptr tiles(Bytes::create());
-								if (!prj->touchIconImage2Bpp(tiles))
-									break;
+					const float x = GetCursorPosX();
+					const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
 
-								constexpr const size_t SIZE = (GBBASIC_ICON_WIDTH / GBBASIC_TILE_SIZE) * GBBASIC_ICON_HEIGHT * 2;
-								if (tiles->count() != SIZE) {
-									GBBASIC_ASSERT(false && "Impossible.");
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Sram());
 
-									break;
-								}
+					SameLine();
 
-								std::string txt;
-								txt += "const unsigned char Icon[256] = { // 32x32 pixels.\n";
-								txt += "  ";
-								for (int i = 0; i < (int)tiles->count(); ++i) {
-									const Byte byte = tiles->get(i);
-									txt += "0x" + Text::toHex(byte, 2, '0', false);
-									if (i < (int)tiles->count() - 1) {
-										txt += ",";
-									}
-									if ((i + 1) % 16 == 0) {
-										txt += "\n";
-										if (i < (int)tiles->count() - 1) {
-											txt += "  ";
+					const char* items[] = {
+						"0KB (None)",
+						"2KB",
+						"8KB",
+						"32KB",
+						"128KB"
+					};
+					int pref = 0;
+					if (!Text::fromString(prj->sramType(), pref))
+						pref = 3;
+					const float u = GetCursorPosX() - x;
+					SetNextItemWidth(w * 0.5f - u);
+					if (Combo("", &pref, items, GBBASIC_COUNTOF(items)))
+						prj->sramType(Text::toString(pref));
+				}
+				PopID();
+
+				PushID("#HasRtc");
+				{
+					SameLine();
+					TextUnformatted(_theme->windowProjectProperty_Rtc());
+
+					SameLine();
+
+					bool pref = prj->hasRtc();
+					if (Checkbox(_theme->generic_Enabled(), &pref))
+						prj->hasRtc(pref);
+				}
+				PopID();
+
+				PushID("#Desc");
+				{
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Desc());
+
+					SameLine();
+
+					SetNextItemWidth(GetContentRegionAvail().x);
+					std::string &txt = prj->description();
+					char buf[WIDGETS_TEXT_BUFFER_SIZE];
+					const size_t n = Math::min(sizeof(buf) - 1, txt.length());
+					memcpy(buf, txt.c_str(), n);
+					buf[n] = '\0';
+					if (InputText("", (char*)buf, sizeof(buf), ImGuiInputTextFlags_None)) {
+						txt = buf;
+					}
+				}
+				PopID();
+
+				PushID("#Athr");
+				{
+					const float x = GetCursorPosX();
+					const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
+
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Author());
+
+					SameLine();
+
+					const float u = GetCursorPosX() - x;
+					SetNextItemWidth(w * 0.5f - u);
+					std::string &txt = prj->author();
+					char buf[WIDGETS_TEXT_BUFFER_SIZE];
+					const size_t n = Math::min(sizeof(buf) - 1, txt.length());
+					memcpy(buf, txt.c_str(), n);
+					buf[n] = '\0';
+					if (InputText("", (char*)buf, sizeof(buf), ImGuiInputTextFlags_None)) {
+						txt = buf;
+					}
+				}
+				PopID();
+
+				PushID("#Gnr");
+				{
+					SameLine();
+					TextUnformatted(_theme->windowProjectProperty_Genre());
+
+					SameLine();
+
+					SetNextItemWidth(GetContentRegionAvail().x);
+					std::string &txt = prj->genre();
+					char buf[WIDGETS_TEXT_BUFFER_SIZE];
+					const size_t n = Math::min(sizeof(buf) - 1, txt.length());
+					memcpy(buf, txt.c_str(), n);
+					buf[n] = '\0';
+					if (InputText("", (char*)buf, sizeof(buf), ImGuiInputTextFlags_None)) {
+						txt = buf;
+					}
+				}
+				PopID();
+
+				PushID("#Ver");
+				{
+					const float x = GetCursorPosX();
+					const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
+
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Version());
+
+					SameLine();
+
+					const float u = GetCursorPosX() - x;
+					SetNextItemWidth(w * 0.5f - u);
+					std::string &txt = prj->version();
+					char buf[WIDGETS_TEXT_BUFFER_SIZE];
+					const size_t n = Math::min(sizeof(buf) - 1, txt.length());
+					memcpy(buf, txt.c_str(), n);
+					buf[n] = '\0';
+					if (InputText("", (char*)buf, sizeof(buf), ImGuiInputTextFlags_None)) {
+						txt = buf;
+					}
+				}
+				PopID();
+
+				float firstColumnEndX = 0.0f;
+				PushID("#Url");
+				{
+					SameLine();
+					firstColumnEndX = GetCursorPosX() - style.ItemSpacing.x;
+					TextUnformatted(_theme->windowProjectProperty_Url());
+
+					SameLine();
+
+					SetNextItemWidth(GetContentRegionAvail().x);
+					std::string &txt = prj->url();
+					char buf[WIDGETS_TEXT_BUFFER_SIZE];
+					const size_t n = Math::min(sizeof(buf) - 1, txt.length());
+					memcpy(buf, txt.c_str(), n);
+					buf[n] = '\0';
+					if (InputText("", (char*)buf, sizeof(buf), ImGuiInputTextFlags_None)) {
+						txt = buf;
+					}
+				}
+				PopID();
+
+				float secondColumnEndX = 0.0f;
+				SameLine();
+				secondColumnEndX = GetCursorPosX() - style.ItemSpacing.x;
+				NewLine();
+
+				PushID("#Icon");
+				{
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Icon());
+
+					SameLine();
+
+					{
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
+
+						PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1);
+						BeginChild("@Col", ImVec2(36.0f, 36.0f), true, ImGuiWindowFlags_NoScrollbar);
+						{
+							void* iconTex = nullptr;
+							if (prj->contentType() == Project::ContentTypes::BASIC) {
+								if (prj->touchIconTexture())
+									iconTex = prj->touchIconTexture()->pointer(_renderer);
+								else if (prj->isExample())
+									iconTex = _theme->iconExample()->pointer(_renderer);
+								else if (prj->isPlain())
+									iconTex = _theme->iconPlainCode()->pointer(_renderer);
+								else
+									iconTex = _theme->iconProjectOmitted()->pointer(_renderer);
+							} else {
+								iconTex = _theme->iconRom()->pointer(_renderer);
+							}
+							SetCursorPos(GetCursorPos() + ImVec2(2, 2));
+							Image(iconTex, ImVec2(32.0f, 32.0f));
+						}
+						EndChild();
+						PopStyleVar();
+					}
+					if (IsItemHovered() && !ws->bubble()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						SetTooltip(_theme->tooltipProperty_ProjectIconDetails());
+					}
+
+					SameLine();
+					{
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
+
+						PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1);
+						BeginChild("@2Bpp", ImVec2(36.0f, 36.0f), true, ImGuiWindowFlags_NoScrollbar);
+						{
+							void* iconTex = nullptr;
+							if (prj->touchIconTexture2Bpp()) {
+								iconTex = prj->touchIconTexture2Bpp()->pointer(_renderer);
+								SetCursorPos(GetCursorPos() + ImVec2(2, 2));
+								Image(iconTex, ImVec2(32.0f, 32.0f));
+								if (IsItemHovered() && IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+									do {
+										Bytes::Ptr tiles(Bytes::create());
+										if (!prj->touchIconImage2Bpp(tiles))
+											break;
+
+										constexpr const size_t SIZE = (GBBASIC_ICON_WIDTH / GBBASIC_TILE_SIZE) * GBBASIC_ICON_HEIGHT * 2;
+										if (tiles->count() != SIZE) {
+											GBBASIC_ASSERT(false && "Impossible.");
+
+											break;
 										}
-									}
+
+										std::string txt;
+										txt += "const unsigned char Icon[256] = { // 32x32 pixels.\n";
+										txt += "  ";
+										for (int i = 0; i < (int)tiles->count(); ++i) {
+											const Byte byte = tiles->get(i);
+											txt += "0x" + Text::toHex(byte, 2, '0', false);
+											if (i < (int)tiles->count() - 1) {
+												txt += ",";
+											}
+											if ((i + 1) % 16 == 0) {
+												txt += "\n";
+												if (i < (int)tiles->count() - 1) {
+													txt += "  ";
+												}
+											}
+										}
+										txt += "};\n";
+
+										txt += "const unsigned char IconIndices[16] = { // 4x4 tiles.\n";
+										txt += "  0,  2,  4,  6,\n";
+										txt += "  1,  3,  5,  7,\n";
+										txt += "  8, 10, 12, 14,\n";
+										txt += "  9, 11, 13, 15\n";
+										txt += "};\n";
+
+										Platform::setClipboardText(txt.c_str());
+
+										ws->bubble(_theme->dialogPrompt_CopiedToClipboard(), nullptr);
+									} while (false);
 								}
-								txt += "};\n";
-
-								txt += "const unsigned char IconIndices[16] = { // 4x4 tiles.\n";
-								txt += "  0,  2,  4,  6,\n";
-								txt += "  1,  3,  5,  7,\n";
-								txt += "  8, 10, 12, 14,\n";
-								txt += "  9, 11, 13, 15\n";
-								txt += "};\n";
-
-								Platform::setClipboardText(txt.c_str());
-
-								ws->bubble(_theme->dialogPrompt_CopiedToClipboard(), nullptr);
-							} while (false);
+							}
 						}
+						EndChild();
+						PopStyleVar();
 					}
+					if (IsItemHovered() && !ws->bubble()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						SetTooltip(_theme->tooltipProperty_ProjectIcon2BppDetails());
+					}
+
+					SameLine();
+					const float btnW = 64.0f;
+					const float posX = GetContentRegionAvail().x < 330 ? secondColumnEndX - btnW : firstColumnEndX - btnW;
+					const float posY = GetCursorPosY();
+					SetCursorPosX(posX);
+					if (Button(_theme->generic_Replace(), ImVec2(btnW, 0))) {
+						pfd::open_file open(
+							_theme->generic_Open(),
+							"",
+							GBBASIC_IMAGE_FILE_FILTER,
+							pfd::opt::none
+						);
+						do {
+							if (open.result().empty() || open.result().front().empty())
+								break;
+
+							std::string path = open.result().front();
+							Path::uniform(path);
+							if (!Path::fileExists(path.c_str()))
+								break;
+
+							File::Ptr file(File::create());
+							if (!file->open(path.c_str(), Stream::READ))
+								break;
+
+							Bytes::Ptr bytes(Bytes::create());
+							if (!file->readBytes(bytes.get())) {
+								file->close(); FileMonitor::unuse(path);
+
+								break;
+							}
+
+							file->close(); FileMonitor::unuse(path);
+
+							Image::Ptr img(Image::create());
+							if (!img->fromBytes(bytes.get()))
+								break;
+							if (img->width() != GBBASIC_ICON_WIDTH || img->height() != GBBASIC_ICON_HEIGHT) {
+								int w = 0;
+								int h = 0;
+								if ((float)img->width() / img->height() < (float)GBBASIC_ICON_WIDTH / GBBASIC_ICON_HEIGHT) {
+									w = GBBASIC_ICON_WIDTH;
+									h = (int)(GBBASIC_ICON_WIDTH * ((float)img->height() / img->width()));
+								} else {
+									w = (int)(GBBASIC_ICON_HEIGHT * ((float)img->width() / img->height()));
+									h = GBBASIC_ICON_HEIGHT;
+								}
+								if (!img->resize(w, h, true)) {
+									break;
+								}
+
+								Image::Ptr tmp(Image::create());
+								if (!tmp->fromBlank(GBBASIC_ICON_WIDTH, GBBASIC_ICON_HEIGHT, 0)) {
+									break;
+								}
+								const int x = (w - GBBASIC_ICON_WIDTH) / 2;
+								const int y = (h - GBBASIC_ICON_HEIGHT) / 2;
+								if (!img->blit(tmp.get(), 0, 0, GBBASIC_ICON_WIDTH, GBBASIC_ICON_HEIGHT, x, y)) {
+									break;
+								}
+								std::swap(img, tmp);
+								img->toBytes(bytes.get(), "png");
+							}
+
+							std::string txt;
+							if (!Base64::fromBytes(txt, bytes.get()))
+								break;
+
+							prj->iconCode(txt);
+						} while (false);
+					}
+					if (IsItemHovered()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						SetTooltip(_theme->tooltipProperty_ReplaceIcon());
+					}
+					const float posY_ = GetCursorPosY();
+					SetCursorPosX(posX - 32.0f - 5);
+					SetCursorPosY(posY);
+					if (Button(_theme->dialogPrompt_Rst(), ImVec2(0, 0))) {
+						prj->iconCode("");
+					}
+					if (IsItemHovered()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						SetTooltip(_theme->tooltipProperty_ResetIcon());
+					}
+					SetCursorPosY(posY_);
 				}
-				EndChild();
-				PopStyleVar();
+				PopID();
+
+				EndTabItem();
 			}
-			if (IsItemHovered() && !ws->bubble()) {
-				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+			if (BeginTabItem(_theme->tabProjectProperty_Compiling(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
+				TextUnformatted(_theme->windowProjectProperty_Main_Parser());
 
-				SetTooltip(_theme->tooltipProperty_ProjectIcon2BppDetails());
+				PushID("#CsIns");
+				{
+					bool pref = prj->caseInsensitive();
+					if (Checkbox(_theme->windowProjectProperty_CaseInsensitive(), &pref))
+						prj->caseInsensitive(pref);
+				}
+				PopID();
+
+				EndTabItem();
+			}
+			if (BeginTabItem(_theme->tabProjectProperty_Advanced(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
+				TextUnformatted(_theme->windowProjectProperty_Advanced_SuperFeatures());
+
+				PushID("#SgbBdr");
+				{
+					TextUnformatted("// TODO");
+				}
+				PopID();
+
+				EndTabItem();
 			}
 
-			SameLine();
-			const float btnW = 64.0f;
-			const float posX = GetContentRegionAvail().x < 330 ? secondColumnEndX - btnW : firstColumnEndX - btnW;
-			const float posY = GetCursorPosY();
-			SetCursorPosX(posX);
-			if (Button(_theme->generic_Replace(), ImVec2(btnW, 0))) {
-				pfd::open_file open(
-					_theme->generic_Open(),
-					"",
-					GBBASIC_IMAGE_FILE_FILTER,
-					pfd::opt::none
-				);
-				do {
-					if (open.result().empty() || open.result().front().empty())
-						break;
-
-					std::string path = open.result().front();
-					Path::uniform(path);
-					if (!Path::fileExists(path.c_str()))
-						break;
-
-					File::Ptr file(File::create());
-					if (!file->open(path.c_str(), Stream::READ))
-						break;
-
-					Bytes::Ptr bytes(Bytes::create());
-					if (!file->readBytes(bytes.get())) {
-						file->close(); FileMonitor::unuse(path);
-
-						break;
-					}
-
-					file->close(); FileMonitor::unuse(path);
-
-					Image::Ptr img(Image::create());
-					if (!img->fromBytes(bytes.get()))
-						break;
-					if (img->width() != GBBASIC_ICON_WIDTH || img->height() != GBBASIC_ICON_HEIGHT) {
-						int w = 0;
-						int h = 0;
-						if ((float)img->width() / img->height() < (float)GBBASIC_ICON_WIDTH / GBBASIC_ICON_HEIGHT) {
-							w = GBBASIC_ICON_WIDTH;
-							h = (int)(GBBASIC_ICON_WIDTH * ((float)img->height() / img->width()));
-						} else {
-							w = (int)(GBBASIC_ICON_HEIGHT * ((float)img->width() / img->height()));
-							h = GBBASIC_ICON_HEIGHT;
-						}
-						if (!img->resize(w, h, true)) {
-							break;
-						}
-
-						Image::Ptr tmp(Image::create());
-						if (!tmp->fromBlank(GBBASIC_ICON_WIDTH, GBBASIC_ICON_HEIGHT, 0)) {
-							break;
-						}
-						const int x = (w - GBBASIC_ICON_WIDTH) / 2;
-						const int y = (h - GBBASIC_ICON_HEIGHT) / 2;
-						if (!img->blit(tmp.get(), 0, 0, GBBASIC_ICON_WIDTH, GBBASIC_ICON_HEIGHT, x, y)) {
-							break;
-						}
-						std::swap(img, tmp);
-						img->toBytes(bytes.get(), "png");
-					}
-
-					std::string txt;
-					if (!Base64::fromBytes(txt, bytes.get()))
-						break;
-
-					prj->iconCode(txt);
-				} while (false);
-			}
-			if (IsItemHovered()) {
-				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
-
-				SetTooltip(_theme->tooltipProperty_ReplaceIcon());
-			}
-			const float posY_ = GetCursorPosY();
-			SetCursorPosX(posX - 32.0f - 5);
-			SetCursorPosY(posY);
-			if (Button(_theme->dialogPrompt_Rst(), ImVec2(0, 0))) {
-				prj->iconCode("");
-			}
-			if (IsItemHovered()) {
-				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
-
-				SetTooltip(_theme->tooltipProperty_ResetIcon());
-			}
-			SetCursorPosY(posY_);
+			EndTabBar();
 		}
-		PopID();
 
 		const char* confirm = _confirmText.c_str();
 		const char* apply = _applyText.empty() ? "Apply" : _applyText.c_str();

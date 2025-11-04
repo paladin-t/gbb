@@ -496,6 +496,10 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tabPreferences_Main)
 	GBBASIC_PROPERTY_READONLY(std::string, tabPreferences_Misc)
 
+	GBBASIC_PROPERTY_READONLY(std::string, tabProjectProperty_Advanced)
+	GBBASIC_PROPERTY_READONLY(std::string, tabProjectProperty_Compiling)
+	GBBASIC_PROPERTY_READONLY(std::string, tabProjectProperty_Project)
+
 	GBBASIC_PROPERTY_READONLY(std::string, tabMusic_Piano)
 	GBBASIC_PROPERTY_READONLY(std::string, tabMusic_Tracker)
 	GBBASIC_PROPERTY_READONLY(std::string, tabMusic_Waves)
@@ -508,21 +512,6 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowBuildingSettings_CartridgeTypeOfOutputRom)
 	GBBASIC_PROPERTY_READONLY(std::string, windowBuildingSettings_Rtc)
 	GBBASIC_PROPERTY_READONLY(std::string, windowBuildingSettings_Sram)
-
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_Title)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_Path)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_Cart)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_Sram)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_Rtc)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_Parser)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_CaseInsensitive)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_Desc)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_Author)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_Genre)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_Version)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_Url)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProperty_Icon)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences)
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Main_2Spaces)
@@ -579,6 +568,23 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Input_Onscreen_Scale)
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Input_Onscreen_SwapAB)
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Input_WaitingForInput)
+
+
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Title)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Path)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Cart)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Sram)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Rtc)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Desc)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Author)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Genre)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Version)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Url)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Icon)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Main_Parser)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_CaseInsensitive)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_SuperFeatures)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowPalette)
 

@@ -3769,7 +3769,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 			new ImGui::ProjectPropertyPopupBox(
 				rnd,
 				theme(),
-				theme()->windowProperty(),
+				theme()->windowProjectProperty(),
 				prj,
 				confirm, cancel, apply,
 				theme()->generic_Ok().c_str(), theme()->generic_Cancel().c_str(), theme()->generic_Apply().c_str()
