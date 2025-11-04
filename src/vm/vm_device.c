@@ -10,6 +10,7 @@
 #include "utils/font.h"
 #include "utils/graphics.h"
 #include "utils/rtc.h"
+#include "utils/sgb.h"
 
 #include "vm_actor.h"
 #include "vm_audio.h"
@@ -53,6 +54,17 @@ const UINT16 SpritePalettes[32] = { // Can be overwritten by compiler.
     0x0055, 0xE51E, 0x0E0E, 0x99F7
 };
 
+// Can be overwritten by compiler.
+const UINT8 SgbPaletteBank = 0;
+const UINT16 SgbPaletteAddress = 0;
+const UINT16 SgbPaletteSize = 0;
+const UINT8 SgbTileBank = 0;
+const UINT16 SgbTileAddress = 0;
+const UINT16 SgbTileSize = 0;
+const UINT8 SgbMapBank = 0;
+const UINT16 SgbMapAddress = 0;
+const UINT16 SgbMapSize = 0;
+
 UINT8 device_type;
 
 UINT8 device_object_sprite_base;
@@ -82,6 +94,16 @@ void device_init(void) BANKED {
             const UINT8 e = MOD4(i);
             set_bkg_palette_entry(p, e, BackgroundPalettes[i]);
             set_sprite_palette_entry(p, e, SpritePalettes[i]);
+        }
+    }
+
+    if (IS_SGB) {
+        if (SgbPaletteBank != 0 /* && SgbTileBank != 0 && SgbMapBank != 0 */) {
+            sgb_set_border(
+                SgbPaletteBank, (UINT8 *)SgbPaletteAddress, SgbPaletteSize,
+                SgbTileBank, (UINT8 *)SgbTileAddress, SgbTileSize,
+                SgbMapBank, (UINT8 *)SgbMapAddress, SgbMapSize
+            );
         }
     }
 
