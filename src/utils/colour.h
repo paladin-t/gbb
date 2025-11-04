@@ -79,7 +79,13 @@ struct Colour {
 
 	void fromRGB555(UInt16 rgb, Byte a = 255);
 	void fromRGB555(Byte r, Byte g, Byte b, Byte a = 255);
+	/**
+	 * @param[in] rgba 0xAABBGGRR as little-endian.
+	 */
 	void fromRGBA(UInt32 rgba);
+	/**
+	 * @param[in] rgba 0xBBGGRRAA as little-endian.
+	 */
 	void fromARGB(UInt32 argb);
 	void fromHSV(float h, float s, float v, Byte a = 255);
 
@@ -92,8 +98,14 @@ struct Colour {
 	static Colour byRGB555(UInt16 rgb, Byte a = 255);
 	static Colour byRGB555(Byte r, Byte g, Byte b, Byte a = 255);
 
+	/**
+	 * @param[in] rgba 0xAABBGGRR as little-endian.
+	 */
 	static Colour byRGBA8888(UInt32 rgba);
 	static Colour byRGBA8888(Byte r, Byte g, Byte b, Byte a);
+	/**
+	 * @param[in] rgba 0xBBGGRRAA as little-endian.
+	 */
 	static Colour byARGB8888(UInt32 argb);
 	static Colour byARGB8888(Byte a, Byte r, Byte g, Byte b);
 	static Colour byHSV(float h, float s, float v, Byte a = 255);

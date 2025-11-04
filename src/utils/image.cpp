@@ -16,6 +16,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../../lib/stb/stb_image_write.h"
 #include <SDL.h>
+#include <set>
 
 /*
 ** {===========================================================================
@@ -959,6 +960,432 @@ public:
 		}
 
 		return true;
+	}
+
+	virtual bool serializeSgbBorder(class Bytes* palette_, class Bytes* tiles_, class Bytes* map_, ErrorPoints* errorPoints) const override {
+		// See: https://github.com/gbdk-2020/gbdk-2020/tree/develop/gbdk-support/png2asset.
+
+		// Macros and constants.
+		#define ABGR8_R                    3
+		#define ABGR8_G                    2
+		#define ABGR8_B                    1
+		#define ABGR8_ALPHA                0
+		#define RGBA32(R, G, B, A)         (((R) << 24) | ((G) << 16) | ((B) << 8) | (A))
+		#define RGB24(R, G, B)             (((R) << 16) | ((G) << 8) | (B))
+		#define RGBA32_TRANSPARENT_WHITE   (RGBA32(255, 255, 255, 0))
+		#define RGB8(R, G, B)              (((UInt16)((((B) >> 3) & 0x1f) << 10)) | ((UInt16)((((G) >> 3) & 0x1f) << 5)) | (((R) >> 3) & 0x1f))
+		#define BIT(VALUE, INDEX)          (1 & ((VALUE) >> (INDEX)))
+
+		// Type declarations.
+		struct IntColorComparer {
+			bool operator() (UInt32 c0, UInt32 c1) const {
+				const UInt8* c0Ptr = (UInt8*)&c0;
+				const UInt8* c1Ptr = (UInt8*)&c1;
+
+				// Compare alpha first, transparent color is considered smaller.
+				if (c0Ptr[ABGR8_ALPHA] != c1Ptr[ABGR8_ALPHA]) {
+					return c0Ptr[ABGR8_ALPHA] < c1Ptr[ABGR8_ALPHA];
+				} else {
+					// If a color is fully transparent then consider it identical to any other fully
+					// transparent color and do not insert.
+					// If this test is reached then alpha channels are identical for the two entries
+					// and entry c0 is the one being tested for insertion.
+					if (c0Ptr[ABGR8_ALPHA] == 0) return false;
+
+					// Do a compare with luminance in upper bits, and original rgb24 in lower bits.
+					// This prefers luminance, but considers RGB values for equal-luminance cases to
+					// make sure the compare functor satisifed the strictly weak ordering requirement
+					const UInt64 lum0 = (UInt32)(c0Ptr[ABGR8_R] * 299 + c0Ptr[ABGR8_G] * 587 + c0Ptr[ABGR8_B] * 114);
+					const UInt64 lum1 = (UInt32)(c1Ptr[ABGR8_R] * 299 + c1Ptr[ABGR8_G] * 587 + c1Ptr[ABGR8_B] * 114);
+					const UInt64 rgb0 = RGB24(c0Ptr[ABGR8_R], c0Ptr[ABGR8_G], c0Ptr[ABGR8_B]);
+					const UInt64 rgb1 = RGB24(c1Ptr[ABGR8_R], c1Ptr[ABGR8_G], c1Ptr[ABGR8_B]);
+					const UInt64 all0 = (lum0 << 24) | rgb0;
+					const UInt64 all1 = (lum1 << 24) | rgb1;
+
+					return all0 > all1;
+				}
+			}
+		};
+		// This set will keep colors in the palette ordered based on their grayscale values to ensure they look good on DMG.
+		// This assumes the palette used in DMG will be 00 01 10 11.
+		typedef std::set<UInt32, IntColorComparer> PaletteSet;
+		typedef std::vector<PaletteSet> Palettes;
+
+		struct Tile {
+			typedef std::vector<Tile> Array;
+
+			typedef std::vector<UInt8> UInt8Buffer;
+
+			Bytes::Ptr data = Bytes::Ptr(Bytes::create());
+			UInt8 palette = 0;
+
+			Tile() {
+			}
+			Tile(int n) {
+				data->resize(n);
+			}
+
+			bool operator == (const Tile &other) const {
+				if (palette != other.palette)
+					return false;
+
+				if (data->count() != other.data->count())
+					return false;
+
+				for (int i = 0; i < (int)data->count(); ++i) {
+					const Byte b0 = data->get(i);
+					const Byte b1 = other.data->get(i);
+					if (b0 != b1)
+						return false;
+				}
+
+				return true;
+			}
+
+			Tile hFlip(void) const {
+				Tile ret;
+				for (int j = (int)data->count() - 8; j >= 0; j -= 8) {
+					for (int i = 0; i < 8; ++i) {
+						ret.data->writeByte(data->get(j + i));
+					}
+				}
+				ret.palette = palette;
+
+				return ret;
+			}
+			Tile vFlip(void) const {
+				Tile ret;
+				for (int j = 0; j < (int)data->count(); j += 8) {
+					for (int i = 7; i >= 0; --i) {
+						ret.data->writeByte(data->get(j + i));
+					}
+				}
+				ret.palette = palette;
+
+				return ret;
+			}
+
+			UInt8Buffer getPackedData(int tile_w, int tile_h, int bpp) const {
+				UInt8Buffer ret((tile_w / 8) * tile_h * bpp, 0);
+				for (int j = 0; j < tile_h; ++j) {
+					for (int i = 0; i < 8; ++i) {
+						const UInt8 col = data->get(8 * j + i);
+						ret[j * 2] |= BIT(col, 0) << (7 - i);
+						ret[j * 2 + 1] |= BIT(col, 1) << (7 - i);
+						ret[(tile_h + j) * 2] |= BIT(col, 2) << (7 - i);
+						ret[(tile_h + j) * 2 + 1] |= BIT(col, 3) << (7 - i);
+					}
+				}
+
+				return ret;
+			}
+		};
+		typedef std::vector<UInt8> MapAndAttributes;
+
+		// Prepare.
+		if (paletted())
+			return false;
+
+		if (!palette_ && !tiles_ && !map_ && !errorPoints)
+			return true;
+
+		if (palette_)
+			palette_->clear();
+		if (tiles_)
+			tiles_->clear();
+		if (map_)
+			map_->clear();
+		if (errorPoints)
+			errorPoints->clear();
+
+		// Functions.
+		auto buildPalettes = [errorPoints] (const Image* img, int tw, int th, Palettes &palettes, int colorsPerPal) -> int* {
+			auto getPaletteColors = [] (const Image* img, int x, int y, int w, int h) -> PaletteSet {
+				PaletteSet ret;
+
+				// For SGB mode, every 16 color palette must have a transparent color as the first entry.
+				//
+				// For most SGB borders the Game Boy screen region is transparent and those
+				// tiles will all be uniform and therefore using only the first palette where
+				// they already have a transparent entry. Which means any additional SGB palettes
+				// will lack the needed transparent entry at their start.
+				//
+				// The solution is to automatically insert a transparent color to every palette
+				// created for an SGB tile. If another transparent entry is present then they
+				// will get automatically merged (regardless of RGB value *fully* transparent
+				// colors are now considered identical. see the CmpIntColor functor for details).
+				//
+				// The use of RGB(255, 255, 255) (0xffffff) for the color is due to colors being sorted
+				// light to dark, and historical use of transparent white in existing examples.
+				ret.insert((UInt32)RGBA32_TRANSPARENT_WHITE);
+
+				// Now scan the tile for colors.
+				for (int j = y; j < y + h; ++j) {
+					for (int i = x; i < x + w; ++i) {
+						Colour col;
+						img->get(i, j, col);
+						const UInt32 colVal = RGBA32(col.r, col.g, col.b, col.a);
+						ret.insert(colVal);
+					}
+				}
+
+				for (PaletteSet::iterator it = ret.begin(); it != ret.end(); ++it) {
+					if (it != ret.begin() && ((0xff & *it) != 0xff)) // `ret.begin()` should be the only one transparent.
+						fprintf(stderr, "Warning: found more than one transparent color in tile at x:%d, y:%d, w:%d, h:%d.\n", x, y, w, h);
+				}
+
+				return ret;
+			};
+			auto findOrCreateSubPalette = [] (const PaletteSet &pal, Palettes &palettes, int colorsPerPal) -> int {
+				// Return -1 if colors can't even fit in sub-palette hardware limit.
+				if (pal.size() > colorsPerPal)
+					return -1;
+
+				// Check if it matches any palettes or create a new one.
+				int i;
+				for (i = 0; i < (int)palettes.size(); ++i) {
+					// Try to merge this palette with any of the palettes (checking if they are
+					// equal is not enough since the palettes can have less than 4 colors).
+					PaletteSet merged(palettes[i]);
+					merged.insert(pal.begin(), pal.end());
+					if (merged.size() <= colorsPerPal) {
+						if (palettes[i].size() <= colorsPerPal)
+							palettes[i] = merged; // Increase colors with this palette (it has less than 4 colors).
+
+						return i; // Found palette.
+					}
+				}
+
+				if (i == (int)palettes.size()) {
+					// Palette not found, add a new one.
+					palettes.push_back(pal);
+				}
+
+				return i;
+			};
+
+			int* palettesPerTile = new int[(img->width() / tw) * (img->height() / th)];
+			const int sx = 1;
+			const int sy = 1;
+			for (int y = 0; y < img->height(); y += th * sy) {
+				for (int x = 0; x < img->width(); x += tw * sx) {
+					// Get palette colors on [x, y, tw, th].
+					const PaletteSet pal = getPaletteColors(img, (x / sx) * sx, (y / sy) * sy, sx * tw, sy * th);
+
+					int subPalIndex = findOrCreateSubPalette(pal, palettes, colorsPerPal);
+					if (subPalIndex < 0) {
+						fprintf(stderr, "Error: more than %d colors found in tile at x:%d, y:%d, w:%d, h:%d.\n", colorsPerPal, (x / sx) * sx, (y / sy) * sy, sx * tw, sy * th);
+
+						if (errorPoints)
+							errorPoints->push_back(Math::Recti::byXYWH((x / sx) * sx, (y / sy) * sy, sx * tw, sy * th));
+
+						subPalIndex = 0; // Force to sub-palette 0, to allow getting a partially-incorrect output image.
+					}
+
+					const int dx = ((x / tw) / sx) * sx;
+					const int dy = ((y / th) / sy) * sy;
+					const int w = (img->width() / tw);
+					for (int yy = 0; yy < sy; ++yy) {
+						for (int xx = 0; xx < sx; ++xx) {
+							palettesPerTile[(dy + yy) * w + dx + xx] = subPalIndex;
+						}
+					}
+				}
+			}
+
+			return palettesPerTile;
+		};
+
+		auto sliceTile = [] (const Image* img, int x, int y, int tw, int th, Tile &tile, int colorsPerPal) -> bool {
+			// Set the palette to 0 when palettes are not stored in tiles to allow tiles to be equal even when their palettes are different.
+			tile.palette = 0;
+
+			bool allZero = true;
+			for (int j = 0; j < th; ++j) {
+				for (int i = 0; i < tw; ++i) {
+					int idx = 0;
+					img->get(x + i, y + j, idx);
+					idx %= colorsPerPal;
+					tile.data->set((j * tw) + i, (UInt8)idx);
+					allZero = allZero && (idx == 0);
+				}
+			}
+
+			return !allZero;
+		};
+		auto findTile = [] (const Tile::Array &tileset, const Tile &t, int &idx, UInt8 &props, UInt8 defaultProps) -> bool {
+			Tile::Array::const_iterator it = std::find(tileset.begin(), tileset.end(), t);
+			if (it != tileset.end()) {
+				idx = (int)(it - tileset.begin());
+				props = defaultProps;
+
+				return true;
+			}
+
+			Tile tile = t.vFlip();
+			it = std::find(tileset.begin(), tileset.end(), tile);
+			if (it != tileset.end()) {
+				idx = (int)(it - tileset.begin());
+				props = defaultProps | (1 << 5);
+
+				return true;
+			}
+
+			tile = tile.hFlip();
+			it = std::find(tileset.begin(), tileset.end(), tile);
+			if (it != tileset.end()) {
+				idx = (int)(it - tileset.begin());
+				props = defaultProps | (1 << 5) | (1 << 6);
+
+				return true;
+			}
+
+			tile = tile.vFlip();
+			it = std::find(tileset.begin(), tileset.end(), tile);
+			if (it != tileset.end()) {
+				idx = (int)(it - tileset.begin());
+				props = defaultProps | (1 << 6);
+
+				return true;
+			}
+
+			return false;
+		};
+
+		auto serializePaletteBytes = [] (const Indexed::Ptr &palette, Bytes* bytes, int totalColorCount, int colorsPerPal) -> void {
+			const int paletteStart = 0;
+			const int totalPaletteCount = totalColorCount / colorsPerPal;
+			for (int i = paletteStart; i < totalPaletteCount; ++i) {
+				const Colour* palPtr = palette->pointer(nullptr);
+				for (int c = 0; c < colorsPerPal; ++c, ++palPtr) {
+					const UInt16 rgb8 = RGB8(palPtr->r, palPtr->g, palPtr->b);
+					if (bytes)
+						bytes->writeUInt16(rgb8);
+				}
+			}
+		};
+		auto serializeTileBytes = [] (const Tile::Array &tiles, Bytes* bytes, int tw, int th, int bpp) -> void {
+			const int tilesStart = 0;
+			for (Tile::Array::const_iterator it = tiles.begin() + tilesStart; it != tiles.end(); ++it) {
+				const Tile::UInt8Buffer packedData = (*it).getPackedData(tw, th, bpp);
+				for (Tile::UInt8Buffer::const_iterator it2 = packedData.begin(); it2 != packedData.end(); ++it2) {
+					if (bytes)
+						bytes->writeUInt8(*it2);
+				}
+			}
+		};
+		auto serializeMapData = [] (const MapAndAttributes &map, Bytes* bytes, Image* img) -> void {
+			const int lineSize = (int)map.size() / (img->height() / 8);
+			for (int j = 0; j < img->height() / 8; ++j) {
+				for (int i = 0; i < lineSize; ++i) {
+					if (bytes)
+						bytes->writeUInt8(map[j * lineSize + i]);
+				}
+			}
+		};
+
+		// Variables and constants.
+		Palettes palettes;
+		Tile::Array tiles;
+		MapAndAttributes map;
+
+		const int tw = GBBASIC_TILE_SIZE;
+		const int th = GBBASIC_TILE_SIZE;
+		const int bpp = 4;
+		const int colorsPerPal = 1 << bpp;
+		const int maxPalettes = 4;
+		const UInt8 defaultProps = 0;
+		const UInt8 baseTile = 0;
+
+		// Generate palettes data, create an indexed image from it.
+		const int* palettesPerTile = buildPalettes(this, tw, th, palettes, colorsPerPal);
+		int paletteCount = 0;
+		if (palettes.size() > maxPalettes) {
+			paletteCount = maxPalettes;
+		} else {
+			paletteCount = (int)palettes.size();
+		}
+
+		const int totalColorCount = paletteCount * colorsPerPal;
+		Indexed::Ptr palette(Indexed::create(totalColorCount));
+		for (int i = 0; i < 255; ++i) {
+			const Colour col(0, 0, 0, 0);
+			palette->set(i, &col);
+		}
+		Image::Ptr img(Image::create(Indexed::Ptr(palette)));
+		img->fromBlank(width(), height(), 8);
+
+		for (int p = 0; p < paletteCount; ++p) {
+			Colour* colPtr = palette->pointer(nullptr);
+			colPtr += p * colorsPerPal;
+			// When palette size does not equal to `colorsPerPal` the unused colors are left as black.
+			for (PaletteSet::iterator it = palettes[p].begin(); it != palettes[p].end(); ++it, ++colPtr) {
+				const UInt8* c = (UInt8*)&(*it);
+				*colPtr = Colour::byRGBA8888(c[ABGR8_R], c[ABGR8_G], c[ABGR8_B], c[ABGR8_ALPHA]);
+			}
+		}
+		for (int y = 0; y < height(); ++y) {
+			for (int x = 0; x < width(); ++x) {
+				Colour col;
+				get(x, y, col);
+				const UInt32 color32 = RGBA32(col.r, col.g, col.b, col.a);
+				const UInt8 palette = (UInt8)palettesPerTile[(y / th) * (width() / tw) + (x / tw)];
+				const UInt8 index = (UInt8)std::distance(palettes[palette].begin(), palettes[palette].find(color32));
+				const int idx = (palette << bpp) + index;
+				img->set(x, y, idx);
+			}
+		}
+		delete [] palettesPerTile;
+
+		// Generate map data.
+		const int w = width() / tw;
+		const int h = height() / th;
+		for (int j = 0; j < h; ++j) {
+			for (int i = 0; i < w; ++i) {
+				const int x = i * tw;
+				const int y = j * th;
+
+				Tile tile(tw * th);
+				sliceTile(img.get(), x, y, tw, th, tile, colorsPerPal);
+
+				// If the tile pattern has not been encountered before then save it.
+				int idx = 0;
+				UInt8 props = 0;
+				if (!findTile(tiles, tile, idx, props, defaultProps)) {
+					tiles.push_back(tile);
+					idx = (int)tiles.size() - 1;
+					props = defaultProps;
+				}
+
+				// Creating map tile index and attributes entries is only when processing the the main image.
+				map.push_back((UInt8)idx + baseTile);
+
+				int colIdx = 0;
+				get(x, y, colIdx);
+				const UInt8 palIdx = (UInt8)colIdx >> bpp; // We can pick the palette from the first pixel of this tile.
+				props = props << 1;                        // Mirror flags in SGB are on bit 7.
+				props |= (palIdx + 4) << 2;                // Palettes are in bits 2, 3, 4 and need to go from 4 to 7.
+				map.push_back(props);                      // Also they are stored within the map tiles.
+			}
+		}
+
+		// Serialize to bytes.
+		serializePaletteBytes(palette, palette_, totalColorCount, colorsPerPal);
+		serializeTileBytes(tiles, tiles_, tw, th, bpp);
+		serializeMapData(map, map_, img.get());
+
+		// Finish.
+		return true;
+
+		#undef ABGR8_R
+		#undef ABGR8_G
+		#undef ABGR8_B
+		#undef ABGR8_ALPHA
+		#undef RGBA32
+		#undef RGB24
+		#undef RGBA32_TRANSPARENT_WHITE
+		#undef RGB8
+		#undef BIT
 	}
 
 	virtual bool fromBlank(int width, int height, int paletted) override {

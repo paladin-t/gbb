@@ -9,7 +9,6 @@
 #include "image.h"
 #include "indexed.h"
 #include <SDL.h>
-#include <vector>
 
 /*
 ** {===========================================================================
@@ -91,7 +90,22 @@ public:
 	virtual void* pointer(void) override {
 		return palette();
 	}
-	virtual const Colour* pointer(int* n) override {
+	virtual Colour* pointer(int* n) override {
+		if (n)
+			*n = 0;
+
+		if (_colors && _count) {
+			if (n)
+				*n = _count;
+
+			_dirty = true;
+
+			return _colors;
+		}
+
+		return nullptr;
+	}
+	virtual const Colour* pointer(int* n) const override {
 		if (n)
 			*n = 0;
 

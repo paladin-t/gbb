@@ -12,7 +12,6 @@
 #include "../gbbasic.h"
 #include "image.h"
 #include "texture.h"
-#include <vector>
 
 /*
 ** {===========================================================================

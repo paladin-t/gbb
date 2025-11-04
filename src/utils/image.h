@@ -11,6 +11,7 @@
 
 #include "../gbbasic.h"
 #include "indexed.h"
+#include <vector>
 
 /*
 ** {===========================================================================
@@ -45,6 +46,8 @@ class Image : public Cloneable<Image>, public virtual Object {
 public:
 	typedef std::shared_ptr<Image> Ptr;
 	typedef std::weak_ptr<Image> WeakPtr;
+
+	typedef std::vector<Math::Recti> ErrorPoints;
 
 	typedef std::function<Colour(int, int, Byte)> PaletteResolver;
 
@@ -136,6 +139,13 @@ public:
 	virtual bool serializeTiles(int tw, int th, TileBeginingSerializer serializeBegining /* nullable */, TileEndingSerializer serializeEnding /* nullable */, TileLineSerializer serializeLine /* nullable */) const = 0;
 	virtual bool parseTile(int tw, int th, int tx, int ty, TileParserStepGetter getParserStep /* nullable */, TileParserStepSetter setParserStep /* nullable */, TileCountParser parseCount /* nullable */, TileDataParser parseData /* nullable */) = 0;
 	virtual bool parseTiles(int tw, int th, TileCountParser parseCount /* nullable */, TileDataParser parseData /* nullable */) = 0;
+
+	/**
+	 * @param[out] palette
+	 * @param[out] tiles
+	 * @param[out] map
+	 */
+	virtual bool serializeSgbBorder(class Bytes* palette /* nullable */, class Bytes* tiles /* nullable */, class Bytes* map /* nullable */, ErrorPoints* errorPoints /* nullable */) const = 0;
 
 	virtual bool fromBlank(int width, int height, int paletted) = 0;
 

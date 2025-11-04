@@ -120,9 +120,15 @@ public:
 	 */
 	virtual void* pointer(void) = 0;
 	/**
+	 * @brief Calling this function will make the palette dirty, thus graphics objects need to be refreshed.
+	 *
 	 * @return `const Colour*`.
 	 */
-	virtual const Colour* pointer(int* n /* nullable */) = 0;
+	virtual Colour* pointer(int* n /* nullable */) = 0;
+	/**
+	 * @return `const Colour*`.
+	 */
+	virtual const Colour* pointer(int* n /* nullable */) const = 0;
 
 	virtual bool validate(void) = 0;
 

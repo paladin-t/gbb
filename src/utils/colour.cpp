@@ -175,11 +175,11 @@ UInt16 Colour::toRGB555(void) const {
 }
 
 UInt32 Colour::toRGBA(void) const {
-	return (r << 0) | (g << 8) | (b << 16) | (a << 24);
+	return (r) | (g << 8) | (b << 16) | (a << 24);
 }
 
 UInt32 Colour::toARGB(void) const {
-	return (a << 0) | (r << 8) | (g << 16) | (b << 24);
+	return (a) | (r << 8) | (g << 16) | (b << 24);
 }
 
 void Colour::toHSV(float* h_, float* s_, float* v_, Byte* a_) const {
