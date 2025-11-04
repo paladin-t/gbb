@@ -13089,16 +13089,10 @@ public:
 			}
 
 			// Emit the invoking.
-			bool ok = false;
-			if (generateSpecialized(bytes, context, INSTRUCTIONS, caseSensitiveFunctionName, bank, address, &ok, onError)) { // Specialized for this known function.
-				if (!ok)
-					return;
-			}
-			ok = false;
-			if (generateGeneric(bytes, context, INSTRUCTIONS, bank, address, &ok, onError)) {
-				if (!ok)
-					return;
-			}
+			if (generateSpecialized(bytes, context, INSTRUCTIONS, caseSensitiveFunctionName, bank, address, nullptr, onError)) // Specialized for this known function.
+				return;
+			if (generateGeneric(bytes, context, INSTRUCTIONS, bank, address, nullptr, onError))
+				return;
 		};
 
 		write(bytes, context, generator, false, onError);
@@ -13119,12 +13113,13 @@ private:
 		Bytes::Ptr &bytes, Context::Stack &context,
 		const Asm::Instructions &INSTRUCTIONS,
 		int bank, int address,
-		bool* ret,
+		bool* ret /* nullable */,
 		Error::Handler onError
 	) {
 		bool ok = false;
 
-		*ret = false;
+		if (ret)
+			*ret = false;
 
 		auto generator = [&] (void) -> void {
 			Context &ctx = context.top();
@@ -13174,7 +13169,8 @@ private:
 
 		generator();
 
-		*ret = ok;
+		if (ret)
+			*ret = ok;
 
 		return true;
 	}
@@ -13182,13 +13178,14 @@ private:
 		Bytes::Ptr &bytes, Context::Stack &context,
 		const Asm::Instructions &INSTRUCTIONS,
 		const std::string &caseSensitiveFunctionName, int bank, int address,
-		bool* ret,
+		bool* ret /* nullable */,
 		Error::Handler onError
 	) {
 		bool spaclialized = true;
 		bool ok = false;
 
-		*ret = false;
+		if (ret)
+			*ret = false;
 
 		auto generator = [&] (void) -> void {
 			Context &ctx = context.top();
@@ -13241,7 +13238,8 @@ private:
 
 		generator();
 
-		*ret = ok;
+		if (ret)
+			*ret = ok;
 
 		return spaclialized;
 	}
