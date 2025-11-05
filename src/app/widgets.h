@@ -935,6 +935,8 @@ private:
 	Renderer* _renderer = nullptr; // Foreign.
 	Theme* _theme = nullptr; // Foreign.
 	std::string _title;
+	Texture::Ptr _borderTexture = nullptr;
+	std::string _borderError;
 	Project* _project = nullptr; // Foreign.
 	Project* _projectShadow = nullptr;
 	char _buffer[WIDGETS_TEXT_BUFFER_SIZE]; // Fixed size.

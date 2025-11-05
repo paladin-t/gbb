@@ -486,10 +486,12 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_CannotAddMoreFrame("Cannot add more frame.");
 	dialogPrompt_CannotAddMorePage("Cannot add more page.");
 	dialogPrompt_CannotAddMoreTilesPage("Cannot add more tiles page.");
+	dialogPrompt_CannotDecodeBorderImage("Cannot decode border image");
 	dialogPrompt_CannotExportProject("Cannot export project.");
 	dialogPrompt_CannotFindAnyKernel("Cannot find any kernel.");
 	dialogPrompt_CannotFindValidKernel("Cannot find valid kernel.");
 	dialogPrompt_CannotModifyTheBuiltinAssetPage("Cannot change the builtin asset page.");
+	dialogPrompt_CannotOpenFile("Cannot open file");
 	dialogPrompt_CannotOpenProject("Cannot open project.");
 	dialogPrompt_CannotRemoveProject("Cannot remove project.");
 	dialogPrompt_CannotRemoveTheBuiltinAssetPage("Cannot remove the builtin asset page.");
@@ -561,6 +563,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_InitialOffset("Initial offset");
 	dialogPrompt_InitialVolume("Initial volume");
 	dialogPrompt_Interval("Interval");
+	dialogPrompt_InvalidBorderImageSize256x224pxRequired("Invalid border image size,\n256x224px required");
 	dialogPrompt_InvalidData("Invalid data");
 	dialogPrompt_InvalidDataSeeTheConsoleWindowForDetails("Invalid data; see the console window for details.");
 	dialogPrompt_InvalidFile("Invalid file.");
@@ -785,6 +788,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowProjectProperty_Advanced_SuperFeatures("\"Super\" features:");
 	windowProjectProperty_Advanced_BorderFrame("Border frame");
 	windowProjectProperty_Advanced_BorderFrame_None("None");
+	windowProjectProperty_Advanced_BorderFrame_Default("Default");
 	windowProjectProperty_Advanced_BorderFrame_Custom("Custom");
 
 	windowPalette("Palette");
@@ -1136,11 +1140,13 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipPalette_Note(tooltipPalette_Note() + "* Will be compiled into final ROM\n");
 	tooltipPalette_Note(tooltipPalette_Note() + "* Copy and paste code to change programmingly");
 
-	tooltipProperty_ProjectIcon2BppDetails("32x32px, 2bpp for ROM");
-	tooltipProperty_ProjectIconDetails("32x32px for application");
-	tooltipProperty_ProjectProperty("Project property");
-	tooltipProperty_ReplaceIcon("Replace icon");
-	tooltipProperty_ResetIcon("Reset icon");
+	tooltipProjectProperty_ProjectIcon2BppDetails("32x32px, 2bpp for ROM");
+	tooltipProjectProperty_ProjectIconDetails("32x32px for application");
+	tooltipProjectProperty_ProjectProperty("Project property");
+	tooltipProjectProperty_ReplaceBorder("Replace border");
+	tooltipProjectProperty_ReplaceIcon("Replace icon");
+	tooltipProjectProperty_ResetBorder("Reset border");
+	tooltipProjectProperty_ResetIcon("Reset icon");
 
 	tooltipScene_ActorDetails(" Index: {0}\n   Pos: {1},{2}\nBounds: {3},{4},{5},{6}");
 	tooltipScene_Attributes("Attributes:");
@@ -1353,6 +1359,8 @@ bool Theme::open(class Renderer* rnd) {
 
 	createImage(rnd, RES_ICON_APP, GBBASIC_COUNTOF(RES_ICON_APP), &imageApp());
 
+	textureDefaultBorder(createTexture(rnd, RES_IMAGE_DEFAULT_BORDER, GBBASIC_COUNTOF(RES_IMAGE_DEFAULT_BORDER), nullptr));
+
 	textureWaitingForSoundShape(createTexture(rnd, RES_IMAGE_WAITING_FOR_SOUND_SHAPE, GBBASIC_COUNTOF(RES_IMAGE_WAITING_FOR_SOUND_SHAPE), nullptr));
 
 	textureByte(createTexture(rnd, RES_IMAGE_BYTE, GBBASIC_COUNTOF(RES_IMAGE_BYTE), &imageByte()));
@@ -1516,6 +1524,8 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconRom(), nullptr);
 
 	destroyImage(rnd, &imageApp());
+
+	destroyTexture(rnd, textureDefaultBorder(), nullptr);
 
 	destroyTexture(rnd, textureWaitingForSoundShape(), nullptr);
 

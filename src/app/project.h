@@ -74,7 +74,7 @@ public:
 
 	enum class BorderFrameTypes : unsigned {
 		NONE,
-		BUILTIN,
+		DEFAULT,
 		CUSTOM,
 		COUNT
 	};
@@ -94,13 +94,13 @@ public:
 	GBBASIC_PROPERTY             (std::string,                   cartridgeType                                    ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   sramType                                         ) // Serialized in project.
 	GBBASIC_PROPERTY             (bool,                          hasRtc                                           ) // Serialized in project.
-	GBBASIC_PROPERTY             (bool,                          caseInsensitive                                  ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   description                                      ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   author                                           ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   genre                                            ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   version                                          ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   url                                              ) // Serialized in project.
 	GBBASIC_FIELD_READONLY       (std::string,                   iconCode                                         ) // Serialized in project.
+	GBBASIC_PROPERTY             (bool,                          caseInsensitive                                  ) // Serialized in project.
 	GBBASIC_FIELD_READONLY       (BorderFrameTypes,              borderFrameType                                  ) // Serialized in project.
 	GBBASIC_FIELD_READONLY       (std::string,                   borderFrame                                      ) // Serialized in project.
 	GBBASIC_FIELD                (long long,                     created                                          ) // Serialized in project.

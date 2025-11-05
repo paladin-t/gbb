@@ -285,10 +285,12 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotAddMoreFrame)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotAddMorePage)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotAddMoreTilesPage)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotDecodeBorderImage)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotExportProject)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotFindAnyKernel)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotFindValidKernel)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotModifyTheBuiltinAssetPage)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotOpenFile)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotOpenProject)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotRemoveProject)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotRemoveTheBuiltinAssetPage)
@@ -360,6 +362,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_InitialOffset)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_InitialVolume)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Interval)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_InvalidBorderImageSize256x224pxRequired)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_InvalidData)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_InvalidDataSeeTheConsoleWindowForDetails)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_InvalidFile)
@@ -589,6 +592,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_SuperFeatures)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_BorderFrame)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_BorderFrame_None)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_BorderFrame_Default)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_BorderFrame_Custom)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowPalette)
@@ -868,11 +872,13 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipPalette_Index3)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipPalette_Note)
 
-	GBBASIC_PROPERTY_READONLY(std::string, tooltipProperty_ProjectIcon2BppDetails)
-	GBBASIC_PROPERTY_READONLY(std::string, tooltipProperty_ProjectIconDetails)
-	GBBASIC_PROPERTY_READONLY(std::string, tooltipProperty_ProjectProperty)
-	GBBASIC_PROPERTY_READONLY(std::string, tooltipProperty_ReplaceIcon)
-	GBBASIC_PROPERTY_READONLY(std::string, tooltipProperty_ResetIcon)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_ProjectIcon2BppDetails)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_ProjectIconDetails)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_ProjectProperty)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_ReplaceBorder)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_ReplaceIcon)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_ResetBorder)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_ResetIcon)
 
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_ActorDetails)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_Attributes)
@@ -1085,6 +1091,8 @@ public:
 	GBBASIC_PROPERTY_PTR(class Texture, iconRom)
 
 	GBBASIC_PROPERTY_PTR(class Image, imageApp)
+
+	GBBASIC_PROPERTY_PTR(class Texture, textureDefaultBorder)
 
 	GBBASIC_PROPERTY_PTR(class Texture, textureWaitingForSoundShape)
 
