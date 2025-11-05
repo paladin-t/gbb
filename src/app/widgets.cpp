@@ -1542,7 +1542,7 @@ void RomBuildSettingsPopupBox::update(Workspace*) {
 			SameLine();
 
 			const char* items[] = {
-				"0KB (None)",
+				_theme->windowBuildingSettings_Sram_None().c_str(),
 				"2KB",
 				"8KB",
 				"32KB",
@@ -3587,7 +3587,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					SameLine();
 
 					const char* items[] = {
-						"0KB (None)",
+						_theme->windowProjectProperty_Sram_None().c_str(),
 						"2KB",
 						"8KB",
 						"32KB",
@@ -3924,12 +3924,12 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				EndTabItem();
 			}
 			if (BeginTabItem(_theme->tabProjectProperty_Compiling(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
-				TextUnformatted(_theme->windowProjectProperty_Main_Parser());
+				TextUnformatted(_theme->windowProjectProperty_Compiling_Parser());
 
 				PushID("#CsIns");
 				{
 					bool pref = prj->caseInsensitive();
-					if (Checkbox(_theme->windowProjectProperty_CaseInsensitive(), &pref))
+					if (Checkbox(_theme->windowProjectProperty_Compiling_Parser_CaseInsensitive(), &pref))
 						prj->caseInsensitive(pref);
 				}
 				PopID();
@@ -3941,7 +3941,40 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 				PushID("#SgbBdr");
 				{
-					TextUnformatted("// TODO");
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Advanced_BorderFrame());
+
+					SameLine();
+
+					const char* items[] = {
+						_theme->windowProjectProperty_Advanced_BorderFrame_None().c_str(),
+						"Builtin",
+						_theme->windowProjectProperty_Advanced_BorderFrame_Custom().c_str()
+					};
+					int type = 0;
+					if (prj->borderFrameType() == Project::BorderFrameTypes::NONE) {
+						type = 0;
+					} else if (prj->borderFrameType() == Project::BorderFrameTypes::CUSTOM) {
+						type = GBBASIC_COUNTOF(items) - 1;
+					} else {
+						type = 1;
+						// TODO
+					}
+					SetNextItemWidth(GetContentRegionAvail().x);
+					if (Combo("", &type, items, GBBASIC_COUNTOF(items))) {
+						if (type == 0) {
+							prj->borderFrameType(Project::BorderFrameTypes::NONE);
+						} else if (GBBASIC_COUNTOF(items) - 1) {
+							prj->borderFrameType(Project::BorderFrameTypes::CUSTOM);
+						} else {
+							prj->borderFrameType(Project::BorderFrameTypes::BUILTIN);
+							// TODO
+						}
+					}
+
+					// TODO
+					// _theme->dialogPrompt_Rst()
+					// _theme->generic_Replace()
 				}
 				PopID();
 

@@ -74,6 +74,7 @@ Project::Project(class Window* wnd, Renderer* rnd, class Workspace* ws) {
 	hasRtc(false);
 	caseInsensitive(true);
 	version("1.0.0");
+	borderFrameType(BorderFrameTypes::NONE);
 	created(-1);
 	modified(-1);
 	order(PROJECT_DEFAULT_ORDER);
@@ -152,6 +153,8 @@ Project &Project::operator = (const Project &other) {
 	version(other.version());
 	url(other.url());
 	iconCode(other.iconCode());
+	borderFrameType(other.borderFrameType());
+	borderFrame(other.borderFrame());
 	created(other.created());
 	modified(other.modified());
 	order(other.order());
@@ -538,6 +541,20 @@ Image::Ptr Project::touchIconImage2Bpp(Bytes::Ptr tiles) {
 	}
 
 	return paletted;
+}
+
+void Project::borderFrameType(BorderFrameTypes y) {
+	if (_borderFrameType == y)
+		return;
+
+	_borderFrameType = y;
+}
+
+void Project::borderFrame(const std::string &val) {
+	if (_borderFrame == val)
+		return;
+
+	_borderFrame = val;
 }
 
 void Project::created(const long long &val) {
@@ -2730,6 +2747,21 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 		iconCode(txt);
 	} while (false);
 
+	borderFrameType(BorderFrameTypes::NONE);
+	unsigned utmp = 0;
+	if (Jpath::get(doc, utmp, "border_frame_type")) {
+		utmp = Math::clamp(utmp, (unsigned)BorderFrameTypes::NONE, (unsigned)BorderFrameTypes::COUNT - 1);
+		borderFrameType((BorderFrameTypes)utmp);
+	} else {
+		borderFrameType(BorderFrameTypes::NONE);
+	}
+
+	borderFrame("");
+	if (!Jpath::get(doc, txt, "border_frame")) {
+		txt.clear();
+	}
+	borderFrame(txt);
+
 	const long long now = DateTime::now();
 	long long timestamp = 0;
 	if (Jpath::get(doc, timestamp, "created")) {
@@ -2933,6 +2965,10 @@ bool Project::saveInformation(std::string &content) {
 	Jpath::set(doc, doc, url(), "url");
 
 	Jpath::set(doc, doc, iconCode(), "icon");
+
+	Jpath::set(doc, doc, (unsigned)borderFrameType(), "border_frame_type");
+
+	Jpath::set(doc, doc, borderFrame(), "border_frame");
 
 	Jpath::set(doc, doc, created(), "created");
 

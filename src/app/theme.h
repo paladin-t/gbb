@@ -512,6 +512,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowBuildingSettings_CartridgeTypeOfOutputRom)
 	GBBASIC_PROPERTY_READONLY(std::string, windowBuildingSettings_Rtc)
 	GBBASIC_PROPERTY_READONLY(std::string, windowBuildingSettings_Sram)
+	GBBASIC_PROPERTY_READONLY(std::string, windowBuildingSettings_Sram_None)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences)
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Main_2Spaces)
@@ -575,6 +576,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Path)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Cart)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Sram)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Sram_None)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Rtc)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Desc)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Author)
@@ -582,9 +584,12 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Version)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Url)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Icon)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Main_Parser)
-	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_CaseInsensitive)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Compiling_Parser)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Compiling_Parser_CaseInsensitive)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_SuperFeatures)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_BorderFrame)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_BorderFrame_None)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_BorderFrame_Custom)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowPalette)
 
