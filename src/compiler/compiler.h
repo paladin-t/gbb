@@ -780,6 +780,10 @@ struct Options {
 	 */
 	Bytes::Ptr icon = nullptr;
 	/**
+	 * @brief The border frame of the program.
+	 */
+	Image::Ptr border = nullptr;
+	/**
 	 * @brief The background palettes of the program.
 	 */
 	Bytes::Ptr backgroundPalettes = nullptr;

@@ -44,6 +44,7 @@ public:
 		int _sfx = 0;
 		int _actor = 0;
 		int _scene = 0;
+		int _borderResources = 0;
 
 	public:
 		Size();
@@ -66,6 +67,8 @@ public:
 		void addActor(int val);
 		int scene(void) const;
 		void addScene(int val);
+		int borderResources(void) const;
+		void addBorderResources(int val);
 
 		int total(void) const;
 

@@ -58,9 +58,9 @@ const UINT16 SpritePalettes[32] = { // Can be overwritten by compiler.
 const UINT8 SgbPaletteBank = 0;
 const UINT16 SgbPaletteAddress = 0;
 const UINT16 SgbPaletteSize = 0;
-const UINT8 SgbTileBank = 0;
-const UINT16 SgbTileAddress = 0;
-const UINT16 SgbTileSize = 0;
+const UINT8 SgbTilesBank = 0;
+const UINT16 SgbTilesAddress = 0;
+const UINT16 SgbTilesSize = 0;
 const UINT8 SgbMapBank = 0;
 const UINT16 SgbMapAddress = 0;
 const UINT16 SgbMapSize = 0;
@@ -98,10 +98,10 @@ void device_init(void) BANKED {
     }
 
     if (IS_SGB) {
-        if (SgbPaletteBank != 0 /* && SgbTileBank != 0 && SgbMapBank != 0 */) {
+        if (SgbPaletteBank != 0 /* && SgbTilesBank != 0 && SgbMapBank != 0 */) {
             sgb_set_border(
                 SgbPaletteBank, (UINT8 *)SgbPaletteAddress, SgbPaletteSize,
-                SgbTileBank, (UINT8 *)SgbTileAddress, SgbTileSize,
+                SgbTilesBank, (UINT8 *)SgbTilesAddress, SgbTilesSize,
                 SgbMapBank, (UINT8 *)SgbMapAddress, SgbMapSize
             );
         }

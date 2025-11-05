@@ -8,6 +8,7 @@
 
 #include "codepoint.h"
 #include "compiler.h"
+#include "../utils/datetime.h"
 #include "../utils/encoding.h"
 #include "../utils/file_handle.h"
 #include "../utils/filesystem.h"
@@ -231,6 +232,34 @@ namespace GBBASIC {
 #ifndef SPRITE_PALETTES_ENTRY_NAME
 #	define SPRITE_PALETTES_ENTRY_NAME "SpritePalettes" // DOC: ROM SCHEMA.
 #endif /* SPRITE_PALETTES_ENTRY_NAME */
+
+#ifndef SGB_PALETTE_BANK_ENTRY_NAME
+#	define SGB_PALETTE_BANK_ENTRY_NAME "SgbPaletteBank"  // DOC: ROM SCHEMA.
+#endif /* SGB_PALETTE_BANK_ENTRY_NAME */
+#ifndef SGB_PALETTE_ADDRESS_ENTRY_NAME
+#	define SGB_PALETTE_ADDRESS_ENTRY_NAME "SgbPaletteAddress" // DOC: ROM SCHEMA.
+#endif /* SGB_PALETTE_ADDRESS_ENTRY_NAME */
+#ifndef SGB_PALETTE_SIZE_ENTRY_NAME
+#	define SGB_PALETTE_SIZE_ENTRY_NAME "SgbPaletteSize" // DOC: ROM SCHEMA.
+#endif /* SGB_PALETTE_SIZE_ENTRY_NAME */
+#ifndef SGB_TILES_BANK_ENTRY_NAME
+#	define SGB_TILES_BANK_ENTRY_NAME "SgbTilesBank" // DOC: ROM SCHEMA.
+#endif /* SGB_TILES_BANK_ENTRY_NAME */
+#ifndef SGB_TILES_ADDRESS_ENTRY_NAME
+#	define SGB_TILES_ADDRESS_ENTRY_NAME "SgbTilesAddress" // DOC: ROM SCHEMA.
+#endif /* SGB_TILES_ADDRESS_ENTRY_NAME */
+#ifndef SGB_TILES_SIZE_ENTRY_NAME
+#	define SGB_TILES_SIZE_ENTRY_NAME "SgbTilesSize" // DOC: ROM SCHEMA.
+#endif /* SGB_TILES_SIZE_ENTRY_NAME */
+#ifndef SGB_MAP_BANK_ENTRY_NAME
+#	define SGB_MAP_BANK_ENTRY_NAME "SgbMapBank" // DOC: ROM SCHEMA.
+#endif /* SGB_MAP_BANK_ENTRY_NAME */
+#ifndef SGB_MAP_ADDRESS_ENTRY_NAME
+#	define SGB_MAP_ADDRESS_ENTRY_NAME "SgbMapAddress" // DOC: ROM SCHEMA.
+#endif /* SGB_MAP_ADDRESS_ENTRY_NAME */
+#ifndef SGB_MAP_SIZE_ENTRY_NAME
+#	define SGB_MAP_SIZE_ENTRY_NAME "SgbMapSize" // DOC: ROM SCHEMA.
+#endif /* SGB_MAP_SIZE_ENTRY_NAME */
 
 #ifndef BEEP_ENTRY_NAME
 #	define BEEP_ENTRY_NAME "Beep" // DOC: ROM SCHEMA.
@@ -1469,6 +1498,26 @@ public:
 		}
 
 		return nullptr;
+	}
+};
+
+struct BorderResources {
+	Image::Ptr image = nullptr;
+	bool serialized = false;
+	UInt8 paletteBank = 0;
+	UInt16 paletteAddress = 0;
+	UInt16 paletteSize = 0;
+	UInt8 tilesBank = 0;
+	UInt16 tilesAddress = 0;
+	UInt16 tilesSize = 0;
+	UInt8 mapBank = 0;
+	UInt16 mapAddress = 0;
+	UInt16 mapSize = 0;
+	long long interval = 0;
+
+	BorderResources() {
+	}
+	BorderResources(const Image::Ptr &img) : image(img) {
 	}
 };
 
@@ -3293,6 +3342,13 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_DUPLICATE_DESTINATION */
+#ifndef THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_RESOURCES
+#	define THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_RESOURCES(ON_ERROR) \
+		do { \
+			throwErrorOccurredDuringGeneratingBorderResources(ON_ERROR); \
+			return; \
+		} while (false)
+#endif /* THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_RESOURCES */
 #ifndef THROW_HEAP_OVERFLOW
 	// As warning or error.
 #	define THROW_HEAP_OVERFLOW(ON_ERROR, IS_WARNING) \
@@ -4281,6 +4337,7 @@ public:
 		const OperatorTable* operators = nullptr;              // Stores the regular and function-like math operators.
 		MacroFunctionTable::Stack* macroFunctions = nullptr;   // FEAT: MACRO. Stores the user defined macro functions.
 
+		BorderResources* borderResources = nullptr;            // Stores the border resources.
 		AssetsBundle::Ptr assets = nullptr;                    // Stores the assets.
 		Pipeline::Ptr pipeline = nullptr;                      // Stores the resources.
 
@@ -5465,6 +5522,26 @@ public:
 
 		return result;
 	}
+	Byte* emit(Bytes::Ptr &bytes, Context::Stack &context, const Byte* data, size_t sz) {
+		Context &ctx = context.top();
+		State &state = top();
+
+		int n = 0;
+		const size_t m = bytes->peek();
+		n += bytes->writeBytes(data, sz);
+
+		state.inRom.size += n;
+
+		ctx.addressCursor += n;
+		if (ctx.addressCursor >= ctx.bankSize) {
+			++ctx.bank;
+			ctx.addressCursor = 0;
+		}
+
+		Byte* result = bytes->pointer() + m;
+
+		return result;
+	}
 	template<typename T> Byte* emit(Bytes::Ptr &bytes, Context::Stack &context, const T &data) {
 		Context &ctx = context.top();
 		State &state = top();
@@ -6495,6 +6572,10 @@ public:
 		const Error err("Duplicate destination \"{0}\"", false);
 		onError(err, err.format({ tk->caseSensitiveText() }), tk->begin());
 	}
+	void throwErrorOccurredDuringGeneratingBorderResources(Error::Handler onError) const {
+		const Error err("Error occurred during generating border resources", false);
+		onError(err, err.format(), TextLocation::INVALID());
+	}
 	void throwHeapOverflow(Error::Handler onError, Token::Ptr tk = nullptr, bool isWarning = true) const {
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
@@ -6816,6 +6897,9 @@ public:
 
 			// Emit the glyph assets.
 			emitGlyphSection(bytes, context, onError_); CHECK(errs);
+
+			// Emit the border resources.
+			emitBorderResourceSection(bytes, context, onError_); CHECK(errs);
 		}
 
 		// Finish.
@@ -7042,6 +7126,102 @@ private:
 		GBBASIC_ASSERT(diffSize >= 0 && "Impossible.");
 		Pipeline::Size &effectiveSize = ctx.pipeline->effectiveSize();
 		effectiveSize.addFont(diffSize);
+	}
+	void emitBorderResourceSection(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) {
+		// Prepare.
+		Context &ctx_ = context.top();
+
+		const long long start = DateTime::ticks();
+
+		// Serialize the border image to bytes.
+		BorderResources* borderResources = ctx_.borderResources;
+		if (!borderResources || !borderResources->image)
+			return;
+
+		Bytes::Ptr palette(Bytes::create());
+		Bytes::Ptr tiles(Bytes::create());
+		Bytes::Ptr map(Bytes::create());
+		Image::ErrorPoints errorPoints;
+		if (!borderResources->image->serializeSgbBorder(palette.get(), tiles.get(), map.get(), &errorPoints))
+			return;
+
+		// Emit the data.
+		const Generator_Void_Void paletteGenerator = [&] (void) -> void {
+			// Prepare.
+			Context &ctx = context.top();
+			State &state = top();
+
+			// Determine the location in the ROM.
+			state.inRom.bank = ctx.bank;
+			state.inRom.address = ctx.addressCursor;
+			state.inRom.size = 0;
+
+			// Reserve the ROM location.
+			borderResources->paletteBank = (UInt8)ctx.bank;
+			borderResources->paletteAddress = (UInt16)(ctx.startAddress + ctx.addressCursor);
+			borderResources->paletteSize = (UInt16)palette->count();
+
+			// Emit the bytes.
+			emit(bytes, context, palette->pointer(), palette->count());
+		};
+		const Generator_Void_Void tilesGenerator = [&] (void) -> void {
+			// Prepare.
+			Context &ctx = context.top();
+			State &state = top();
+
+			// Determine the location in the ROM.
+			state.inRom.bank = ctx.bank;
+			state.inRom.address = ctx.addressCursor;
+			state.inRom.size = 0;
+
+			// Reserve the ROM location.
+			borderResources->tilesBank = (UInt8)ctx.bank;
+			borderResources->tilesAddress = (UInt16)(ctx.startAddress + ctx.addressCursor);
+			borderResources->tilesSize = (UInt16)tiles->count();
+
+			// Emit the bytes.
+			emit(bytes, context, tiles->pointer(), tiles->count());
+		};
+		const Generator_Void_Void mapGenerator = [&] (void) -> void {
+			// Prepare.
+			Context &ctx = context.top();
+			State &state = top();
+
+			// Determine the location in the ROM.
+			state.inRom.bank = ctx.bank;
+			state.inRom.address = ctx.addressCursor;
+			state.inRom.size = 0;
+
+			// Reserve the ROM location.
+			borderResources->mapBank = (UInt8)ctx.bank;
+			borderResources->mapAddress = (UInt16)(ctx.startAddress + ctx.addressCursor);
+			borderResources->mapSize = (UInt16)map->count();
+
+			// Emit the bytes.
+			emit(bytes, context, map->pointer(), map->count());
+		};
+
+		int errs = 0;
+		auto onError_ = [onError, &errs] (const Error &err, const std::string &msg, const TextLocation &loc) -> void {
+			onError(err, msg, loc);
+			++errs;
+		};
+
+		write(bytes, context, paletteGenerator, true, onError_); // Allow these emissions to be placed at the tail of a bank.
+		write(bytes, context, tilesGenerator, true, onError_);
+		write(bytes, context, mapGenerator, true, onError_);
+
+		if (errs) { THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_RESOURCES(onError); }
+
+		borderResources->serialized = true;
+
+		Pipeline::Size &effectiveSize = ctx_.pipeline->effectiveSize();
+		effectiveSize.addBorderResources(borderResources->paletteSize + borderResources->tilesSize + borderResources->mapSize);
+
+		// Finish.
+		const long long end = DateTime::ticks();
+		const long long diff = end - start;
+		borderResources->interval = diff;
 	}
 };
 
@@ -37774,6 +37954,7 @@ private:
 	Node::MacroConstantTable::Stack _macroConstants;
 	Node::MacroIdentifierAliasTable::Stack _macroIdentifierAliases;
 	Node::MacroStackReferenceTable::Stack _macroStackReferences;
+	BorderResources _borderResources;
 	AssetsBundle::Ptr _assets = nullptr;
 
 	Bytes::Ptr _bytes = nullptr;
@@ -37938,7 +38119,11 @@ public:
 		return _bytes;
 	}
 
-	bool process(const Node::Ptr &ast, AssetsBundle::Ptr assets, Pipeline::Ptr pipeline, RamLocation::Dictionary* allocations, FeatureUsages* featureUsages, int* compiledSize, Error::Handler onError) {
+	BorderResources &borderResources(void) {
+		return _borderResources;
+	}
+
+	bool process(const Node::Ptr &ast, AssetsBundle::Ptr assets, Pipeline::Ptr pipeline, RamLocation::Dictionary* allocations, FeatureUsages* featureUsages, BorderResources &borderResources, int* compiledSize, Error::Handler onError) {
 		// Prepare.
 		_bytes = nullptr;
 		if (!ast)
@@ -37951,6 +38136,7 @@ public:
 			onError(err, msg, loc);
 		};
 
+		_borderResources = borderResources;
 		_assets = assets;
 
 		// Generate VM code from the AST.
@@ -37969,6 +38155,7 @@ public:
 			pipeline,
 			allocations,
 			featureUsages,
+			&_borderResources,
 			compiledSize,
 			gotError
 		);
@@ -37983,6 +38170,7 @@ public:
 			_macroStackReferences
 		);
 
+		borderResources = _borderResources;
 		_assets = nullptr;
 
 		return errorCount == 0;
@@ -38005,6 +38193,7 @@ private:
 		Pipeline::Ptr pipeline,
 		RamLocation::Dictionary* allocations,
 		FeatureUsages* featureUsages,
+		BorderResources* borderResources,
 		int* compiledSize,
 		Error::Handler onError
 	) {
@@ -38038,6 +38227,7 @@ private:
 		(void)                                           macroConstants;         // FEAT: MACRO.
 		(void)                                           macroIdentifierAliases; // FEAT: MACRO.
 		(void)                                           macroStackReferences;   // FEAT: MACRO.
+		context.top().borderResources                 =  borderResources;
 		context.top().assets                          =  assets;
 		context.top().pipeline                        =  pipeline;
 
@@ -38289,7 +38479,7 @@ public:
 		return _bytes;
 	}
 
-	bool process(const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const FeatureUsages &featureUsages, Error::Handler onError) {
+	bool process(const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const FeatureUsages &featureUsages, const BorderResources &borderResources, Error::Handler onError) {
 		// Prepare.
 		_bytes = nullptr;
 		if (!rom || !compiled)
@@ -38303,14 +38493,14 @@ public:
 		};
 
 		// Program the ROM with the specific bytes.
-		_bytes = program(rom, compiled, featureUsages, _options, _symbols, gotError);
+		_bytes = program(rom, compiled, featureUsages, borderResources, _options, _symbols, gotError);
 
 		// Finish.
 		return errorCount == 0;
 	}
 
 private:
-	static Bytes::Ptr program(const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const FeatureUsages &featureUsages, const Options &options, const SymbolTable &symbols, Error::Handler onError) {
+	static Bytes::Ptr program(const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const FeatureUsages &featureUsages, const BorderResources &borderResources, const Options &options, const SymbolTable &symbols, Error::Handler onError) {
 		// Prepare.
 		Bytes::Ptr bytes(Bytes::create());
 
@@ -38380,6 +38570,55 @@ private:
 				memcpy(ptr, options.icon->pointer(), SIZE);
 			} while (false);
 		}
+
+		do {
+			if (!borderResources.serialized)
+				break;
+
+			const RomLocation* romLocation0 = symbols.find(SGB_PALETTE_BANK_ENTRY_NAME);
+			const RomLocation* romLocation1 = symbols.find(SGB_PALETTE_ADDRESS_ENTRY_NAME);
+			const RomLocation* romLocation2 = symbols.find(SGB_PALETTE_SIZE_ENTRY_NAME);
+			const RomLocation* romLocation3 = symbols.find(SGB_TILES_BANK_ENTRY_NAME);
+			const RomLocation* romLocation4 = symbols.find(SGB_TILES_ADDRESS_ENTRY_NAME);
+			const RomLocation* romLocation5 = symbols.find(SGB_TILES_SIZE_ENTRY_NAME);
+			const RomLocation* romLocation6 = symbols.find(SGB_MAP_BANK_ENTRY_NAME);
+			const RomLocation* romLocation7 = symbols.find(SGB_MAP_ADDRESS_ENTRY_NAME);
+			const RomLocation* romLocation8 = symbols.find(SGB_MAP_SIZE_ENTRY_NAME);
+			if (
+				!romLocation0 || !romLocation1 || !romLocation2 ||
+				!romLocation3 || !romLocation4 || !romLocation5 ||
+				!romLocation6 || !romLocation7 || !romLocation8
+			) {
+				const Error err("Invalid border resource point", true);
+				onError(err, err.format(), TextLocation::INVALID());
+
+				break;
+			}
+
+			auto copyUInt8 = [&options, &bytes] (const RomLocation* romLocation, UInt8 val) -> void {
+				const int bank = romLocation->bank;
+				const int address = romLocation->address;
+				const int offset = (bank * options.bankSize) + (address - options.startAddress);
+				Byte* ptr = bytes->pointer() + offset;
+				memcpy(ptr, &val, sizeof(UInt8));
+			};
+			auto copyUInt16 = [&options, &bytes] (const RomLocation* romLocation, UInt16 val) -> void {
+				const int bank = romLocation->bank;
+				const int address = romLocation->address;
+				const int offset = (bank * options.bankSize) + (address - options.startAddress);
+				Byte* ptr = bytes->pointer() + offset;
+				memcpy(ptr, &val, sizeof(UInt16));
+			};
+			copyUInt8(romLocation0, borderResources.paletteBank);
+			copyUInt16(romLocation1, borderResources.paletteAddress);
+			copyUInt16(romLocation2, borderResources.paletteSize);
+			copyUInt8(romLocation3, borderResources.tilesBank);
+			copyUInt16(romLocation4, borderResources.tilesAddress);
+			copyUInt16(romLocation5, borderResources.tilesSize);
+			copyUInt8(romLocation6, borderResources.mapBank);
+			copyUInt16(romLocation7, borderResources.mapAddress);
+			copyUInt16(romLocation8, borderResources.mapSize);
+		} while (false);
 
 		do {
 			const UInt8 extensionMode = extension ? TRUE : FALSE;
@@ -38492,7 +38731,7 @@ private:
 			} else {
 				header.setClassicSupportOnly(extension);
 			}
-			if (!featureUsages.superFeatureUsages.empty()) {
+			if (!featureUsages.superFeatureUsages.empty() || borderResources.serialized) {
 				header.setSuperSupport(true);
 				header.setOldLicenseCode("33");
 			}
@@ -38911,6 +39150,7 @@ bool compile(Program &program, const Options &options) {
 	const std::string &ast                                                     = options.ast;
 	const Options::Passes passes                                               = options.passes;
 	const Bytes::Ptr &icon                                                     = options.icon;
+	const Image::Ptr &border                                                   = options.border;
 	const Bytes::Ptr &backgroundPalettes                                       = options.backgroundPalettes;
 	const Bytes::Ptr &spritePalettes                                           = options.spritePalettes;
 	const std::string &title                                                   = options.title;
@@ -39125,8 +39365,9 @@ bool compile(Program &program, const Options &options) {
 		// Compile.
 		RamLocation::Dictionary allocations;
 		FeatureUsages featureUsages;
+		BorderResources borderResources(border);
 		int compiledSize = 0;
-		if (!compiler.process(organizer.ast(), program.assets, pipeline, &allocations, &featureUsages, &compiledSize, onError)) {
+		if (!compiler.process(organizer.ast(), program.assets, pipeline, &allocations, &featureUsages, borderResources, &compiledSize, onError)) {
 			std::swap(program.compiled.allocations, allocations);
 			std::swap(program.compiled.featureUsages, featureUsages);
 
@@ -39141,6 +39382,15 @@ bool compile(Program &program, const Options &options) {
 		std::swap(program.compiled.featureUsages, featureUsages);
 		program.compiled.effectiveSize.addCode(codeSize);
 		program.compiled.effectiveSize += pipeline->effectiveSize();
+
+		if (borderResources.serialized) {
+			const double secs = DateTime::toSeconds(borderResources.interval);
+
+			const std::string dstn = Text::toScaledBytes(borderResources.paletteSize + borderResources.tilesSize + borderResources.mapSize);
+			const std::string time = Text::toString(secs, 6, 0, ' ', std::ios::fixed);
+			const std::string msg = Text::format("Succeeded to process the border resources to {0} in {1}s.", { dstn, time });
+			onPrint(msg);
+		}
 
 		onPrint("Succeeded to compile the source code.");
 
@@ -39159,7 +39409,7 @@ bool compile(Program &program, const Options &options) {
 			break;
 
 		// Program the ROM.
-		if (!programmer.process(program.rom, compiler.bytes(), program.compiled.featureUsages, onError)) {
+		if (!programmer.process(program.rom, compiler.bytes(), program.compiled.featureUsages, compiler.borderResources(), onError)) {
 			onError_("Failed to program the ROM.", false, -1, -1, -1);
 			++errors;
 
