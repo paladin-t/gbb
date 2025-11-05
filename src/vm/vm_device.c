@@ -55,15 +55,15 @@ const UINT16 SpritePalettes[32] = { // Can be overwritten by compiler.
 };
 
 // Can be overwritten by compiler.
-const UINT8 SgbPaletteBank = 0;
-const UINT16 SgbPaletteAddress = 0;
-const UINT16 SgbPaletteSize = 0;
-const UINT8 SgbTilesBank = 0;
-const UINT16 SgbTilesAddress = 0;
-const UINT16 SgbTilesSize = 0;
-const UINT8 SgbMapBank = 0;
-const UINT16 SgbMapAddress = 0;
-const UINT16 SgbMapSize = 0;
+const volatile UINT8 SgbPaletteBank = 0;
+const volatile UINT16 SgbPaletteAddress = 0;
+const volatile UINT16 SgbPaletteSize = 0;
+const volatile UINT8 SgbTilesBank = 0;
+const volatile UINT16 SgbTilesAddress = 0;
+const volatile UINT16 SgbTilesSize = 0;
+const volatile UINT8 SgbMapBank = 0;
+const volatile UINT16 SgbMapAddress = 0;
+const volatile UINT16 SgbMapSize = 0;
 
 UINT8 device_type;
 
