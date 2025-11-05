@@ -49,13 +49,10 @@ void sgb_set_border(
     // Prepare tilemap for SGB_BORDER_CHR_TRN (should display all 256 tiles).
     UINT8 i = 0u;
     for (UINT8 y = 0; y != 14u; ++y) {
-        UINT8 * dout = map_buf;
         for (UINT8 x = 0u; x != 20u; ++x) {
-            *dout++ = i++;
+            set_bkg_tile_xy(x, y, i++);
         }
-        set_bkg_submap(0, y, 20, 1, map_buf, 20);
     }
-    memset(map_buf, 0, sizeof(map_buf));
 
     // Transfer tile data.
     UINT8 ntiles = (tiledata_size > 256 * 32) ? 0 : tiledata_size >> 5;
