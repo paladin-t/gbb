@@ -10,7 +10,6 @@
 #define __EDITOR_REF_RESOLVER_H__
 
 #include "widgets.h"
-#include "../utils/editable.h"
 
 /*
 ** {===========================================================================

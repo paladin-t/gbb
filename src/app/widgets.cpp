@@ -12,7 +12,6 @@
 #include "workspace.h"
 #include "../utils/datetime.h"
 #include "../utils/encoding.h"
-#include "../utils/file_sandbox.h"
 #include "../utils/filesystem.h"
 #include "../utils/generic.h"
 #include "../../lib/civetweb/include/civetweb.h"
@@ -4032,6 +4031,8 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 						_borderTexture = nullptr;
 						_borderError.clear();
+
+						prj->borderFrameType(Project::BorderFrameTypes::DEFAULT);
 					};
 
 					if (wndWidth < 344.0f && prj->borderFrameType() != Project::BorderFrameTypes::NONE) {
@@ -4088,6 +4089,52 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 								_borderTexture = Texture::Ptr(Texture::create());
 								_borderTexture->fromImage(_renderer, Texture::STATIC, img.get(), Texture::NEAREST);
+
+								struct Data {
+									bool ok = false;
+									::Image::Ptr image = nullptr;
+									Bytes::Ptr palette = nullptr;
+									Bytes::Ptr tiles = nullptr;
+									Bytes::Ptr map = nullptr;
+									::Image::ErrorPoints errorPoints;
+
+									Data(::Image::Ptr img) : image(img) {
+										palette = Bytes::Ptr(Bytes::create());
+										tiles = Bytes::Ptr(Bytes::create());
+										map = Bytes::Ptr(Bytes::create());
+									}
+								};
+
+								_borderError = _theme->dialogPrompt_Checking();
+
+								Data* data = new Data(img);
+								_borderTextureIsBeingGenerated = ws->async(
+									std::bind(
+										[] (WorkTask* /* task */, Data* data) -> uintptr_t { // On work thread.
+											::Image::Ptr &image = data->image;
+											const bool ret = image->serializeSgbBorder(data->palette.get(), data->tiles.get(), data->map.get(), &data->errorPoints);
+											data->ok = ret;
+
+											return (uintptr_t)data;
+										},
+										std::placeholders::_1, data
+									),
+									[this] (WorkTask* /* task */, uintptr_t ptr) -> void { // On main thread.
+										Data* data = (Data*)ptr;
+										if (!data->ok) {
+											_borderError = _theme->dialogPrompt_CannotUseThisImage();
+										} else if (!data->errorPoints.empty()) {
+											_borderError = _theme->dialogPrompt_TooManyColors();
+										} else {
+											_borderError.clear();
+										}
+									},
+									[this] (WorkTask* /* task */, uintptr_t ptr) -> void { // On main thread.
+										Data* data = (Data*)ptr;
+
+										delete data;
+									}
+								);
 							}
 
 							if (!_borderTexture)
@@ -4220,6 +4267,8 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 		toCancel = true;
 
 	if (toConfirm) {
+		_borderTextureIsBeingGenerated.wait();
+
 		_init.reset();
 
 		if (!_confirmedHandler.empty()) {
@@ -4229,6 +4278,8 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 		}
 	}
 	if (toApply) {
+		_borderTextureIsBeingGenerated.wait();
+
 		if (!_appliedHandler.empty()) {
 			_appliedHandler(_projectShadow);
 
@@ -4236,6 +4287,8 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 		}
 	}
 	if (toCancel) {
+		_borderTextureIsBeingGenerated.wait();
+
 		_init.reset();
 
 		if (!_canceledHandler.empty()) {

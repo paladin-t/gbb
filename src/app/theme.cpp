@@ -502,6 +502,8 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_CannotSaveProjectSeeTheConsoleForDetails("Cannot save project.\nSee the console for details.");
 	dialogPrompt_CannotSaveSramState("Cannot save SRAM state.");
 	dialogPrompt_CannotSaveToReadonlyLocations("Cannot save to readonly locations.");
+	dialogPrompt_CannotUseThisImage("Cannot use this image");
+	dialogPrompt_Checking("Checking...");
 	dialogPrompt_ClearedProjects("Cleared projects");
 	dialogPrompt_ClickToPut("Click to put");
 	dialogPrompt_ClimbVelocity("Climb velocity");
@@ -651,6 +653,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_TicksPerRow("Ticks per row");
 	dialogPrompt_Tiles("Tiles:");
 	dialogPrompt_TilesPage("Tiles page");
+	dialogPrompt_TooManyColors("Too many colors");
 	dialogPrompt_Trim("Trim");
 	dialogPrompt_UnsupportedOperation("Unsupported operation.");
 	dialogPrompt_UseGravity("Use gravity");

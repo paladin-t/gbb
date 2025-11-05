@@ -10,8 +10,6 @@
 #define __EDITOR_PROPERTIES_H__
 
 #include "widgets.h"
-#include "../utils/actor.h"
-#include "../utils/editable.h"
 
 /*
 ** {===========================================================================

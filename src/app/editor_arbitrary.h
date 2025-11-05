@@ -10,8 +10,6 @@
 #define __EDITOR_ARBITRARY_H__
 
 #include "widgets.h"
-#include "../utils/assets.h"
-#include "../utils/editable.h"
 
 /*
 ** {===========================================================================
