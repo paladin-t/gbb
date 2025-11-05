@@ -1099,8 +1099,12 @@ public:
 			errorPoints->clear();
 
 		// Functions.
-		auto buildPalettes = [errorPoints] (const Image* img, int tw, int th, Palettes &palettes, int colorsPerPal) -> int* {
-			auto getPaletteColors = [] (const Image* img, int x, int y, int w, int h) -> PaletteSet {
+		auto translateColor = [] (Colour &col) -> void {
+			if (col == Colour(255, 0, 255)) // Translate magenta to transparent.
+				col = Colour(255, 255, 255, 0);
+		};
+		auto buildPalettes = [errorPoints, translateColor] (const Image* img, int tw, int th, Palettes &palettes, int colorsPerPal) -> int* {
+			auto getPaletteColors = [translateColor] (const Image* img, int x, int y, int w, int h) -> PaletteSet {
 				PaletteSet ret;
 
 				// For SGB mode, every 16 color palette must have a transparent color as the first entry.
@@ -1124,6 +1128,7 @@ public:
 					for (int i = x; i < x + w; ++i) {
 						Colour col;
 						img->get(i, j, col);
+						translateColor(col);
 						const UInt32 colVal = RGBA32(col.r, col.g, col.b, col.a);
 						ret.insert(colVal);
 					}
@@ -1328,6 +1333,7 @@ public:
 			for (int x = 0; x < width(); ++x) {
 				Colour col;
 				get(x, y, col);
+				translateColor(col);
 				const UInt32 color32 = RGBA32(col.r, col.g, col.b, col.a);
 				const UInt8 palette = (UInt8)palettesPerTile[(y / th) * (width() / tw) + (x / tw)];
 				const UInt8 index = (UInt8)std::distance(palettes[palette].begin(), palettes[palette].find(color32));
