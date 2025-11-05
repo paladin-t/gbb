@@ -13,9 +13,8 @@
 #include "exporter.h"
 #include "settings.h"
 #include "../compiler/kernel.h"
-#include "../utils/entry.h"
+#include "../utils/assets.h"
 #include "../utils/renderer.h"
-#include "../utils/texture.h"
 #include "../utils/window.h"
 #include "../../lib/imgui/imgui.h"
 #include <stack>
@@ -935,6 +934,9 @@ private:
 	Renderer* _renderer = nullptr; // Foreign.
 	Theme* _theme = nullptr; // Foreign.
 	std::string _title;
+	Texture::Ptr _borderTexture = nullptr;
+	std::string _borderError;
+	Semaphore _borderTextureIsBeingGenerated;
 	Project* _project = nullptr; // Foreign.
 	Project* _projectShadow = nullptr;
 	char _buffer[WIDGETS_TEXT_BUFFER_SIZE]; // Fixed size.

@@ -1295,7 +1295,7 @@ private:
 			width_ += ImGui::GetItemRectSize().x;
 			ImGui::SameLine();
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
-			if (ImGui::ImageButton(ws->theme()->iconProperty()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipProperty_ProjectProperty().c_str())) {
+			if (ImGui::ImageButton(ws->theme()->iconProperty()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipProjectProperty_ProjectProperty().c_str())) {
 				ws->showProjectProperty(wnd, rnd, _project);
 			}
 			width_ += ImGui::GetItemRectSize().x;

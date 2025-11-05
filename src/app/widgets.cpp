@@ -12,7 +12,6 @@
 #include "workspace.h"
 #include "../utils/datetime.h"
 #include "../utils/encoding.h"
-#include "../utils/file_sandbox.h"
 #include "../utils/filesystem.h"
 #include "../utils/generic.h"
 #include "../../lib/civetweb/include/civetweb.h"
@@ -834,7 +833,7 @@ void SortAssetsPopupBox::update(Workspace* ws) {
 		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	}
 
-	const float width = Math::clamp(_renderer->width() * 0.8f, 280.0f, 380.0f);
+	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 380.0f);
 	const float height = Math::min(width, _renderer->height() * 0.8f - 48.0f);
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, _canceledHandler.empty() ? nullptr : &isOpen, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
@@ -1496,7 +1495,7 @@ void RomBuildSettingsPopupBox::update(Workspace*) {
 		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	}
 
-	const float width = Math::clamp(_renderer->width() * 0.8f, 280.0f, 380.0f);
+	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 380.0f);
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, _canceledHandler.empty() ? nullptr : &isOpen, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
 		AlignTextToFramePadding();
@@ -1542,7 +1541,7 @@ void RomBuildSettingsPopupBox::update(Workspace*) {
 			SameLine();
 
 			const char* items[] = {
-				"0KB (None)",
+				_theme->windowBuildingSettings_Sram_None().c_str(),
 				"2KB",
 				"8KB",
 				"32KB",
@@ -1667,7 +1666,7 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	}
 
-	const float width = Math::clamp(_renderer->width() * 0.8f, 280.0f, 480.0f);
+	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 480.0f);
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, _canceledHandler.empty() ? nullptr : &isOpen, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
 		if (BeginTabBar("@Pref")) {
@@ -1759,7 +1758,7 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 
 								file->close(); FileMonitor::unuse(path);
 
-								Image::Ptr img(Image::create());
+								::Image::Ptr img(::Image::create());
 								if (!img->fromBytes(bytes.get()))
 									break;
 								if (
@@ -1778,7 +1777,7 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 						if (IsItemHovered()) {
 							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-							SetTooltip(_theme->tooltipProperty_ReplaceIcon());
+							SetTooltip(_theme->tooltipProjectProperty_ReplaceIcon());
 						}
 						const float posY_ = GetCursorPosY();
 						SetCursorPosX(posX);
@@ -1791,7 +1790,7 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 						if (IsItemHovered()) {
 							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-							SetTooltip(_theme->tooltipProperty_ResetIcon());
+							SetTooltip(_theme->tooltipProjectProperty_ResetIcon());
 						}
 						SetCursorPosY(posY_);
 
@@ -3508,7 +3507,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	}
 
-	const float width = Math::clamp(_renderer->width() * 0.8f, 280.0f, 480.0f);
+	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 480.0f);
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
 		Project* prj = _projectShadow;
@@ -3587,7 +3586,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					SameLine();
 
 					const char* items[] = {
-						"0KB (None)",
+						_theme->windowProjectProperty_Sram_None().c_str(),
 						"2KB",
 						"8KB",
 						"32KB",
@@ -3761,7 +3760,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					if (IsItemHovered() && !ws->bubble()) {
 						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-						SetTooltip(_theme->tooltipProperty_ProjectIconDetails());
+						SetTooltip(_theme->tooltipProjectProperty_ProjectIconDetails());
 					}
 
 					SameLine();
@@ -3827,7 +3826,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					if (IsItemHovered() && !ws->bubble()) {
 						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-						SetTooltip(_theme->tooltipProperty_ProjectIcon2BppDetails());
+						SetTooltip(_theme->tooltipProjectProperty_ProjectIcon2BppDetails());
 					}
 
 					SameLine();
@@ -3864,7 +3863,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 							file->close(); FileMonitor::unuse(path);
 
-							Image::Ptr img(Image::create());
+							::Image::Ptr img(::Image::create());
 							if (!img->fromBytes(bytes.get()))
 								break;
 							if (img->width() != GBBASIC_ICON_WIDTH || img->height() != GBBASIC_ICON_HEIGHT) {
@@ -3881,7 +3880,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 									break;
 								}
 
-								Image::Ptr tmp(Image::create());
+								::Image::Ptr tmp(::Image::create());
 								if (!tmp->fromBlank(GBBASIC_ICON_WIDTH, GBBASIC_ICON_HEIGHT, 0)) {
 									break;
 								}
@@ -3904,7 +3903,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					if (IsItemHovered()) {
 						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-						SetTooltip(_theme->tooltipProperty_ReplaceIcon());
+						SetTooltip(_theme->tooltipProjectProperty_ReplaceIcon());
 					}
 					const float posY_ = GetCursorPosY();
 					SetCursorPosX(posX - 32.0f - 5);
@@ -3915,7 +3914,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					if (IsItemHovered()) {
 						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-						SetTooltip(_theme->tooltipProperty_ResetIcon());
+						SetTooltip(_theme->tooltipProjectProperty_ResetIcon());
 					}
 					SetCursorPosY(posY_);
 				}
@@ -3924,12 +3923,12 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				EndTabItem();
 			}
 			if (BeginTabItem(_theme->tabProjectProperty_Compiling(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
-				TextUnformatted(_theme->windowProjectProperty_Main_Parser());
+				TextUnformatted(_theme->windowProjectProperty_Compiling_Parser());
 
 				PushID("#CsIns");
 				{
 					bool pref = prj->caseInsensitive();
-					if (Checkbox(_theme->windowProjectProperty_CaseInsensitive(), &pref))
+					if (Checkbox(_theme->windowProjectProperty_Compiling_Parser_CaseInsensitive(), &pref))
 						prj->caseInsensitive(pref);
 				}
 				PopID();
@@ -3941,7 +3940,260 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 				PushID("#SgbBdr");
 				{
-					TextUnformatted("// TODO");
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Advanced_BorderFrame());
+
+					SameLine();
+					const float wndWidth = GetWindowWidth();
+					const float beginX = GetCursorPosX();
+
+					VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(1, 1));
+
+					const char* items[] = {
+						_theme->windowProjectProperty_Advanced_BorderFrame_None().c_str(),
+						_theme->windowProjectProperty_Advanced_BorderFrame_Default().c_str(),
+						_theme->windowProjectProperty_Advanced_BorderFrame_Custom().c_str()
+					};
+					int type = 0;
+					if (prj->borderFrameType() == Project::BorderFrameTypes::NONE) {
+						type = 0;
+					} else if (prj->borderFrameType() == Project::BorderFrameTypes::CUSTOM) {
+						type = GBBASIC_COUNTOF(items) - 1;
+					} else {
+						type = 1;
+					}
+					SetNextItemWidth(GetContentRegionAvail().x);
+					if (Combo("", &type, items, GBBASIC_COUNTOF(items))) {
+						if (type == 0) {
+							prj->borderFrameType(Project::BorderFrameTypes::NONE);
+						} else if (type == GBBASIC_COUNTOF(items) - 1) {
+							prj->borderFrameType(Project::BorderFrameTypes::CUSTOM);
+						} else {
+							prj->borderFrameType(Project::BorderFrameTypes::DEFAULT);
+						}
+					}
+
+					SameLine();
+					const float endX = GetCursorPosX() - style.ItemSpacing.x;
+					NewLine();
+
+					auto replaceBorder = [&] (void) -> void {
+						pfd::open_file open(
+							_theme->generic_Open(),
+							"",
+							GBBASIC_IMAGE_FILE_FILTER,
+							pfd::opt::none
+						);
+						do {
+							if (open.result().empty() || open.result().front().empty())
+								break;
+
+							std::string path = open.result().front();
+							Path::uniform(path);
+							if (!Path::fileExists(path.c_str()))
+								break;
+
+							File::Ptr file(File::create());
+							if (!file->open(path.c_str(), Stream::READ)) {
+								_borderError = _theme->dialogPrompt_CannotOpenFile();
+
+								break;
+							}
+
+							Bytes::Ptr bytes(Bytes::create());
+							if (!file->readBytes(bytes.get())) {
+								_borderError = _theme->dialogPrompt_CannotOpenFile();
+
+								file->close(); FileMonitor::unuse(path);
+
+								break;
+							}
+
+							file->close(); FileMonitor::unuse(path);
+
+							std::string txt;
+							if (!Base64::fromBytes(txt, bytes.get())) {
+								_borderError = _theme->dialogPrompt_CannotOpenFile();
+
+								break;
+							}
+
+							prj->borderFrame(txt);
+						} while (false);
+
+						_borderTexture = nullptr;
+						_borderError.clear();
+
+						prj->borderFrameType(Project::BorderFrameTypes::CUSTOM);
+					};
+					auto resetBorder = [&] (void) -> void {
+						prj->borderFrame("");
+
+						_borderTexture = nullptr;
+						_borderError.clear();
+
+						prj->borderFrameType(Project::BorderFrameTypes::DEFAULT);
+					};
+
+					if (wndWidth < 344.0f && prj->borderFrameType() != Project::BorderFrameTypes::NONE) {
+						SetCursorPosX(beginX);
+						const float btnW = 64.0f;
+						if (Button(_theme->generic_Replace(), ImVec2(btnW, 0))) {
+							replaceBorder();
+						}
+						if (IsItemHovered()) {
+							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+							SetTooltip(_theme->tooltipProjectProperty_ReplaceBorder());
+						}
+						SameLine();
+						if (Button(_theme->dialogPrompt_Rst(), ImVec2(0, 0))) {
+							resetBorder();
+						}
+						if (IsItemHovered()) {
+							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+							SetTooltip(_theme->tooltipProjectProperty_ResetBorder());
+						}
+					}
+
+					void* iconTex = nullptr;
+					if (prj->borderFrameType() == Project::BorderFrameTypes::DEFAULT) {
+						iconTex = _theme->textureDefaultBorder()->pointer(_renderer);
+					} else if (prj->borderFrameType() == Project::BorderFrameTypes::CUSTOM) {
+						iconTex = _theme->textureDefaultBorder()->pointer(_renderer);
+						do {
+							if (prj->borderFrame().empty())
+								break;
+
+							if (_borderTexture == nullptr) {
+								Bytes::Ptr bytes(Bytes::create());
+								if (!Base64::toBytes(bytes.get(), prj->borderFrame())) {
+									_borderError = _theme->dialogPrompt_CannotDecodeBorderImage();
+
+									break;
+								}
+
+								::Image::Ptr img(::Image::create());
+								if (!img->fromBytes(bytes.get())) {
+									_borderError = _theme->dialogPrompt_CannotDecodeBorderImage();
+
+									break;
+								}
+
+								if (img->width() != GBBASIC_BORDERED_SCREEN_WIDTH || img->height() != GBBASIC_BORDERED_SCREEN_HEIGHT) {
+									_borderError = _theme->dialogPrompt_InvalidBorderImageSize256x224pxRequired();
+
+									break;
+								}
+
+								_borderTexture = Texture::Ptr(Texture::create());
+								_borderTexture->fromImage(_renderer, Texture::STATIC, img.get(), Texture::NEAREST);
+
+								struct Data {
+									bool ok = false;
+									::Image::Ptr image = nullptr;
+									Bytes::Ptr palette = nullptr;
+									Bytes::Ptr tiles = nullptr;
+									Bytes::Ptr map = nullptr;
+									::Image::ErrorPoints errorPoints;
+
+									Data(::Image::Ptr img) : image(img) {
+										palette = Bytes::Ptr(Bytes::create());
+										tiles = Bytes::Ptr(Bytes::create());
+										map = Bytes::Ptr(Bytes::create());
+									}
+								};
+
+								_borderError = _theme->dialogPrompt_Checking();
+
+								Data* data = new Data(img);
+								_borderTextureIsBeingGenerated = ws->async(
+									std::bind(
+										[] (WorkTask* /* task */, Data* data) -> uintptr_t { // On work thread.
+											::Image::Ptr &image = data->image;
+											const bool ret = image->serializeSgbBorder(data->palette.get(), data->tiles.get(), data->map.get(), &data->errorPoints);
+											data->ok = ret;
+
+											return (uintptr_t)data;
+										},
+										std::placeholders::_1, data
+									),
+									[this] (WorkTask* /* task */, uintptr_t ptr) -> void { // On main thread.
+										Data* data = (Data*)ptr;
+										if (!data->ok) {
+											_borderError = _theme->dialogPrompt_CannotUseThisImage();
+										} else if (!data->errorPoints.empty()) {
+											_borderError = _theme->dialogPrompt_TooManyColors();
+										} else {
+											_borderError.clear();
+										}
+									},
+									[this] (WorkTask* /* task */, uintptr_t ptr) -> void { // On main thread.
+										Data* data = (Data*)ptr;
+
+										delete data;
+									}
+								);
+							}
+
+							if (!_borderTexture)
+								break;
+
+							iconTex = _borderTexture->pointer(_renderer);
+						} while (false);
+					}
+					if (iconTex) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
+
+						const float imgw = GBBASIC_BORDERED_SCREEN_WIDTH * 0.5f, imgh = GBBASIC_BORDERED_SCREEN_HEIGHT * 0.5f;
+						SetCursorPosX(beginX);
+						PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1);
+						BeginChild("@Img", ImVec2(imgw + 4, imgh + 4), true, ImGuiWindowFlags_NoScrollbar);
+						{
+							SetCursorPos(GetCursorPos() + ImVec2(2, 2));
+							Image(iconTex, ImVec2(imgw, imgh));
+						}
+						EndChild();
+						PopStyleVar();
+					}
+
+					if (wndWidth >= 344.0f && prj->borderFrameType() != Project::BorderFrameTypes::NONE) {
+						SameLine();
+						const float btnW = 64.0f;
+						const float posX = endX - btnW;
+						const float posY = GetCursorPosY();
+						SetCursorPosX(posX);
+						if (Button(_theme->generic_Replace(), ImVec2(btnW, 0))) {
+							replaceBorder();
+						}
+						if (IsItemHovered()) {
+							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+							SetTooltip(_theme->tooltipProjectProperty_ReplaceBorder());
+						}
+						const float posY_ = GetCursorPosY();
+						SetCursorPosX(posX - 32.0f - 5);
+						SetCursorPosY(posY);
+						if (Button(_theme->dialogPrompt_Rst(), ImVec2(0, 0))) {
+							resetBorder();
+						}
+						if (IsItemHovered()) {
+							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+							SetTooltip(_theme->tooltipProjectProperty_ResetBorder());
+						}
+						SetCursorPosY(posY_);
+					}
+
+					if (!_borderError.empty()) {
+						SetCursorPosX(beginX);
+
+						AlignTextToFramePadding();
+						TextUnformatted(_borderError);
+					}
+
+					NewLine(2);
 				}
 				PopID();
 
@@ -3960,13 +4212,15 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			prj->cartridgeType()   != _project->cartridgeType()   ||
 			prj->sramType()        != _project->sramType()        ||
 			prj->hasRtc()          != _project->hasRtc()          ||
-			prj->caseInsensitive() != _project->caseInsensitive() ||
 			prj->description()     != _project->description()     ||
 			prj->author()          != _project->author()          ||
 			prj->genre()           != _project->genre()           ||
 			prj->version()         != _project->version()         ||
 			prj->url()             != _project->url()             ||
-			prj->iconCode()        != _project->iconCode();
+			prj->iconCode()        != _project->iconCode()        ||
+			prj->caseInsensitive() != _project->caseInsensitive() ||
+			prj->borderFrameType() != _project->borderFrameType() ||
+			prj->borderFrame()     != _project->borderFrame();
 
 		if (_confirmText.empty()) {
 			confirm = "Ok";
@@ -4013,6 +4267,8 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 		toCancel = true;
 
 	if (toConfirm) {
+		_borderTextureIsBeingGenerated.wait();
+
 		_init.reset();
 
 		if (!_confirmedHandler.empty()) {
@@ -4022,6 +4278,8 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 		}
 	}
 	if (toApply) {
+		_borderTextureIsBeingGenerated.wait();
+
 		if (!_appliedHandler.empty()) {
 			_appliedHandler(_projectShadow);
 
@@ -4029,6 +4287,8 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 		}
 	}
 	if (toCancel) {
+		_borderTextureIsBeingGenerated.wait();
+
 		_init.reset();
 
 		if (!_canceledHandler.empty()) {
@@ -4083,7 +4343,7 @@ void PreferencesPopupBox::update(Workspace*) {
 		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	}
 
-	const float width = Math::clamp(_renderer->width() * 0.8f, 280.0f, 480.0f);
+	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 480.0f);
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
 		const bool borderlessWritable = _getBorderlessWritable();
@@ -4462,7 +4722,7 @@ void ActivitiesPopupBox::update(Workspace* ws) {
 		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	}
 
-	const float width = Math::clamp(_renderer->width() * 0.8f, 280.0f, 480.0f);
+	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 480.0f);
 	const float height = Math::clamp(_renderer->height() * 0.3f, 64.0f, 256.0f);
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
@@ -4587,7 +4847,7 @@ void AboutPopupBox::update(Workspace*) {
 		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	}
 
-	const float width = Math::clamp(_renderer->width() * 0.8f, 280.0f, 480.0f);
+	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 480.0f);
 	const float height = Math::clamp(_renderer->height() * 0.3f, 64.0f, 256.0f);
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {

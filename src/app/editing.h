@@ -519,7 +519,6 @@ enum PaintableTools {
 	MOVE,
 	RESIZE,
 	REF,
-
 	COUNT
 };
 

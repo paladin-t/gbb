@@ -3732,6 +3732,8 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 		prj->version(prj_->version());
 		prj->url(prj_->url());
 		prj->iconCode(prj_->iconCode());
+		prj->borderFrameType(prj_->borderFrameType());
+		prj->borderFrame(prj_->borderFrame());
 		prj->modified(now);
 
 		prj->hasDirtyInformation(true);
@@ -5034,8 +5036,42 @@ void Workspace::compile(
 		// Initialize the cartridge options.
 		if (project) {
 			Bytes::Ptr iconTiles(Bytes::create());
-			if (!!project->touchIconImage2Bpp(iconTiles))
+			if (!!project->touchIconImage2Bpp(iconTiles)) {
 				options.icon = iconTiles;
+			}
+
+			Image::Ptr borderImage = nullptr;
+			switch (project->borderFrameType()) {
+			case Project::BorderFrameTypes::DEFAULT: {
+					Image::Ptr img(Image::create());
+					if (!img->fromBytes((Byte*)RES_IMAGE_DEFAULT_BORDER, GBBASIC_COUNTOF(RES_IMAGE_DEFAULT_BORDER)))
+						break;
+
+					borderImage = img;
+				}
+
+				break;
+			case Project::BorderFrameTypes::CUSTOM: {
+					if (project->borderFrame().empty())
+						break;
+
+					Bytes::Ptr bytes(Bytes::create());
+					if (!Base64::toBytes(bytes.get(), project->borderFrame()))
+						break;
+
+					Image::Ptr img(Image::create());
+					if (!img->fromBytes(bytes.get()))
+						break;
+
+					borderImage = img;
+				}
+
+				break;
+			default: // Do nothing.
+				break;
+			}
+			if (borderImage)
+				options.border = borderImage;
 
 			options.backgroundPalettes = project->backgroundPalettes();
 			options.spritePalettes = project->spritePalettes();

@@ -266,6 +266,15 @@
 #	define GBBASIC_SCREEN_HEIGHT 144
 #endif /* GBBASIC_SCREEN_HEIGHT */
 
+// The width of screen with border.
+#ifndef GBBASIC_BORDERED_SCREEN_WIDTH
+#	define GBBASIC_BORDERED_SCREEN_WIDTH 256
+#endif /* GBBASIC_BORDERED_SCREEN_WIDTH */
+// The height of screen with border.
+#ifndef GBBASIC_BORDERED_SCREEN_HEIGHT
+#	define GBBASIC_BORDERED_SCREEN_HEIGHT 224
+#endif /* GBBASIC_BORDERED_SCREEN_HEIGHT */
+
 // The bit count of palette group.
 #ifndef GBBASIC_PALETTE_DEPTH
 #	define GBBASIC_PALETTE_DEPTH 2

@@ -10,7 +10,6 @@
 #define __EDITOR_PALETTE_H__
 
 #include "widgets.h"
-#include "../utils/editable.h"
 
 /*
 ** {===========================================================================
