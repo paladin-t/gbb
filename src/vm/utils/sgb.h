@@ -8,7 +8,7 @@
 #endif /* __SDCC */
 
 typedef struct sgb_palette_packet_t {
-    UINT8 cmd;
+    UINT8 command;
     UINT16 colors[7];
 } sgb_palette_packet_t;
 

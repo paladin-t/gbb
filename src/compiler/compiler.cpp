@@ -233,33 +233,40 @@ namespace GBBASIC {
 #	define SPRITE_PALETTES_ENTRY_NAME "SpritePalettes" // DOC: ROM SCHEMA.
 #endif /* SPRITE_PALETTES_ENTRY_NAME */
 
-#ifndef SGB_PALETTE_BANK_ENTRY_NAME
-#	define SGB_PALETTE_BANK_ENTRY_NAME "SgbPaletteBank"  // DOC: ROM SCHEMA.
-#endif /* SGB_PALETTE_BANK_ENTRY_NAME */
-#ifndef SGB_PALETTE_ADDRESS_ENTRY_NAME
-#	define SGB_PALETTE_ADDRESS_ENTRY_NAME "SgbPaletteAddress" // DOC: ROM SCHEMA.
-#endif /* SGB_PALETTE_ADDRESS_ENTRY_NAME */
-#ifndef SGB_PALETTE_SIZE_ENTRY_NAME
-#	define SGB_PALETTE_SIZE_ENTRY_NAME "SgbPaletteSize" // DOC: ROM SCHEMA.
-#endif /* SGB_PALETTE_SIZE_ENTRY_NAME */
-#ifndef SGB_TILES_BANK_ENTRY_NAME
-#	define SGB_TILES_BANK_ENTRY_NAME "SgbTilesBank" // DOC: ROM SCHEMA.
-#endif /* SGB_TILES_BANK_ENTRY_NAME */
-#ifndef SGB_TILES_ADDRESS_ENTRY_NAME
-#	define SGB_TILES_ADDRESS_ENTRY_NAME "SgbTilesAddress" // DOC: ROM SCHEMA.
-#endif /* SGB_TILES_ADDRESS_ENTRY_NAME */
-#ifndef SGB_TILES_SIZE_ENTRY_NAME
-#	define SGB_TILES_SIZE_ENTRY_NAME "SgbTilesSize" // DOC: ROM SCHEMA.
-#endif /* SGB_TILES_SIZE_ENTRY_NAME */
-#ifndef SGB_MAP_BANK_ENTRY_NAME
-#	define SGB_MAP_BANK_ENTRY_NAME "SgbMapBank" // DOC: ROM SCHEMA.
-#endif /* SGB_MAP_BANK_ENTRY_NAME */
-#ifndef SGB_MAP_ADDRESS_ENTRY_NAME
-#	define SGB_MAP_ADDRESS_ENTRY_NAME "SgbMapAddress" // DOC: ROM SCHEMA.
-#endif /* SGB_MAP_ADDRESS_ENTRY_NAME */
-#ifndef SGB_MAP_SIZE_ENTRY_NAME
-#	define SGB_MAP_SIZE_ENTRY_NAME "SgbMapSize" // DOC: ROM SCHEMA.
-#endif /* SGB_MAP_SIZE_ENTRY_NAME */
+#ifndef SGB_BORDER_PALETTE_BANK_ENTRY_NAME
+#	define SGB_BORDER_PALETTE_BANK_ENTRY_NAME "SgbBorderPaletteBank"  // DOC: ROM SCHEMA.
+#endif /* SGB_BORDER_PALETTE_BANK_ENTRY_NAME */
+#ifndef SGB_BORDER_PALETTE_ADDRESS_ENTRY_NAME
+#	define SGB_BORDER_PALETTE_ADDRESS_ENTRY_NAME "SgbBorderPaletteAddress" // DOC: ROM SCHEMA.
+#endif /* SGB_BORDER_PALETTE_ADDRESS_ENTRY_NAME */
+#ifndef SGB_BORDER_PALETTE_SIZE_ENTRY_NAME
+#	define SGB_BORDER_PALETTE_SIZE_ENTRY_NAME "SgbBorderPaletteSize" // DOC: ROM SCHEMA.
+#endif /* SGB_BORDER_PALETTE_SIZE_ENTRY_NAME */
+#ifndef SGB_BORDER_TILES_BANK_ENTRY_NAME
+#	define SGB_BORDER_TILES_BANK_ENTRY_NAME "SgbBorderTilesBank" // DOC: ROM SCHEMA.
+#endif /* SGB_BORDER_TILES_BANK_ENTRY_NAME */
+#ifndef SGB_BORDER_TILES_ADDRESS_ENTRY_NAME
+#	define SGB_BORDER_TILES_ADDRESS_ENTRY_NAME "SgbBorderTilesAddress" // DOC: ROM SCHEMA.
+#endif /* SGB_BORDER_TILES_ADDRESS_ENTRY_NAME */
+#ifndef SGB_BORDER_TILES_SIZE_ENTRY_NAME
+#	define SGB_BORDER_TILES_SIZE_ENTRY_NAME "SgbBorderTilesSize" // DOC: ROM SCHEMA.
+#endif /* SGB_BORDER_TILES_SIZE_ENTRY_NAME */
+#ifndef SGB_BORDER_MAP_BANK_ENTRY_NAME
+#	define SGB_BORDER_MAP_BANK_ENTRY_NAME "SgbBorderMapBank" // DOC: ROM SCHEMA.
+#endif /* SGB_BORDER_MAP_BANK_ENTRY_NAME */
+#ifndef SGB_BORDER_MAP_ADDRESS_ENTRY_NAME
+#	define SGB_BORDER_MAP_ADDRESS_ENTRY_NAME "SgbBorderMapAddress" // DOC: ROM SCHEMA.
+#endif /* SGB_BORDER_MAP_ADDRESS_ENTRY_NAME */
+#ifndef SGB_BORDER_MAP_SIZE_ENTRY_NAME
+#	define SGB_BORDER_MAP_SIZE_ENTRY_NAME "SgbBorderMapSize" // DOC: ROM SCHEMA.
+#endif /* SGB_BORDER_MAP_SIZE_ENTRY_NAME */
+
+#ifndef SGB_PALETTES_BANK_ENTRY_NAME
+#	define SGB_PALETTES_BANK_ENTRY_NAME "SgbPalettesBank" // DOC: ROM SCHEMA.
+#endif /* SGB_PALETTES_BANK_ENTRY_NAME */
+#ifndef SGB_PALETTES_ADDRESS_ENTRY_NAME
+#	define SGB_PALETTES_ADDRESS_ENTRY_NAME "SgbPalettesAddress" // DOC: ROM SCHEMA.
+#endif /* SGB_PALETTES_ADDRESS_ENTRY_NAME */
 
 #ifndef BEEP_ENTRY_NAME
 #	define BEEP_ENTRY_NAME "Beep" // DOC: ROM SCHEMA.
@@ -38709,15 +38716,15 @@ private:
 			if (!borderFrameResources.serialized)
 				break;
 
-			const RomLocation* romLocation0 = symbols.find(SGB_PALETTE_BANK_ENTRY_NAME);
-			const RomLocation* romLocation1 = symbols.find(SGB_PALETTE_ADDRESS_ENTRY_NAME);
-			const RomLocation* romLocation2 = symbols.find(SGB_PALETTE_SIZE_ENTRY_NAME);
-			const RomLocation* romLocation3 = symbols.find(SGB_TILES_BANK_ENTRY_NAME);
-			const RomLocation* romLocation4 = symbols.find(SGB_TILES_ADDRESS_ENTRY_NAME);
-			const RomLocation* romLocation5 = symbols.find(SGB_TILES_SIZE_ENTRY_NAME);
-			const RomLocation* romLocation6 = symbols.find(SGB_MAP_BANK_ENTRY_NAME);
-			const RomLocation* romLocation7 = symbols.find(SGB_MAP_ADDRESS_ENTRY_NAME);
-			const RomLocation* romLocation8 = symbols.find(SGB_MAP_SIZE_ENTRY_NAME);
+			const RomLocation* romLocation0 = symbols.find(SGB_BORDER_PALETTE_BANK_ENTRY_NAME);
+			const RomLocation* romLocation1 = symbols.find(SGB_BORDER_PALETTE_ADDRESS_ENTRY_NAME);
+			const RomLocation* romLocation2 = symbols.find(SGB_BORDER_PALETTE_SIZE_ENTRY_NAME);
+			const RomLocation* romLocation3 = symbols.find(SGB_BORDER_TILES_BANK_ENTRY_NAME);
+			const RomLocation* romLocation4 = symbols.find(SGB_BORDER_TILES_ADDRESS_ENTRY_NAME);
+			const RomLocation* romLocation5 = symbols.find(SGB_BORDER_TILES_SIZE_ENTRY_NAME);
+			const RomLocation* romLocation6 = symbols.find(SGB_BORDER_MAP_BANK_ENTRY_NAME);
+			const RomLocation* romLocation7 = symbols.find(SGB_BORDER_MAP_ADDRESS_ENTRY_NAME);
+			const RomLocation* romLocation8 = symbols.find(SGB_BORDER_MAP_SIZE_ENTRY_NAME);
 			if (
 				!romLocation0 || !romLocation1 || !romLocation2 ||
 				!romLocation3 || !romLocation4 || !romLocation5 ||

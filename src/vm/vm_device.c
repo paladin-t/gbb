@@ -31,7 +31,7 @@ BANKREF_EXTERN(BUILTIN)
 
 extern const unsigned char Font[]; // From builtin inline data.
 
-const BOOLEAN ExtensionMode = TRUE; // Can be overwritten by compiler.
+const volatile BOOLEAN ExtensionMode = TRUE; // Can be overwritten by compiler.
 
 const UINT16 BackgroundPalettes[32] = { // Can be overwritten by compiler.
     0x6BFC, 0x3B11, 0x29A6, 0x1061,
@@ -55,15 +55,19 @@ const UINT16 SpritePalettes[32] = { // Can be overwritten by compiler.
 };
 
 // Can be overwritten by compiler.
-const volatile UINT8 SgbPaletteBank = 0;
-const volatile UINT16 SgbPaletteAddress = 0;
-const volatile UINT16 SgbPaletteSize = 0;
-const volatile UINT8 SgbTilesBank = 0;
-const volatile UINT16 SgbTilesAddress = 0;
-const volatile UINT16 SgbTilesSize = 0;
-const volatile UINT8 SgbMapBank = 0;
-const volatile UINT16 SgbMapAddress = 0;
-const volatile UINT16 SgbMapSize = 0;
+const volatile UINT8 SgbBorderPaletteBank = 0;
+const volatile UINT16 SgbBorderPaletteAddress = 0;
+const volatile UINT16 SgbBorderPaletteSize = 0;
+const volatile UINT8 SgbBorderTilesBank = 0;
+const volatile UINT16 SgbBorderTilesAddress = 0;
+const volatile UINT16 SgbBorderTilesSize = 0;
+const volatile UINT8 SgbBorderMapBank = 0;
+const volatile UINT16 SgbBorderMapAddress = 0;
+const volatile UINT16 SgbBorderMapSize = 0;
+
+// Can be overwritten by compiler.
+const volatile UINT8 SgbPalettesBank = 0;
+const volatile UINT16 SgbPalettesAddress = 0;
 
 UINT8 device_type;
 
@@ -98,12 +102,20 @@ void device_init(void) BANKED {
     }
 
     if (IS_SGB) {
-        if (SgbPaletteBank != 0 /* && SgbTilesBank != 0 && SgbMapBank != 0 */) {
+        if (SgbBorderPaletteBank != 0 /* && SgbBorderTilesBank != 0 && SgbBorderMapBank != 0 */) {
             sgb_set_border(
-                SgbPaletteBank, (UINT8 *)SgbPaletteAddress, SgbPaletteSize,
-                SgbTilesBank, (UINT8 *)SgbTilesAddress, SgbTilesSize,
-                SgbMapBank, (UINT8 *)SgbMapAddress, SgbMapSize
+                SgbBorderPaletteBank, (UINT8 *)SgbBorderPaletteAddress, SgbBorderPaletteSize,
+                SgbBorderTilesBank, (UINT8 *)SgbBorderTilesAddress, SgbBorderTilesSize,
+                SgbBorderMapBank, (UINT8 *)SgbBorderMapAddress, SgbBorderMapSize
             );
+        }
+        if (SgbPalettesBank != 0) {
+            const UINT8 * ptr = (UINT8 *)SgbPalettesAddress;
+            const UINT8 n = *(ptr++);
+            for (UINT8 i = 0; i != n; ++i) {
+                sgb_send_packet(SgbPalettesBank, ptr, sizeof(sgb_palette_packet_t));
+                ptr += sizeof(sgb_palette_packet_t);
+            }
         }
     }
 

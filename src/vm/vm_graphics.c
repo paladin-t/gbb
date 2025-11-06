@@ -94,7 +94,7 @@ void vm_palette(SCRIPT_CTX * THIS, UINT8 nsargs) OLDCALL BANKED {
         break;
     case 8: { // For SGB.
             sgb_palette_packet_t pck;
-            pck.cmd           = (UINT8)*(--THIS->stack_ptr);
+            pck.command       = (UINT8)*(--THIS->stack_ptr);
             pck.colors[0]     = (UINT16)*(--THIS->stack_ptr);
             pck.colors[1]     = (UINT16)*(--THIS->stack_ptr);
             pck.colors[2]     = (UINT16)*(--THIS->stack_ptr);
@@ -102,7 +102,7 @@ void vm_palette(SCRIPT_CTX * THIS, UINT8 nsargs) OLDCALL BANKED {
             pck.colors[4]     = (UINT16)*(--THIS->stack_ptr);
             pck.colors[5]     = (UINT16)*(--THIS->stack_ptr);
             pck.colors[6]     = (UINT16)*(--THIS->stack_ptr);
-            sgb_send_packet(0, (UINT8 *)&pck, sizeof(sgb_palette_packet_t));
+            sgb_transfer((POINTER)&pck);
         }
 
         break;
