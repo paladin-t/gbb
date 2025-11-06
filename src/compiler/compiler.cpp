@@ -1502,8 +1502,9 @@ public:
 };
 
 struct BorderResources {
-	Image::Ptr image = nullptr;
+	bool enabled = false;
 	bool serialized = false;
+	Image::Ptr image = nullptr;
 	UInt8 paletteBank = 0;
 	UInt16 paletteAddress = 0;
 	UInt16 paletteSize = 0;
@@ -1517,7 +1518,7 @@ struct BorderResources {
 
 	BorderResources() {
 	}
-	BorderResources(const Image::Ptr &img) : image(img) {
+	BorderResources(bool e, const Image::Ptr &img) : enabled(e), image(img) {
 	}
 };
 
@@ -7147,7 +7148,7 @@ private:
 
 		// Serialize the border image to bytes.
 		BorderResources* borderResources = ctx_.borderResources;
-		if (!borderResources || !borderResources->image)
+		if (!borderResources || !borderResources->enabled || !borderResources->image)
 			return;
 
 		Bytes::Ptr palette(Bytes::create());
@@ -39187,6 +39188,7 @@ bool compile(Program &program, const Options &options) {
 	const std::string &ast                                                     = options.ast;
 	const Options::Passes passes                                               = options.passes;
 	const Bytes::Ptr &icon                                                     = options.icon;
+	const bool superFeaturesEnabled                                            = options.superFeaturesEnabled;
 	const Image::Ptr &border                                                   = options.border;
 	const Bytes::Ptr &backgroundPalettes                                       = options.backgroundPalettes;
 	const Bytes::Ptr &spritePalettes                                           = options.spritePalettes;
@@ -39402,7 +39404,7 @@ bool compile(Program &program, const Options &options) {
 		// Compile.
 		RamLocation::Dictionary allocations;
 		FeatureUsages featureUsages;
-		BorderResources borderResources(border);
+		BorderResources borderResources(superFeaturesEnabled, border);
 		int compiledSize = 0;
 		if (!compiler.process(organizer.ast(), program.assets, pipeline, &allocations, &featureUsages, borderResources, &compiledSize, onError)) {
 			std::swap(program.compiled.allocations, allocations);
@@ -39420,13 +39422,15 @@ bool compile(Program &program, const Options &options) {
 		program.compiled.effectiveSize.addCode(codeSize);
 		program.compiled.effectiveSize += pipeline->effectiveSize();
 
-		if (borderResources.serialized) {
-			const double secs = DateTime::toSeconds(borderResources.interval);
+		if (superFeaturesEnabled) {
+			if (borderResources.serialized) {
+				const double secs = DateTime::toSeconds(borderResources.interval);
 
-			const std::string dstn = Text::toScaledBytes(borderResources.paletteSize + borderResources.tilesSize + borderResources.mapSize);
-			const std::string time = Text::toString(secs, 6, 0, ' ', std::ios::fixed);
-			const std::string msg = Text::format("Succeeded to process the border resources to {0} in {1}s.", { dstn, time });
-			onPrint(msg);
+				const std::string dstn = Text::toScaledBytes(borderResources.paletteSize + borderResources.tilesSize + borderResources.mapSize);
+				const std::string time = Text::toString(secs, 6, 0, ' ', std::ios::fixed);
+				const std::string msg = Text::format("Succeeded to process the border resources to {0} in {1}s.", { dstn, time });
+				onPrint(msg);
+			}
 		}
 
 		onPrint("Succeeded to compile the source code.");

@@ -789,7 +789,9 @@ bool Theme::open(class Renderer* rnd) {
 	windowProjectProperty_Compiling_Parser("Parser:");
 	windowProjectProperty_Compiling_Parser_CaseInsensitive("Case-insensitive");
 	windowProjectProperty_Advanced_SuperFeatures("\"Super\" features:");
+	windowProjectProperty_Advanced_SuperFeatures_Enabled("Enabled");
 	windowProjectProperty_Advanced_BorderFrame("Border frame");
+	windowProjectProperty_Advanced_Preview("     Preview");
 	windowProjectProperty_Advanced_BorderFrame_None("None");
 	windowProjectProperty_Advanced_BorderFrame_Default("Default");
 	windowProjectProperty_Advanced_BorderFrame_Custom("Custom");

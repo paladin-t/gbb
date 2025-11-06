@@ -74,6 +74,7 @@ Project::Project(class Window* wnd, Renderer* rnd, class Workspace* ws) {
 	hasRtc(false);
 	version("1.0.0");
 	caseInsensitive(true);
+	superFeaturesEnabled(false);
 	borderFrameType(BorderFrameTypes::NONE);
 	created(-1);
 	modified(-1);
@@ -153,6 +154,7 @@ Project &Project::operator = (const Project &other) {
 	url(other.url());
 	iconCode(other.iconCode());
 	caseInsensitive(other.caseInsensitive());
+	superFeaturesEnabled(other.superFeaturesEnabled());
 	borderFrameType(other.borderFrameType());
 	borderFrame(other.borderFrame());
 	created(other.created());
@@ -1849,6 +1851,7 @@ bool Project::open(const char* path_) {
 		version("1.0.0");
 		url("");
 		caseInsensitive(true);
+		superFeaturesEnabled(false);
 		created(now);
 		modified(now);
 		preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
@@ -1914,6 +1917,7 @@ bool Project::open(const char* path_) {
 		version("1.0.0");
 		url("");
 		caseInsensitive(true);
+		superFeaturesEnabled(false);
 		created(now);
 		modified(now);
 		preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
@@ -2379,6 +2383,7 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		version("1.0.0");
 		url("");
 		caseInsensitive(true);
+		superFeaturesEnabled(false);
 		created(now);
 		modified(now);
 		preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
@@ -2747,6 +2752,14 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 		report(msg.c_str(), true);
 	}
 
+	superFeaturesEnabled(false);
+	if (!Jpath::get(doc, superFeaturesEnabled(), "super_features_enabled")) {
+		superFeaturesEnabled(false);
+
+		const std::string msg = Text::format("The project information has no \"super_features_enabled\" field, falls to \"{0}\".", { Text::toString(superFeaturesEnabled()) });
+		report(msg.c_str(), true);
+	}
+
 	borderFrameType(BorderFrameTypes::NONE);
 	unsigned utmp = 0;
 	if (Jpath::get(doc, utmp, "border_frame_type")) {
@@ -2965,6 +2978,8 @@ bool Project::saveInformation(std::string &content) {
 	Jpath::set(doc, doc, iconCode(), "icon");
 
 	Jpath::set(doc, doc, caseInsensitive(), "case_insensitive");
+
+	Jpath::set(doc, doc, superFeaturesEnabled(), "super_features_enabled");
 
 	Jpath::set(doc, doc, (unsigned)borderFrameType(), "border_frame_type");
 

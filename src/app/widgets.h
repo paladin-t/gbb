@@ -934,6 +934,7 @@ private:
 	Renderer* _renderer = nullptr; // Foreign.
 	Theme* _theme = nullptr; // Foreign.
 	std::string _title;
+	float _superFeaturesBeginX = 0.0f;
 	Texture::Ptr _borderTexture = nullptr;
 	std::string _borderError;
 	Semaphore _borderTextureIsBeingGenerated;

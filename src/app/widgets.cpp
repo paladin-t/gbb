@@ -3938,6 +3938,20 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			if (BeginTabItem(_theme->tabProjectProperty_Advanced(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
 				TextUnformatted(_theme->windowProjectProperty_Advanced_SuperFeatures());
 
+				PushID("#SFE");
+				{
+					SetCursorPosX(_superFeaturesBeginX);
+					bool pref = prj->superFeaturesEnabled();
+					if (Checkbox(_theme->windowProjectProperty_Advanced_SuperFeatures_Enabled(), &pref))
+						prj->superFeaturesEnabled(pref);
+				}
+				PopID();
+
+				const bool enabled = prj->superFeaturesEnabled();
+
+				if (!enabled)
+					BeginDisabled();
+
 				PushID("#SgbBdr");
 				{
 					AlignTextToFramePadding();
@@ -3946,6 +3960,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					SameLine();
 					const float wndWidth = GetWindowWidth();
 					const float beginX = GetCursorPosX();
+					_superFeaturesBeginX = beginX;
 
 					VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(1, 1));
 
@@ -4144,6 +4159,11 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 						} while (false);
 					}
 					if (iconTex) {
+						//AlignTextToFramePadding();
+						TextUnformatted(_theme->windowProjectProperty_Advanced_Preview());
+
+						SameLine();
+
 						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
 
 						const float imgw = GBBASIC_BORDERED_SCREEN_WIDTH * 0.5f, imgh = GBBASIC_BORDERED_SCREEN_HEIGHT * 0.5f;
@@ -4197,6 +4217,9 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				}
 				PopID();
 
+				if (!enabled)
+					EndDisabled();
+
 				EndTabItem();
 			}
 
@@ -4208,19 +4231,20 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 		const char* cancel = _cancelText.empty() ? "Cancel" : _cancelText.c_str();
 
 		const bool appliable =
-			prj->title()           != _project->title()           ||
-			prj->cartridgeType()   != _project->cartridgeType()   ||
-			prj->sramType()        != _project->sramType()        ||
-			prj->hasRtc()          != _project->hasRtc()          ||
-			prj->description()     != _project->description()     ||
-			prj->author()          != _project->author()          ||
-			prj->genre()           != _project->genre()           ||
-			prj->version()         != _project->version()         ||
-			prj->url()             != _project->url()             ||
-			prj->iconCode()        != _project->iconCode()        ||
-			prj->caseInsensitive() != _project->caseInsensitive() ||
-			prj->borderFrameType() != _project->borderFrameType() ||
-			prj->borderFrame()     != _project->borderFrame();
+			prj->title()                != _project->title()                ||
+			prj->cartridgeType()        != _project->cartridgeType()        ||
+			prj->sramType()             != _project->sramType()             ||
+			prj->hasRtc()               != _project->hasRtc()               ||
+			prj->description()          != _project->description()          ||
+			prj->author()               != _project->author()               ||
+			prj->genre()                != _project->genre()                ||
+			prj->version()              != _project->version()              ||
+			prj->url()                  != _project->url()                  ||
+			prj->iconCode()             != _project->iconCode()             ||
+			prj->caseInsensitive()      != _project->caseInsensitive()      ||
+			prj->superFeaturesEnabled() != _project->superFeaturesEnabled() ||
+			prj->borderFrameType()      != _project->borderFrameType()      ||
+			prj->borderFrame()          != _project->borderFrame();
 
 		if (_confirmText.empty()) {
 			confirm = "Ok";

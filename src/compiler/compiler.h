@@ -780,6 +780,10 @@ struct Options {
 	 */
 	Bytes::Ptr icon = nullptr;
 	/**
+	 * @brief Whether the super features have been enabled for the program.
+	 */
+	bool superFeaturesEnabled = false;
+	/**
 	 * @brief The border frame of the program.
 	 */
 	Image::Ptr border = nullptr;

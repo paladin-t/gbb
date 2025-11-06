@@ -3725,13 +3725,14 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 		prj->cartridgeType(prj_->cartridgeType());
 		prj->sramType(prj_->sramType());
 		prj->hasRtc(prj_->hasRtc());
-		prj->caseInsensitive(prj_->caseInsensitive());
 		prj->description(prj_->description());
 		prj->author(prj_->author());
 		prj->genre(prj_->genre());
 		prj->version(prj_->version());
 		prj->url(prj_->url());
 		prj->iconCode(prj_->iconCode());
+		prj->caseInsensitive(prj_->caseInsensitive());
+		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
 		prj->borderFrame(prj_->borderFrame());
 		prj->modified(now);
@@ -5041,37 +5042,39 @@ void Workspace::compile(
 			}
 
 			Image::Ptr borderImage = nullptr;
-			switch (project->borderFrameType()) {
-			case Project::BorderFrameTypes::DEFAULT: {
-					Image::Ptr img(Image::create());
-					if (!img->fromBytes((Byte*)RES_IMAGE_DEFAULT_BORDER, GBBASIC_COUNTOF(RES_IMAGE_DEFAULT_BORDER)))
-						break;
+			if (project->superFeaturesEnabled()) {
+				switch (project->borderFrameType()) {
+				case Project::BorderFrameTypes::DEFAULT: {
+						Image::Ptr img(Image::create());
+						if (!img->fromBytes((Byte*)RES_IMAGE_DEFAULT_BORDER, GBBASIC_COUNTOF(RES_IMAGE_DEFAULT_BORDER)))
+							break;
 
-					borderImage = img;
+						borderImage = img;
+					}
+
+					break;
+				case Project::BorderFrameTypes::CUSTOM: {
+						if (project->borderFrame().empty())
+							break;
+
+						Bytes::Ptr bytes(Bytes::create());
+						if (!Base64::toBytes(bytes.get(), project->borderFrame()))
+							break;
+
+						Image::Ptr img(Image::create());
+						if (!img->fromBytes(bytes.get()))
+							break;
+
+						borderImage = img;
+					}
+
+					break;
+				default: // Do nothing.
+					break;
 				}
-
-				break;
-			case Project::BorderFrameTypes::CUSTOM: {
-					if (project->borderFrame().empty())
-						break;
-
-					Bytes::Ptr bytes(Bytes::create());
-					if (!Base64::toBytes(bytes.get(), project->borderFrame()))
-						break;
-
-					Image::Ptr img(Image::create());
-					if (!img->fromBytes(bytes.get()))
-						break;
-
-					borderImage = img;
-				}
-
-				break;
-			default: // Do nothing.
-				break;
 			}
-			if (borderImage)
-				options.border = borderImage;
+			options.superFeaturesEnabled = project->superFeaturesEnabled();
+			options.border = borderImage;
 
 			options.backgroundPalettes = project->backgroundPalettes();
 			options.spritePalettes = project->spritePalettes();
