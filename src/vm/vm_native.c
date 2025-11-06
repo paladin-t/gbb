@@ -87,7 +87,7 @@ BOOLEAN wait_until_confirm(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
     return FALSE;
 }
 
-// Sends a packet to the SGB device.
+// Sends a packet of bytes to SGB devices.
 BOOLEAN send_sgb_packet(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)start;
     (void)stack_frame;
@@ -97,10 +97,7 @@ BOOLEAN send_sgb_packet(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCA
     const UINT16 addr  = (UINT16)*(--THIS_->stack_ptr);
     const UINT8 size   = (UINT8)*(--THIS_->stack_ptr);
 
-    UINT8 buf[16];
-    memset(buf, 0, sizeof(buf));
-    get_chunk(buf, bank, (UINT8 *)addr, MIN(size, sizeof(buf)));
-    sgb_transfer((POINTER)buf);
+    sgb_send_packet(bank, (UINT8 *)addr, size);
 
     return TRUE;
 }

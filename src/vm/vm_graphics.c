@@ -6,6 +6,7 @@
 #endif /* __SDCC */
 
 #include "utils/graphics.h"
+#include "utils/sgb.h"
 #include "utils/text.h"
 #include "utils/utils.h"
 
@@ -88,6 +89,20 @@ void vm_palette(SCRIPT_CTX * THIS, UINT8 nsargs) OLDCALL BANKED {
                 else /* if (layer == GRAPHICS_LAYER_SPRITE) */
                     set_sprite_palette_entry(plt, entry, val);
             }
+        }
+
+        break;
+    case 8: { // For SGB.
+            sgb_palette_packet_t pck;
+            pck.cmd           = (UINT8)*(--THIS->stack_ptr);
+            pck.colors[0]     = (UINT16)*(--THIS->stack_ptr);
+            pck.colors[1]     = (UINT16)*(--THIS->stack_ptr);
+            pck.colors[2]     = (UINT16)*(--THIS->stack_ptr);
+            pck.colors[3]     = (UINT16)*(--THIS->stack_ptr);
+            pck.colors[4]     = (UINT16)*(--THIS->stack_ptr);
+            pck.colors[5]     = (UINT16)*(--THIS->stack_ptr);
+            pck.colors[6]     = (UINT16)*(--THIS->stack_ptr);
+            sgb_send_packet(0, (UINT8 *)&pck, sizeof(sgb_palette_packet_t));
         }
 
         break;

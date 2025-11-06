@@ -433,6 +433,10 @@ namespace GBBASIC {
 #	define GRAPHICS_PALETTE_SILVER                                  0x01
 #	define GRAPHICS_PALETTE_GRAY                                    0x02
 #	define GRAPHICS_PALETTE_BLACK                                   0x03
+#	define GRAPHICS_SGB_PALETTE_01                                ((0x00 << 3) | 1)
+#	define GRAPHICS_SGB_PALETTE_23                                ((0x01 << 3) | 1)
+#	define GRAPHICS_SGB_PALETTE_03                                ((0x02 << 3) | 1)
+#	define GRAPHICS_SGB_PALETTE_12                                ((0x03 << 3) | 1)
 #endif /* GRAPHICS_PALETTES */
 
 #ifndef GRAPHICS_LAYERS
@@ -17079,7 +17083,9 @@ public:
 				THROW_TOO_FEW_ARGUMENTS(onError);
 			} else if (_children.size() == 2 || _children.size() == 3 || _children.size() == 4) {
 				// Do nothing.
-			} else if (_children.size() > 4) {
+			} else if (_children.size() == 8) {
+				// Do nothing.
+			} else if (_children.size() > 8) {
 				THROW_TOO_MANY_ARGUMENTS(onError);
 			} else {
 				THROW_ARGUMENT_COUNT_DOES_NOT_MATCH(onError);
@@ -29377,6 +29383,11 @@ public:
 			ADD_BUILTIN("SILVER",                                    BuiltinTable::Entry(GRAPHICS_PALETTE_SILVER)                           );
 			ADD_BUILTIN("GRAY",                                      BuiltinTable::Entry(GRAPHICS_PALETTE_GRAY)                             );
 			ADD_BUILTIN("BLACK",                                     BuiltinTable::Entry(GRAPHICS_PALETTE_BLACK)                            );
+
+			ADD_BUILTIN("SGB_PALETTE_01",                            BuiltinTable::Entry(GRAPHICS_SGB_PALETTE_01)                           ); // For graphics primitives...
+			ADD_BUILTIN("SGB_PALETTE_23",                            BuiltinTable::Entry(GRAPHICS_SGB_PALETTE_23)                           );
+			ADD_BUILTIN("SGB_PALETTE_03",                            BuiltinTable::Entry(GRAPHICS_SGB_PALETTE_03)                           );
+			ADD_BUILTIN("SGB_PALETTE_12",                            BuiltinTable::Entry(GRAPHICS_SGB_PALETTE_12)                           );
 
 			ADD_BUILTIN("MAP_LAYER",                                 BuiltinTable::Entry(GRAPHICS_LAYER_MAP)                                ); // `MAP_LAYER` and `SPRITE_LAYER` are for the `VM_PALETTE` instruction...
 			ADD_BUILTIN("WINDOW_LAYER",                              BuiltinTable::Entry(GRAPHICS_LAYER_WINDOW)                             ); // All of these three are for the fill instruction...

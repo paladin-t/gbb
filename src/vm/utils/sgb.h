@@ -7,6 +7,13 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
+typedef struct sgb_palette_packet_t {
+    UINT8 cmd;
+    UINT16 colors[7];
+} sgb_palette_packet_t;
+
+void sgb_send_packet(UINT8 bank, const UINT8 * packet, UINT8 size) BANKED;
+
 void sgb_set_border(
     UINT8 palette_bank, const UINT8 * palette, UINT16 palette_size,
     UINT8 tiledata_bank, const UINT8 * tiledata, UINT16 tiledata_size,

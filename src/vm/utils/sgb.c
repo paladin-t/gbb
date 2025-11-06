@@ -28,6 +28,19 @@
         call_v_bbp_oldcall((F), (N), (BANK), (PTR), (FUNC)); \
     } while (0)
 
+void sgb_send_packet(UINT8 bank, const UINT8 * packet, UINT8 size) BANKED {
+    if (bank == 0) {
+        sgb_transfer((POINTER)packet);
+
+        return;
+    }
+
+    UINT8 buf[16];
+    memset(buf, 0, sizeof(buf));
+    get_chunk(buf, bank, (UINT8 *)packet, MIN(size, sizeof(buf)));
+    sgb_transfer((POINTER)buf);
+}
+
 void sgb_set_border(
     UINT8 palette_bank, const UINT8 * palette, UINT16 palette_size,
     UINT8 tiledata_bank, const UINT8 * tiledata, UINT16 tiledata_size,
