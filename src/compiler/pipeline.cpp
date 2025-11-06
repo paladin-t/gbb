@@ -2305,7 +2305,7 @@ public:
 
 		const long long end = DateTime::ticks();
 		const long long diff = end - start;
-		const int assetsSize = _effectiveSize.total() - _effectiveSize.borderResources();
+		const int assetsSize = _effectiveSize.total() - _effectiveSize.sgbResources();
 		const double secs = assetsSize != 0 ? DateTime::toSeconds(diff) : 0;
 
 		if (ok) {
@@ -3186,15 +3186,15 @@ Pipeline::Size::Size() {
 }
 
 Pipeline::Size &Pipeline::Size::operator += (const Size &other) {
-	_font            += other._font;
-	_code            += other._code;
-	_tiles           += other._tiles;
-	_map             += other._map;
-	_music           += other._music;
-	_sfx             += other._sfx;
-	_actor           += other._actor;
-	_scene           += other._scene;
-	_borderResources += other._borderResources;
+	_font         += other._font;
+	_code         += other._code;
+	_tiles        += other._tiles;
+	_map          += other._map;
+	_music        += other._music;
+	_sfx          += other._sfx;
+	_actor        += other._actor;
+	_scene        += other._scene;
+	_sgbResources += other._sgbResources;
 
 	return *this;
 }
@@ -3263,12 +3263,12 @@ void Pipeline::Size::addScene(int val) {
 	_scene += val;
 }
 
-int Pipeline::Size::borderResources(void) const {
-	return _borderResources;
+int Pipeline::Size::sgbResources(void) const {
+	return _sgbResources;
 }
 
-void Pipeline::Size::addBorderResources(int val) {
-	_borderResources += val;
+void Pipeline::Size::addSgbResources(int val) {
+	_sgbResources += val;
 }
 
 int Pipeline::Size::total(void) const {
@@ -3281,24 +3281,24 @@ int Pipeline::Size::total(void) const {
 		_sfx +
 		_actor +
 		_scene +
-		_borderResources;
+		_sgbResources;
 }
 
 std::string Pipeline::Size::toString(int indent) const {
 	std::string ret;
 	const std::string indent_ = Text::repeat(" ", indent);
 
-	const bool hasBorderResources = borderResources() > 0;
+	const bool hasSgbResources = sgbResources() > 0;
 
-	const std::string sfont   = Text::toScaledBytes(font());
-	const std::string scode   = Text::toScaledBytes(code());
-	const std::string stiles  = Text::toScaledBytes(tiles());
-	const std::string smap    = Text::toScaledBytes(map());
-	const std::string smusic  = Text::toScaledBytes(music());
-	const std::string ssfx    = Text::toScaledBytes(sfx());
-	const std::string sactor  = Text::toScaledBytes(actor());
-	const std::string sscene  = Text::toScaledBytes(scene());
-	const std::string sborder = hasBorderResources ? Text::toScaledBytes(borderResources()) : "";
+	const std::string sfont  = Text::toScaledBytes(font());
+	const std::string scode  = Text::toScaledBytes(code());
+	const std::string stiles = Text::toScaledBytes(tiles());
+	const std::string smap   = Text::toScaledBytes(map());
+	const std::string smusic = Text::toScaledBytes(music());
+	const std::string ssfx   = Text::toScaledBytes(sfx());
+	const std::string sactor = Text::toScaledBytes(actor());
+	const std::string sscene = Text::toScaledBytes(scene());
+	const std::string rsgb   = hasSgbResources ? Text::toScaledBytes(sgbResources()) : "";
 	int maxs = (int)Math::max(
 		sfont.length(),
 		scode.length(),
@@ -3309,52 +3309,52 @@ std::string Pipeline::Size::toString(int indent) const {
 		sactor.length(),
 		sscene.length()
 	);
-	if (hasBorderResources) {
-		maxs = (int)Math::max((size_t)maxs, sborder.length());
+	if (hasSgbResources) {
+		maxs = (int)Math::max((size_t)maxs, rsgb.length());
 	}
 
-	int pfont   = 0;
-	int pcode   = 0;
-	int ptiles  = 0;
-	int pmap    = 0;
-	int pmusic  = 0;
-	int psfx    = 0;
-	int pactor  = 0;
-	int pscene  = 0;
-	int pborder = 0;
+	int pfont  = 0;
+	int pcode  = 0;
+	int ptiles = 0;
+	int pmap   = 0;
+	int pmusic = 0;
+	int psfx   = 0;
+	int pactor = 0;
+	int pscene = 0;
+	int psgb   = 0;
 	if (total() > 0) {
-		 pfont      =            font() * 100 / total();
-		 pcode      =            code() * 100 / total();
-		ptiles      =           tiles() * 100 / total();
-		  pmap      =             map() * 100 / total();
-		pmusic      =           music() * 100 / total();
-		  psfx      =             sfx() * 100 / total();
-		pactor      =           actor() * 100 / total();
-		pscene      =           scene() * 100 / total();
-		if (hasBorderResources)
-			pborder = borderResources() * 100 / total();
+		 pfont   =         font() * 100 / total();
+		 pcode   =         code() * 100 / total();
+		ptiles   =        tiles() * 100 / total();
+		  pmap   =          map() * 100 / total();
+		pmusic   =        music() * 100 / total();
+		  psfx   =          sfx() * 100 / total();
+		pactor   =        actor() * 100 / total();
+		pscene   =        scene() * 100 / total();
+		if (hasSgbResources)
+			psgb = sgbResources() * 100 / total();
 	}
-	const std::string spfont   = Text::toString(pfont);
-	const std::string spcode   = Text::toString(pcode);
-	const std::string sptiles  = Text::toString(ptiles);
-	const std::string spmap    = Text::toString(pmap);
-	const std::string spmusic  = Text::toString(pmusic);
-	const std::string spsfx    = Text::toString(psfx);
-	const std::string spactor  = Text::toString(pactor);
-	const std::string spscene  = Text::toString(pscene);
-	const std::string spborder = Text::toString(pborder);
+	const std::string spfont  = Text::toString(pfont);
+	const std::string spcode  = Text::toString(pcode);
+	const std::string sptiles = Text::toString(ptiles);
+	const std::string spmap   = Text::toString(pmap);
+	const std::string spmusic = Text::toString(pmusic);
+	const std::string spsfx   = Text::toString(psfx);
+	const std::string spactor = Text::toString(pactor);
+	const std::string spscene = Text::toString(pscene);
+	const std::string spsgb   = Text::toString(psgb);
 	const int maxp = (int)Math::max(spfont.length(), spcode.length(), sptiles.length(), spmap.length(), spmusic.length(), spsfx.length(), spactor.length(), spscene.length());
 
-	if (hasBorderResources) {
-		ret += indent_ + "  Code size: " + scode   + ", " + Text::repeat(" ", maxs - (int)scode.length())   + "~" + Text::repeat(" ", maxp - (int)spcode.length())   + Text::toString(pcode)   + "%\n";
-		ret += indent_ + " Tiles size: " + stiles  + ", " + Text::repeat(" ", maxs - (int)stiles.length())  + "~" + Text::repeat(" ", maxp - (int)sptiles.length())  + Text::toString(ptiles)  + "%\n";
-		ret += indent_ + "   Map size: " + smap    + ", " + Text::repeat(" ", maxs - (int)smap.length())    + "~" + Text::repeat(" ", maxp - (int)spmap.length())    + Text::toString(pmap)    + "%\n";
-		ret += indent_ + " Scene size: " + sscene  + ", " + Text::repeat(" ", maxs - (int)sscene.length())  + "~" + Text::repeat(" ", maxp - (int)spscene.length())  + Text::toString(pscene)  + "%\n";
-		ret += indent_ + " Actor size: " + sactor  + ", " + Text::repeat(" ", maxs - (int)sactor.length())  + "~" + Text::repeat(" ", maxp - (int)spactor.length())  + Text::toString(pactor)  + "%\n";
-		ret += indent_ + "  Font size: " + sfont   + ", " + Text::repeat(" ", maxs - (int)sfont.length())   + "~" + Text::repeat(" ", maxp - (int)spfont.length())   + Text::toString(pfont)   + "%\n";
-		ret += indent_ + " Music size: " + smusic  + ", " + Text::repeat(" ", maxs - (int)smusic.length())  + "~" + Text::repeat(" ", maxp - (int)spmusic.length())  + Text::toString(pmusic)  + "%\n";
-		ret += indent_ + "   SFX size: " + ssfx    + ", " + Text::repeat(" ", maxs - (int)ssfx.length())    + "~" + Text::repeat(" ", maxp - (int)spsfx.length())    + Text::toString(psfx)    + "%\n";
-		ret += indent_ + "Border size: " + sborder + ", " + Text::repeat(" ", maxs - (int)sborder.length()) + "~" + Text::repeat(" ", maxp - (int)spborder.length()) + Text::toString(pborder) + "%";
+	if (hasSgbResources) {
+		ret += indent_ + "        Code size: " + scode  + ", " + Text::repeat(" ", maxs - (int)scode.length())  + "~" + Text::repeat(" ", maxp - (int)spcode.length())  + Text::toString(pcode)  + "%\n";
+		ret += indent_ + "       Tiles size: " + stiles + ", " + Text::repeat(" ", maxs - (int)stiles.length()) + "~" + Text::repeat(" ", maxp - (int)sptiles.length()) + Text::toString(ptiles) + "%\n";
+		ret += indent_ + "         Map size: " + smap   + ", " + Text::repeat(" ", maxs - (int)smap.length())   + "~" + Text::repeat(" ", maxp - (int)spmap.length())   + Text::toString(pmap)   + "%\n";
+		ret += indent_ + "       Scene size: " + sscene + ", " + Text::repeat(" ", maxs - (int)sscene.length()) + "~" + Text::repeat(" ", maxp - (int)spscene.length()) + Text::toString(pscene) + "%\n";
+		ret += indent_ + "       Actor size: " + sactor + ", " + Text::repeat(" ", maxs - (int)sactor.length()) + "~" + Text::repeat(" ", maxp - (int)spactor.length()) + Text::toString(pactor) + "%\n";
+		ret += indent_ + "        Font size: " + sfont  + ", " + Text::repeat(" ", maxs - (int)sfont.length())  + "~" + Text::repeat(" ", maxp - (int)spfont.length())  + Text::toString(pfont)  + "%\n";
+		ret += indent_ + "       Music size: " + smusic + ", " + Text::repeat(" ", maxs - (int)smusic.length()) + "~" + Text::repeat(" ", maxp - (int)spmusic.length()) + Text::toString(pmusic) + "%\n";
+		ret += indent_ + "         SFX size: " + ssfx   + ", " + Text::repeat(" ", maxs - (int)ssfx.length())   + "~" + Text::repeat(" ", maxp - (int)spsfx.length())   + Text::toString(psfx)   + "%\n";
+		ret += indent_ + "SGB resource size: " + rsgb   + ", " + Text::repeat(" ", maxs - (int)rsgb.length())   + "~" + Text::repeat(" ", maxp - (int)spsgb.length())   + Text::toString(psgb)   + "%";
 	} else {
 		ret += indent_ + " Code size: " + scode  + ", " + Text::repeat(" ", maxs - (int)scode.length())  + "~" + Text::repeat(" ", maxp - (int)spcode.length())  + Text::toString(pcode)  + "%\n";
 		ret += indent_ + "Tiles size: " + stiles + ", " + Text::repeat(" ", maxs - (int)stiles.length()) + "~" + Text::repeat(" ", maxp - (int)sptiles.length()) + Text::toString(ptiles) + "%\n";

@@ -650,6 +650,8 @@ struct Options {
 	 * @brief "Super" features.
 	 */
 	struct SuperFeatures {
+		typedef std::vector<Colour> Palettes;
+
 		/**
 		 * @brief Whether these features have been enabled.
 		 */
@@ -661,7 +663,7 @@ struct Options {
 		/**
 		 * @brief Extra pelettes.
 		 */
-		SuperPalettes palettes;
+		Palettes palettes;
 	};
 	/**
 	 * @brief Compiling strategies.

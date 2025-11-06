@@ -79,6 +79,8 @@ public:
 		COUNT
 	};
 
+	typedef std::array<Colour, 14> SuperPalettes;
+
 	typedef std::function<bool(File::Ptr)> FileReadingHandler;
 	typedef std::function<bool(File::Ptr)> FileWritingHandler;
 

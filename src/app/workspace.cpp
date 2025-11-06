@@ -5076,7 +5076,7 @@ void Workspace::compile(
 			}
 			options.superFeatures.enabled = project->superFeaturesEnabled();
 			options.superFeatures.border = borderImage;
-			options.superFeatures.palettes = project->superPalettes();
+			options.superFeatures.palettes = GBBASIC::Options::SuperFeatures::Palettes(project->superPalettes().begin(), project->superPalettes().end());
 
 			options.backgroundPalettes = project->backgroundPalettes();
 			options.spritePalettes = project->spritePalettes();
