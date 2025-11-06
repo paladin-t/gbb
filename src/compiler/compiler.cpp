@@ -13473,6 +13473,7 @@ private:
 
 				ok = true;
 			} else if (caseSensitiveFunctionName == SET_SGB_BORDER_FUNCTION_NAME) { // `set_sgb_border`.
+				// Using "Super" features.
 				usingSuperFeature(ctx, SET_SGB_BORDER_FUNCTION_NAME);
 
 				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, &ok, onError);
@@ -17055,6 +17056,9 @@ public:
 	NODE_TYPE(Types::PALETTE)
 
 	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		typedef std::vector<int> Indices;
+		typedef std::vector<Colour> Colours;
+
 		const Generator_Void_Void generator = [&] (void) -> void {
 			// Prepare.
 			Context &ctx = context.top();
@@ -17098,27 +17102,23 @@ public:
 			// Set the expression slot guard.
 			VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
 
-			// Get palette color from assets.
-			Colour col;
-			bool fromAsset = false;
-			if (_children.size() == 4) {
-				// Check for feature compatibility.
-				usingColoredFeature(ctx, "palette", onError);
-
+			// Function to get palette color from assets.
+			auto getColorFromPaletteAsset = [&] (Colour &col, bool &fromAsset, int index) -> bool {
 				// Find the palette asset.
 				constexpr const char* PALETTE_NAMES[] = EDITOR_PALETTE_NAMES;
 				const char* const* PALETTE_END = PALETTE_NAMES + GBBASIC_COUNTOF(PALETTE_NAMES);
 
+				fromAsset = false;
 				int page = -1;
 				Destination dest(0);
-				const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, (int)_children.size() - 1, true);
+				const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, index, true);
 				if (dest.isLeft()) {
 					if (tks.size() == 3) { /* Do nothing. */ }
-					else { THROW_INVALID_ASSET_POINT(onError); }
+					else { return false; }
 					fromAsset = true;
 				} else if (page == -1 && dest.isRight() && !dest.right().get().empty()) {
 					if (tks.size() == 1) { /* Do nothing. */ }
-					else { THROW_INVALID_ASSET_POINT(onError); }
+					else { return false; }
 					const std::string name = dest.right().get();
 					const char* const* ptr = std::find_if(
 						PALETTE_NAMES, PALETTE_END,
@@ -17126,14 +17126,14 @@ public:
 							return Text::startsWith(name, name_, true);
 						}
 					);
-					if (ptr == PALETTE_END) { THROW_INVALID_ASSET_POINT(onError); }
+					if (ptr == PALETTE_END) { return false; }
 					const int pageIndex = (int)(ptr - PALETTE_NAMES);
 					page = pageIndex;
 					const size_t colonIdx = Text::indexOf(name, ':');
-					if (colonIdx == std::string::npos) { THROW_INVALID_ASSET_POINT(onError); }
+					if (colonIdx == std::string::npos) { return false; }
 					const std::string substr = name.substr(colonIdx + 1);
 					int sub = 0;
-					if (!Text::fromString(substr, sub)) { THROW_INVALID_ASSET_POINT(onError); }
+					if (!Text::fromString(substr, sub)) { return false; }
 					dest = Left<int>(sub);
 					fromAsset = true;
 				}
@@ -17141,43 +17141,86 @@ public:
 				if (fromAsset) {
 					const PaletteAssets &palettes = ctx.assets->palette;
 					const PaletteAssets::Entry* paletteEntry = palettes.get(page);
-					if (!paletteEntry) { THROW_INVALID_ASSET_POINT(onError); }
+					if (!paletteEntry) { return false; }
 					const int idx = dest.left().get();
-					if (!paletteEntry->data->get(idx, col)) { THROW_INVALID_ASSET_POINT(onError); }
+					if (!paletteEntry->data->get(idx, col)) { return false; }
 				}
+
+				return true;
+			};
+
+			// Determine the colors.
+			const bool isCgb = _children.size() == 4;
+			const bool isSgb = _children.size() == 8;
+			Indices indexedToAssets;
+			Colours cols;
+			if (isCgb) {
+				// Check for feature compatibility.
+				usingColoredFeature(ctx, "palette", onError);
+
+				// Use the arguments.
+				for (int i = 0; i < (int)_children.size() - 1; ++i)
+					indexedToAssets.push_back(-1);
+
+				// Find the palette asset.
+				bool fromAsset = false;
+				Colour col;
+				if (!getColorFromPaletteAsset(col, fromAsset, (int)_children.size() - 1)) { THROW_INVALID_ASSET_POINT(onError); }
+				if (fromAsset) {
+					indexedToAssets.push_back((int)cols.size());
+					cols.push_back(col);
+				} else {
+					indexedToAssets.push_back(-1);
+				}
+			} else if (isSgb) {
+				// Using "Super" features.
+				usingSuperFeature(ctx, "palette");
+
+				// Use the first argument.
+				indexedToAssets.push_back(-1);
+
+				// Find the palette assets if needed.
+				for (int i = 1; i < (int)_children.size(); ++i) {
+					bool fromAsset = false;
+					Colour col;
+					if (!getColorFromPaletteAsset(col, fromAsset, i)) { THROW_INVALID_ASSET_POINT(onError); }
+					if (fromAsset) {
+						indexedToAssets.push_back((int)cols.size());
+						cols.push_back(col);
+					} else {
+						indexedToAssets.push_back(-1);
+					}
+				}
+			} else {
+				// Use the arguments.
+				for (int i = 0; i < (int)_children.size(); ++i)
+					indexedToAssets.push_back(-1);
 			}
 
 			// Emit the right hand value.
-			if (fromAsset) {
-				writeRightHand(
-					bytes, context, stk,
-					[&] (void) -> void {
-						// Emit the arguments.
-						const UInt16 rgb = RGB8(col.r, col.g, col.b);
-						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
-						args = fill(args, (UInt16)rgb);
-						writeChildren(bytes, context, Range(2, 0), stk, onError);
+			writeRightHand(
+				bytes, context, stk,
+				[&] (void) -> void {
+					// Emit the arguments.
+					for (int i = (int)indexedToAssets.size() - 1; i >= 0; --i) {
+						const int idx = indexedToAssets[i];
+						if (idx == -1) {
+							// Use the argument.
+							writeChildren(bytes, context, Range(i), stk, onError);
+						} else {
+							// Use constant from assets.
+							const UInt16 rgb = RGB8(cols[idx].r, cols[idx].g, cols[idx].b);
+							Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+							args = fill(args, (UInt16)rgb);
+						}
+					}
 
-						// Emit a `VM_PALETTE` instruction.
-						args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PALETTE]); DEC_COUNTER(stk, 2 * 4);
-						args = fill(args, (UInt8)_children.size());
-					}, 0, false,
-					onError
-				);
-			} else {
-				writeRightHand(
-					bytes, context, stk,
-					[&] (void) -> void {
-						// Emit the arguments.
-						writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
-
-						// Emit a `VM_PALETTE` instruction.
-						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PALETTE]); DEC_COUNTER(stk, 2 * (int)_children.size());
-						args = fill(args, (UInt8)_children.size());
-					}, 0, false,
-					onError
-				);
-			}
+					// Emit a `VM_PALETTE` instruction.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PALETTE]); DEC_COUNTER(stk, 2 * (int)_children.size());
+					args = fill(args, (UInt8)_children.size());
+				}, 0, false,
+				onError
+			);
 
 			// Check the stack footprint.
 			CHECK_COUNTER(ctx, onError);
@@ -19739,8 +19782,6 @@ public:
 			}
 
 			// Determine the manipulation.
-			const bool withDeclaring = ctx.declaration.declaring != -1;
-			if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
 			switch (action) {
 			case ResourceManipulations::FILL:
 				if (read) {
@@ -19857,11 +19898,15 @@ public:
 				writeRoutine(bytes, context, Asm::Types::DEF_SPRITE, ASSET_SOURCE_STACK, 2, nullptr, nullptr, onError);
 
 				break;
-			case ResourceManipulations::GET:
-				if (prop)
-					writeFunction(bytes, context, Asm::Types::GET_SPRITE_PROP, ASSET_SOURCE_IGNORED, 2, nullptr, nullptr, onError);
-				else
-					writeFunction(bytes, context, Asm::Types::SGET, ASSET_SOURCE_IGNORED, 1, nullptr, nullptr, onError);
+			case ResourceManipulations::GET: {
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
+					if (prop)
+						writeFunction(bytes, context, Asm::Types::GET_SPRITE_PROP, ASSET_SOURCE_IGNORED, 2, nullptr, nullptr, onError);
+					else
+						writeFunction(bytes, context, Asm::Types::SGET, ASSET_SOURCE_IGNORED, 1, nullptr, nullptr, onError);
+				}
 
 				break;
 			case ResourceManipulations::SET:
@@ -22274,8 +22319,6 @@ public:
 			}
 
 			// Determine the manipulation.
-			const bool withDeclaring = ctx.declaration.declaring != -1;
-			if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
 			UInt8 src = ASSET_SOURCE_FAR;
 			if (read) src = ASSET_SOURCE_READ;
 			else if (data) src = ASSET_SOURCE_DATA;
@@ -22520,6 +22563,9 @@ public:
 				break;
 			case ResourceManipulations::GET:
 				if (_children.size() == 3 || _children.size() == 1) {
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
 					writeFunction(
 						bytes, context,
 						Asm::Types::GET_SCENE_PROP, ASSET_SOURCE_IGNORED, -1,
@@ -22573,6 +22619,10 @@ public:
 
 				break;
 			case ResourceManipulations::GET_WIDTH: {
+					// Prepare.
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
 					// Get data from asset.
 					int page = -1;
 					Destination dest(0);
@@ -22627,6 +22677,10 @@ public:
 
 				break;
 			case ResourceManipulations::GET_HEIGHT: {
+					// Prepare.
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
 					// Get data from asset.
 					int page = -1;
 					Destination dest(0);
@@ -23043,8 +23097,6 @@ public:
 			}
 
 			// Determine the manipulation.
-			const bool withDeclaring = ctx.declaration.declaring != -1;
-			if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
 			switch (action) {
 			case ResourceManipulations::FILL:
 				if (byName_) {
@@ -23257,8 +23309,12 @@ public:
 				}
 
 				break;
-			case ResourceManipulations::GET:
-				writeFunction(bytes, context, Asm::Types::GET_ACTOR_PROP, ASSET_SOURCE_IGNORED, 2, nullptr, nullptr, onError);
+			case ResourceManipulations::GET: {
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
+					writeFunction(bytes, context, Asm::Types::GET_ACTOR_PROP, ASSET_SOURCE_IGNORED, 2, nullptr, nullptr, onError);
+				}
 
 				break;
 			case ResourceManipulations::SET:
@@ -23456,6 +23512,10 @@ public:
 
 				break;
 			case ResourceManipulations::LEN: {
+					// Prepare.
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
 					// Get data from asset.
 					int page = -1;
 					Destination dest(0);
@@ -23511,6 +23571,10 @@ public:
 
 				break;
 			case ResourceManipulations::GET_WIDTH: {
+					// Prepare.
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
 					// Get data from asset.
 					int page = -1;
 					Destination dest(0);
@@ -23570,6 +23634,10 @@ public:
 
 				break;
 			case ResourceManipulations::GET_HEIGHT: {
+					// Prepare.
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
 					// Get data from asset.
 					int page = -1;
 					Destination dest(0);
@@ -23629,6 +23697,9 @@ public:
 
 				break;
 			case ResourceManipulations::FIND: {
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
 					UInt8 filterType = ACTOR_FILTER_BY_BEHAVIOUR;
 					UInt8 filterTmp = 0;
 					int page = -1;
@@ -24700,8 +24771,6 @@ public:
 			}
 
 			// Determine the manipulation.
-			const bool withDeclaring = ctx.declaration.declaring != -1;
-			if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
 			switch (action) {
 			case ResourceManipulations::FILL:
 				if (byName_) {
@@ -25005,8 +25074,12 @@ public:
 				}
 
 				break;
-			case ResourceManipulations::GET:
-				writeFunction(bytes, context, Asm::Types::GET_PROJECTILE_PROP, ASSET_SOURCE_IGNORED, 2, nullptr, nullptr, onError);
+			case ResourceManipulations::GET: {
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
+					writeFunction(bytes, context, Asm::Types::GET_PROJECTILE_PROP, ASSET_SOURCE_IGNORED, 2, nullptr, nullptr, onError);
+				}
 
 				break;
 			case ResourceManipulations::SET:
@@ -25204,6 +25277,10 @@ public:
 
 				break;
 			case ResourceManipulations::LEN: {
+					// Prepare.
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
 					// Get data from asset.
 					int page = -1;
 					Destination dest(0);
@@ -25259,6 +25336,10 @@ public:
 
 				break;
 			case ResourceManipulations::GET_WIDTH: {
+					// Prepare.
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
 					// Get data from asset.
 					int page = -1;
 					Destination dest(0);
@@ -25318,6 +25399,10 @@ public:
 
 				break;
 			case ResourceManipulations::GET_HEIGHT: {
+					// Prepare.
+					const bool withDeclaring = ctx.declaration.declaring != -1;
+					if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
+
 					// Get data from asset.
 					int page = -1;
 					Destination dest(0);
