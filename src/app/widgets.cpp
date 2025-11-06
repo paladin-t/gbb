@@ -3952,6 +3952,12 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				if (!enabled)
 					BeginDisabled();
 
+				PushID("#SgbPlt");
+				{
+					// TODO
+				}
+				PopID();
+
 				PushID("#SgbBdr");
 				{
 					AlignTextToFramePadding();
@@ -4244,7 +4250,8 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			prj->caseInsensitive()      != _project->caseInsensitive()      ||
 			prj->superFeaturesEnabled() != _project->superFeaturesEnabled() ||
 			prj->borderFrameType()      != _project->borderFrameType()      ||
-			prj->borderFrameCode()      != _project->borderFrameCode();
+			prj->borderFrameCode()      != _project->borderFrameCode()      ||
+			prj->superPalettes()        != _project->superPalettes();
 
 		if (_confirmText.empty()) {
 			confirm = "Ok";

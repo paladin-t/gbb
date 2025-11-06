@@ -647,6 +647,23 @@ struct Options {
 	};
 
 	/**
+	 * @brief "Super" features.
+	 */
+	struct SuperFeatures {
+		/**
+		 * @brief Whether these features have been enabled.
+		 */
+		bool enabled = false;
+		/**
+		 * @brief Border frame.
+		 */
+		Image::Ptr border = nullptr;
+		/**
+		 * @brief Extra pelettes.
+		 */
+		SuperPalettes palettes;
+	};
+	/**
 	 * @brief Compiling strategies.
 	 */
 	struct Strategies {
@@ -780,13 +797,9 @@ struct Options {
 	 */
 	Bytes::Ptr icon = nullptr;
 	/**
-	 * @brief Whether the super features have been enabled for the program.
+	 * @brief "Super" features.
 	 */
-	bool superFeaturesEnabled = false;
-	/**
-	 * @brief The border frame of the program.
-	 */
-	Image::Ptr border = nullptr;
+	SuperFeatures superFeatures;
 	/**
 	 * @brief The background palettes of the program.
 	 */

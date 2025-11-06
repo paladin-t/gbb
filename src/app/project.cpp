@@ -157,6 +157,7 @@ Project &Project::operator = (const Project &other) {
 	superFeaturesEnabled(other.superFeaturesEnabled());
 	borderFrameType(other.borderFrameType());
 	borderFrameCode(other.borderFrameCode());
+	superPalettes(other.superPalettes());
 	created(other.created());
 	modified(other.modified());
 	order(other.order());
@@ -557,6 +558,20 @@ void Project::borderFrameCode(const std::string &val) {
 		return;
 
 	_borderFrameCode = val;
+}
+
+void Project::superPalettes(const SuperPalettes &val) {
+	if (_superPalettes == val)
+		return;
+
+	_superPalettes = val;
+}
+
+void Project::superPalettes(const Colour* val) {
+	if (memcmp(&_superPalettes.front(), val, _superPalettes.size() * sizeof(Colour)) == 0)
+		return;
+
+	memcpy(&_superPalettes.front(), val, _superPalettes.size() * sizeof(Colour));
 }
 
 void Project::created(const long long &val) {
@@ -2772,6 +2787,22 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 	}
 	borderFrameCode(txt);
 
+	const Colour DEFAULT_COLORS_ARRAY[] = INDEXED_DEFAULT_COLORS;
+	superPalettes(DEFAULT_COLORS_ARRAY);
+	bool ok = true;
+	SuperPalettes cols = superPalettes();
+	for (int i = 0; i < (int)superPalettes().size(); ++i) {
+		UInt32 rgba = 0;
+		if (!Jpath::get(doc, rgba, "super_features", "colors", i)) {
+			ok = false;
+
+			break;
+		}
+		cols[i].fromRGBA(rgba);
+	}
+	if (ok)
+		superPalettes(cols);
+
 	const long long now = DateTime::now();
 	long long timestamp = 0;
 	if (Jpath::get(doc, timestamp, "created")) {
@@ -2981,6 +3012,11 @@ bool Project::saveInformation(std::string &content) {
 	Jpath::set(doc, doc, (unsigned)borderFrameType(), "super_features", "border_frame_type");
 
 	Jpath::set(doc, doc, borderFrameCode(), "super_features", "border_frame");
+
+	for (int i = 0; i < (int)superPalettes().size(); ++i) {
+		const UInt32 rgba = superPalettes()[i].toRGBA();
+		Jpath::set(doc, doc, rgba, "super_features", "colors", i);
+	}
 
 	Jpath::set(doc, doc, created(), "created");
 

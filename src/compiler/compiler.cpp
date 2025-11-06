@@ -39291,8 +39291,7 @@ bool compile(Program &program, const Options &options) {
 	const std::string &ast                                                     = options.ast;
 	const Options::Passes passes                                               = options.passes;
 	const Bytes::Ptr &icon                                                     = options.icon;
-	const bool superFeaturesEnabled                                            = options.superFeaturesEnabled;
-	const Image::Ptr &border                                                   = options.border;
+	const Options::SuperFeatures &superFeatures                                = options.superFeatures;
 	const Bytes::Ptr &backgroundPalettes                                       = options.backgroundPalettes;
 	const Bytes::Ptr &spritePalettes                                           = options.spritePalettes;
 	const std::string &title                                                   = options.title;
@@ -39507,7 +39506,7 @@ bool compile(Program &program, const Options &options) {
 		// Compile.
 		RamLocation::Dictionary allocations;
 		FeatureUsages featureUsages;
-		BorderFrameResources borderFrameResources(superFeaturesEnabled, border);
+		BorderFrameResources borderFrameResources(superFeatures.enabled, superFeatures.border);
 		int compiledSize = 0;
 		if (!compiler.process(organizer.ast(), program.assets, pipeline, &allocations, &featureUsages, borderFrameResources, &compiledSize, onError)) {
 			std::swap(program.compiled.allocations, allocations);
@@ -39525,7 +39524,7 @@ bool compile(Program &program, const Options &options) {
 		program.compiled.effectiveSize.addCode(codeSize);
 		program.compiled.effectiveSize += pipeline->effectiveSize();
 
-		if (superFeaturesEnabled) {
+		if (superFeatures.enabled) {
 			if (borderFrameResources.serialized) {
 				const double secs = DateTime::toSeconds(borderFrameResources.interval);
 

@@ -3735,6 +3735,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
 		prj->borderFrameCode(prj_->borderFrameCode());
+		prj->superPalettes(prj_->superPalettes());
 		prj->modified(now);
 
 		prj->hasDirtyInformation(true);
@@ -5073,8 +5074,9 @@ void Workspace::compile(
 					break;
 				}
 			}
-			options.superFeaturesEnabled = project->superFeaturesEnabled();
-			options.border = borderImage;
+			options.superFeatures.enabled = project->superFeaturesEnabled();
+			options.superFeatures.border = borderImage;
+			options.superFeatures.palettes = project->superPalettes();
 
 			options.backgroundPalettes = project->backgroundPalettes();
 			options.spritePalettes = project->spritePalettes();
