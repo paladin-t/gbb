@@ -110,10 +110,11 @@ void device_init(void) BANKED {
             );
         }
         if (SgbPalettesBank != 0) {
+            const UINT8 bank = SgbPalettesBank;
             const UINT8 * ptr = (UINT8 *)SgbPalettesAddress;
-            const UINT8 n = *(ptr++);
+            const UINT8 n = get_uint8(bank, (UINT8 *)ptr); ++ptr;
             for (UINT8 i = 0; i != n; ++i) {
-                sgb_send_packet(SgbPalettesBank, ptr, sizeof(sgb_palette_packet_t));
+                sgb_send_packet(bank, ptr, sizeof(sgb_palette_packet_t));
                 ptr += sizeof(sgb_palette_packet_t);
             }
         }

@@ -3369,13 +3369,20 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_DUPLICATE_DESTINATION */
-#ifndef THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_RESOURCES
-#	define THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_RESOURCES(ON_ERROR) \
+#ifndef THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_FRAME_RESOURCES
+#	define THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_FRAME_RESOURCES(ON_ERROR) \
 		do { \
-			throwErrorOccurredDuringGeneratingBorderResources(ON_ERROR); \
+			throwErrorOccurredDuringGeneratingBorderFrameResources(ON_ERROR); \
 			return; \
 		} while (false)
-#endif /* THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_RESOURCES */
+#endif /* THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_FRAME_RESOURCES */
+#ifndef THROW_ERROR_OCCURRED_DURING_GENERATING_SUPER_PALETTE_RESOURCES
+#	define THROW_ERROR_OCCURRED_DURING_GENERATING_SUPER_PALETTE_RESOURCES(ON_ERROR) \
+		do { \
+			throwErrorOccurredDuringGeneratingSuperPaletteResources(ON_ERROR); \
+			return; \
+		} while (false)
+#endif /* THROW_ERROR_OCCURRED_DURING_GENERATING_SUPER_PALETTE_RESOURCES */
 #ifndef THROW_HEAP_OVERFLOW
 	// As warning or error.
 #	define THROW_HEAP_OVERFLOW(ON_ERROR, IS_WARNING) \
@@ -6606,8 +6613,12 @@ public:
 		const Error err("Duplicate destination \"{0}\"", false);
 		onError(err, err.format({ tk->caseSensitiveText() }), tk->begin());
 	}
-	void throwErrorOccurredDuringGeneratingBorderResources(Error::Handler onError) const {
+	void throwErrorOccurredDuringGeneratingBorderFrameResources(Error::Handler onError) const {
 		const Error err("Error occurred during generating border resources", false);
+		onError(err, err.format(), TextLocation::INVALID());
+	}
+	void throwErrorOccurredDuringGeneratingSuperPaletteResources(Error::Handler onError) const {
+		const Error err("Error occurred during generating super palette resources", false);
 		onError(err, err.format(), TextLocation::INVALID());
 	}
 	void throwHeapOverflow(Error::Handler onError, Token::Ptr tk = nullptr, bool isWarning = true) const {
@@ -7252,7 +7263,7 @@ private:
 		write(bytes, context, tilesGenerator, true, onError_);
 		write(bytes, context, mapGenerator, true, onError_);
 
-		if (errs) { THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_RESOURCES(onError); }
+		if (errs) { THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_FRAME_RESOURCES(onError); }
 
 		borderFrameResources->serialized = true;
 
@@ -7281,6 +7292,7 @@ private:
 			return;
 
 		Bytes::Ptr palettes(Bytes::create());
+		palettes->writeUInt8(PALETTES);
 		for (int i = 0; i < (int)superPaletteResources->palettes.size() / N_PER_PALETTE; ++i) {
 			const UInt8 command = (i == 0) ? GRAPHICS_SGB_PALETTE_01 : GRAPHICS_SGB_PALETTE_23;
 			palettes->writeUInt8(command);
@@ -7320,7 +7332,7 @@ private:
 
 		write(bytes, context, generator, true, onError_); // Allow this emission to be placed at the tail of a bank.
 
-		if (errs) { THROW_ERROR_OCCURRED_DURING_GENERATING_BORDER_RESOURCES(onError); }
+		if (errs) { THROW_ERROR_OCCURRED_DURING_GENERATING_SUPER_PALETTE_RESOURCES(onError); }
 
 		superPaletteResources->serialized = true;
 
