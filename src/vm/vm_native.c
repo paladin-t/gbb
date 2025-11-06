@@ -6,6 +6,8 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
+#include <string.h>
+
 #include "utils/sgb.h"
 #include "utils/utils.h"
 
@@ -83,6 +85,24 @@ BOOLEAN wait_until_confirm(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
     ((SCRIPT_CTX *)THIS)->waitable = TRUE; // No input, wait.
 
     return FALSE;
+}
+
+// Sends a packet to the SGB device.
+BOOLEAN send_sgb_packet(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)start;
+    (void)stack_frame;
+
+    SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
+    const UINT8 bank   = (UINT8)*(--THIS_->stack_ptr);
+    const UINT16 addr  = (UINT16)*(--THIS_->stack_ptr);
+    const UINT8 size   = (UINT8)*(--THIS_->stack_ptr);
+
+    UINT8 buf[16];
+    memset(buf, 0, sizeof(buf));
+    get_chunk(buf, bank, (UINT8 *)addr, MIN(size, sizeof(buf)));
+    sgb_transfer((POINTER)buf);
+
+    return TRUE;
 }
 
 // Sets border frame for SGB devices.

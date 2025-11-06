@@ -34,10 +34,10 @@ void sgb_set_border(
     UINT8 tilemap_bank, const UINT8 * tilemap, UINT16 tilemap_size
 ) BANKED {
     // Prepare.
-    UINT8 map_buf[20];
-    memset(map_buf, 0, sizeof(map_buf));
+    UINT8 buf[20];
+    memset(buf, 0, sizeof(buf));
 
-    SGB_TRANSFER((SGB_MASK_EN << 3) | 1, SGB_SCR_FREEZE, map_buf);
+    SGB_TRANSFER((SGB_MASK_EN << 3) | 1, SGB_SCR_FREEZE, buf);
 
     BGP_REG = OBP0_REG = OBP1_REG = 0xE4u;
     SCX_REG = SCY_REG = 0u;
@@ -59,31 +59,31 @@ void sgb_set_border(
     UINT8 ntiles = (tiledata_size > 256 * 32) ? 0 : tiledata_size >> 5;
     if ((!ntiles) || (ntiles > 128u)) {
         SGB_DEF(tiledata_bank, (UINT8 *)tiledata, 0, 0, set_bkg_data);
-        SGB_TRANSFER((SGB_CHR_TRN << 3) | 1, SGB_CHR_BLOCK0, map_buf);
+        SGB_TRANSFER((SGB_CHR_TRN << 3) | 1, SGB_CHR_BLOCK0, buf);
         if (ntiles) ntiles -= 128u;
         tiledata += (128 * 32);
         SGB_DEF(tiledata_bank, (UINT8 *)tiledata, 0, ntiles << 1, set_bkg_data);
-        SGB_TRANSFER((SGB_CHR_TRN << 3) | 1, SGB_CHR_BLOCK1, map_buf);
+        SGB_TRANSFER((SGB_CHR_TRN << 3) | 1, SGB_CHR_BLOCK1, buf);
     } else {
         SGB_DEF(tiledata_bank, (UINT8 *)tiledata, 0, ntiles << 1, set_bkg_data);
-        SGB_TRANSFER((SGB_CHR_TRN << 3) | 1, SGB_CHR_BLOCK0, map_buf);
+        SGB_TRANSFER((SGB_CHR_TRN << 3) | 1, SGB_CHR_BLOCK0, buf);
     }
 
     // Transfer map and palettes.
     SGB_DEF(tilemap_bank, (UINT8 *)tilemap, 0, (UINT8)(tilemap_size >> 4), set_bkg_data);
     SGB_DEF(palette_bank, (UINT8 *)palette, 128, (UINT8)(palette_size >> 4), set_bkg_data);
-    SGB_TRANSFER((SGB_PCT_TRN << 3) | 1, 0, map_buf);
+    SGB_TRANSFER((SGB_PCT_TRN << 3) | 1, 0, buf);
 
     LCDC_REG = tmp_lcdc;
 
     // Clear the screen.
-    memset(map_buf, 0, 16);
-    set_bkg_data(0, 1, map_buf);
+    memset(buf, 0, 16);
+    set_bkg_data(0, 1, buf);
     for (UINT8 j = 0; j != 18; ++j) {
         for (UINT8 i = 0; i != 20; ++i) {
             set_bkg_tile_xy(i, j, 0);
         }
     }
 
-    SGB_TRANSFER((SGB_MASK_EN << 3) | 1, SGB_SCR_UNFREEZE, map_buf);
+    SGB_TRANSFER((SGB_MASK_EN << 3) | 1, SGB_SCR_UNFREEZE, buf);
 }
