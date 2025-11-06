@@ -3568,6 +3568,12 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_UNKNOWN_TYPE */
+#ifndef THROW_UNUSED_RESULT
+#	define THROW_UNUSED_RESULT(ON_ERROR) \
+		do { \
+			throwUnusedResult(ON_ERROR); \
+		} while (false)
+#endif /* THROW_UNUSED_RESULT */
 #ifndef THROW_USING_COLORED_FEATURE_WITH_CLASSIC_CARTRIDGE_ENABLE_COLORED_FEATURE_IN_PROJECT_PROPERTY
 	// As warning.
 #	define THROW_USING_COLORED_FEATURE_WITH_CLASSIC_CARTRIDGE_ENABLE_COLORED_FEATURE_IN_PROJECT_PROPERTY(ON_ERROR, TK) \
@@ -6783,6 +6789,12 @@ public:
 		const Error err("Unknown type \"{0}\"", false);
 		onError(err, err.format({ tk->caseSensitiveText() }), tk->begin());
 	}
+	void throwUnusedResult(Error::Handler onError, Token::Ptr tk = nullptr) const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("Unused result", true); // Warning.
+		onError(err, err.format(), tk->begin());
+	}
 	void throwUsingColoredFeatureWithClassicCartridgeEnableColoredFeatureInProjectProperty(Error::Handler onError, Token::Ptr tk = nullptr) const {
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
@@ -8738,6 +8750,8 @@ public:
 			}
 
 			// Get the bank of the specific target.
+			const bool withDeclaring = ctx.declaration.declaring != -1;
+			if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
 			switch (_type) {
 			case OperationTypes::PALETTE: {
 					// Prepare.
@@ -8826,9 +8840,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -8884,9 +8895,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -8942,9 +8950,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -9000,9 +9005,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -9058,9 +9060,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -9116,9 +9115,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -9174,9 +9170,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -9534,6 +9527,8 @@ public:
 			}
 
 			// Get the address of the specific target.
+			const bool withDeclaring = ctx.declaration.declaring != -1;
+			if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
 			switch (_type) {
 			case OperationTypes::PALETTE: {
 					// Prepare.
@@ -9619,9 +9614,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -9677,9 +9669,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -9735,9 +9724,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -9793,9 +9779,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -9851,9 +9834,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -9909,9 +9889,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -9967,9 +9944,6 @@ public:
 
 					Generator_Void_Byteptr opcodes = nullptr;
 					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
-						const bool withDeclaring = ctx.declaration.declaring != -1;
-						GBBASIC_ASSERT(withDeclaring && "Impossible.");
-
 						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 						args = fill(args, (UInt16)0);
@@ -19758,6 +19732,8 @@ public:
 			}
 
 			// Determine the manipulation.
+			const bool withDeclaring = ctx.declaration.declaring != -1;
+			if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
 			switch (action) {
 			case ResourceManipulations::FILL:
 				if (read) {
@@ -22291,6 +22267,8 @@ public:
 			}
 
 			// Determine the manipulation.
+			const bool withDeclaring = ctx.declaration.declaring != -1;
+			if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
 			UInt8 src = ASSET_SOURCE_FAR;
 			if (read) src = ASSET_SOURCE_READ;
 			else if (data) src = ASSET_SOURCE_DATA;
@@ -23058,6 +23036,8 @@ public:
 			}
 
 			// Determine the manipulation.
+			const bool withDeclaring = ctx.declaration.declaring != -1;
+			if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
 			switch (action) {
 			case ResourceManipulations::FILL:
 				if (byName_) {
@@ -24713,6 +24693,8 @@ public:
 			}
 
 			// Determine the manipulation.
+			const bool withDeclaring = ctx.declaration.declaring != -1;
+			if (!withDeclaring) { THROW_UNUSED_RESULT(onError); }
 			switch (action) {
 			case ResourceManipulations::FILL:
 				if (byName_) {
@@ -35221,22 +35203,46 @@ private:
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				State q = begin();
 				Node::Array children;
-
+				Token::Ptr id = nullptr;
+				std::string name;
 				if (!LineNumber(q, opts)) return false;
-				if (!must(Token::Types::KEYWORD, "bankof")(q)) return false;
-				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
-					any()(q);
-				} else {
-					if (must(Token::Types::OPERATOR, "(")(q)) {
-						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
+				if (!(id = must(Token::Types::SYMBOL)(q))) return false;
+				else name = (std::string)id->data();
+				if (name == "bankof") {
+					if (forward(Token::Types::KEYWORD, "read")(q.index)) {
+						any()(q);
+					} else {
+						if (must(Token::Types::OPERATOR, "(")(q)) {
+							if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
+								Arguments(q, children);
+								CHECK_UNEXPECTED(q);
+							}
+							if (!must(Token::Types::OPERATOR, ")")(q)) return false;
+						} else {
 							Arguments(q, children);
 							CHECK_UNEXPECTED(q);
 						}
-						if (!must(Token::Types::OPERATOR, ")")(q)) return false;
-					} else {
+					}
+				} else if (name == "get" && forwardN(2, Token::Types::KEYWORD, "bankof")(q.index)) {
+					if (!(id = must(Token::Types::SYMBOL)(q))) return false;
+					else name = (std::string)id->data();
+					if (name == "palette" || name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile" || name == "music" || name == "sfx") {
+						any()(q);
+						if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
 						Arguments(q, children);
 						CHECK_UNEXPECTED(q);
+						if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
 					}
+					{
+						const int n = (int)children.size();
+						Token::Ptr node(new Token());
+						node
+							->type(Token::Types::INTEGER)
+							->data(n);
+						q.tokens.push_back(node);
+					}
+				} else {
+					return false;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
@@ -35263,22 +35269,47 @@ private:
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				State q = begin();
 				Node::Array children;
+				Token::Ptr id = nullptr;
+				std::string name;
 
 				if (!LineNumber(q, opts)) return false;
-				if (!must(Token::Types::KEYWORD, "addressof")(q)) return false;
-				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
-					any()(q);
-				} else {
-					if (must(Token::Types::OPERATOR, "(")(q)) {
-						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
+				if (!(id = must(Token::Types::SYMBOL)(q))) return false;
+				else name = (std::string)id->data();
+				if (name == "addressof") {
+					if (forward(Token::Types::KEYWORD, "read")(q.index)) {
+						any()(q);
+					} else {
+						if (must(Token::Types::OPERATOR, "(")(q)) {
+							if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
+								Arguments(q, children);
+								CHECK_UNEXPECTED(q);
+							}
+							if (!must(Token::Types::OPERATOR, ")")(q)) return false;
+						} else {
 							Arguments(q, children);
 							CHECK_UNEXPECTED(q);
 						}
-						if (!must(Token::Types::OPERATOR, ")")(q)) return false;
-					} else {
+					}
+				} else if (name == "get" && forwardN(2, Token::Types::KEYWORD, "addressof")(q.index)) {
+					if (!(id = must(Token::Types::SYMBOL)(q))) return false;
+					else name = (std::string)id->data();
+					if (name == "palette" || name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile" || name == "music" || name == "sfx") {
+						any()(q);
+						if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
 						Arguments(q, children);
 						CHECK_UNEXPECTED(q);
+						if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
 					}
+					{
+						const int n = (int)children.size();
+						Token::Ptr node(new Token());
+						node
+							->type(Token::Types::INTEGER)
+							->data(n);
+						q.tokens.push_back(node);
+					}
+				} else {
+					return false;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);

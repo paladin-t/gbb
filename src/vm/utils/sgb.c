@@ -17,11 +17,11 @@
 #define SGB_SCR_FREEZE     1
 #define SGB_SCR_UNFREEZE   0
 
-#define SGB_TRANSFER(A, B) \
+#define SGB_TRANSFER(A, B, BUF) \
     do { \
-        map_buf[0] = (A); \
-        map_buf[1] = (B); \
-        sgb_transfer(map_buf); \
+        (BUF)[0] = (A); \
+        (BUF)[1] = (B); \
+        sgb_transfer(BUF); \
     } while (0)
 #define SGB_DEF(BANK, PTR, F, N, FUNC) \
     do { \
@@ -33,10 +33,11 @@ void sgb_set_border(
     UINT8 tiledata_bank, const UINT8 * tiledata, UINT16 tiledata_size,
     UINT8 tilemap_bank, const UINT8 * tilemap, UINT16 tilemap_size
 ) BANKED {
+    // Prepare.
     UINT8 map_buf[20];
     memset(map_buf, 0, sizeof(map_buf));
 
-    SGB_TRANSFER((SGB_MASK_EN << 3) | 1, SGB_SCR_FREEZE);
+    SGB_TRANSFER((SGB_MASK_EN << 3) | 1, SGB_SCR_FREEZE, map_buf);
 
     BGP_REG = OBP0_REG = OBP1_REG = 0xE4u;
     SCX_REG = SCY_REG = 0u;
@@ -47,9 +48,9 @@ void sgb_set_border(
     DISPLAY_ON;
 
     // Prepare tilemap for SGB_BORDER_CHR_TRN (should display all 256 tiles).
-    UINT8 i = 0u;
-    for (UINT8 y = 0; y != 14u; ++y) {
-        for (UINT8 x = 0u; x != 20u; ++x) {
+    UINT8 i = 0;
+    for (UINT8 y = 0; y != 14; ++y) {
+        for (UINT8 x = 0; x != 20; ++x) {
             set_bkg_tile_xy(x, y, i++);
         }
     }
@@ -58,24 +59,24 @@ void sgb_set_border(
     UINT8 ntiles = (tiledata_size > 256 * 32) ? 0 : tiledata_size >> 5;
     if ((!ntiles) || (ntiles > 128u)) {
         SGB_DEF(tiledata_bank, (UINT8 *)tiledata, 0, 0, set_bkg_data);
-        SGB_TRANSFER((SGB_CHR_TRN << 3) | 1, SGB_CHR_BLOCK0);
+        SGB_TRANSFER((SGB_CHR_TRN << 3) | 1, SGB_CHR_BLOCK0, map_buf);
         if (ntiles) ntiles -= 128u;
         tiledata += (128 * 32);
         SGB_DEF(tiledata_bank, (UINT8 *)tiledata, 0, ntiles << 1, set_bkg_data);
-        SGB_TRANSFER((SGB_CHR_TRN << 3) | 1, SGB_CHR_BLOCK1);
+        SGB_TRANSFER((SGB_CHR_TRN << 3) | 1, SGB_CHR_BLOCK1, map_buf);
     } else {
         SGB_DEF(tiledata_bank, (UINT8 *)tiledata, 0, ntiles << 1, set_bkg_data);
-        SGB_TRANSFER((SGB_CHR_TRN << 3) | 1, SGB_CHR_BLOCK0);
+        SGB_TRANSFER((SGB_CHR_TRN << 3) | 1, SGB_CHR_BLOCK0, map_buf);
     }
 
     // Transfer map and palettes.
     SGB_DEF(tilemap_bank, (UINT8 *)tilemap, 0, (UINT8)(tilemap_size >> 4), set_bkg_data);
     SGB_DEF(palette_bank, (UINT8 *)palette, 128, (UINT8)(palette_size >> 4), set_bkg_data);
-    SGB_TRANSFER((SGB_PCT_TRN << 3) | 1, 0);
+    SGB_TRANSFER((SGB_PCT_TRN << 3) | 1, 0, map_buf);
 
     LCDC_REG = tmp_lcdc;
 
-    // Clear screen.
+    // Clear the screen.
     memset(map_buf, 0, 16);
     set_bkg_data(0, 1, map_buf);
     for (UINT8 j = 0; j != 18; ++j) {
@@ -84,5 +85,5 @@ void sgb_set_border(
         }
     }
 
-    SGB_TRANSFER((SGB_MASK_EN << 3) | 1, SGB_SCR_UNFREEZE);
+    SGB_TRANSFER((SGB_MASK_EN << 3) | 1, SGB_SCR_UNFREEZE, map_buf);
 }
