@@ -156,7 +156,7 @@ Project &Project::operator = (const Project &other) {
 	caseInsensitive(other.caseInsensitive());
 	superFeaturesEnabled(other.superFeaturesEnabled());
 	borderFrameType(other.borderFrameType());
-	borderFrame(other.borderFrame());
+	borderFrameCode(other.borderFrameCode());
 	created(other.created());
 	modified(other.modified());
 	order(other.order());
@@ -552,11 +552,11 @@ void Project::borderFrameType(BorderFrameTypes y) {
 	_borderFrameType = y;
 }
 
-void Project::borderFrame(const std::string &val) {
-	if (_borderFrame == val)
+void Project::borderFrameCode(const std::string &val) {
+	if (_borderFrameCode == val)
 		return;
 
-	_borderFrame = val;
+	_borderFrameCode = val;
 }
 
 void Project::created(const long long &val) {
@@ -2753,27 +2753,24 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 	}
 
 	superFeaturesEnabled(false);
-	if (!Jpath::get(doc, superFeaturesEnabled(), "super_features_enabled")) {
+	if (!Jpath::get(doc, superFeaturesEnabled(), "super_features", "enabled")) {
 		superFeaturesEnabled(false);
-
-		const std::string msg = Text::format("The project information has no \"super_features_enabled\" field, falls to \"{0}\".", { Text::toString(superFeaturesEnabled()) });
-		report(msg.c_str(), true);
 	}
 
 	borderFrameType(BorderFrameTypes::NONE);
 	unsigned utmp = 0;
-	if (Jpath::get(doc, utmp, "border_frame_type")) {
+	if (Jpath::get(doc, utmp, "super_features", "border_frame_type")) {
 		utmp = Math::clamp(utmp, (unsigned)BorderFrameTypes::NONE, (unsigned)BorderFrameTypes::COUNT - 1);
 		borderFrameType((BorderFrameTypes)utmp);
 	} else {
 		borderFrameType(BorderFrameTypes::NONE);
 	}
 
-	borderFrame("");
-	if (!Jpath::get(doc, txt, "border_frame")) {
+	borderFrameCode("");
+	if (!Jpath::get(doc, txt, "super_features", "border_frame")) {
 		txt.clear();
 	}
-	borderFrame(txt);
+	borderFrameCode(txt);
 
 	const long long now = DateTime::now();
 	long long timestamp = 0;
@@ -2979,11 +2976,11 @@ bool Project::saveInformation(std::string &content) {
 
 	Jpath::set(doc, doc, caseInsensitive(), "case_insensitive");
 
-	Jpath::set(doc, doc, superFeaturesEnabled(), "super_features_enabled");
+	Jpath::set(doc, doc, superFeaturesEnabled(), "super_features", "enabled");
 
-	Jpath::set(doc, doc, (unsigned)borderFrameType(), "border_frame_type");
+	Jpath::set(doc, doc, (unsigned)borderFrameType(), "super_features", "border_frame_type");
 
-	Jpath::set(doc, doc, borderFrame(), "border_frame");
+	Jpath::set(doc, doc, borderFrameCode(), "super_features", "border_frame");
 
 	Jpath::set(doc, doc, created(), "created");
 

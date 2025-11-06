@@ -4033,7 +4033,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 								break;
 							}
 
-							prj->borderFrame(txt);
+							prj->borderFrameCode(txt);
 						} while (false);
 
 						_borderTexture = nullptr;
@@ -4042,7 +4042,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 						prj->borderFrameType(Project::BorderFrameTypes::CUSTOM);
 					};
 					auto resetBorder = [&] (void) -> void {
-						prj->borderFrame("");
+						prj->borderFrameCode("");
 
 						_borderTexture = nullptr;
 						_borderError.clear();
@@ -4078,12 +4078,12 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					} else if (prj->borderFrameType() == Project::BorderFrameTypes::CUSTOM) {
 						iconTex = _theme->textureDefaultBorder()->pointer(_renderer);
 						do {
-							if (prj->borderFrame().empty())
+							if (prj->borderFrameCode().empty())
 								break;
 
 							if (_borderTexture == nullptr) {
 								Bytes::Ptr bytes(Bytes::create());
-								if (!Base64::toBytes(bytes.get(), prj->borderFrame())) {
+								if (!Base64::toBytes(bytes.get(), prj->borderFrameCode())) {
 									_borderError = _theme->dialogPrompt_CannotDecodeBorderImage();
 
 									break;
@@ -4244,7 +4244,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			prj->caseInsensitive()      != _project->caseInsensitive()      ||
 			prj->superFeaturesEnabled() != _project->superFeaturesEnabled() ||
 			prj->borderFrameType()      != _project->borderFrameType()      ||
-			prj->borderFrame()          != _project->borderFrame();
+			prj->borderFrameCode()      != _project->borderFrameCode();
 
 		if (_confirmText.empty()) {
 			confirm = "Ok";

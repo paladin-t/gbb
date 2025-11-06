@@ -103,7 +103,7 @@ public:
 	GBBASIC_PROPERTY             (bool,                          caseInsensitive                                  ) // Serialized in project.
 	GBBASIC_PROPERTY             (bool,                          superFeaturesEnabled                             ) // Serialized in project.
 	GBBASIC_FIELD_READONLY       (BorderFrameTypes,              borderFrameType                                  ) // Serialized in project.
-	GBBASIC_FIELD_READONLY       (std::string,                   borderFrame                                      ) // Serialized in project.
+	GBBASIC_FIELD_READONLY       (std::string,                   borderFrameCode                                  ) // Serialized in project.
 	GBBASIC_FIELD                (long long,                     created                                          ) // Serialized in project.
 	GBBASIC_FIELD                (long long,                     modified                                         ) // Serialized in project.
 	GBBASIC_PROPERTY             (unsigned,                      order                                            ) // Serialized in project.
@@ -195,7 +195,7 @@ public:
 	Texture::Ptr &touchIconTexture2Bpp(void);
 	Image::Ptr touchIconImage2Bpp(Bytes::Ptr tiles /* nullable */);
 	void borderFrameType(BorderFrameTypes y);
-	void borderFrame(const std::string &val);
+	void borderFrameCode(const std::string &val);
 	void created(const long long &val);
 	void modified(const long long &val);
 

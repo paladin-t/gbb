@@ -3734,7 +3734,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 		prj->caseInsensitive(prj_->caseInsensitive());
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
-		prj->borderFrame(prj_->borderFrame());
+		prj->borderFrameCode(prj_->borderFrameCode());
 		prj->modified(now);
 
 		prj->hasDirtyInformation(true);
@@ -5054,11 +5054,11 @@ void Workspace::compile(
 
 					break;
 				case Project::BorderFrameTypes::CUSTOM: {
-						if (project->borderFrame().empty())
+						if (project->borderFrameCode().empty())
 							break;
 
 						Bytes::Ptr bytes(Bytes::create());
-						if (!Base64::toBytes(bytes.get(), project->borderFrame()))
+						if (!Base64::toBytes(bytes.get(), project->borderFrameCode()))
 							break;
 
 						Image::Ptr img(Image::create());
