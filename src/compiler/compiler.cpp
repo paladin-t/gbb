@@ -3608,13 +3608,13 @@ namespace GBBASIC {
 			throwUnusedResult(ON_ERROR); \
 		} while (false)
 #endif /* THROW_UNUSED_RESULT */
-#ifndef THROW_USING_COLORED_FEATURE_WITH_CLASSIC_CARTRIDGE_ENABLE_COLORED_FEATURE_IN_PROJECT_PROPERTY
+#ifndef THROW_USING_COLORED_FEATURE_OR_ATTRIBUTES_WITH_CLASSIC_CARTRIDGE_ENABLE_COLORED_FEATURE_IN_PROJECT_PROPERTY
 	// As warning.
-#	define THROW_USING_COLORED_FEATURE_WITH_CLASSIC_CARTRIDGE_ENABLE_COLORED_FEATURE_IN_PROJECT_PROPERTY(ON_ERROR, TK) \
+#	define THROW_USING_COLORED_FEATURE_OR_ATTRIBUTES_WITH_CLASSIC_CARTRIDGE_ENABLE_COLORED_FEATURE_IN_PROJECT_PROPERTY(ON_ERROR, TK) \
 		do { \
-			throwUsingColoredFeatureWithClassicCartridgeEnableColoredFeatureInProjectProperty((ON_ERROR), (TK)); \
+			throwUsingColoredFeatureOrAttributesWithClassicCartridgeEnableColoredFeatureInProjectProperty((ON_ERROR), (TK)); \
 		} while (false)
-#endif /* THROW_USING_COLORED_FEATURE_WITH_CLASSIC_CARTRIDGE_ENABLE_COLORED_FEATURE_IN_PROJECT_PROPERTY */
+#endif /* THROW_USING_COLORED_FEATURE_OR_ATTRIBUTES_WITH_CLASSIC_CARTRIDGE_ENABLE_COLORED_FEATURE_IN_PROJECT_PROPERTY */
 #ifndef THROW_USING_EXTENSION_FEATURE_WITH_REGULAR_CARTRIDGE_ENABLE_EXTENSION_FEATURE_IN_PROJECT_PROPERTY
 	// As warning.
 #	define THROW_USING_EXTENSION_FEATURE_WITH_REGULAR_CARTRIDGE_ENABLE_EXTENSION_FEATURE_IN_PROJECT_PROPERTY(ON_ERROR, TK) \
@@ -6517,14 +6517,16 @@ public:
 
 	/**< Compatibility checking. */
 
-	bool usingColoredFeature(Context &ctx, const std::string &feat, Error::Handler onError, Token::Ptr tk = nullptr) {
+	bool usingColoredFeatureOrAttributes(Context &ctx, const std::string &feat, Error::Handler onError, Token::Ptr tk = nullptr) {
 		ctx.usingColoredFeature(feat);
 
 #if REPORT_MISUSING_COLORED_FEATURE_ENABLED
 		if ((ctx.compatibility & GBBASIC::Options::Strategies::Compatibilities::COLORED) != GBBASIC::Options::Strategies::Compatibilities::NONE)
 			return true;
 
-		THROW_USING_COLORED_FEATURE_WITH_CLASSIC_CARTRIDGE_ENABLE_COLORED_FEATURE_IN_PROJECT_PROPERTY(onError, tk);
+		if (onError) {
+			THROW_USING_COLORED_FEATURE_OR_ATTRIBUTES_WITH_CLASSIC_CARTRIDGE_ENABLE_COLORED_FEATURE_IN_PROJECT_PROPERTY(onError, tk);
+		}
 
 		return false;
 #else /* REPORT_MISUSING_COLORED_FEATURE_ENABLED */
@@ -6546,7 +6548,9 @@ public:
 		if ((ctx.compatibility & GBBASIC::Options::Strategies::Compatibilities::EXTENSION) != GBBASIC::Options::Strategies::Compatibilities::NONE)
 			return true;
 
-		THROW_USING_EXTENSION_FEATURE_WITH_REGULAR_CARTRIDGE_ENABLE_EXTENSION_FEATURE_IN_PROJECT_PROPERTY(onError, tk);
+		if (onError) {
+			THROW_USING_EXTENSION_FEATURE_WITH_REGULAR_CARTRIDGE_ENABLE_EXTENSION_FEATURE_IN_PROJECT_PROPERTY(onError, tk);
+		}
 
 		return false;
 #else /* REPORT_MISUSING_EXTENSION_FEATURE_ENABLED */
@@ -6834,10 +6838,10 @@ public:
 		const Error err("Unused result", true); // Warning.
 		onError(err, err.format(), tk->begin());
 	}
-	void throwUsingColoredFeatureWithClassicCartridgeEnableColoredFeatureInProjectProperty(Error::Handler onError, Token::Ptr tk = nullptr) const {
+	void throwUsingColoredFeatureOrAttributesWithClassicCartridgeEnableColoredFeatureInProjectProperty(Error::Handler onError, Token::Ptr tk = nullptr) const {
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
-		const Error err("Using colored feature with classic cartridge.\n  Enable colored feature in project property?", true); // Warning.
+		const Error err("Using colored feature or attributes with classic cartridge.\n  Enable colored feature in project property?", true); // Warning.
 		onError(err, err.format(), tk->begin());
 	}
 	void throwUsingExtensionFeatureWithRegularCartridgeEnableExtensionFeatureInProjectProperty(Error::Handler onError, Token::Ptr tk = nullptr) const {
@@ -17260,7 +17264,7 @@ public:
 			Colours cols;
 			if (isCgb) {
 				// Check for feature compatibility.
-				usingColoredFeature(ctx, "palette", onError);
+				usingColoredFeatureOrAttributes(ctx, "palette", nullptr);
 
 				// Use the arguments.
 				for (int i = 0; i < (int)_children.size() - 1; ++i)
@@ -18167,7 +18171,7 @@ public:
 
 					// Define the map.
 					if (mapEntry->hasAttributes) {
-						usingColoredFeature(ctx, "image", onError); // Check for feature compatibility.
+						usingColoredFeatureOrAttributes(ctx, "image", onError); // Check for feature compatibility.
 
 						do { // `OPTION VRAM_USAGE, VRAM_ATTRIBUTES`.
 							// Set the stack footprint guard.
@@ -24495,7 +24499,7 @@ public:
 							return 6;
 						};
 					} else if (argn == 5) {
-						usingColoredFeature(ctx, "emote", onError); // Check for feature compatibility.
+						usingColoredFeatureOrAttributes(ctx, "emote", onError); // Check for feature compatibility.
 
 						argf = [&] (Counter &stk) -> int {
 							Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
@@ -24581,7 +24585,7 @@ public:
 							return 6;
 						};
 					} else if (argn == 6) {
-						usingColoredFeature(ctx, "emote", onError); // Check for feature compatibility.
+						usingColoredFeatureOrAttributes(ctx, "emote", onError); // Check for feature compatibility.
 
 						argf = [&] (Counter &stk) -> int {
 							writeChildren(bytes, context, Range(5, 0), stk, onError); // X, y, base tile, mirrored, actor, palette.
@@ -27586,13 +27590,13 @@ public:
 						args = fill(args, (UInt16)0);
 						writeChildren(bytes, context, Range((int)_children.size() - 1), stk, onError); // Tile.
 					} else if (arge == 2) {
-						usingColoredFeature(ctx, "scroll", onError); // Check for feature compatibility.
+						usingColoredFeatureOrAttributes(ctx, "scroll", onError); // Check for feature compatibility.
 
 						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2); // Direction.
 						args = fill(args, (UInt16)DIRECTION_UP);
 						writeChildren(bytes, context, Range((int)_children.size() - 1, (int)_children.size() - 2), stk, onError); // Tile, attributes.
 					} else if (arge == 3) {
-						usingColoredFeature(ctx, "scroll", onError); // Check for feature compatibility.
+						usingColoredFeatureOrAttributes(ctx, "scroll", onError); // Check for feature compatibility.
 
 						writeChildren(bytes, context, Range((int)_children.size() - 1, (int)_children.size() - 3), stk, onError); // Tile, attributes, direction.
 					}
@@ -27862,7 +27866,7 @@ public:
 					emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::FX]); DEC_COUNTER(stk, 2 * (int)(_children.size() + 1));
 				} else if (_children.size() == 2) {
 					// Check for feature compatibility.
-					usingColoredFeature(ctx, "fx", onError);
+					usingColoredFeatureOrAttributes(ctx, "fx", onError);
 
 					// Emit the effect switch/argument count, and effect type.
 					writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);

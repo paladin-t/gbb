@@ -18,7 +18,7 @@ UINT8 * get_win_addr(void) OLDCALL PRESERVES_REGS(b, c, h, l);
 UINT8 * get_bkg_addr(void) OLDCALL PRESERVES_REGS(b, c, h, l);
 
 /**
- * @brief Scrolls rectangle area of VRAM filemap by base address one row up.
+ * @brief Scrolls rectangle area of VRAM tilemap by base address one row up.
  *
  * @param base the address of the top-left corner
  * @param w the width of the area
@@ -27,7 +27,7 @@ UINT8 * get_bkg_addr(void) OLDCALL PRESERVES_REGS(b, c, h, l);
  */
 void scroll_up(UINT8 * base, UINT8 w, UINT8 h, UINT8 data) OLDCALL BANKED PRESERVES_REGS(b, c);
 /**
- * @brief Scrolls rectangle area of VRAM filemap by base address one row down.
+ * @brief Scrolls rectangle area of VRAM tilemap by base address one row down.
  *
  * @param base the address of the top-left corner
  * @param w the width of the area
