@@ -3520,7 +3520,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
 
 					AlignTextToFramePadding();
-					TextUnformatted(_theme->windowProjectProperty_Title());
+					TextUnformatted(_theme->windowProjectProperty_Project_Title());
 
 					SameLine();
 
@@ -3534,7 +3534,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				PushID("#Path");
 				{
 					SameLine();
-					TextUnformatted(_theme->windowProjectProperty_Path());
+					TextUnformatted(_theme->windowProjectProperty_Project_Path());
 
 					SameLine();
 
@@ -3549,7 +3549,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				PushID("#CrtTyp");
 				{
 					AlignTextToFramePadding();
-					TextUnformatted(_theme->windowProjectProperty_Cart());
+					TextUnformatted(_theme->windowProjectProperty_Project_Cart());
 
 					SameLine();
 
@@ -3581,12 +3581,12 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
 
 					AlignTextToFramePadding();
-					TextUnformatted(_theme->windowProjectProperty_Sram());
+					TextUnformatted(_theme->windowProjectProperty_Project_Sram());
 
 					SameLine();
 
 					const char* items[] = {
-						_theme->windowProjectProperty_Sram_None().c_str(),
+						_theme->windowProjectProperty_Project_Sram_None().c_str(),
 						"2KB",
 						"8KB",
 						"32KB",
@@ -3605,7 +3605,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				PushID("#HasRtc");
 				{
 					SameLine();
-					TextUnformatted(_theme->windowProjectProperty_Rtc());
+					TextUnformatted(_theme->windowProjectProperty_Project_Rtc());
 
 					SameLine();
 
@@ -3618,7 +3618,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				PushID("#Desc");
 				{
 					AlignTextToFramePadding();
-					TextUnformatted(_theme->windowProjectProperty_Desc());
+					TextUnformatted(_theme->windowProjectProperty_Project_Desc());
 
 					SameLine();
 
@@ -3640,7 +3640,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
 
 					AlignTextToFramePadding();
-					TextUnformatted(_theme->windowProjectProperty_Author());
+					TextUnformatted(_theme->windowProjectProperty_Project_Author());
 
 					SameLine();
 
@@ -3660,7 +3660,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				PushID("#Gnr");
 				{
 					SameLine();
-					TextUnformatted(_theme->windowProjectProperty_Genre());
+					TextUnformatted(_theme->windowProjectProperty_Project_Genre());
 
 					SameLine();
 
@@ -3682,7 +3682,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
 
 					AlignTextToFramePadding();
-					TextUnformatted(_theme->windowProjectProperty_Version());
+					TextUnformatted(_theme->windowProjectProperty_Project_Version());
 
 					SameLine();
 
@@ -3704,7 +3704,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				{
 					SameLine();
 					firstColumnEndX = GetCursorPosX() - style.ItemSpacing.x;
-					TextUnformatted(_theme->windowProjectProperty_Url());
+					TextUnformatted(_theme->windowProjectProperty_Project_Url());
 
 					SameLine();
 
@@ -3728,7 +3728,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				PushID("#Icon");
 				{
 					AlignTextToFramePadding();
-					TextUnformatted(_theme->windowProjectProperty_Icon());
+					TextUnformatted(_theme->windowProjectProperty_Project_Icon());
 
 					SameLine();
 
@@ -3936,14 +3936,22 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				EndTabItem();
 			}
 			if (BeginTabItem(_theme->tabProjectProperty_Advanced(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
+				AlignTextToFramePadding();
 				TextUnformatted(_theme->windowProjectProperty_Advanced_SuperFeatures());
 
-				PushID("#SFE");
+				PushID("#SgbOn");
 				{
-					SetCursorPosX(_superFeaturesBeginX);
-					bool pref = prj->superFeaturesEnabled();
-					if (Checkbox(_theme->windowProjectProperty_Advanced_SuperFeatures_Enabled(), &pref))
-						prj->superFeaturesEnabled(pref);
+					if (_superFeaturesEndX > 0) {
+						SameLine();
+						const float posX = _superFeaturesEndX - _superFeaturesEnabledWidth;
+						SetCursorPosX(posX);
+						bool pref = prj->superFeaturesEnabled();
+						if (Checkbox(_theme->windowProjectProperty_Advanced_SuperFeatures_Enabled(), &pref))
+							prj->superFeaturesEnabled(pref);
+						SameLine();
+						_superFeaturesEnabledWidth = GetCursorPosX() - posX - style.ItemSpacing.x;
+						NewLine();
+					}
 				}
 				PopID();
 
@@ -3954,7 +3962,118 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 				PushID("#SgbPlt");
 				{
-					// TODO
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Advanced_Palettes());
+
+					SameLine();
+
+					const int n = prj->countSuperPaletteColor();
+					if (_superPaletteNames.empty()) {
+						for (int i = 0; i < 4; ++i) {
+							for (int j = 1; j < 4; ++j) {
+								const std::string name = Text::format(
+									_theme->windowProjectProperty_Advanced_PaletteFormat(),
+									{
+										Text::toString(i), Text::toString(j)
+									}
+								);
+								_superPaletteNames.push_back(name);
+							}
+						}
+						const std::string name0 = Text::format(
+							_theme->windowProjectProperty_Advanced_PaletteFormat(),
+							{
+								Text::toString(0), Text::toString(0)
+							}
+						);
+						_superPaletteNames.insert(_superPaletteNames.begin(), name0);
+						const std::string name7 = Text::format(
+							_theme->windowProjectProperty_Advanced_PaletteFormat(),
+							{
+								Text::toString(2), Text::toString(0)
+							}
+						);
+						_superPaletteNames.insert(_superPaletteNames.begin() + 7, name7);
+					}
+
+					if (_superFeaturesBeginX > 0) {
+						VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(1, 1));
+
+						const float size = 19;
+						for (int i = 0; i < n; ++i) {
+							const Colour* colptr = prj->getSuperPaletteColor(i);
+							if (!colptr)
+								continue;
+
+							PushID(i);
+
+							const Colour &color = *colptr;
+							const ImVec4 col4v(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
+							ColorButton(_superPaletteNames[i].c_str(), col4v, ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_AlphaPreview, ImVec2(size, size));
+
+							if (IsItemHovered() && (IsMouseClicked(ImGuiMouseButton_Left) || IsMouseClicked(ImGuiMouseButton_Right))) {
+								_activeSuperPaletteShowColorPicker = true;
+								_activeSuperPaletteIndex = i;
+							}
+
+							if ((i + 1) % 7 == 0 && i != n - 1) {
+								SameLine();
+								const float btnW = 36.0f;
+								const float posX = _superFeaturesEndX - btnW;
+								SetCursorPosX(posX);
+								if (Button(_theme->dialogPrompt_Rst(), ImVec2(btnW, 0))) {
+									_activeSuperPaletteShowColorPicker = false;
+									_activeSuperPaletteIndex = -1;
+									const PaletteAssets &palette = prj->touchPalette();
+									prj->customizedSuperPalettes(false);
+									prj->syncSuperPalettes(palette);
+								}
+
+								SetCursorPosX(_superFeaturesBeginX);
+							} else {
+								SameLine();
+							}
+
+							PopID();
+						}
+						NewLine();
+
+						if (_activeSuperPaletteShowColorPicker) {
+							_activeSuperPaletteShowColorPicker = false;
+							OpenPopup("@Pkr");
+						}
+						do {
+							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+
+							if (BeginPopup("@Pkr")) {
+								VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+								const Colour* colptr = prj->getSuperPaletteColor(_activeSuperPaletteIndex);
+								if (!colptr)
+									break;
+
+								const Colour col = *colptr;
+								float col4f[] = {
+									Math::clamp(col.r / 255.0f, 0.0f, 1.0f),
+									Math::clamp(col.g / 255.0f, 0.0f, 1.0f),
+									Math::clamp(col.b / 255.0f, 0.0f, 1.0f),
+									Math::clamp(col.a / 255.0f, 0.0f, 1.0f)
+								};
+
+								if (ColorPicker4("", col4f, ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoSidePreview)) {
+									const Colour value(
+										(Byte)(col4f[0] * 255),
+										(Byte)(col4f[1] * 255),
+										(Byte)(col4f[2] * 255),
+										(Byte)(col4f[3] * 255)
+									);
+									prj->setSuperPaletteColor(_activeSuperPaletteIndex, value);
+								}
+
+								EndPopup();
+							}
+						} while (false);
+					}
 				}
 				PopID();
 
@@ -3996,6 +4115,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 					SameLine();
 					const float endX = GetCursorPosX() - style.ItemSpacing.x;
+					_superFeaturesEndX = endX;
 					NewLine();
 
 					auto replaceBorder = [&] (void) -> void {
@@ -4237,21 +4357,22 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 		const char* cancel = _cancelText.empty() ? "Cancel" : _cancelText.c_str();
 
 		const bool appliable =
-			prj->title()                != _project->title()                ||
-			prj->cartridgeType()        != _project->cartridgeType()        ||
-			prj->sramType()             != _project->sramType()             ||
-			prj->hasRtc()               != _project->hasRtc()               ||
-			prj->description()          != _project->description()          ||
-			prj->author()               != _project->author()               ||
-			prj->genre()                != _project->genre()                ||
-			prj->version()              != _project->version()              ||
-			prj->url()                  != _project->url()                  ||
-			prj->iconCode()             != _project->iconCode()             ||
-			prj->caseInsensitive()      != _project->caseInsensitive()      ||
-			prj->superFeaturesEnabled() != _project->superFeaturesEnabled() ||
-			prj->borderFrameType()      != _project->borderFrameType()      ||
-			prj->borderFrameCode()      != _project->borderFrameCode()      ||
-			prj->superPalettes()        != _project->superPalettes();
+			prj->title()                   != _project->title()                ||
+			prj->cartridgeType()           != _project->cartridgeType()        ||
+			prj->sramType()                != _project->sramType()             ||
+			prj->hasRtc()                  != _project->hasRtc()               ||
+			prj->description()             != _project->description()          ||
+			prj->author()                  != _project->author()               ||
+			prj->genre()                   != _project->genre()                ||
+			prj->version()                 != _project->version()              ||
+			prj->url()                     != _project->url()                  ||
+			prj->iconCode()                != _project->iconCode()             ||
+			prj->caseInsensitive()         != _project->caseInsensitive()      ||
+			prj->superFeaturesEnabled()    != _project->superFeaturesEnabled() ||
+			prj->borderFrameType()         != _project->borderFrameType()      ||
+			prj->borderFrameCode()         != _project->borderFrameCode()      ||
+			prj->superPalettes()           != _project->superPalettes()        ||
+			prj->customizedSuperPalettes() != _project->customizedSuperPalettes();
 
 		if (_confirmText.empty()) {
 			confirm = "Ok";

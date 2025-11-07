@@ -935,9 +935,14 @@ private:
 	Theme* _theme = nullptr; // Foreign.
 	std::string _title;
 	float _superFeaturesBeginX = 0.0f;
+	float _superFeaturesEndX = 0.0f;
+	float _superFeaturesEnabledWidth = 72.0f;
 	Texture::Ptr _borderTexture = nullptr;
 	std::string _borderError;
 	Semaphore _borderTextureIsBeingGenerated;
+	bool _activeSuperPaletteShowColorPicker = false;
+	int _activeSuperPaletteIndex = -1;
+	Text::Array _superPaletteNames;
 	Project* _project = nullptr; // Foreign.
 	Project* _projectShadow = nullptr;
 	char _buffer[WIDGETS_TEXT_BUFFER_SIZE]; // Fixed size.

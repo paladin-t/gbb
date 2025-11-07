@@ -3100,6 +3100,8 @@ void Workspace::showPaletteEditor(
 			);
 		}
 
+		prj->syncSuperPalettes(data);
+
 		prj->hasDirtyAsset(true);
 	};
 
@@ -3736,6 +3738,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 		prj->borderFrameType(prj_->borderFrameType());
 		prj->borderFrameCode(prj_->borderFrameCode());
 		prj->superPalettes(prj_->superPalettes());
+		prj->customizedSuperPalettes(prj_->customizedSuperPalettes());
 		prj->modified(now);
 
 		prj->hasDirtyInformation(true);

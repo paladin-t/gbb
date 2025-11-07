@@ -89,6 +89,15 @@
 	}
 #endif /* INDEXED_DEFAULT_COLORS */
 
+#ifndef INDEXED_DEFAULT_COLORS_FOR_SUPER_PALETTES
+#	define INDEXED_DEFAULT_COLORS_FOR_SUPER_PALETTES { \
+		Colour::byRGBA8888(0xffd0f8e0),   Colour::byRGBA8888(0xff70c088),   Colour::byRGBA8888(0xff566834),   Colour::byRGBA8888(0xff201808), \
+		                                  Colour::byRGB555(0x68e5, 255),    Colour::byRGB555(0x128d, 255),    Colour::byRGB555(0xfbfb, 255),  \
+		Colour::byRGBA8888(0xffd0f8e0),   Colour::byRGB555(0xf8a9, 255),    Colour::byRGB555(0x8b41, 255),    Colour::byRGB555(0xfc76, 255),  \
+		                                  Colour::byRGB555(0x3f7c, 255),    Colour::byRGB555(0x2620, 255),    Colour::byRGB555(0xeccf, 255)   \
+	}
+#endif /* INDEXED_DEFAULT_COLORS_FOR_SUPER_PALETTES */
+
 /* ===========================================================================} */
 
 /*

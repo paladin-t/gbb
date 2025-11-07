@@ -107,6 +107,7 @@ public:
 	GBBASIC_FIELD_READONLY       (BorderFrameTypes,              borderFrameType                                  ) // Serialized in project.
 	GBBASIC_FIELD_READONLY       (std::string,                   borderFrameCode                                  ) // Serialized in project.
 	GBBASIC_FIELD_READONLY       (SuperPalettes,                 superPalettes                                    ) // Serialized in project.
+	GBBASIC_PROPERTY             (bool,                          customizedSuperPalettes                          ) // Serialized in project.
 	GBBASIC_FIELD                (long long,                     created                                          ) // Serialized in project.
 	GBBASIC_FIELD                (long long,                     modified                                         ) // Serialized in project.
 	GBBASIC_PROPERTY             (unsigned,                      order                                            ) // Serialized in project.
@@ -201,6 +202,10 @@ public:
 	void borderFrameCode(const std::string &val);
 	void superPalettes(const SuperPalettes &val);
 	void superPalettes(const Colour* val);
+	int countSuperPaletteColor(void) const;
+	const Colour* getSuperPaletteColor(int idx) const;
+	bool setSuperPaletteColor(int idx, const Colour &val);
+	void syncSuperPalettes(const PaletteAssets &val);
 	void created(const long long &val);
 	void modified(const long long &val);
 

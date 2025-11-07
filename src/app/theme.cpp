@@ -778,23 +778,25 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Input_WaitingForInput("Waiting for input...");
 
 	windowProjectProperty("Property");
-	windowProjectProperty_Title("  Title");    windowProjectProperty_Path("Path ");
-	windowProjectProperty_Cart("   Cart");
-	windowProjectProperty_Sram("   SRAM");      windowProjectProperty_Rtc("RTC  ");
-	windowProjectProperty_Desc("   Desc");
-	windowProjectProperty_Author(" Author");  windowProjectProperty_Genre("Genre");
-	windowProjectProperty_Version("Version");   windowProjectProperty_Url("URL  ");
-	windowProjectProperty_Icon("   Icon");
-	windowProjectProperty_Sram_None("0KB (None)");
+	windowProjectProperty_Project_Title("  Title");    windowProjectProperty_Project_Path("Path ");
+	windowProjectProperty_Project_Cart("   Cart");
+	windowProjectProperty_Project_Sram("   SRAM");      windowProjectProperty_Project_Rtc("RTC  ");
+	windowProjectProperty_Project_Desc("   Desc");
+	windowProjectProperty_Project_Author(" Author");  windowProjectProperty_Project_Genre("Genre");
+	windowProjectProperty_Project_Version("Version");   windowProjectProperty_Project_Url("URL  ");
+	windowProjectProperty_Project_Icon("   Icon");
+	windowProjectProperty_Project_Sram_None("0KB (None)");
 	windowProjectProperty_Compiling_Parser("Parser:");
 	windowProjectProperty_Compiling_Parser_CaseInsensitive("Case-insensitive");
 	windowProjectProperty_Advanced_SuperFeatures("\"Super\" features:");
 	windowProjectProperty_Advanced_SuperFeatures_Enabled("Enabled");
+	windowProjectProperty_Advanced_Palettes("    Palettes");
+	windowProjectProperty_Advanced_PaletteFormat("Pal: {0}, Col: {1}");
 	windowProjectProperty_Advanced_BorderFrame("Border frame");
-	windowProjectProperty_Advanced_Preview("     Preview");
 	windowProjectProperty_Advanced_BorderFrame_None("None");
 	windowProjectProperty_Advanced_BorderFrame_Default("Default");
 	windowProjectProperty_Advanced_BorderFrame_Custom("Custom");
+	windowProjectProperty_Advanced_Preview("     Preview");
 
 	windowPalette("Palette");
 

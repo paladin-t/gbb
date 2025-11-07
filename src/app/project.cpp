@@ -76,6 +76,7 @@ Project::Project(class Window* wnd, Renderer* rnd, class Workspace* ws) {
 	caseInsensitive(true);
 	superFeaturesEnabled(false);
 	borderFrameType(BorderFrameTypes::NONE);
+	customizedSuperPalettes(false);
 	created(-1);
 	modified(-1);
 	order(PROJECT_DEFAULT_ORDER);
@@ -158,6 +159,7 @@ Project &Project::operator = (const Project &other) {
 	borderFrameType(other.borderFrameType());
 	borderFrameCode(other.borderFrameCode());
 	superPalettes(other.superPalettes());
+	customizedSuperPalettes(other.customizedSuperPalettes());
 	created(other.created());
 	modified(other.modified());
 	order(other.order());
@@ -572,6 +574,46 @@ void Project::superPalettes(const Colour* val) {
 		return;
 
 	memcpy(&_superPalettes.front(), val, _superPalettes.size() * sizeof(Colour));
+}
+
+int Project::countSuperPaletteColor(void) const {
+	return (int)_superPalettes.size();
+}
+
+const Colour* Project::getSuperPaletteColor(int idx) const {
+	if (idx < 0 || idx >= (int)_superPalettes.size())
+		return nullptr;
+
+	return &_superPalettes[idx];
+}
+
+bool Project::setSuperPaletteColor(int idx, const Colour &val) {
+	if (idx < 0 || idx >= (int)_superPalettes.size())
+		return false;
+
+	_superPalettes[idx] = val;
+
+	customizedSuperPalettes(true);
+
+	return true;
+}
+
+void Project::syncSuperPalettes(const PaletteAssets &val) {
+	if (customizedSuperPalettes()) // Ignore.
+		return;
+
+	int k = 0;
+	for (int i = 0; i < 4; ++i) {
+		const PaletteAssets::Entry* entry = val.get(i);
+		if (entry) {
+			for (int j = 0; j < 4; ++j) {
+				Colour col;
+				if (entry->data->get(j + (i % 2), col)) {
+					_superPalettes[k++] = col;
+				}
+			}
+		}
+	}
 }
 
 void Project::created(const long long &val) {
@@ -1867,6 +1909,7 @@ bool Project::open(const char* path_) {
 		url("");
 		caseInsensitive(true);
 		superFeaturesEnabled(false);
+		customizedSuperPalettes(false);
 		created(now);
 		modified(now);
 		preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
@@ -1933,6 +1976,7 @@ bool Project::open(const char* path_) {
 		url("");
 		caseInsensitive(true);
 		superFeaturesEnabled(false);
+		customizedSuperPalettes(false);
 		created(now);
 		modified(now);
 		preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
@@ -2399,6 +2443,7 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		url("");
 		caseInsensitive(true);
 		superFeaturesEnabled(false);
+		customizedSuperPalettes(false);
 		created(now);
 		modified(now);
 		preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
@@ -2787,13 +2832,13 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 	}
 	borderFrameCode(txt);
 
-	const Colour DEFAULT_COLORS_ARRAY[] = INDEXED_DEFAULT_COLORS;
+	const Colour DEFAULT_COLORS_ARRAY[] = INDEXED_DEFAULT_COLORS_FOR_SUPER_PALETTES;
 	superPalettes(DEFAULT_COLORS_ARRAY);
 	bool ok = true;
 	SuperPalettes cols = superPalettes();
 	for (int i = 0; i < (int)superPalettes().size(); ++i) {
 		UInt32 rgba = 0;
-		if (!Jpath::get(doc, rgba, "super_features", "colors", i)) {
+		if (!Jpath::get(doc, rgba, "super_features", "colors", "data", i)) {
 			ok = false;
 
 			break;
@@ -2802,6 +2847,11 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 	}
 	if (ok)
 		superPalettes(cols);
+
+	customizedSuperPalettes(false);
+	if (!Jpath::get(doc, customizedSuperPalettes(), "super_features", "colors", "customized")) {
+		customizedSuperPalettes(false);
+	}
 
 	const long long now = DateTime::now();
 	long long timestamp = 0;
@@ -3015,8 +3065,10 @@ bool Project::saveInformation(std::string &content) {
 
 	for (int i = 0; i < (int)superPalettes().size(); ++i) {
 		const UInt32 rgba = superPalettes()[i].toRGBA();
-		Jpath::set(doc, doc, rgba, "super_features", "colors", i);
+		Jpath::set(doc, doc, rgba, "super_features", "colors", "data", i);
 	}
+
+	Jpath::set(doc, doc, customizedSuperPalettes(), "super_features", "colors", "customized");
 
 	Jpath::set(doc, doc, created(), "created");
 
@@ -3111,6 +3163,8 @@ bool Project::loadAssets(const char* fontConfigPath, const std::string &content,
 			break;
 
 		touchPalette().copyFrom(palette, nullptr);
+
+		syncSuperPalettes(palette);
 	} while (false);
 
 	if (palettePageCount() > 0)
