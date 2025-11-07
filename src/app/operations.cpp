@@ -4204,7 +4204,7 @@ promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes
 				ws->canvasDevice()->classicPalette(i, ws->settings().deviceClassicPalette[i]);
 			const bool suc = ws->canvasDevice()->open(
 				rom,
-				(Device::DeviceTypes)ws->settings().deviceType,
+				(Device::DeviceTypes)ws->settings().deviceType, ws->settings().devicePreferSgb,
 				ws->input(),
 				sram,
 				true, true, traceless
@@ -4221,17 +4221,22 @@ promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes
 			ws->canvasDevice()->speed(ws->settings().emulatorSpeed);
 
 			const bool cgb = ws->canvasDevice()->cartridgeHasCgbSupport();
-			const bool ext = ws->canvasDevice()->cartridgeHasExtensionSupport();
+			const bool sgb = ws->canvasDevice()->cartridgeHasSgbSupport();
+			const bool ext = ws->canvasDevice()->cartridgeHasExtSupport();
 			const Device::DeviceTypes dev = ws->canvasDevice()->deviceType();
+			const Device::DeviceTypes edev = ws->canvasDevice()->enabledDeviceType();
 			const int sram_ = ws->canvasDevice()->cartridgeSramSize(nullptr);
 			const int rtc = ws->canvasDevice()->cartridgeHasRtc();
 			const std::string cartFlag = std::string(cgb ? "COLOR" : "GRAY");
+			const std::string sgbFlag = std::string(sgb ? "[SGB]" : "");
 			const std::string devFlag = std::string(
-				dev == Device::DeviceTypes::CLASSIC ? "GRAY" :
-				dev == Device::DeviceTypes::COLORED ? "COLOR" :
-				dev == Device::DeviceTypes::CLASSIC_EXTENDED ? "GRAY[EXT]" :
-				dev == Device::DeviceTypes::COLORED_EXTENDED ? "COLOR[EXT]" :
-				"UNKNOWN"
+				edev == Device::DeviceTypes::SUPER            ? "SUPER" :
+				edev == Device::DeviceTypes::SUPER_EXTENDED   ? "SUPER[EXT]" :
+				dev  == Device::DeviceTypes::CLASSIC          ? "GRAY" :
+				dev  == Device::DeviceTypes::COLORED          ? "COLOR" :
+				dev  == Device::DeviceTypes::CLASSIC_EXTENDED ? "GRAY[EXT]" :
+				dev  == Device::DeviceTypes::COLORED_EXTENDED ? "COLOR[EXT]" :
+				                                                "UNKNOWN"
 			);
 			ws->canvasStatusText(
 				cartFlag + "/" +
@@ -4243,7 +4248,7 @@ promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes
 				Text::format(
 					ws->theme()->tooltipEmulator_StatusNote(),
 					{
-						cartFlag,
+						cartFlag + sgbFlag,
 						std::string(ext ? "YES" : "NO"),
 						devFlag,
 						std::string(sram_ ? "YES" : "NO"),

@@ -67,6 +67,7 @@ struct Settings {
 	bool debugOnscreenDebugEnabled = true;
 
 	unsigned deviceType = 0;
+	bool devicePreferSgb = false;
 	bool deviceSaveSramOnStop = true;
 	Colour deviceClassicPalette[4];
 

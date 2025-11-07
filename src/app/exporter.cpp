@@ -35,6 +35,7 @@ Exporter::Settings::Settings() {
 	static_assert(INPUT_GAMEPAD_COUNT >= 2, "Wrong size.");
 
 	deviceType = (unsigned)Device::DeviceTypes::COLORED_EXTENDED;
+	devicePreferSgb = false;
 	deviceSaveSramOnStop = true;
 	deviceClassicPalette[0] = Colour::byRGBA8888(DEVICE_CLASSIC_PALETTE_0);
 	deviceClassicPalette[1] = Colour::byRGBA8888(DEVICE_CLASSIC_PALETTE_1);
@@ -66,6 +67,7 @@ Exporter::Settings &Exporter::Settings::operator = (const Settings &other) {
 	emulatorShowPreferenceDialogOnEscPress = other.emulatorShowPreferenceDialogOnEscPress;
 
 	deviceType = other.deviceType;
+	devicePreferSgb = other.devicePreferSgb;
 	deviceSaveSramOnStop = other.deviceSaveSramOnStop;
 	for (int i = 0; i < GBBASIC_COUNTOF(deviceClassicPalette); ++i)
 		deviceClassicPalette[i] = other.deviceClassicPalette[i];
@@ -94,6 +96,7 @@ bool Exporter::Settings::operator != (const Settings &other) const {
 	}
 
 	if (deviceType != other.deviceType ||
+		devicePreferSgb != other.devicePreferSgb ||
 		deviceSaveSramOnStop != other.deviceSaveSramOnStop
 	) {
 		return true;
@@ -137,6 +140,7 @@ bool Exporter::Settings::toString(std::string &val, bool pretty) const {
 	Jpath::set(doc, doc, emulatorShowPreferenceDialogOnEscPress, "emulator", "show_preference_dialog_on_esc_press");
 
 	Jpath::set(doc, doc, deviceType, "device", "type");
+	Jpath::set(doc, doc, devicePreferSgb, "device", "prefer_sgb");
 	Jpath::set(doc, doc, deviceSaveSramOnStop, "device", "save_sram_on_stop");
 	for (int i = 0; i < GBBASIC_COUNTOF(deviceClassicPalette); ++i) {
 		Jpath::set(doc, doc, deviceClassicPalette[i].toRGBA(), "device", "classic_palette", i);
@@ -193,6 +197,7 @@ bool Exporter::Settings::fromString(const std::string &val) {
 	Jpath::get(doc, emulatorShowPreferenceDialogOnEscPress, "emulator", "show_preference_dialog_on_esc_press");
 
 	Jpath::get(doc, deviceType, "device", "type");
+	Jpath::get(doc, devicePreferSgb, "device", "prefer_sgb");
 	Jpath::get(doc, deviceSaveSramOnStop, "device", "save_sram_on_stop");
 	for (int i = 0; i < GBBASIC_COUNTOF(deviceClassicPalette); ++i) {
 		UInt32 col = 0;

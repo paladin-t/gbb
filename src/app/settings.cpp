@@ -20,6 +20,7 @@ Settings::Settings() {
 	applicationWindowPosition = Math::Vec2i(-1, -1);
 
 	deviceType = (unsigned)Device::DeviceTypes::COLORED_EXTENDED;
+	devicePreferSgb = false;
 	deviceSaveSramOnStop = true;
 	deviceClassicPalette[0] = Colour::byRGBA8888(DEVICE_CLASSIC_PALETTE_0);
 	deviceClassicPalette[1] = Colour::byRGBA8888(DEVICE_CLASSIC_PALETTE_1);
@@ -76,6 +77,7 @@ Settings &Settings::operator = (const Settings &other) {
 	debugOnscreenDebugEnabled = other.debugOnscreenDebugEnabled;
 
 	deviceType = other.deviceType;
+	devicePreferSgb = other.devicePreferSgb;
 	deviceSaveSramOnStop = other.deviceSaveSramOnStop;
 	for (int i = 0; i < GBBASIC_COUNTOF(deviceClassicPalette); ++i)
 		deviceClassicPalette[i] = other.deviceClassicPalette[i];
@@ -146,6 +148,7 @@ bool Settings::operator != (const Settings &other) const {
 	}
 
 	if (deviceType != other.deviceType ||
+		devicePreferSgb != other.devicePreferSgb ||
 		deviceSaveSramOnStop != other.deviceSaveSramOnStop
 	) {
 		return true;

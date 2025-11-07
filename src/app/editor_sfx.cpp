@@ -2469,7 +2469,8 @@ private:
 			if (rom_) {
 				job.device->open(
 					rom_,
-					Device::DeviceTypes::CLASSIC, nullptr,
+					Device::DeviceTypes::CLASSIC, false,
+					nullptr,
 					nullptr,
 					true, false, true
 				);

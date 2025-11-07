@@ -4264,7 +4264,7 @@ void Workspace::destroyAudioDevice(void) {
 void Workspace::openAudioDevice(Bytes::Ptr rom) {
 	audioDevice()->open(
 		rom,
-		Device::DeviceTypes::CLASSIC,
+		Device::DeviceTypes::CLASSIC, false,
 		nullptr,
 		nullptr,
 		true, true, true
@@ -5681,6 +5681,7 @@ bool Workspace::loadConfig(Window*, Renderer*, const rapidjson::Document &doc) {
 	Jpath::get(doc, settings().debugOnscreenDebugEnabled, "debug", "onscreen_debug_enabled");
 
 	Jpath::get(doc, settings().deviceType, "device", "type");
+	Jpath::get(doc, settings().devicePreferSgb, "device", "prefer_sgb");
 	Jpath::get(doc, settings().deviceSaveSramOnStop, "device", "save_sram_on_stop");
 	for (int i = 0; i < GBBASIC_COUNTOF(settings().deviceClassicPalette); ++i) {
 		UInt32 col = 0;
@@ -5772,6 +5773,7 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 	Jpath::set(doc, doc, settings().debugOnscreenDebugEnabled, "debug", "onscreen_debug_enabled");
 
 	Jpath::set(doc, doc, settings().deviceType, "device", "type");
+	Jpath::set(doc, doc, settings().devicePreferSgb, "device", "prefer_sgb");
 	Jpath::set(doc, doc, settings().deviceSaveSramOnStop, "device", "save_sram_on_stop");
 	for (int i = 0; i < GBBASIC_COUNTOF(settings().deviceClassicPalette); ++i) {
 		Jpath::set(doc, doc, settings().deviceClassicPalette[i].toRGBA(), "device", "classic_palette", i);
@@ -6204,7 +6206,11 @@ bool Workspace::execute(Window* wnd, Renderer* rnd, double delta, unsigned* fpsR
 		rnd->clear(&col);
 	}
 
-	if (canvasDevice()->cartridgeHasSgbSupport() && canvasDevice()->isSgbBorderSupported() && !canvasTextureForBorderFrame()) {
+	if (
+		canvasDevice()->isSgbBorderSupported() &&
+		canvasDevice()->cartridgeHasSgbSupport() && canvasDevice()->deviceHasSgbSupport() &&
+		!canvasTextureForBorderFrame()
+	) {
 		canvasTextureForBorderFrame(Texture::Ptr(Texture::create()));
 		canvasTextureForBorderFrame()->scale(Texture::NEAREST);
 		canvasTextureForBorderFrame()->blend(Texture::BLEND);

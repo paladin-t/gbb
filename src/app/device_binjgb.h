@@ -64,13 +64,17 @@ public:
 	virtual unsigned type(void) const override;
 
 	virtual bool cartridgeHasCgbSupport(void) const override;
-	virtual bool cartridgeHasExtensionSupport(void) const override;
+	virtual bool cartridgeHasExtSupport(void) const override;
 	virtual bool cartridgeHasSgbSupport(void) const override;
 	virtual int cartridgeRomSize(int* banks) const override;
 	virtual int cartridgeSramSize(int* banks) const override;
 	virtual bool cartridgeHasRtc(void) const override;
+
 	virtual DeviceTypes deviceType(void) const override;
 	virtual DeviceTypes enabledDeviceType(void) const override;
+	virtual bool deviceHasCgbSupport(void) const override;
+	virtual bool deviceHasExtSupport(void) const override;
+	virtual bool deviceHasSgbSupport(void) const override;
 
 	virtual Colour classicPalette(int index) const override;
 	virtual void classicPalette(int index, const Colour &col) override;
@@ -97,7 +101,7 @@ public:
 
 	virtual bool traceless(void) const override;
 
-	virtual bool open(Bytes::Ptr rom, DeviceTypes deviceType, class Input* input, Bytes::Ptr sram, bool isEditor, bool useAudioDevice, bool traceless) override;
+	virtual bool open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, class Input* input, Bytes::Ptr sram, bool isEditor, bool useAudioDevice, bool traceless) override;
 	virtual bool close(Bytes::Ptr sram) override;
 
 	virtual bool update(

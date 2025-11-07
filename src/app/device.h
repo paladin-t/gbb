@@ -61,9 +61,11 @@ public:
 
 	enum class DeviceTypes {
 		CLASSIC,
-		COLORED,
 		CLASSIC_EXTENDED,
-		COLORED_EXTENDED
+		COLORED,
+		COLORED_EXTENDED,
+		SUPER,
+		SUPER_EXTENDED
 	};
 
 	enum class CursorTypes {
@@ -107,13 +109,17 @@ public:
 
 public:
 	virtual bool cartridgeHasCgbSupport(void) const = 0;
-	virtual bool cartridgeHasExtensionSupport(void) const = 0;
+	virtual bool cartridgeHasExtSupport(void) const = 0;
 	virtual bool cartridgeHasSgbSupport(void) const = 0;
 	virtual int cartridgeRomSize(int* banks /* nullable */) const = 0;
 	virtual int cartridgeSramSize(int* banks /* nullable */) const = 0;
 	virtual bool cartridgeHasRtc(void) const = 0;
+
 	virtual DeviceTypes deviceType(void) const = 0;
 	virtual DeviceTypes enabledDeviceType(void) const = 0;
+	virtual bool deviceHasCgbSupport(void) const = 0;
+	virtual bool deviceHasExtSupport(void) const = 0;
+	virtual bool deviceHasSgbSupport(void) const = 0;
 
 	virtual Colour classicPalette(int index) const = 0;
 	virtual void classicPalette(int index, const Colour &col) = 0;
@@ -140,7 +146,7 @@ public:
 
 	virtual bool traceless(void) const = 0;
 
-	virtual bool open(Bytes::Ptr rom, DeviceTypes deviceType, class Input* input /* nullable */, Bytes::Ptr sram /* nullable */, bool isEditor, bool useAudioDevice, bool traceless) = 0;
+	virtual bool open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, class Input* input /* nullable */, Bytes::Ptr sram /* nullable */, bool isEditor, bool useAudioDevice, bool traceless) = 0;
 	virtual bool close(Bytes::Ptr sram /* nullable */) = 0;
 
 	virtual bool update(

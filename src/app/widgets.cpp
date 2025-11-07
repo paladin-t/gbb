@@ -1824,6 +1824,13 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 					SetNextItemWidth(GetContentRegionAvail().x);
 					if (Combo("", &pref, items, GBBASIC_COUNTOF(items)))
 						_settings.deviceType = pref;
+
+					Checkbox(_theme->windowPreferences_Device_PreferSgb(), &_settings.devicePreferSgb);
+					if (IsItemHovered()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						SetTooltip(_theme->tooltip_CheckToPreferSgbRatherThanColoredDevice());
+					}
 				}
 				PopID();
 
@@ -3937,7 +3944,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			}
 			if (BeginTabItem(_theme->tabProjectProperty_Advanced(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
 				AlignTextToFramePadding();
-				TextUnformatted(_theme->windowProjectProperty_Advanced_SuperFeatures());
+				TextUnformatted(_theme->windowProjectProperty_Advanced_SgbFeatures());
 
 				PushID("#SgbOn");
 				{
@@ -3946,7 +3953,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 						const float posX = _superFeaturesEndX - _superFeaturesEnabledWidth;
 						SetCursorPosX(posX);
 						bool pref = prj->superFeaturesEnabled();
-						if (Checkbox(_theme->windowProjectProperty_Advanced_SuperFeatures_Enabled(), &pref))
+						if (Checkbox(_theme->windowProjectProperty_Advanced_SgbFeatures_Enabled(), &pref))
 							prj->superFeaturesEnabled(pref);
 						SameLine();
 						_superFeaturesEnabledWidth = GetCursorPosX() - posX - style.ItemSpacing.x;
@@ -4018,18 +4025,21 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 							}
 
 							if ((i + 1) % 7 == 0 && i != n - 1) {
-								if (wndWidth >= 298.0f) {
-									SameLine();
-									const float btnW = 36.0f;
-									const float posX = _superFeaturesEndX - btnW;
-									SetCursorPosX(posX);
-									if (Button(_theme->dialogPrompt_Rst(), ImVec2(btnW, 0))) {
-										_activeSuperPaletteShowColorPicker = false;
-										_activeSuperPaletteIndex = -1;
-										const PaletteAssets &palette = prj->touchPalette();
-										prj->customizedSuperPalettes(false);
-										prj->syncSuperPalettes(palette);
-									}
+								SameLine();
+								const float btnW = 36.0f;
+								const float posX = _superFeaturesEndX - btnW;
+								SetCursorPosX(posX);
+								if (Button(_theme->dialogPrompt_Rst(), ImVec2(btnW, 0))) {
+									_activeSuperPaletteShowColorPicker = false;
+									_activeSuperPaletteIndex = -1;
+									const PaletteAssets &palette = prj->touchPalette();
+									prj->customizedSuperPalettes(false);
+									prj->syncSuperPalettes(palette);
+								}
+								if (IsItemHovered()) {
+									VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+									SetTooltip(_theme->tooltipProjectProperty_ResetPalettesToUseTheSharedAsset());
 								}
 								SetCursorPosX(_superFeaturesBeginX);
 							} else {
@@ -4082,7 +4092,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				PushID("#SgbBdr");
 				{
 					AlignTextToFramePadding();
-					TextUnformatted(_theme->windowProjectProperty_Advanced_BorderFrame());
+					TextUnformatted(_theme->windowProjectProperty_Advanced_Border());
 
 					SameLine();
 					const float wndWidth = GetWindowWidth();
@@ -4092,9 +4102,9 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(1, 1));
 
 					const char* items[] = {
-						_theme->windowProjectProperty_Advanced_BorderFrame_None().c_str(),
-						_theme->windowProjectProperty_Advanced_BorderFrame_Default().c_str(),
-						_theme->windowProjectProperty_Advanced_BorderFrame_Custom().c_str()
+						_theme->windowProjectProperty_Advanced_Border_None().c_str(),
+						_theme->windowProjectProperty_Advanced_Border_Default().c_str(),
+						_theme->windowProjectProperty_Advanced_Border_Custom().c_str()
 					};
 					int type = 0;
 					if (prj->borderFrameType() == Project::BorderFrameTypes::NONE) {
@@ -4617,6 +4627,13 @@ void PreferencesPopupBox::update(Workspace*) {
 					SetNextItemWidth(GetContentRegionAvail().x);
 					if (Combo("", &pref, items, GBBASIC_COUNTOF(items)))
 						_settingsShadow.deviceType = pref;
+
+					Checkbox(_theme->windowPreferences_Device_PreferSgb(), &_settingsShadow.devicePreferSgb);
+					if (IsItemHovered()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						SetTooltip(_theme->tooltip_CheckToPreferSgbRatherThanColoredDevice());
+					}
 				}
 				PopID();
 

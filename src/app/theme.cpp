@@ -758,6 +758,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Device_ColoredWithExtension("Colored with extension");
 	windowPreferences_Device_EmulationPalette("Emulation palette");
 	windowPreferences_Device_Emulator("Emulator:");
+	windowPreferences_Device_PreferSgb("Prefer SGB");
 	windowPreferences_Device_SaveSramOnStop("Save SRAM on stop");
 	windowPreferences_Device_Type("Type");
 	windowPreferences_Graphics_Application("Application:");
@@ -788,15 +789,15 @@ bool Theme::open(class Renderer* rnd) {
 	windowProjectProperty_Project_Sram_None("0KB (None)");
 	windowProjectProperty_Compiling_Parser("Parser:");
 	windowProjectProperty_Compiling_Parser_CaseInsensitive("Case-insensitive");
-	windowProjectProperty_Advanced_SuperFeatures("\"Super\" features:");
-	windowProjectProperty_Advanced_SuperFeatures_Enabled("Enabled");
-	windowProjectProperty_Advanced_Palettes("    Palettes");
+	windowProjectProperty_Advanced_SgbFeatures("SGB features:");
+	windowProjectProperty_Advanced_SgbFeatures_Enabled("Enabled");
+	windowProjectProperty_Advanced_Palettes("Palettes");
 	windowProjectProperty_Advanced_PaletteFormat("Pal: {0}, Col: {1}");
-	windowProjectProperty_Advanced_BorderFrame("Border frame");
-	windowProjectProperty_Advanced_BorderFrame_None("None");
-	windowProjectProperty_Advanced_BorderFrame_Default("Default");
-	windowProjectProperty_Advanced_BorderFrame_Custom("Custom");
-	windowProjectProperty_Advanced_Preview("     Preview");
+	windowProjectProperty_Advanced_Border("  Border");
+	windowProjectProperty_Advanced_Border_None("None");
+	windowProjectProperty_Advanced_Border_Default("Default");
+	windowProjectProperty_Advanced_Border_Custom("Custom");
+	windowProjectProperty_Advanced_Preview(" Preview");
 
 	windowPalette("Palette");
 
@@ -895,6 +896,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_ChangeRefFont("Change ref font");
 	tooltip_ChangeRefMap("Change ref map");
 	tooltip_ChangeRefTiles("Change ref tiles");
+	tooltip_CheckToPreferSgbRatherThanColoredDevice("Check to prefer SGB rather than colored device");
 	tooltip_Clear("Clear");
 	tooltip_Compacting("Compacting...");
 	tooltip_Compiling("Compiling...");
@@ -1153,6 +1155,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipProjectProperty_ReplaceBorder("Replace border");
 	tooltipProjectProperty_ReplaceIcon("Replace icon");
 	tooltipProjectProperty_ResetBorder("Reset border");
+	tooltipProjectProperty_ResetPalettesToUseTheSharedAsset("Reset palettes to use the shared asset");
 	tooltipProjectProperty_ResetIcon("Reset icon");
 
 	tooltipScene_ActorDetails(" Index: {0}\n   Pos: {1},{2}\nBounds: {3},{4},{5},{6}");

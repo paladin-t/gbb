@@ -12,6 +12,7 @@
 #include "../utils/input.h"
 #include "../utils/platform.h"
 #include "../utils/renderer.h"
+#include "../utils/rom_inspector.h"
 #include "../utils/text.h"
 #include "../utils/texture.h"
 
@@ -314,7 +315,7 @@ bool DeviceBinjgb::cartridgeHasCgbSupport(void) const {
 		y == DEVICE_BINJGB_CARTRIDGE_CGB_ONLY_TYPE;
 }
 
-bool DeviceBinjgb::cartridgeHasExtensionSupport(void) const {
+bool DeviceBinjgb::cartridgeHasExtSupport(void) const {
 	return !!(_cartridgeType & DEVICE_BINJGB_CARTRIDGE_EXTENSION_TYPE);
 }
 
@@ -443,6 +444,18 @@ Device::DeviceTypes DeviceBinjgb::enabledDeviceType(void) const {
 	return _enabledDeviceType;
 }
 
+bool DeviceBinjgb::deviceHasCgbSupport(void) const {
+	return _enabledDeviceType == DeviceTypes::COLORED || _enabledDeviceType == DeviceTypes::COLORED_EXTENDED;
+}
+
+bool DeviceBinjgb::deviceHasExtSupport(void) const {
+	return _enabledDeviceType == DeviceTypes::CLASSIC_EXTENDED || _enabledDeviceType == DeviceTypes::COLORED_EXTENDED || _enabledDeviceType == DeviceTypes::SUPER_EXTENDED;
+}
+
+bool DeviceBinjgb::deviceHasSgbSupport(void) const {
+	return _enabledDeviceType == DeviceTypes::SUPER || _enabledDeviceType == DeviceTypes::SUPER_EXTENDED;
+}
+
 Colour DeviceBinjgb::classicPalette(int index) const {
 	if (index < 0 || index >= GBBASIC_COUNTOF(_classicPalette))
 		return Colour();
@@ -535,7 +548,7 @@ bool DeviceBinjgb::traceless(void) const {
 	return _traceless;
 }
 
-bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, class Input* input, Bytes::Ptr sram, bool isEditor, bool useAudioDevice, bool traceless) {
+bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, class Input* input, Bytes::Ptr sram, bool isEditor, bool useAudioDevice, bool traceless) {
 	// Prepare.
 	if (_opened)
 		return false;
@@ -560,13 +573,40 @@ bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, class Input* inp
 	if (DEVICE_BINJGB_CARTRIDGE_OLD_LICENSE_CODE_ADDRESS < rom->count())
 		_cartridgeOldLicenseCode = rom->get(DEVICE_BINJGB_CARTRIDGE_OLD_LICENSE_CODE_ADDRESS);
 
-	if (_enabledDeviceType == DeviceTypes::CLASSIC_EXTENDED || _enabledDeviceType == DeviceTypes::COLORED_EXTENDED) { // GBB EXTENSION.
+	if (cartridgeHasSgbSupport() && deviceHasCgbSupport() && (!cartridgeHasCgbSupport() || preferSgb)) {
+		// The device's SGB features are only available if the cartridge prefers it and the user does as well.
+		if (_enabledDeviceType == DeviceTypes::COLORED)
+			_enabledDeviceType = DeviceTypes::SUPER;
+		else /* if (_enabledDeviceType == DeviceTypes::COLORED_EXTENDED) */
+			_enabledDeviceType = DeviceTypes::SUPER_EXTENDED;
+
+		// Interpolate the ROM to remove CGB flag.
+		if (cartridgeHasCgbSupport()) {
+			RomInspector header;
+			header.load(rom);
+			{
+				const int newCartType = _cartridgeType & ~DEVICE_BINJGB_CARTRIDGE_CGB_ONLY_TYPE;
+				rom->set(DEVICE_BINJGB_CARTRIDGE_TYPE_ADDRESS, (Byte)newCartType);
+
+				const std::string headerChecksum = header.getCorrectHeaderChecksum();
+				header.setHeaderChecksum(headerChecksum);
+				const std::string globalChecksum = header.getCorrectGlobalChecksum();
+				header.setGlobalChecksum(globalChecksum);
+			}
+			header.unload();
+		}
+	}
+
+	if (deviceHasExtSupport()) { // GBB EXTENSION.
 		// The device's extension is only turned on if the cartridge prefers it.
-		if (!cartridgeHasExtensionSupport()) {
+		if (!cartridgeHasExtSupport()) {
+			// Otherwise turn it off.
 			if (_enabledDeviceType == DeviceTypes::CLASSIC_EXTENDED)
 				_enabledDeviceType = DeviceTypes::CLASSIC;
 			else if (_enabledDeviceType == DeviceTypes::COLORED_EXTENDED)
 				_enabledDeviceType = DeviceTypes::COLORED;
+			else if (_enabledDeviceType == DeviceTypes::SUPER_EXTENDED)
+				_enabledDeviceType = DeviceTypes::SUPER;
 		}
 	}
 
@@ -591,12 +631,14 @@ bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, class Input* inp
 	setBwPalette(PALETTE_TYPE_OBP0, _classicPalette[0].toRGBA(), _classicPalette[1].toRGBA(), _classicPalette[2].toRGBA(), _classicPalette[3].toRGBA());
 	setBwPalette(PALETTE_TYPE_OBP1, _classicPalette[0].toRGBA(), _classicPalette[1].toRGBA(), _classicPalette[2].toRGBA(), _classicPalette[3].toRGBA());
 
-	if (_enabledDeviceType == DeviceTypes::CLASSIC_EXTENDED || _enabledDeviceType == DeviceTypes::COLORED_EXTENDED) { // GBB EXTENSION.
+	if (deviceHasExtSupport()) { // GBB EXTENSION.
 		// Turn on the extension features.
 		if (_enabledDeviceType == DeviceTypes::CLASSIC_EXTENDED)
 			emulator_write_u8_raw(_emulator, DEVICE_BINJGB_EXTENSION_STATUS_REG, DEVICE_BINJGB_CPU_GB1_TYPE);
 		else if (_enabledDeviceType == DeviceTypes::COLORED_EXTENDED)
 			emulator_write_u8_raw(_emulator, DEVICE_BINJGB_EXTENSION_STATUS_REG, DEVICE_BINJGB_CPU_GB2_TYPE);
+		else if (_enabledDeviceType == DeviceTypes::SUPER_EXTENDED)
+			emulator_write_u8_raw(_emulator, DEVICE_BINJGB_EXTENSION_STATUS_REG, DEVICE_BINJGB_CPU_GB1_TYPE);
 		for (int i = 1; i < DEVICE_BINJGB_EXTENSION_AREA_SIZE; ++i)
 			emulator_write_u8_raw(_emulator, (Address)(DEVICE_BINJGB_EXTENSION_START_ADDRESS + i), 0);
 
@@ -1120,7 +1162,7 @@ void DeviceBinjgb::setBwPalette(PaletteType type, u32 white, u32 light_gray, u32
 
 bool DeviceBinjgb::processStreaming(class Window* wnd, class Renderer* rnd) {
 	// Extension feature: stream transfering.
-	if (_enabledDeviceType != DeviceTypes::CLASSIC_EXTENDED && _enabledDeviceType != DeviceTypes::COLORED_EXTENDED) // GBB EXTENSION.
+	if (!deviceHasExtSupport()) // GBB EXTENSION.
 		return false;
 
 	const u8 statusByte = emulator_read_u8_raw(_emulator, DEVICE_BINJGB_STREAMING_STATUS_REG);
@@ -1154,7 +1196,7 @@ bool DeviceBinjgb::processStreaming(class Window* wnd, class Renderer* rnd) {
 
 bool DeviceBinjgb::processShellCommand(class Window* wnd, class Renderer* rnd) {
 	// Extension feature: shell command.
-	if (_enabledDeviceType != DeviceTypes::CLASSIC_EXTENDED && _enabledDeviceType != DeviceTypes::COLORED_EXTENDED) // GBB EXTENSION.
+	if (!deviceHasExtSupport()) // GBB EXTENSION.
 		return false;
 
 	const u8 statusByte = emulator_read_u8_raw(_emulator, DEVICE_BINJGB_TRANSFER_STATUS_REG);
@@ -1305,7 +1347,7 @@ void DeviceBinjgb::onInput(JoypadButtons* joyp, void* data) {
 	);
 
 	// Update the touch states.
-	if (self->_enabledDeviceType == DeviceTypes::CLASSIC_EXTENDED || self->_enabledDeviceType == DeviceTypes::COLORED_EXTENDED) { // GBB EXTENSION.
+	if (self->deviceHasExtSupport()) { // GBB EXTENSION.
 		// Extension feature: touch input.
 		int x = 0;
 		int y = 0;
