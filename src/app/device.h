@@ -146,7 +146,7 @@ public:
 	virtual bool update(
 		class Window* wnd, class Renderer* rnd,
 		double delta,
-		class Texture* texture /* nullable */,
+		class Texture* texture /* nullable */, class Texture* textureForBorderFrame /* nullable */,
 		bool allowInput,
 		const KeyboardModifiers* keyMods /* nullable */,
 		AudioHandler handleAudio /* nullable */

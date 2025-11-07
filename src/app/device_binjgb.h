@@ -28,15 +28,15 @@ private:
 	DeviceTypes _enabledDeviceType = DeviceTypes::COLORED; // Determined by both device and ROM.
 	int _cartridgeType = 0;
 	int _cartridgeSuperType = 0;
-	int _controllerType = 0;
+	int _cartridgeMbcType = 0;
 	int _romType = 0;
 	int _sramType = 0;
+	int _cartridgeOldLicenseCode = 0;
 	Colour _classicPalette[4];
 	Emulator* _emulator = nullptr;
 	bool _emulatorPaused = false;
 	double _rtcTicks = 0;
 	Bytes::Ptr _streamingBuffer = nullptr;
-	RGBA _videoBuffer[SCREEN_WIDTH * SCREEN_HEIGHT];
 	SDL_AudioDeviceID _audioDeviceId = 0;
 	SDL_AudioSpec _audioSpec;
 	SDL_AudioCVT _audioCvt;
@@ -103,7 +103,7 @@ public:
 	virtual bool update(
 		class Window* wnd, class Renderer* rnd,
 		double delta,
-		class Texture* texture,
+		class Texture* texture, class Texture* textureForBorderFrame,
 		bool allowInput,
 		const KeyboardModifiers* keyMods,
 		AudioHandler handleAudio

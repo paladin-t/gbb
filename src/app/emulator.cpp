@@ -11,6 +11,8 @@
 #include "theme.h"
 #include "widgets.h"
 #include "../../lib/binjgb/src/emulator.h"
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "../../lib/imgui/imgui_internal.h"
 #include <SDL.h>
 
 /*
@@ -25,6 +27,7 @@ struct Context {
 	Input* input = nullptr;
 	Device* canvasDevice = nullptr;
 	Texture* canvasTexture = nullptr;
+	Texture* canvasTextureForBorderFrame = nullptr;
 	std::string statusText;
 	std::string statusTooltip;
 	float* statusBarWidth = nullptr;
@@ -54,7 +57,7 @@ struct Context {
 		Window* window_, Renderer* renderer_,
 		Theme* theme_,
 		Input* input_,
-		const Device::Ptr &canvasDevice_, const Texture::Ptr &canvasTexture_,
+		const Device::Ptr &canvasDevice_, const Texture::Ptr &canvasTexture_, const Texture::Ptr &canvasTextureForBorderFrame_,
 		const std::string &statusText_, const std::string &statusTooltip_, float* statusBarWidth_, float statusBarHeight_, bool showStatus_,
 		bool* emulatorMuted_, int* emulatorSpeed_, int* emulatorFastForwardSpeed_,
 		bool integerScale_, bool fixRatio_,
@@ -67,7 +70,7 @@ struct Context {
 		window(window_), renderer(renderer_),
 		theme(theme_),
 		input(input_),
-		canvasDevice(canvasDevice_.get()), canvasTexture(canvasTexture_.get()),
+		canvasDevice(canvasDevice_.get()), canvasTexture(canvasTexture_.get()), canvasTextureForBorderFrame(canvasTextureForBorderFrame_.get()),
 		statusText(statusText_), statusTooltip(statusTooltip_), statusBarWidth(statusBarWidth_), statusBarHeight(statusBarHeight_), showStatus(showStatus_),
 		emulatorMuted(emulatorMuted_), emulatorSpeed(emulatorSpeed_), emulatorPreferedSpeed(emulatorFastForwardSpeed_),
 		integerScale(integerScale_), fixRatio(fixRatio_),
@@ -168,6 +171,13 @@ struct Context {
 
 			input->sync();
 		}
+	}
+
+	Math::Vec2f scaled(void) const {
+		if (srcSize.x == 0 || srcSize.y == 0)
+			return Math::Vec2f(1, 1);
+
+		return Math::Vec2f(dstSize.x / srcSize.x, dstSize.y / srcSize.y);
 	}
 };
 
@@ -384,7 +394,7 @@ void emulator(
 	class Window* wnd, class Renderer* rnd,
 	class Theme* theme,
 	Input* input,
-	const Device::Ptr &canvasDevice, const Texture::Ptr &canvasTexture,
+	const Device::Ptr &canvasDevice, const Texture::Ptr &canvasTexture, const Texture::Ptr &canvasTextureForBorderFrame,
 	const std::string &statusText, const std::string &statusTooltip, float &statusBarWidth, float statusBarHeight, bool showStatus,
 	bool &emulatorMuted, int &emulatorSpeed, int &emulatorPreferedSpeed,
 	bool integerScale, bool fixRatio,
@@ -400,7 +410,7 @@ void emulator(
 		wnd, rnd,
 		theme,
 		input,
-		canvasDevice, canvasTexture,
+		canvasDevice, canvasTexture, canvasTextureForBorderFrame,
 		statusText, statusTooltip, &statusBarWidth, statusBarHeight, showStatus,
 		&emulatorMuted, &emulatorSpeed, &emulatorPreferedSpeed,
 		integerScale, fixRatio,
@@ -420,6 +430,17 @@ void emulator(
 	context.begin();
 	{
 		// Render the canvas.
+		if (canvasTextureForBorderFrame) {
+			const ImVec2 pos = context.dstPos - ImVec2((float)(SGB_SCREEN_LEFT * context.scaled().x), (float)(SGB_SCREEN_TOP * context.scaled().y));
+			const ImVec2 size = context.dstSize + ImVec2((float)(SGB_SCREEN_LEFT * context.scaled().x * 2), (float)(SGB_SCREEN_TOP * context.scaled().y * 2));
+			ImGui::SetCursorPos(pos);
+			ImGui::Image(
+				canvasTextureForBorderFrame->pointer(rnd),
+				size,
+				ImVec2(0, 0), ImVec2(1, 1),
+				ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
+			);
+		}
 		ImGui::SetCursorPos(context.dstPos);
 		ImGui::Image(
 			canvasTexture->pointer(rnd),

@@ -24,7 +24,7 @@ void emulator(
 	class Window* wnd, class Renderer* rnd,
 	class Theme* theme,
 	Input* input,
-	const Device::Ptr &canvasDevice, const Texture::Ptr &canvasTexture,
+	const Device::Ptr &canvasDevice, const Texture::Ptr &canvasTexture, const Texture::Ptr &canvasTextureForBorderFrame,
 	const std::string &statusText, const std::string &statusTooltip, float &statusBarWidth, float statusBarHeight, bool showStatus,
 	bool &emulatorMuted, int &emulatorSpeed, int &emulatorPreferedSpeed,
 	bool integerScale, bool fixRatio,

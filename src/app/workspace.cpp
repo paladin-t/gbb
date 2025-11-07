@@ -4286,7 +4286,7 @@ void Workspace::updateAudioDevice(Window* wnd, Renderer* rnd, double delta, unsi
 
 	*fpsReq = GBBASIC_ACTIVE_FRAME_RATE;
 
-	audioDevice()->update(wnd, rnd, delta, nullptr, false, nullptr, handleAudio);
+	audioDevice()->update(wnd, rnd, delta, nullptr, nullptr, false, nullptr, handleAudio);
 }
 
 bool Workspace::delay(Delayed::Handler delayed_, const std::string &key, const Delayed::Amount &delay_) {
@@ -6196,24 +6196,37 @@ bool Workspace::execute(Window* wnd, Renderer* rnd, double delta, unsigned* fpsR
 		canvasTexture(Texture::Ptr(Texture::create()));
 		canvasTexture()->scale(Texture::NEAREST);
 		canvasTexture()->blend(Texture::BLEND);
-
 		canvasTexture()->fromBytes(rnd, Texture::TARGET, nullptr, SCREEN_WIDTH, SCREEN_HEIGHT, 0, Texture::NEAREST);
 
 		GBBASIC_RENDER_TARGET(rnd, canvasTexture().get())
 		GBBASIC_RENDER_SCALE(rnd, 1)
-		const Colour col(30, 30, 30, 255);
+		const Colour col(255, 255, 255, 0);
+		rnd->clear(&col);
+	}
+
+	if (canvasDevice()->cartridgeHasSgbSupport() && canvasDevice()->isSgbBorderSupported() && !canvasTextureForBorderFrame()) {
+		canvasTextureForBorderFrame(Texture::Ptr(Texture::create()));
+		canvasTextureForBorderFrame()->scale(Texture::NEAREST);
+		canvasTextureForBorderFrame()->blend(Texture::BLEND);
+		canvasTextureForBorderFrame()->fromBytes(rnd, Texture::TARGET, nullptr, SGB_SCREEN_WIDTH, SGB_SCREEN_HEIGHT, 0, Texture::NEAREST);
+
+		GBBASIC_RENDER_TARGET(rnd, canvasTextureForBorderFrame().get())
+		GBBASIC_RENDER_SCALE(rnd, 1)
+		const Colour col(255, 255, 255, 0);
 		rnd->clear(&col);
 	}
 
 	Device::AudioHandler audioHandler = nullptr;
 	if (settings().emulatorMuted) {
 		audioHandler = [] (void* /* specification */, Bytes* /* buffer */, UInt32 /* length */) -> bool {
+			// Do nothing.
+
 			return true;
 		};
 	}
 
 	const Device::KeyboardModifiers keyMods(io.KeyCtrl, io.KeyShift, io.KeyAlt, io.KeySuper);
-	canvasDevice()->update(wnd, rnd, delta, canvasTexture().get(), !popupBox() && !menuOpened(), &keyMods, audioHandler);
+	canvasDevice()->update(wnd, rnd, delta, canvasTexture().get(), canvasTextureForBorderFrame().get(), !popupBox() && !menuOpened(), &keyMods, audioHandler);
 
 	return true;
 }
@@ -11000,7 +11013,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			wnd, rnd,
 			theme(),
 			input(),
-			canvasDevice(), canvasTexture(),
+			canvasDevice(), canvasTexture(), canvasTextureForBorderFrame(),
 			canvasStatusText(), canvasStatusTooltip(), statusWidth(), statusBarHeight, true,
 			settings().emulatorMuted, settings().emulatorSpeed, settings().emulatorPreferedSpeed,
 			settings().canvasIntegerScale, settings().canvasFixRatio,

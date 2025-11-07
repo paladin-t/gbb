@@ -3966,6 +3966,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					TextUnformatted(_theme->windowProjectProperty_Advanced_Palettes());
 
 					SameLine();
+					const float wndWidth = GetWindowWidth();
 
 					const int n = prj->countSuperPaletteColor();
 					if (_superPaletteNames.empty()) {
@@ -4017,18 +4018,19 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 							}
 
 							if ((i + 1) % 7 == 0 && i != n - 1) {
-								SameLine();
-								const float btnW = 36.0f;
-								const float posX = _superFeaturesEndX - btnW;
-								SetCursorPosX(posX);
-								if (Button(_theme->dialogPrompt_Rst(), ImVec2(btnW, 0))) {
-									_activeSuperPaletteShowColorPicker = false;
-									_activeSuperPaletteIndex = -1;
-									const PaletteAssets &palette = prj->touchPalette();
-									prj->customizedSuperPalettes(false);
-									prj->syncSuperPalettes(palette);
+								if (wndWidth >= 298.0f) {
+									SameLine();
+									const float btnW = 36.0f;
+									const float posX = _superFeaturesEndX - btnW;
+									SetCursorPosX(posX);
+									if (Button(_theme->dialogPrompt_Rst(), ImVec2(btnW, 0))) {
+										_activeSuperPaletteShowColorPicker = false;
+										_activeSuperPaletteIndex = -1;
+										const PaletteAssets &palette = prj->touchPalette();
+										prj->customizedSuperPalettes(false);
+										prj->syncSuperPalettes(palette);
+									}
 								}
-
 								SetCursorPosX(_superFeaturesBeginX);
 							} else {
 								SameLine();

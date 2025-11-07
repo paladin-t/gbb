@@ -26,15 +26,18 @@
 #ifndef DEVICE_BINJGB_CARTRIDGE_SUPER_TYPE_ADDRESS
 #	define DEVICE_BINJGB_CARTRIDGE_SUPER_TYPE_ADDRESS 0x0146
 #endif /* DEVICE_BINJGB_CARTRIDGE_SUPER_TYPE_ADDRESS */
-#ifndef DEVICE_BINJGB_CONTROLLER_TYPE_ADDRESS
-#	define DEVICE_BINJGB_CONTROLLER_TYPE_ADDRESS 0x0147
-#endif /* DEVICE_BINJGB_CONTROLLER_TYPE_ADDRESS */
+#ifndef DEVICE_BINJGB_CARTRIDGE_MBC_TYPE_ADDRESS
+#	define DEVICE_BINJGB_CARTRIDGE_MBC_TYPE_ADDRESS 0x0147
+#endif /* DEVICE_BINJGB_CARTRIDGE_MBC_TYPE_ADDRESS */
 #ifndef DEVICE_BINJGB_ROM_SIZE_ADDRESS
 #	define DEVICE_BINJGB_ROM_SIZE_ADDRESS 0x0148
 #endif /* DEVICE_BINJGB_ROM_SIZE_ADDRESS */
 #ifndef DEVICE_BINJGB_SRAM_SIZE_ADDRESS
 #	define DEVICE_BINJGB_SRAM_SIZE_ADDRESS 0x0149
 #endif /* DEVICE_BINJGB_SRAM_SIZE_ADDRESS */
+#ifndef DEVICE_BINJGB_CARTRIDGE_OLD_LICENSE_CODE_ADDRESS
+#	define DEVICE_BINJGB_CARTRIDGE_OLD_LICENSE_CODE_ADDRESS 0x14b
+#endif /* DEVICE_BINJGB_CARTRIDGE_OLD_LICENSE_CODE_ADDRESS */
 
 // For `DEVICE_BINJGB_CARTRIDGE_TYPE_ADDRESS`.
 #ifndef DEVICE_BINJGB_CARTRIDGE_GB_ONLY_TYPE
@@ -57,6 +60,11 @@
 #ifndef DEVICE_BINJGB_CARTRIDGE_WITH_SGB_SUPPORT_TYPE
 #	define DEVICE_BINJGB_CARTRIDGE_WITH_SGB_SUPPORT_TYPE 0x03 // The cartridge supports super functions.
 #endif /* DEVICE_BINJGB_CARTRIDGE_WITH_SGB_SUPPORT_TYPE */
+
+// For `DEVICE_BINJGB_CARTRIDGE_OLD_LICENSE_CODE_ADDRESS`.
+#ifndef DEVICE_BINJGB_CARTRIDGE_WITH_NEW_LICENSE_CODE_TYPE
+#	define DEVICE_BINJGB_CARTRIDGE_WITH_NEW_LICENSE_CODE_TYPE 0x33 // The cartridge supports super functions.
+#endif /* DEVICE_BINJGB_CARTRIDGE_WITH_NEW_LICENSE_CODE_TYPE */
 
 #ifndef DEVICE_BINJGB_EXTENSION_AREA_SIZE
 #	define DEVICE_BINJGB_EXTENSION_AREA_SIZE 0x60 // GBB EXTENSION.
@@ -312,9 +320,11 @@ bool DeviceBinjgb::cartridgeHasExtensionSupport(void) const {
 
 bool DeviceBinjgb::cartridgeHasSgbSupport(void) const {
 	const int y = _cartridgeSuperType;
+	const int l = _cartridgeOldLicenseCode;
 
 	return
-		y == DEVICE_BINJGB_CARTRIDGE_WITH_SGB_SUPPORT_TYPE;
+		y == DEVICE_BINJGB_CARTRIDGE_WITH_SGB_SUPPORT_TYPE &&
+		l == DEVICE_BINJGB_CARTRIDGE_WITH_NEW_LICENSE_CODE_TYPE;
 }
 
 int DeviceBinjgb::cartridgeRomSize(int* banks) const {
@@ -421,8 +431,8 @@ int DeviceBinjgb::cartridgeSramSize(int* banks) const {
 
 bool DeviceBinjgb::cartridgeHasRtc(void) const {
 	return
-		_controllerType == 0x0f || // MBC3 + TIMER + BATTERY.
-		_controllerType == 0x10;   // MBC3 + TIMER + RAM + BATTERY.
+		_cartridgeMbcType == 0x0f || // MBC3 + TIMER + BATTERY.
+		_cartridgeMbcType == 0x10;   // MBC3 + TIMER + RAM + BATTERY.
 }
 
 Device::DeviceTypes DeviceBinjgb::deviceType(void) const {
@@ -541,12 +551,14 @@ bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, class Input* inp
 		_cartridgeType = rom->get(DEVICE_BINJGB_CARTRIDGE_TYPE_ADDRESS);
 	if (DEVICE_BINJGB_CARTRIDGE_SUPER_TYPE_ADDRESS < rom->count())
 		_cartridgeSuperType = rom->get(DEVICE_BINJGB_CARTRIDGE_SUPER_TYPE_ADDRESS);
-	if (DEVICE_BINJGB_CONTROLLER_TYPE_ADDRESS < rom->count())
-		_controllerType = rom->get(DEVICE_BINJGB_CONTROLLER_TYPE_ADDRESS);
+	if (DEVICE_BINJGB_CARTRIDGE_MBC_TYPE_ADDRESS < rom->count())
+		_cartridgeMbcType = rom->get(DEVICE_BINJGB_CARTRIDGE_MBC_TYPE_ADDRESS);
 	if (DEVICE_BINJGB_ROM_SIZE_ADDRESS < rom->count())
 		_romType = rom->get(DEVICE_BINJGB_ROM_SIZE_ADDRESS);
 	if (DEVICE_BINJGB_SRAM_SIZE_ADDRESS < rom->count())
 		_sramType = rom->get(DEVICE_BINJGB_SRAM_SIZE_ADDRESS);
+	if (DEVICE_BINJGB_CARTRIDGE_OLD_LICENSE_CODE_ADDRESS < rom->count())
+		_cartridgeOldLicenseCode = rom->get(DEVICE_BINJGB_CARTRIDGE_OLD_LICENSE_CODE_ADDRESS);
 
 	if (_enabledDeviceType == DeviceTypes::CLASSIC_EXTENDED || _enabledDeviceType == DeviceTypes::COLORED_EXTENDED) { // GBB EXTENSION.
 		// The device's extension is only turned on if the cartridge prefers it.
@@ -626,9 +638,6 @@ bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, class Input* inp
 
 	// Initialize the streaming buffer.
 	_streamingBuffer = nullptr;
-
-	// Initialize the frame buffer.
-	memset(_videoBuffer, 0, sizeof(_videoBuffer));
 
 	// Initialize the audio.
 	memset(&_audioCvt, 0, sizeof(SDL_AudioCVT));
@@ -739,9 +748,6 @@ bool DeviceBinjgb::close(Bytes::Ptr sram) {
 		_audioDeviceId = 0;
 	}
 
-	// Dispose the frame buffer.
-	memset(_videoBuffer, 0, sizeof(_videoBuffer));
-
 	// Dispose the streaming buffer.
 	_streamingBuffer = nullptr;
 
@@ -758,9 +764,10 @@ bool DeviceBinjgb::close(Bytes::Ptr sram) {
 	// Release the ROM.
 	_cartridgeType = DEVICE_BINJGB_CARTRIDGE_GB_ONLY_TYPE;
 	_cartridgeSuperType = DEVICE_BINJGB_CARTRIDGE_WITHOUT_SGB_SUPPORT_TYPE;
-	_controllerType = 0;
+	_cartridgeMbcType = 0;
 	_romType = 0;
 	_sramType = 0;
+	_cartridgeOldLicenseCode = 0;
 
 	// Dispose the device type.
 	_deviceType = DeviceTypes::COLORED;
@@ -773,7 +780,7 @@ bool DeviceBinjgb::close(Bytes::Ptr sram) {
 bool DeviceBinjgb::update(
 	class Window* wnd, class Renderer* rnd,
 	double delta,
-	class Texture* texture,
+	class Texture* texture, class Texture* textureForBorderFrame,
 	bool allowInput,
 	const KeyboardModifiers* keyMods,
 	AudioHandler handleAudio
@@ -784,40 +791,46 @@ bool DeviceBinjgb::update(
 	if (!_emulator)
 		return false;
 
+	const bool isSgb = !!textureForBorderFrame;
+	Texture* oldRndTarget = nullptr;
+	int oldRndScale = 0;
+
+	auto beginRendering = [&] (void) -> void {
+		oldRndTarget = rnd->target();
+		oldRndScale = rnd->scale();
+	};
+	auto endRendering = [&] (void) -> void {
+		rnd->target(oldRndTarget);
+		rnd->scale(oldRndScale);
+	};
+	auto renderTextures = [&] (bool isSgb) -> void {
+		constexpr const int BYTES = SDL_BYTESPERPIXEL(SDL_PIXELFORMAT_ABGR8888);
+		if (isSgb) {
+			rnd->target(textureForBorderFrame);
+			rnd->scale(1);
+			const SgbFrameBuffer* sframe = emulator_get_sgb_frame_buffer(_emulator);
+			SDL_UpdateTexture((SDL_Texture*)textureForBorderFrame->pointer(rnd), nullptr, (void*)sframe, SGB_SCREEN_WIDTH * BYTES);
+		}
+		rnd->target(texture);
+		rnd->scale(1);
+		const FrameBuffer* frame = emulator_get_frame_buffer(_emulator);
+		SDL_UpdateTexture((SDL_Texture*)texture->pointer(rnd), nullptr, (void*)frame, SCREEN_WIDTH * BYTES);
+	};
+
 	// Fill the keyboard modifiers.
 	if (keyMods)
 		_keyboardModifiers = *keyMods;
 
 	// Set the renderer states.
-	Texture* oldRndTarget = nullptr;
-	int oldRndScale = 0;
-	bool isSgb = false;
-	if (texture) {
-		oldRndTarget = rnd->target();
-		rnd->target(texture);
-		oldRndScale = rnd->scale();
-		rnd->scale(1);
-
-		if (texture->width() == SGB_SCREEN_WIDTH && texture->height() == SGB_SCREEN_HEIGHT)
-			isSgb = true;
-	}
+	if (texture)
+		beginRendering();
 
 	// Update with paused content.
 	if (_emulatorPaused) {
 		if (texture) {
-			const int bytes = SDL_BYTESPERPIXEL(SDL_PIXELFORMAT_ABGR8888);
-			if (isSgb) {
-				SgbFrameBuffer* frame = emulator_get_sgb_frame_buffer(_emulator);
-				memcpy(_videoBuffer, frame, sizeof(_videoBuffer));
-				SDL_UpdateTexture((SDL_Texture*)texture->pointer(rnd), nullptr, _videoBuffer, SGB_SCREEN_WIDTH * bytes);
-			} else {
-				FrameBuffer* frame = emulator_get_frame_buffer(_emulator);
-				memcpy(_videoBuffer, frame, sizeof(_videoBuffer));
-				SDL_UpdateTexture((SDL_Texture*)texture->pointer(rnd), nullptr, _videoBuffer, SCREEN_WIDTH * bytes);
-			}
+			renderTextures(isSgb);
 
-			rnd->target(oldRndTarget);
-			rnd->scale(oldRndScale);
+			endRendering();
 		}
 
 		return true;
@@ -863,16 +876,7 @@ bool DeviceBinjgb::update(
 			}
 
 			if (texture) {
-				const int bytes = SDL_BYTESPERPIXEL(SDL_PIXELFORMAT_ABGR8888);
-				if (isSgb) {
-					SgbFrameBuffer* frame = emulator_get_sgb_frame_buffer(_emulator);
-					memcpy(_videoBuffer, frame, sizeof(_videoBuffer));
-					SDL_UpdateTexture((SDL_Texture*)texture->pointer(rnd), nullptr, _videoBuffer, SGB_SCREEN_WIDTH * bytes);
-				} else {
-					FrameBuffer* frame = emulator_get_frame_buffer(_emulator);
-					memcpy(_videoBuffer, frame, sizeof(_videoBuffer));
-					SDL_UpdateTexture((SDL_Texture*)texture->pointer(rnd), nullptr, _videoBuffer, SCREEN_WIDTH * bytes);
-				}
+				renderTextures(isSgb);
 			}
 
 			const Ticks ticks = emulator_get_duty_ticks(_emulator);
@@ -1002,10 +1006,8 @@ bool DeviceBinjgb::update(
 	processShellCommand(wnd, rnd);
 
 	// Restore the renderer states.
-	if (texture) {
-		rnd->target(oldRndTarget);
-		rnd->scale(oldRndScale);
-	}
+	if (texture)
+		endRendering();
 
 	// Finish.
 	return !timeout;

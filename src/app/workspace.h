@@ -578,6 +578,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(bool, canvasFixRatio)
 	GBBASIC_PROPERTY_READONLY(bool, canvasIntegerScale)
 	GBBASIC_PROPERTY_READONLY(Texture::Ptr, canvasTexture)
+	GBBASIC_PROPERTY_READONLY(Texture::Ptr, canvasTextureForBorderFrame)
 	GBBASIC_PROPERTY_READONLY(bool, canvasHovering)
 	GBBASIC_PROPERTY(std::string, canvasStatusText)
 	GBBASIC_PROPERTY(std::string, canvasStatusTooltip)

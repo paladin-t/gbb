@@ -4292,9 +4292,10 @@ promise::Promise Operations::projectStop(Window*, Renderer*, Workspace* ws) {
 			ws->canvasStatusTooltip().clear();
 			ws->canvasCursorMode(Device::CursorTypes::POINTER);
 
-			if (ws->canvasTexture()) {
+			if (ws->canvasTexture())
 				ws->canvasTexture(nullptr);
-			}
+			if (ws->canvasTextureForBorderFrame())
+				ws->canvasTextureForBorderFrame(nullptr);
 
 			if (!traceless)
 				ws->print("End running.");
