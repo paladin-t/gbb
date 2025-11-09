@@ -82,7 +82,7 @@ void device_init(void) BANKED {
 
     if (ExtensionMode) {
         const UINT8 ext  = *(UINT8 *)EXTENSION_STATUS_REG;
-        IS_GBB           = ext == GB1_TYPE || ext == GB2_TYPE;
+        IS_GBB           = !!(ext & ANY_EXT_TYPE); // `ext == GB_EXT_TYPE || ext == CGB_EXT_TYPE || ext == SGB_EXT_TYPE;`
     }
 
     device_type |= DEVICE_TYPE_GB;

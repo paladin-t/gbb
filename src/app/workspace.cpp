@@ -8566,6 +8566,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			recentProjectsFilterPosition(ImGui::GetCursorPos());
 			if (recentProjectsFilter().enabled) {
 				WIDGETS_SELECTION_GUARD(theme());
+
 				if (ImGui::MenuBarImageButton(theme()->iconFind()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipFile_Find().c_str())) {
 					recentProjectsFilter().enabled = false;
 					recentProjectsFilter().initialized = false;
@@ -8981,6 +8982,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 	case Categories::EMULATOR: {
 			if (settings().inputOnscreenGamepadEnabled) {
 				WIDGETS_SELECTION_GUARD(theme());
+
 				if (ImGui::MenuBarImageButton(theme()->iconGamepad()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEmulator_ToggleOnscreenGamepad().c_str())) {
 					settings().inputOnscreenGamepadEnabled = false;
 				}
@@ -9422,6 +9424,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 		}
 		if (docOpened) {
 			WIDGETS_SELECTION_GUARD(theme());
+
 			if (ImGui::MenuBarImageButton(theme()->iconDocument()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipRecent_Document().c_str())) {
 				toggleDocument(nullptr);
 			}
@@ -9455,6 +9458,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					}
 				} else {
 					WIDGETS_SELECTION_GUARD(theme());
+
 					if (ImGui::MenuBarImageButton(theme()->iconEmulator()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Emulator().c_str())) {
 						// Do nothing.
 					}
@@ -9481,6 +9485,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 						}
 					} else {
 						WIDGETS_SELECTION_GUARD(theme());
+
 						if (ImGui::MenuBarImageButton(theme()->iconCode()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Code().c_str())) {
 							// Do nothing.
 						}
@@ -9502,6 +9507,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 						}
 					} else {
 						WIDGETS_SELECTION_GUARD(theme());
+
 						if (ImGui::MenuBarImageButton(theme()->iconTiles()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Tiles().c_str())) {
 							// Do nothing.
 						}
@@ -9523,6 +9529,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 						}
 					} else {
 						WIDGETS_SELECTION_GUARD(theme());
+
 						if (ImGui::MenuBarImageButton(theme()->iconMap()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Map().c_str())) {
 							// Do nothing.
 						}
@@ -9544,6 +9551,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 						}
 					} else {
 						WIDGETS_SELECTION_GUARD(theme());
+
 						if (ImGui::MenuBarImageButton(theme()->iconScene()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Scene().c_str())) {
 							// Do nothing.
 						}
@@ -9565,6 +9573,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 						}
 					} else {
 						WIDGETS_SELECTION_GUARD(theme());
+
 						if (ImGui::MenuBarImageButton(theme()->iconActor()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Actor().c_str())) {
 							// Do nothing.
 						}
@@ -9586,6 +9595,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 						}
 					} else {
 						WIDGETS_SELECTION_GUARD(theme());
+
 						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
 							// Do nothing.
 						}
@@ -9607,6 +9617,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 						}
 					} else {
 						WIDGETS_SELECTION_GUARD(theme());
+
 						if (ImGui::MenuBarImageButton(theme()->iconAudioMore()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Audio().c_str())) {
 							ImGui::OpenPopup("@Aud");
 
@@ -9647,6 +9658,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					}
 				} else {
 					WIDGETS_SELECTION_GUARD(theme());
+
 					if (ImGui::MenuBarImageButton(theme()->iconConsole()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Console().c_str()) && !busy) {
 						// Do nothing.
 					}
@@ -9673,6 +9685,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 
 			if (docOpened) {
 				WIDGETS_SELECTION_GUARD(theme());
+
 				if (ImGui::MenuBarImageButton(theme()->iconDocument()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipRecent_Document().c_str()) && !busy) {
 					toggleDocument(nullptr);
 				}
@@ -11185,6 +11198,7 @@ void Workspace::blank(Window* wnd, Renderer* rnd, float marginTop, float marginB
 			ImGui::SetCursorPosX(wndWidth - statusWidth());
 			do {
 				WIDGETS_SELECTION_GUARD(theme());
+
 				if (ImGui::ImageButton(theme()->iconMusic()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme()->tooltipAudio_Music().c_str())) {
 					// Do nothing.
 				}
@@ -11212,6 +11226,7 @@ void Workspace::blank(Window* wnd, Renderer* rnd, float marginTop, float marginB
 			ImGui::SameLine();
 			do {
 				WIDGETS_SELECTION_GUARD(theme());
+
 				if (ImGui::ImageButton(theme()->iconSfx()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme()->tooltipAudio_Sfx().c_str())) {
 					// Do nothing.
 				}

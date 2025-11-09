@@ -48,10 +48,10 @@ struct Context {
 	unsigned deviceFps;
 	unsigned fps;
 
-	ImVec2 regSize;
-	Math::Vec2i srcSize;
-	ImVec2 dstPos;
-	ImVec2 dstSize;
+	ImVec2 regSize;      // Content region size of the current ImGui window.
+	Math::Vec2i srcSize; // Source texture size of the video buffer to be rendered.
+	ImVec2 dstPos;       // Destination position to render the video texture.
+	ImVec2 dstSize;      // Destination size to render the video texture.
 
 	Context(
 		Window* window_, Renderer* renderer_,
@@ -82,6 +82,7 @@ struct Context {
 	{
 	}
 
+	// Begin rendering context.
 	void begin(void) {
 		// Prepare.
 		ImGuiStyle &style = ImGui::GetStyle();
@@ -95,30 +96,37 @@ struct Context {
 			regMax.y - regMin.y - borderSize * 2
 		);
 
-		// Calculate the widget area.
+		// Determine the source texture size.
 		const int texWidth = Math::max(canvasTexture->width(), SCREEN_WIDTH);
 		const int texHeight = Math::max(canvasTexture->height(), SCREEN_HEIGHT);
 		srcSize = Math::Vec2i(texWidth, texHeight);
+
+		// Calculate the client area.
 		dstPos = ImGui::GetCursorPos();
 		dstSize = regSize;
-		if (showStatus)
-			dstSize.y -= statusBarHeight - style.ChildBorderSize;
-		else
-			dstSize.y -= style.ChildBorderSize;
+		dstSize.y -= showStatus ? (statusBarHeight - style.ChildBorderSize) : style.ChildBorderSize;
+
 		if (integerScale) {
-			int w = (int)Math::max(std::floor(dstSize.x / texWidth), 1.0f);
-			int h = (int)Math::max(std::floor(dstSize.y / texHeight), 1.0f);
+			const int xTimes = (int)Math::max(std::floor(dstSize.x / texWidth), 1.0f);
+			const int yTimes = (int)Math::max(std::floor(dstSize.y / texHeight), 1.0f);
+			int w = 0;
+			int h = 0;
 			if (fixRatio) {
-				if (w < h)
-					h = w;
-				else if (w > h)
-					w = h;
-				w *= texWidth;
-				h *= texHeight;
+				if (xTimes < yTimes) {
+					w = xTimes * texWidth;
+					h = xTimes * texHeight;
+				} else if (xTimes > yTimes) {
+					w = yTimes * texWidth;
+					h = yTimes * texHeight;
+				} else {
+					w = xTimes * texWidth;
+					h = yTimes * texHeight;
+				}
 			} else {
-				w *= texWidth;
-				h *= texHeight;
+				w = xTimes * texWidth;
+				h = yTimes * texHeight;
 			}
+
 			dstPos.x += (dstSize.x - w) * 0.5f;
 			dstPos.y += (dstSize.y - h) * 0.5f;
 			dstSize.x = (float)w;
@@ -143,6 +151,7 @@ struct Context {
 			}
 		}
 	}
+	// End rendering context.
 	void end(void) const {
 		// Render the onscreen gamepad.
 		int pressed = 0;
@@ -158,8 +167,8 @@ struct Context {
 		}
 
 		// Update the input module.
-		const ImVec2 wndPos = ImGui::GetWindowPos();
-		const Math::Rectf clientArea = Math::Rectf::byXYWH(
+		const ImVec2 wndPos = ImGui::GetWindowPos(); // The ImGui window position.
+		const Math::Rectf clientArea = Math::Rectf::byXYWH( // The destination client area to render the game texture.
 			wndPos.x + dstPos.x, wndPos.y + dstPos.y,
 			std::ceil(dstSize.x), std::ceil(dstSize.y)
 		);
@@ -173,6 +182,7 @@ struct Context {
 		}
 	}
 
+	// The final calculated scale, `dstSize` / `srcSize`.
 	Math::Vec2f scaled(void) const {
 		if (srcSize.x == 0 || srcSize.y == 0)
 			return Math::Vec2f(1, 1);
@@ -251,13 +261,12 @@ static void renderStatus(const Context &context) {
 					ImGui::OpenPopup("@Spd");
 				}
 			} else {
-				do {
-					WIDGETS_SELECTION_GUARD(context.theme);
-					if (ImGui::ImageButton(context.theme->iconNormalSpeed()->pointer(context.renderer), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, context.theme->tooltipEmulator_NormalSpeed().c_str())) {
-						*context.emulatorSpeed = DEVICE_BASE_SPEED_FACTOR * 1;
-						context.canvasDevice->speed(DEVICE_BASE_SPEED_FACTOR * 1);
-					}
-				} while (false);
+				WIDGETS_SELECTION_GUARD(context.theme);
+
+				if (ImGui::ImageButton(context.theme->iconNormalSpeed()->pointer(context.renderer), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, context.theme->tooltipEmulator_NormalSpeed().c_str())) {
+					*context.emulatorSpeed = DEVICE_BASE_SPEED_FACTOR * 1;
+					context.canvasDevice->speed(DEVICE_BASE_SPEED_FACTOR * 1);
+				}
 			}
 			width_ += ImGui::GetItemRectSize().x;
 			ImGui::SameLine();
@@ -431,7 +440,9 @@ void emulator(
 	{
 		// Render the canvas.
 		if (canvasTextureForBorderFrame) {
-			const ImVec2 pos = context.dstPos - ImVec2((float)(SGB_SCREEN_LEFT * context.scaled().x), (float)(SGB_SCREEN_TOP * context.scaled().y));
+			ImVec2 pos = context.dstPos - ImVec2((float)(SGB_SCREEN_LEFT * context.scaled().x), (float)(SGB_SCREEN_TOP * context.scaled().y));
+			pos.x = std::floor(pos.x);
+			pos.y = std::floor(pos.y);
 			const ImVec2 size = context.dstSize + ImVec2((float)(SGB_SCREEN_LEFT * context.scaled().x * 2), (float)(SGB_SCREEN_TOP * context.scaled().y * 2));
 			ImGui::SetCursorPos(pos);
 			ImGui::Image(

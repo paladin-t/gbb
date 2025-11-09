@@ -8,10 +8,14 @@ BANKREF_EXTERN(VM_DEVICE_EXT)
 
 /**< The GBB extended conventions. GBB EXTENSION. */
 
+// Hardware model: any one with extension.
+#define ANY_EXT_TYPE                   0x01
 // Hardware model: grayscale with extension.
-#define GB1_TYPE                       0x21
+#define GB_EXT_TYPE                   (0x10 | ANY_EXT_TYPE)
 // Hardware model: colored with extension.
-#define GB2_TYPE                       0x31
+#define CGB_EXT_TYPE                  (0x20 | ANY_EXT_TYPE)
+// Hardware model: SGB with extension.
+#define SGB_EXT_TYPE                  (0x50 | ANY_EXT_TYPE)
 
 // The first button of the touch device.
 #define TOUCH_BUTTON_0                 0x01
@@ -66,7 +70,7 @@ BANKREF_EXTERN(VM_DEVICE_EXT)
 #define DEVICE_TYPE_AGB                0x08
 #define DEVICE_TYPE_GBB                0x80
 
-#define DEVICE_ISR_DEFAULT             (VBL_IFLAG | LCD_IFLAG | TIM_IFLAG)
+#define DEVICE_ISR_DEFAULT            (VBL_IFLAG | LCD_IFLAG | TIM_IFLAG)
 #define DEVICE_ISR_SERIAL              SIO_IFLAG
 
 #define DEVICE_SCREEN_TEXT             1
@@ -83,7 +87,7 @@ BANKREF_EXTERN(VM_DEVICE_EXT)
 
 #define SRAM_TYPE_ADDRESS              0x0149
 #define SRAM_OFFSET                    _SRAM
-#define SRAM_BANK_SIZE                 (_RAM - _SRAM)
+#define SRAM_BANK_SIZE                (_RAM - _SRAM)
 
 #define VRAM_SPR0_TILE_ADDRESS         _VRAM8000
 #define VRAM_SPR1_TILE_ADDRESS         _VRAM8800

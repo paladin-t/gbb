@@ -4186,6 +4186,7 @@ private:
 			ImGui::SameLine();
 			do {
 				WIDGETS_SELECTION_GUARD(ws->theme());
+
 				if (ImGui::ImageButton(ws->theme()->iconMusic()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipAudio_Music().c_str())) {
 					// Do nothing.
 				}
