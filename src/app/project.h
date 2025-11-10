@@ -205,7 +205,7 @@ public:
 	int countSuperPaletteColor(void) const;
 	const Colour* getSuperPaletteColor(int idx) const;
 	bool setSuperPaletteColor(int idx, const Colour &val);
-	void syncSuperPalettes(const PaletteAssets &val);
+	void synchronizeSuperPalettes(const PaletteAssets &val);
 	void created(const long long &val);
 	void modified(const long long &val);
 

@@ -598,7 +598,7 @@ bool Project::setSuperPaletteColor(int idx, const Colour &val) {
 	return true;
 }
 
-void Project::syncSuperPalettes(const PaletteAssets &val) {
+void Project::synchronizeSuperPalettes(const PaletteAssets &val) {
 	if (customizedSuperPalettes()) // Ignore.
 		return;
 
@@ -3169,7 +3169,7 @@ bool Project::loadAssets(const char* fontConfigPath, const std::string &content,
 
 		touchPalette().copyFrom(palette, nullptr);
 
-		syncSuperPalettes(palette);
+		synchronizeSuperPalettes(palette);
 	} while (false);
 
 	if (palettePageCount() > 0)

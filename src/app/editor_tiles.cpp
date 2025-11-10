@@ -1059,6 +1059,9 @@ public:
 						palette->set(index, &col);
 
 						entry()->cleanup(); // Clean up the outdated editable and runtime resources.
+
+						// Synchronize the super palettes.
+						_project->synchronizeSuperPalettes(assets);
 					},
 					[rnd, ws, this] (void) -> void { // Open the palette editor.
 						ws->showPaletteEditor(

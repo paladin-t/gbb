@@ -4034,7 +4034,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 									_activeSuperPaletteIndex = -1;
 									const PaletteAssets &palette = prj->touchPalette();
 									prj->customizedSuperPalettes(false);
-									prj->syncSuperPalettes(palette);
+									prj->synchronizeSuperPalettes(palette);
 								}
 								if (IsItemHovered()) {
 									VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));

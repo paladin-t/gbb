@@ -3100,7 +3100,7 @@ void Workspace::showPaletteEditor(
 			);
 		}
 
-		prj->syncSuperPalettes(data);
+		prj->synchronizeSuperPalettes(data);
 
 		prj->hasDirtyAsset(true);
 	};
