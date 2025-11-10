@@ -2143,8 +2143,15 @@ private:
 				ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipActor_TestActor().c_str());
 				ImGui::EndDisabled();
 			} else {
-				if (ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipActor_TestActor().c_str())) {
-					_tools.playActorTesting();
+				const bool asActor = entry()->asActor;
+				if (asActor) {
+					if (ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipActor_TestActor().c_str())) {
+						_tools.playActorTesting();
+					}
+				} else {
+					ImGui::BeginDisabled();
+					ImGui::ImageButton(ws->theme()->iconStartPreview()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipActor_TestActor().c_str());
+					ImGui::EndDisabled();
 				}
 			}
 		}
