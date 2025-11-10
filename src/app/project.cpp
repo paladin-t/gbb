@@ -605,13 +605,18 @@ void Project::syncSuperPalettes(const PaletteAssets &val) {
 	int k = 0;
 	for (int i = 0; i < 4; ++i) {
 		const PaletteAssets::Entry* entry = val.get(i);
-		if (entry) {
-			for (int j = 0; j < 4; ++j) {
-				Colour col;
-				if (entry->data->get(j + (i % 2), col)) {
-					_superPalettes[k++] = col;
-				}
-			}
+		if (!entry)
+			continue;
+
+		for (int j = 0; j < 4; ++j) {
+			Colour col;
+			if (!entry->data->get(j + (i % 2), col))
+				continue;
+
+			if (k != 0 && (k % 7) == 0)
+				_superPalettes[k++] = _superPalettes[0];
+			else
+				_superPalettes[k++] = col;
 		}
 	}
 }
