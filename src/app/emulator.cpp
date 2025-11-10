@@ -70,7 +70,7 @@ struct Context {
 	ImVec2 dstPos;          // Destination position to render the video texture.
 	ImVec2 dstSize;         // Destination size to render the video texture.
 	Math::Vec2f scale;      // `dstSize` / `srcSize`.
-	Math::Vec2f clientSize; // The size of the client area.
+	Math::Vec2i clientSize; // The size of the client area.
 
 	Context(
 		Window* window_, Renderer* renderer_,
