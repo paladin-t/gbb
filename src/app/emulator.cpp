@@ -17,6 +17,20 @@
 
 /*
 ** {===========================================================================
+** Macros and constants
+*/
+
+#ifndef EMULATOR_SGB_PADDING_X
+#	define EMULATOR_SGB_PADDING_X SGB_SCREEN_LEFT
+#endif /* EMULATOR_SGB_PADDING_X */
+#ifndef EMULATOR_SGB_PADDING_Y
+#	define EMULATOR_SGB_PADDING_Y SGB_SCREEN_TOP
+#endif /* EMULATOR_SGB_PADDING_Y */
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Emulator
 */
 
@@ -52,6 +66,7 @@ struct Context {
 	Math::Vec2i srcSize; // Source texture size of the video buffer to be rendered.
 	ImVec2 dstPos;       // Destination position to render the video texture.
 	ImVec2 dstSize;      // Destination size to render the video texture.
+	Math::Vec2f scale;
 
 	Context(
 		Window* window_, Renderer* renderer_,
@@ -83,7 +98,7 @@ struct Context {
 	}
 
 	// Begin rendering context.
-	void begin(void) {
+	void begin(bool showSgbBorder) {
 		// Prepare.
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -97,8 +112,8 @@ struct Context {
 		);
 
 		// Determine the source texture size.
-		const int texWidth = Math::max(canvasTexture->width(), SCREEN_WIDTH);
-		const int texHeight = Math::max(canvasTexture->height(), SCREEN_HEIGHT);
+		const int texWidth = showSgbBorder ? Math::max(canvasTexture->width(), SGB_SCREEN_WIDTH) : Math::max(canvasTexture->width(), SCREEN_WIDTH);
+		const int texHeight = showSgbBorder ? Math::max(canvasTexture->height(), SGB_SCREEN_HEIGHT) : Math::max(canvasTexture->height(), SCREEN_HEIGHT);
 		srcSize = Math::Vec2i(texWidth, texHeight);
 
 		// Calculate the client area.
@@ -150,6 +165,17 @@ struct Context {
 				// Do nothing.
 			}
 		}
+
+		// Determine the final scale.
+		scale = Math::Vec2f(dstSize.x / srcSize.x, dstSize.y / srcSize.y);
+
+		// Adjust the client area if SGB border is present.
+		if (showSgbBorder) {
+			dstPos.x = (float)(dstPos.x + scale.x * EMULATOR_SGB_PADDING_X);
+			dstPos.y = (float)(dstPos.y + scale.y * EMULATOR_SGB_PADDING_Y);
+			dstSize.x = (float)(dstSize.x - scale.x * (EMULATOR_SGB_PADDING_X * 2));
+			dstSize.y = (float)(dstSize.y - scale.y * (EMULATOR_SGB_PADDING_Y * 2));
+		}
 	}
 	// End rendering context.
 	void end(void) const {
@@ -173,21 +199,13 @@ struct Context {
 			std::ceil(dstSize.x), std::ceil(dstSize.y)
 		);
 		const Math::Vec2i canvasSize = srcSize;
-		const int scale = renderer->scale() / window->scale();
+		const int scale_ = renderer->scale() / window->scale();
 
 		if (!hasPopup) {
-			input->update(window, renderer, &clientArea, &canvasSize, !pressed, scale);
+			input->update(window, renderer, &clientArea, &canvasSize, !pressed, scale_);
 
 			input->sync();
 		}
-	}
-
-	// The final calculated scale, `dstSize` / `srcSize`.
-	Math::Vec2f scaled(void) const {
-		if (srcSize.x == 0 || srcSize.y == 0)
-			return Math::Vec2f(1, 1);
-
-		return Math::Vec2f(dstSize.x / srcSize.x, dstSize.y / srcSize.y);
 	}
 };
 
@@ -436,14 +454,15 @@ void emulator(
 		return;
 
 	// Render emulation.
-	context.begin();
+	context.begin(!!canvasTextureForBorderFrame);
 	{
 		// Render the canvas.
 		if (canvasTextureForBorderFrame) {
-			ImVec2 pos = context.dstPos - ImVec2((float)(SGB_SCREEN_LEFT * context.scaled().x), (float)(SGB_SCREEN_TOP * context.scaled().y));
+			const Math::Vec2f &scale = context.scale;
+			ImVec2 pos = context.dstPos - ImVec2((float)(EMULATOR_SGB_PADDING_X * scale.x), (float)(EMULATOR_SGB_PADDING_Y * scale.y));
 			pos.x = std::floor(pos.x);
 			pos.y = std::floor(pos.y);
-			const ImVec2 size = context.dstSize + ImVec2((float)(SGB_SCREEN_LEFT * context.scaled().x * 2), (float)(SGB_SCREEN_TOP * context.scaled().y * 2));
+			const ImVec2 size = context.dstSize + ImVec2((float)(EMULATOR_SGB_PADDING_X * scale.x * 2), (float)(EMULATOR_SGB_PADDING_Y * scale.y * 2));
 			ImGui::SetCursorPos(pos);
 			ImGui::Image(
 				canvasTextureForBorderFrame->pointer(rnd),
