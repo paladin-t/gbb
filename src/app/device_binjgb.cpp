@@ -201,6 +201,10 @@
 #	define DEVICE_BINJGB_DELTA_TIME_MIN_SECONDS 0.024
 #endif /* DEVICE_BINJGB_DELTA_TIME_MIN_SECONDS */
 
+#ifndef DEVICE_BINJGB_FADE_SECONDS
+#	define DEVICE_BINJGB_FADE_SECONDS 0.35
+#endif /* DEVICE_BINJGB_FADE_SECONDS */
+
 /* ===========================================================================} */
 
 /*
@@ -684,6 +688,9 @@ bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, 
 	// Initialize the streaming buffer.
 	_streamingBuffer = nullptr;
 
+	// Initialize the frame buffer.
+	memset(_sgbBorderVideoBuffer, 0, sizeof(_sgbBorderVideoBuffer));
+
 	// Initialize the audio.
 	memset(&_audioCvt, 0, sizeof(SDL_AudioCVT));
 
@@ -780,6 +787,12 @@ bool DeviceBinjgb::close(Bytes::Ptr sram) {
 	_keyboardModifiers = KeyboardModifiers();
 	_keyBuffer.clear();
 
+	// Dispose the video.
+	if (_sgbBorderVideoFadeBuffer) {
+		delete [] _sgbBorderVideoFadeBuffer;
+		_sgbBorderVideoFadeBuffer = nullptr;
+	}
+
 	// Dispose the audio.
 	_audioCvtBufferLength = 0;
 	_audioBuffer = nullptr;
@@ -792,6 +805,9 @@ bool DeviceBinjgb::close(Bytes::Ptr sram) {
 		SDL_CloseAudioDevice(_audioDeviceId);
 		_audioDeviceId = 0;
 	}
+
+	// Dispose the frame buffer.
+	memset(_sgbBorderVideoBuffer, 0, sizeof(_sgbBorderVideoBuffer));
 
 	// Dispose the streaming buffer.
 	_streamingBuffer = nullptr;
@@ -851,10 +867,73 @@ bool DeviceBinjgb::update(
 	auto renderTextures = [&] (bool isSgb) -> void {
 		constexpr const int BYTES = SDL_BYTESPERPIXEL(SDL_PIXELFORMAT_ABGR8888);
 		if (isSgb) {
+			auto blend = [this, BYTES] (SDL_Texture* tex, double alpha) -> void {
+				if (!_sgbBorderVideoFadeBuffer)
+					_sgbBorderVideoFadeBuffer = new Colour [SGB_SCREEN_WIDTH * SGB_SCREEN_HEIGHT];
+
+				for (int j = 0; j < SGB_SCREEN_HEIGHT; ++j) {
+					for (int i = 0; i < SGB_SCREEN_WIDTH; ++i) {
+						const Colour* pixels = (Colour*)_sgbBorderVideoBuffer;
+						const Colour &srccol = pixels[i + j * SGB_SCREEN_WIDTH];
+						Colour &dstcol = _sgbBorderVideoFadeBuffer[i + j * SGB_SCREEN_WIDTH];
+						dstcol.r = (UInt8)(srccol.r * alpha);
+						dstcol.g = (UInt8)(srccol.g * alpha);
+						dstcol.b = (UInt8)(srccol.b * alpha);
+					}
+				}
+				SDL_UpdateTexture(tex, nullptr, (void*)_sgbBorderVideoFadeBuffer, SGB_SCREEN_WIDTH * BYTES);
+			};
+
 			rnd->target(textureForBorderFrame);
 			rnd->scale(1);
+			SDL_Texture* tex = (SDL_Texture*)textureForBorderFrame->pointer(rnd);
 			const SgbFrameBuffer* sframe = emulator_get_sgb_frame_buffer(_emulator);
-			SDL_UpdateTexture((SDL_Texture*)textureForBorderFrame->pointer(rnd), nullptr, (void*)sframe, SGB_SCREEN_WIDTH * BYTES);
+			switch (_sgbBorderFade) {
+			case SgbFadeOperations::NONE:
+				if (memcmp(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer)) != 0) {
+					_sgbBorderFade = SgbFadeOperations::FADEOUT;
+				}
+
+				break;
+			case SgbFadeOperations::FADEOUT:
+				_sgbBorderFadeTicks += delta;
+				if (_sgbBorderFadeTicks < DEVICE_BINJGB_FADE_SECONDS) {
+					const double alpha = 1.0 - Math::clamp(_sgbBorderFadeTicks / DEVICE_BINJGB_FADE_SECONDS, 0.0, 1.0);
+					blend(tex, alpha);
+				} else {
+					_sgbBorderFade = SgbFadeOperations::FADEIN;
+					_sgbBorderFadeTicks = 0;
+					blend(tex, 0);
+					memcpy(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer));
+					SDL_UpdateTexture(tex, nullptr, (void*)_sgbBorderVideoBuffer, SGB_SCREEN_WIDTH * BYTES);
+				}
+
+				break;
+			case SgbFadeOperations::FADEIN:
+				_sgbBorderFadeTicks += delta;
+				if (_sgbBorderFadeTicks < DEVICE_BINJGB_FADE_SECONDS) {
+					const double alpha = Math::clamp(_sgbBorderFadeTicks / DEVICE_BINJGB_FADE_SECONDS, 0.0, 1.0);
+					blend(tex, alpha);
+				} else {
+					_sgbBorderFade = SgbFadeOperations::NONE;
+					_sgbBorderFadeTicks = 0;
+					blend(tex, 1);
+					if (_sgbBorderVideoFadeBuffer) {
+						delete [] _sgbBorderVideoFadeBuffer;
+						_sgbBorderVideoFadeBuffer = nullptr;
+					}
+				}
+
+				break;
+			case SgbFadeOperations::INIT:
+				if (memcmp(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer)) != 0) {
+					_sgbBorderFade = SgbFadeOperations::FADEIN;
+					memcpy(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer));
+					SDL_UpdateTexture(tex, nullptr, (void*)_sgbBorderVideoBuffer, SGB_SCREEN_WIDTH * BYTES);
+				}
+
+				break;
+			}
 		}
 		rnd->target(texture);
 		rnd->scale(1);

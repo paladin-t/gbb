@@ -21,6 +21,14 @@
 
 class DeviceBinjgb : public Device, public virtual Object {
 private:
+	enum class SgbFadeOperations {
+		NONE,
+		FADEOUT,
+		FADEIN,
+		INIT
+	};
+
+private:
 	bool _opened = false;
 	bool _traceless = false;
 	Protocol* _debugListener = nullptr;
@@ -37,6 +45,10 @@ private:
 	bool _emulatorPaused = false;
 	double _rtcTicks = 0;
 	Bytes::Ptr _streamingBuffer = nullptr;
+	RGBA _sgbBorderVideoBuffer[SGB_SCREEN_WIDTH * SGB_SCREEN_HEIGHT];
+	Colour* _sgbBorderVideoFadeBuffer = nullptr;
+	SgbFadeOperations _sgbBorderFade = SgbFadeOperations::INIT;
+	double _sgbBorderFadeTicks = 0;
 	SDL_AudioDeviceID _audioDeviceId = 0;
 	SDL_AudioSpec _audioSpec;
 	SDL_AudioCVT _audioCvt;
