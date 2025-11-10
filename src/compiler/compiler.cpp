@@ -13029,9 +13029,7 @@ public:
 	}
 
 	virtual std::string dump(int depth) const override {
-		const std::string name = _name + ":";
-
-		return dump(depth, name.c_str());
+		return dump(depth, "{DEST}");
 	}
 	using Node::dump;
 };

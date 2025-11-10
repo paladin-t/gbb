@@ -20,12 +20,14 @@
 
 typedef std::function<void(void)> DebugHandler;
 
+typedef std::function<void(void)> ButtonEventHandler;
+
 void emulator(
 	class Window* wnd, class Renderer* rnd,
 	class Theme* theme,
 	Input* input,
 	const Device::Ptr &canvasDevice, const Texture::Ptr &canvasTexture, const Texture::Ptr &canvasTextureForBorderFrame,
-	const std::string &statusText, const std::string &statusTooltip, float &statusBarWidth, float statusBarHeight, bool showStatus,
+	const std::string &cartridgeStatusText, const std::string &deviceStatusText, const std::string &statusTooltip, float &statusBarWidth, float statusBarHeight, bool showStatus,
 	bool &emulatorMuted, int &emulatorSpeed, int &emulatorPreferedSpeed,
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
@@ -33,6 +35,7 @@ void emulator(
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,
+	ButtonEventHandler onDeviceButtonClicked /* nullable */, ButtonEventHandler onCartridgeButtonClicked /* nullable */,
 	DebugHandler debug
 );
 

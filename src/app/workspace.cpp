@@ -3876,7 +3876,7 @@ void Workspace::closeSearchResult(void) {
 	}
 }
 
-void Workspace::showPreferences(Window* wnd, Renderer* rnd) {
+void Workspace::showPreferences(Window* wnd, Renderer* rnd, const char* tab) {
 	auto set = [wnd, rnd, this] (Settings &sets) -> void {
 		do {
 			Project::Ptr &prj = currentProject();
@@ -3992,6 +3992,7 @@ void Workspace::showPreferences(Window* wnd, Renderer* rnd) {
 				theme()->windowPreferences(),
 				settings(),
 				[wnd] (void) -> bool { return !wnd->fullscreen() && !wnd->maximized(); }, [wnd] (void) -> bool { return !wnd->bordered(); },
+				tab ? tab : "",
 				confirm, cancel, apply,
 				theme()->generic_Ok().c_str(), theme()->generic_Cancel().c_str(), theme()->generic_Apply().c_str()
 			)
@@ -7742,7 +7743,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 
 		if (ImGui::BeginMenu(theme()->menu_Application())) {
 			if (ImGui::MenuItem(theme()->menu_Preferences())) {
-				showPreferences(wnd, rnd);
+				showPreferences(wnd, rnd, nullptr);
 			}
 			if (ImGui::MenuItem(theme()->menu_Activities())) {
 				showActivities(rnd);
@@ -11015,6 +11016,15 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 	VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
 	VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2());
 
+	Project::Ptr &prj = currentProject();
+
+	ButtonEventHandler onCartridgeButtonClicked = nullptr;
+	if (prj && prj->contentType() == Project::ContentTypes::BASIC) {
+		onCartridgeButtonClicked = [&] (void) -> void {
+			showProjectProperty(wnd, rnd, prj.get());
+		};
+	}
+
 	// Show the window.
 	ImGui::SetNextWindowPos(ImVec2(0, marginTop), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(
@@ -11033,7 +11043,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			theme(),
 			input(),
 			canvasDevice(), canvasTexture(), canvasTextureForBorderFrame(),
-			canvasStatusText(), canvasStatusTooltip(), statusWidth(), statusBarHeight, true,
+			canvasCartridgeStatusText(), canvasDeviceStatusText(), canvasStatusTooltip(), statusWidth(), statusBarHeight, true,
 			settings().emulatorMuted, settings().emulatorSpeed, settings().emulatorPreferedSpeed,
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
@@ -11041,6 +11051,10 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			canvasCursorMode(),
 			!!popupBox(),
 			fps,
+			[&] (void) -> void {
+				showPreferences(wnd, rnd, "device");
+			},
+			onCartridgeButtonClicked,
 			[&] (void) -> void {
 				debug(wnd, rnd, marginTop, marginBottom);
 			}

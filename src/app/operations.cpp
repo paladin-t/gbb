@@ -4238,11 +4238,13 @@ promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes
 				dev  == Device::DeviceTypes::COLORED_EXTENDED ? "COLOR[EXT]" :
 				                                                "UNKNOWN"
 			);
-			ws->canvasStatusText(
-				cartFlag + "/" +
-				devFlag + " " +
+			ws->canvasCartridgeStatusText(
+				cartFlag + " " +
 				std::string(sram_ ? "SRAM[YES]" : "SRAM[NO]") + " " +
 				std::string(rtc ? "RTC[YES]" : "RTC[NO]")
+			);
+			ws->canvasDeviceStatusText(
+				devFlag
 			);
 			ws->canvasStatusTooltip(
 				Text::format(
@@ -4293,7 +4295,8 @@ promise::Promise Operations::projectStop(Window*, Renderer*, Workspace* ws) {
 			sram = Bytes::Ptr(Bytes::create());
 			ws->canvasDevice()->close(sram);
 			ws->canvasDevice(nullptr);
-			ws->canvasStatusText().clear();
+			ws->canvasCartridgeStatusText().clear();
+			ws->canvasDeviceStatusText().clear();
 			ws->canvasStatusTooltip().clear();
 			ws->canvasCursorMode(Device::CursorTypes::POINTER);
 

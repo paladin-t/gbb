@@ -4469,6 +4469,7 @@ PreferencesPopupBox::PreferencesPopupBox(
 	const std::string &title,
 	Settings &settings,
 	BoolGetter getBorderlessWritable, BoolGetter getBorderless,
+	const std::string &tab,
 	const ConfirmedHandler &confirm, const CanceledHandler &cancel, const AppliedHandler &apply,
 	const char* confirmTxt, const char* cancelTxt, const char* applyTxt
 ) : _renderer(rnd),
@@ -4479,6 +4480,9 @@ PreferencesPopupBox::PreferencesPopupBox(
 	_confirmedHandler(confirm), _canceledHandler(cancel), _appliedHandler(apply)
 {
 	_settingsShadow = _settings;
+
+	if (tab == "device")
+		_toDeviceTab = true;
 
 	if (confirmTxt)
 		_confirmText = confirmTxt;
@@ -4607,7 +4611,12 @@ void PreferencesPopupBox::update(Workspace*) {
 
 				EndTabItem();
 			}
-			if (BeginTabItem(_theme->tabPreferences_Device(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
+			if (BeginTabItem(_theme->tabPreferences_Device(), nullptr, _toDeviceTab ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
+				if (_toDeviceTab) {
+					_toDeviceTab = false;
+					_init.reset();
+				}
+
 				TextUnformatted(_theme->windowPreferences_Device_Emulator());
 
 				PushID("#Dvc");

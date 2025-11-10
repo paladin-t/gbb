@@ -42,7 +42,8 @@ struct Context {
 	Device* canvasDevice = nullptr;
 	Texture* canvasTexture = nullptr;
 	Texture* canvasTextureForBorderFrame = nullptr;
-	std::string statusText;
+	std::string cartridgeStatusText;
+	std::string deviceStatusText;
 	std::string statusTooltip;
 	float* statusBarWidth = nullptr;
 	float statusBarHeight;
@@ -61,39 +62,44 @@ struct Context {
 	bool hasPopup;
 	unsigned deviceFps;
 	unsigned fps;
+	ButtonEventHandler onDeviceButtonClicked = nullptr;
+	ButtonEventHandler onCartridgeButtonClicked = nullptr;
 
-	ImVec2 regSize;      // Content region size of the current ImGui window.
-	Math::Vec2i srcSize; // Source texture size of the video buffer to be rendered.
-	ImVec2 dstPos;       // Destination position to render the video texture.
-	ImVec2 dstSize;      // Destination size to render the video texture.
-	Math::Vec2f scale;
+	ImVec2 regSize;         // Content region size of the current ImGui window.
+	Math::Vec2i srcSize;    // Source texture size of the video buffer to be rendered.
+	ImVec2 dstPos;          // Destination position to render the video texture.
+	ImVec2 dstSize;         // Destination size to render the video texture.
+	Math::Vec2f scale;      // `dstSize` / `srcSize`.
+	Math::Vec2f clientSize; // The size of the client area.
 
 	Context(
 		Window* window_, Renderer* renderer_,
 		Theme* theme_,
 		Input* input_,
 		const Device::Ptr &canvasDevice_, const Texture::Ptr &canvasTexture_, const Texture::Ptr &canvasTextureForBorderFrame_,
-		const std::string &statusText_, const std::string &statusTooltip_, float* statusBarWidth_, float statusBarHeight_, bool showStatus_,
+		const std::string &cartridgeStatusText_, const std::string &deviceStatusText_, const std::string &statusTooltip_, float* statusBarWidth_, float statusBarHeight_, bool showStatus_,
 		bool* emulatorMuted_, int* emulatorSpeed_, int* emulatorFastForwardSpeed_,
 		bool integerScale_, bool fixRatio_,
 		bool* onscreenGamepadEnabled_, bool onscreenGamepadSwapAB_, float onscreenGamepadScale_, const Math::Vec2<float> onscreenGamepadPadding_,
 		bool* onscreenDebugEnabled_,
 		Device::CursorTypes cursor_,
 		bool hasPopup_,
-		unsigned deviceFps_, unsigned fps_
+		unsigned deviceFps_, unsigned fps_,
+		ButtonEventHandler onDeviceButtonClicked_, ButtonEventHandler onCartridgeButtonClicked_
 	) :
 		window(window_), renderer(renderer_),
 		theme(theme_),
 		input(input_),
 		canvasDevice(canvasDevice_.get()), canvasTexture(canvasTexture_.get()), canvasTextureForBorderFrame(canvasTextureForBorderFrame_.get()),
-		statusText(statusText_), statusTooltip(statusTooltip_), statusBarWidth(statusBarWidth_), statusBarHeight(statusBarHeight_), showStatus(showStatus_),
+		cartridgeStatusText(cartridgeStatusText_), deviceStatusText(deviceStatusText_), statusTooltip(statusTooltip_), statusBarWidth(statusBarWidth_), statusBarHeight(statusBarHeight_), showStatus(showStatus_),
 		emulatorMuted(emulatorMuted_), emulatorSpeed(emulatorSpeed_), emulatorPreferedSpeed(emulatorFastForwardSpeed_),
 		integerScale(integerScale_), fixRatio(fixRatio_),
 		onscreenGamepadEnabled(onscreenGamepadEnabled_), onscreenGamepadSwapAB(onscreenGamepadSwapAB_), onscreenGamepadScale(onscreenGamepadScale_), onscreenGamepadPadding(onscreenGamepadPadding_),
 		onscreenDebugEnabled(onscreenDebugEnabled_),
 		cursor(cursor_),
 		hasPopup(hasPopup_),
-		deviceFps(deviceFps_), fps(fps_)
+		deviceFps(deviceFps_), fps(fps_),
+		onDeviceButtonClicked(onDeviceButtonClicked_), onCartridgeButtonClicked(onCartridgeButtonClicked_)
 	{
 	}
 
@@ -112,9 +118,10 @@ struct Context {
 		);
 
 		// Determine the source texture size.
-		const int texWidth = showSgbBorder ? Math::max(canvasTexture->width(), SGB_SCREEN_WIDTH) : Math::max(canvasTexture->width(), SCREEN_WIDTH);
-		const int texHeight = showSgbBorder ? Math::max(canvasTexture->height(), SGB_SCREEN_HEIGHT) : Math::max(canvasTexture->height(), SCREEN_HEIGHT);
-		srcSize = Math::Vec2i(texWidth, texHeight);
+		clientSize = Math::Vec2i(Math::max(canvasTexture->width(), SCREEN_WIDTH), Math::max(canvasTexture->height(), SCREEN_HEIGHT));
+		srcSize = showSgbBorder ?
+			Math::Vec2i(Math::max(canvasTexture->width(), SGB_SCREEN_WIDTH), Math::max(canvasTexture->height(), SGB_SCREEN_HEIGHT)) :
+			clientSize;
 
 		// Calculate the client area.
 		dstPos = ImGui::GetCursorPos();
@@ -122,24 +129,24 @@ struct Context {
 		dstSize.y -= showStatus ? (statusBarHeight - style.ChildBorderSize) : style.ChildBorderSize;
 
 		if (integerScale) {
-			const int xTimes = (int)Math::max(std::floor(dstSize.x / texWidth), 1.0f);
-			const int yTimes = (int)Math::max(std::floor(dstSize.y / texHeight), 1.0f);
+			const int xTimes = (int)Math::max(std::floor(dstSize.x / srcSize.x), 1.0f);
+			const int yTimes = (int)Math::max(std::floor(dstSize.y / srcSize.y), 1.0f);
 			int w = 0;
 			int h = 0;
 			if (fixRatio) {
 				if (xTimes < yTimes) {
-					w = xTimes * texWidth;
-					h = xTimes * texHeight;
+					w = xTimes * srcSize.x;
+					h = xTimes * srcSize.y;
 				} else if (xTimes > yTimes) {
-					w = yTimes * texWidth;
-					h = yTimes * texHeight;
+					w = yTimes * srcSize.x;
+					h = yTimes * srcSize.y;
 				} else {
-					w = xTimes * texWidth;
-					h = yTimes * texHeight;
+					w = xTimes * srcSize.x;
+					h = yTimes * srcSize.y;
 				}
 			} else {
-				w = xTimes * texWidth;
-				h = yTimes * texHeight;
+				w = xTimes * srcSize.x;
+				h = yTimes * srcSize.y;
 			}
 
 			dstPos.x += (dstSize.x - w) * 0.5f;
@@ -198,7 +205,7 @@ struct Context {
 			wndPos.x + dstPos.x, wndPos.y + dstPos.y,
 			std::ceil(dstSize.x), std::ceil(dstSize.y)
 		);
-		const Math::Vec2i canvasSize = srcSize;
+		const Math::Vec2i &canvasSize = clientSize;
 		const int scale_ = renderer->scale() / window->scale();
 
 		if (!hasPopup) {
@@ -232,19 +239,42 @@ static void renderStatus(const Context &context) {
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
 	}
-	ImGui::Dummy(ImVec2(8, 0));
-	ImGui::SameLine();
-	ImGui::AlignTextToFramePadding();
-	if (ImGui::GetWindowWidth() >= 370) {
-		ImGui::Text("%s %uFPS", context.statusText.c_str(), context.deviceFps);
-	} else {
-		ImGui::Text("%s", context.statusText.c_str());
-	}
-	if (ImGui::IsItemHovered()) {
-		VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+	do {
+		VariableGuard<decltype(style.FramePadding.x)> guardFramePaddingX(&style.FramePadding.x, style.FramePadding.x, 0);
 
-		ImGui::SetTooltip(context.statusTooltip);
-	}
+		ImGui::Dummy(ImVec2(8, 0));
+		ImGui::SameLine();
+		ImGui::AlignTextToFramePadding();
+		if (context.onDeviceButtonClicked) {
+			if (ImGui::Button(context.deviceStatusText))
+				context.onDeviceButtonClicked();
+		} else {
+			ImGui::TextUnformatted(context.deviceStatusText);
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(context.statusTooltip);
+		}
+		ImGui::SameLine();
+		ImGui::TextUnformatted("/");
+		ImGui::SameLine();
+		if (context.onCartridgeButtonClicked) {
+			if (ImGui::Button(context.cartridgeStatusText))
+				context.onCartridgeButtonClicked();
+		} else {
+			ImGui::TextUnformatted(context.cartridgeStatusText);
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(context.statusTooltip);
+		}
+		ImGui::SameLine();
+		if (ImGui::GetWindowWidth() >= 370) {
+			ImGui::Text(" %uFPS", context.deviceFps);
+		}
+	} while (false);
 	if (ImGui::GetWindowWidth() >= 430) {
 		if (context.canvasDevice->canGetDuty()) {
 			ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImGui::GetStyleColorVec4(ImGuiCol_CheckMark));
@@ -422,7 +452,7 @@ void emulator(
 	class Theme* theme,
 	Input* input,
 	const Device::Ptr &canvasDevice, const Texture::Ptr &canvasTexture, const Texture::Ptr &canvasTextureForBorderFrame,
-	const std::string &statusText, const std::string &statusTooltip, float &statusBarWidth, float statusBarHeight, bool showStatus,
+	const std::string &cartridgeStatusText, const std::string &deviceStatusText, const std::string &statusTooltip, float &statusBarWidth, float statusBarHeight, bool showStatus,
 	bool &emulatorMuted, int &emulatorSpeed, int &emulatorPreferedSpeed,
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
@@ -430,6 +460,7 @@ void emulator(
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,
+	ButtonEventHandler onDeviceButtonClicked, ButtonEventHandler onCartridgeButtonClicked,
 	DebugHandler debug
 ) {
 	// Prepare.
@@ -438,14 +469,15 @@ void emulator(
 		theme,
 		input,
 		canvasDevice, canvasTexture, canvasTextureForBorderFrame,
-		statusText, statusTooltip, &statusBarWidth, statusBarHeight, showStatus,
+		cartridgeStatusText, deviceStatusText, statusTooltip, &statusBarWidth, statusBarHeight, showStatus,
 		&emulatorMuted, &emulatorSpeed, &emulatorPreferedSpeed,
 		integerScale, fixRatio,
 		&onscreenGamepadEnabled, onscreenGamepadSwapAB, onscreenGamepadScale, onscreenGamepadPadding,
 		&onscreenDebugEnabled,
 		cursor,
 		hasPopup,
-		canvasDevice->fps(), fps
+		canvasDevice->fps(), fps,
+		onDeviceButtonClicked, onCartridgeButtonClicked
 	);
 
 	GBBASIC_ASSERT(!!canvasDevice && "Impossible.");

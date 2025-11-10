@@ -993,6 +993,7 @@ private:
 	Settings _settingsShadow;
 	BoolGetter _getBorderlessWritable = nullptr;
 	BoolGetter _getBorderless = nullptr;
+	bool _toDeviceTab = false;
 	bool _activeClassicPaletteShowColorPicker = false;
 	int _activeClassicPaletteIndex = -1;
 	int _activeGamepadIndex = -1;
@@ -1014,6 +1015,7 @@ public:
 		const std::string &title,
 		Settings &settings,
 		BoolGetter getBorderlessWritable, BoolGetter getBorderless,
+		const std::string &tab,
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel, const AppliedHandler &apply,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */, const char* applyTxt /* nullable */
 	);

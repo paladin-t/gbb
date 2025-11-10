@@ -580,7 +580,8 @@ public:
 	GBBASIC_PROPERTY_READONLY(Texture::Ptr, canvasTexture)
 	GBBASIC_PROPERTY_READONLY(Texture::Ptr, canvasTextureForBorderFrame)
 	GBBASIC_PROPERTY_READONLY(bool, canvasHovering)
-	GBBASIC_PROPERTY(std::string, canvasStatusText)
+	GBBASIC_PROPERTY(std::string, canvasCartridgeStatusText)
+	GBBASIC_PROPERTY(std::string, canvasDeviceStatusText)
 	GBBASIC_PROPERTY(std::string, canvasStatusTooltip)
 	GBBASIC_PROPERTY(Device::CursorTypes, canvasCursorMode)
 
@@ -888,7 +889,7 @@ public:
 	void showProjectProperty(Window* wnd, Renderer* rnd, Project* prj);
 	void showSearchResult(const std::string &pattern, const Editing::Tools::SearchResult::Array &found);
 	void closeSearchResult(void);
-	void showPreferences(Window* wnd, Renderer* rnd);
+	void showPreferences(Window* wnd, Renderer* rnd, const char* tab /* nullable */);
 	void showActivities(Renderer* rnd);
 	void showAbout(Renderer* rnd);
 	std::string getSourceCodePath(std::string* name /* nullable */) const;
