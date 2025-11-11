@@ -61,8 +61,8 @@ public:
 
 	enum class DeviceTypes {
 		CLASSIC,
-		CLASSIC_EXTENDED,
 		COLORED,
+		CLASSIC_EXTENDED,
 		COLORED_EXTENDED,
 		SUPER,
 		SUPER_EXTENDED

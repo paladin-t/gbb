@@ -879,6 +879,7 @@ bool DeviceBinjgb::update(
 						dstcol.r = (UInt8)(srccol.r * alpha);
 						dstcol.g = (UInt8)(srccol.g * alpha);
 						dstcol.b = (UInt8)(srccol.b * alpha);
+						dstcol.a = srccol.a;
 					}
 				}
 				SDL_UpdateTexture(tex, nullptr, (void*)_sgbBorderVideoFadeBuffer, SGB_SCREEN_WIDTH * BYTES);

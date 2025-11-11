@@ -6203,7 +6203,7 @@ bool Workspace::execute(Window* wnd, Renderer* rnd, double delta, unsigned* fpsR
 
 		GBBASIC_RENDER_TARGET(rnd, canvasTexture().get())
 		GBBASIC_RENDER_SCALE(rnd, 1)
-		const Colour col(255, 255, 255, 0);
+		const Colour col(8, 8, 8, 255);
 		rnd->clear(&col);
 	}
 
@@ -6219,7 +6219,7 @@ bool Workspace::execute(Window* wnd, Renderer* rnd, double delta, unsigned* fpsR
 
 		GBBASIC_RENDER_TARGET(rnd, canvasTextureForBorderFrame().get())
 		GBBASIC_RENDER_SCALE(rnd, 1)
-		const Colour col(255, 255, 255, 0);
+		const Colour col(8, 8, 8, 255);
 		rnd->clear(&col);
 	}
 
