@@ -4872,6 +4872,7 @@ void Workspace::upgrade(
 		prj->preferencesFontIsTwoBitsPerPixel(GBBASIC_FONT_DEFAULT_IS_2BPP);
 		prj->preferencesFontPreferFullWord(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD);
 		prj->preferencesFontPreferFullWordForNonAscii(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD_FOR_NON_ASCII);
+		prj->preferencesPreviewAnchorPoint(true);
 		prj->preferencesPreviewPaletteBits(true);
 		prj->preferencesUseByteMatrix(false);
 		prj->preferencesShowGrids(true);

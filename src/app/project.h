@@ -116,6 +116,7 @@ public:
 	GBBASIC_PROPERTY             (bool,                          preferencesFontIsTwoBitsPerPixel                 ) // Serialized in project. For font assets.
 	GBBASIC_PROPERTY             (bool,                          preferencesFontPreferFullWord                    ) // Serialized in project. For font assets.
 	GBBASIC_PROPERTY             (bool,                          preferencesFontPreferFullWordForNonAscii         ) // Serialized in project. For font assets.
+	GBBASIC_PROPERTY             (bool,                          preferencesPreviewAnchorPoint                    ) // Serialized in project. For actor assets.
 	GBBASIC_PROPERTY             (bool,                          preferencesPreviewPaletteBits                    ) // Serialized in project. For map, scene and actor assets.
 	GBBASIC_PROPERTY             (bool,                          preferencesUseByteMatrix                         ) // Serialized in project. For map and scene assets.
 	GBBASIC_PROPERTY             (bool,                          preferencesShowGrids                             ) // Serialized in project. For tiles, map, scene, actor and font assets.

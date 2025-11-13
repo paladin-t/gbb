@@ -85,6 +85,7 @@ Project::Project(class Window* wnd, Renderer* rnd, class Workspace* ws) {
 	preferencesFontIsTwoBitsPerPixel(GBBASIC_FONT_DEFAULT_IS_2BPP);
 	preferencesFontPreferFullWord(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD);
 	preferencesFontPreferFullWordForNonAscii(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD_FOR_NON_ASCII);
+	preferencesPreviewAnchorPoint(true);
 	preferencesPreviewPaletteBits(true);
 	preferencesUseByteMatrix(false);
 	preferencesShowGrids(true);
@@ -168,6 +169,7 @@ Project &Project::operator = (const Project &other) {
 	preferencesFontIsTwoBitsPerPixel(other.preferencesFontIsTwoBitsPerPixel());
 	preferencesFontPreferFullWord(other.preferencesFontPreferFullWord());
 	preferencesFontPreferFullWordForNonAscii(other.preferencesFontPreferFullWordForNonAscii());
+	preferencesPreviewAnchorPoint(other.preferencesPreviewAnchorPoint());
 	preferencesPreviewPaletteBits(other.preferencesPreviewPaletteBits());
 	preferencesUseByteMatrix(other.preferencesUseByteMatrix());
 	preferencesShowGrids(other.preferencesShowGrids());
@@ -2456,6 +2458,7 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		preferencesFontIsTwoBitsPerPixel(GBBASIC_FONT_DEFAULT_IS_2BPP);
 		preferencesFontPreferFullWord(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD);
 		preferencesFontPreferFullWordForNonAscii(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD_FOR_NON_ASCII);
+		preferencesPreviewAnchorPoint(true);
 		preferencesPreviewPaletteBits(true);
 		preferencesUseByteMatrix(false);
 		preferencesShowGrids(true);
@@ -2915,6 +2918,10 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 		preferencesFontPreferFullWordForNonAscii(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD_FOR_NON_ASCII);
 	}
 
+	preferencesPreviewAnchorPoint(true);
+	if (!Jpath::get(doc, preferencesPreviewAnchorPoint(), "preference", "preview_anchor_point"))
+		preferencesPreviewAnchorPoint(true);
+
 	preferencesPreviewPaletteBits(true);
 	if (!Jpath::get(doc, preferencesPreviewPaletteBits(), "preference", "preview_palette_bits"))
 		preferencesPreviewPaletteBits(true);
@@ -3092,6 +3099,8 @@ bool Project::saveInformation(std::string &content) {
 	Jpath::set(doc, doc, preferencesFontPreferFullWord(), "preference", "font_prefer_full_word");
 
 	Jpath::set(doc, doc, preferencesFontPreferFullWordForNonAscii(), "preference", "font_prefer_full_word_for_non_ascii");
+
+	Jpath::set(doc, doc, preferencesPreviewAnchorPoint(), "preference", "preview_anchor_point");
 
 	Jpath::set(doc, doc, preferencesPreviewPaletteBits(), "preference", "preview_palette_bits");
 

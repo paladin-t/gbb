@@ -309,7 +309,6 @@ private:
 		bool gridsVisible = false;
 		Math::Vec2i gridUnit = Math::Vec2i(0, 0);
 		bool transparentBackbroundVisible = true;
-		bool anchorVisible = true;
 		bool routinesUnfolded = false;
 		int toBindCallback = -1;
 		bool definitionUnfolded = false;
@@ -342,7 +341,6 @@ private:
 			gridsVisible = false;
 			gridUnit = Math::Vec2i(0, 0);
 			transparentBackbroundVisible = true;
-			anchorVisible = true;
 			routinesUnfolded = false;
 			toBindCallback = -1;
 			definitionUnfolded = false;
@@ -568,7 +566,6 @@ public:
 		_tools.gridsVisible = !caps.pressed();
 		_tools.gridUnit = Math::Vec2i(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
 		_tools.transparentBackbroundVisible = num.pressed();
-		_tools.anchorVisible = num.pressed();
 		_tools.definitionShadow = entry()->definition;
 		_tools.playActorTesting = std::bind(&EditorActorImpl::playActorTesting, this, wnd, rnd, ws);
 		_tools.stopActorTesting = std::bind(&EditorActorImpl::stopActorTesting, this, wnd, rnd, ws);
@@ -1030,7 +1027,7 @@ public:
 					&_frame.cursor, &hovering,
 					&appended,
 					canUseShortcuts(),
-					true
+					_project->preferencesPreviewAnchorPoint()
 				);
 				if (hovering >= 0) {
 					_frame.hovering = hovering;
@@ -1218,7 +1215,7 @@ public:
 						_overlay.texture ? _overlay.texture.get() : nullptr,
 						&_tools.gridUnit, _tools.showGrids && _tools.gridsVisible,
 						_tools.transparentBackbroundVisible,
-						&currentFrame()->anchor, _tools.anchorVisible,
+						&currentFrame()->anchor, _project->preferencesPreviewAnchorPoint(),
 						&boundingBox, _tools.definitionUnfolded
 					)
 				);
@@ -1865,7 +1862,6 @@ private:
 			_project->hasDirtyEditor(true);
 		}
 		_tools.transparentBackbroundVisible = num.pressed();
-		_tools.anchorVisible = num.pressed();
 
 		if (_tools.inputFieldFocused || !ws->canUseShortcuts()) {
 			if (_tools.post) {
@@ -2786,6 +2782,19 @@ private:
 
 		// Views.
 		if (ImGui::BeginPopup("@Views")) {
+			if (ImGui::MenuItem(ws->theme()->menu_Anchor(), nullptr, &_project->preferencesPreviewAnchorPoint())) {
+				entry()->cleanup();
+				ws->skipFrame(); // Skip a frame to avoid glitch.
+
+				_project->hasDirtyEditor(true);
+			}
+			if (ImGui::IsItemHovered()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip(ws->theme()->tooltip_PreviewAnchorPoint());
+			}
+			ImGui::Separator();
+
 			if (ImGui::MenuItem(ws->theme()->menu_PaletteBits(), nullptr, &_project->preferencesPreviewPaletteBits())) {
 				entry()->cleanup();
 				ws->skipFrame(); // Skip a frame to avoid glitch.

@@ -320,6 +320,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Activities("Activities...");
 	menu_Actor("Actor");
 	menu_Actors("Actors");
+	menu_Anchor("Anchor");
 	menu_Application("Application");
 	menu_Attributes("Attributes");
 	menu_Bank("Bank");
@@ -934,6 +935,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_OrderedByTitle("Ordered by title");
 	tooltip_OverrideThreaded("Override; threaded");
 	tooltip_Pause("Pause");
+	tooltip_PreviewAnchorPoint("Preview anchor point");
 	tooltip_PreviewPaletteBitsForColoredOnly("Preview palette bits (for colored only)");
 	tooltip_Refreshing("Refreshing...");
 	tooltip_Reset("Reset");
