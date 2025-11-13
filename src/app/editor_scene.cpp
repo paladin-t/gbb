@@ -673,6 +673,9 @@ public:
 				for (SceneAssets::Entry::UniqueRef::const_iterator it = uniqueActors.begin(); it != uniqueActors.end(); ++it) {
 					const int cel = *it;
 					const ActorAssets::Entry* entry = project->getActor(cel);
+					if (!entry)
+						continue;
+
 					const active_t def = entry->definition;
 					const UInt8 idx = def.behaviour;
 					GBBASIC::Kernel::Behaviour::Array::const_iterator bit = std::find_if(

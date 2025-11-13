@@ -6912,6 +6912,9 @@ void SceneAssets::Entry::cleanup(void) {
 
 	for (int refActor : uniqueRefActors) {
 		ActorAssets::Entry* actorEntry = getActor(refActor);
+		if (!actorEntry)
+			continue;
+
 		actorEntry->cleanup();
 	}
 }
