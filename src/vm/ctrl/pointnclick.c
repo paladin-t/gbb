@@ -171,12 +171,12 @@ BOOLEAN controller_behave_pointnclick_player(actor_t * actor, UINT8 pointing) BA
     }
 
     // Check for trigger collisions.
-    UINT8 hit_trigger = trigger_at_intersection(&actor->bounds, &actor->position);
-    BOOLEAN is_hover_trigger = hit_trigger != TRIGGER_NONE && triggers[hit_trigger].hit_handler_bank && triggers[hit_trigger].hit_handler_flags & TRIGGER_HAS_ENTER_SCRIPT;
+    const UINT8 hit_trigger = trigger_at_intersection(&actor->bounds, &actor->position);
+    const BOOLEAN is_hover_trigger = hit_trigger != TRIGGER_NONE && triggers[hit_trigger].hit_handler_bank && triggers[hit_trigger].hit_handler_flags & TRIGGER_HAS_ENTER_SCRIPT;
 
     // Check collision with another actor.
     actor_t * hit_actor = actor_in_front_of_actor(actor, 0, FALSE);
-    BOOLEAN is_hover_actor = hit_actor && hit_actor->hit_handler_bank != 0;
+    const BOOLEAN is_hover_actor = hit_actor && hit_actor->hit_handler_bank != 0;
 
     // Set cursor animation.
     if (is_hover_trigger || is_hover_actor) {

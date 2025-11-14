@@ -187,7 +187,7 @@ STATIC BOOLEAN controller_behave_topdown_player_update(actor_t * actor) {
         actor_t * hit_actor = actor_in_front_of_actor(actor, 4, TRUE);
         if (
             hit_actor &&
-            !(actor->collision_group & hit_actor->collision_group) &&          // Different collision group.
+            (actor->collision_group & hit_actor->collision_group) == 0 &&      // Different collision group.
             (actor->hit_handler_bank != 0 || hit_actor->hit_handler_bank != 0) // Has collision handler(s).
         ) {
             actor_play_animation(hit_actor, FLIP_DIRECTION(actor->direction), FALSE);

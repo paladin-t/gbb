@@ -244,7 +244,7 @@ run:
         hit_actor = actor_in_front_of_actor(actor, 2, TRUE);
         if (
             hit_actor &&
-            !(actor->collision_group & hit_actor->collision_group) &&          // Different collision group.
+            (actor->collision_group & hit_actor->collision_group) == 0 &&      // Different collision group.
             (actor->hit_handler_bank != 0 || hit_actor->hit_handler_bank != 0) // Has collision handler(s).
         ) {
             actor_restore_move_speed(actor);
