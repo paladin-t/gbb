@@ -9774,7 +9774,12 @@ bool definable(
 			ImGui::NewLine(1);
 			ImGui::Dummy(ImVec2(xOffset, 0));
 			ImGui::SameLine();
-			ImGui::Checkbox(theme->dialogPrompt_16x16Player(), &is16x16Player);
+			ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
+			ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
+			{
+				ImGui::Checkbox(theme->dialogPrompt_16x16Player(), &is16x16Player);
+			}
+			ImGui::PopStyleColor(2);
 			if (ImGui::IsItemHovered()) {
 				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 

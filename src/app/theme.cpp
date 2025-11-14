@@ -905,7 +905,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_DeleteFrame("Delete frame");
 	tooltip_Export("Export");
 	tooltip_ForAlignToTileMovementForControllers("For align-to-tile movement for controllers\nEnable for 16x16px aligned, otherwise 8x8px aligned\n(Usually leave disabled)");
-	tooltip_ForAutoAlignToTileMovementForControllers("For auto-align-to-tile movement for controllers\nEnable for 16x16px-based auto aligning, otherwise 8x8px-based\n(Determined automatically)");
+	tooltip_ForAutoAlignToTileMovementForControllers("Determined automatically!\nFor auto-align-to-tile movement for controllers\nEnable for 16x16px-based auto aligning, otherwise 8x8px-based");
 	tooltip_GenerateAndCopyCode("Generate and copy code");
 	tooltip_GlobalSearch("Global search");
 	tooltip_HighBits("High bits");
