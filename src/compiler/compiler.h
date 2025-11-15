@@ -32,6 +32,9 @@
 #ifndef COMPILER_CASE_INSENSITIVE_OPTION_KEY
 #	define COMPILER_CASE_INSENSITIVE_OPTION_KEY "i"
 #endif /* COMPILER_CASE_INSENSITIVE_OPTION_KEY */
+#ifndef COMPILER_STRICT_ON_OPTION_KEY
+#	define COMPILER_STRICT_ON_OPTION_KEY "u"
+#endif /* COMPILER_STRICT_ON_OPTION_KEY */
 #ifndef COMPILER_DECLARATION_REQUIRED_OPTION_KEY
 #	define COMPILER_DECLARATION_REQUIRED_OPTION_KEY "d"
 #endif /* COMPILER_DECLARATION_REQUIRED_OPTION_KEY */
@@ -706,6 +709,10 @@ struct Options {
 		 * @brief Indicates whether the parser is case insensitive.
 		 */
 		bool caseInsensitive = true;
+		/**
+		 * @brief Indicates whether the compiler runs in strict mode.
+		 */
+		bool strictOn = true;
 		/**
 		 * @brief Whether to complete line number automatically.
 		 */

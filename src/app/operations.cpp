@@ -1002,6 +1002,7 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			prj->sramType(PROJECT_SRAM_TYPE_32KB);
 			prj->hasRtc(false);
 			prj->caseInsensitive(true);
+			prj->strictOn(true);
 			prj->description("");
 			prj->author("");
 			prj->genre("");
@@ -3930,6 +3931,7 @@ promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspac
 				hasRtc_ ? *hasRtc_ :
 					prj_->hasRtc();
 			const bool caseInsensitive = prj_->caseInsensitive();
+			const bool strictOn = prj_->strictOn();
 
 			Text::Dictionary arguments;
 			arguments[COMPILER_ROM_OPTION_KEY]                              = rom;
@@ -3946,6 +3948,7 @@ promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspac
 			arguments[COMPILER_RAM_TYPE_OPTION_KEY]                         = sramType;
 			arguments[COMPILER_RTC_OPTION_KEY]                              = Text::toString(hasRtc);
 			arguments[COMPILER_CASE_INSENSITIVE_OPTION_KEY]                 = Text::toString(caseInsensitive);
+			arguments[COMPILER_STRICT_ON_OPTION_KEY]                        = Text::toString(strictOn);
 			// Do not: `arguments[COMPILER_EXPLICIT_LINE_NUMBER_OPTION_KEY] = "";`.
 			arguments[COMPILER_DECLARATION_REQUIRED_OPTION_KEY]             = "true";
 			arguments[COMPILER_BOOTSTRAP_OPTION_KEY]                        = Text::toString(bootstrap);

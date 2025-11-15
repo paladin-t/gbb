@@ -3940,6 +3940,24 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				}
 				PopID();
 
+				Separator();
+
+				TextUnformatted(_theme->windowProjectProperty_Compiling_Compiler());
+
+				PushID("#StrOn");
+				{
+					bool pref = prj->strictOn();
+					if (Checkbox(_theme->windowProjectProperty_Compiling_Compiler_StrictOn(), &pref))
+						prj->strictOn(pref);
+
+					if (IsItemHovered()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						SetTooltip(_theme->tooltipProjectProperty_WhetherToCompileInStrictModeTreatsSomeWarningsAsErrors());
+					}
+				}
+				PopID();
+
 				EndTabItem();
 			}
 			if (BeginTabItem(_theme->tabProjectProperty_Advanced(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
@@ -4380,6 +4398,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			prj->url()                     != _project->url()                  ||
 			prj->iconCode()                != _project->iconCode()             ||
 			prj->caseInsensitive()         != _project->caseInsensitive()      ||
+			prj->strictOn()                != _project->strictOn()             ||
 			prj->superFeaturesEnabled()    != _project->superFeaturesEnabled() ||
 			prj->borderFrameType()         != _project->borderFrameType()      ||
 			prj->borderFrameCode()         != _project->borderFrameCode()      ||

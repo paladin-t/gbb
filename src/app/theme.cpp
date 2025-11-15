@@ -788,6 +788,8 @@ bool Theme::open(class Renderer* rnd) {
 	windowProjectProperty_Project_Version("Version");   windowProjectProperty_Project_Url("URL  ");
 	windowProjectProperty_Project_Icon("   Icon");
 	windowProjectProperty_Project_Sram_None("0KB (None)");
+	windowProjectProperty_Compiling_Compiler("Compiler:");
+	windowProjectProperty_Compiling_Compiler_StrictOn("Strict on");
 	windowProjectProperty_Compiling_Parser("Parser:");
 	windowProjectProperty_Compiling_Parser_CaseInsensitive("Case-insensitive");
 	windowProjectProperty_Advanced_SgbFeatures("SGB features:");
@@ -946,7 +948,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_Threaded("Threaded");
 	tooltip_UseByteMatrixViewOnTheToolbar("Use byte matrix view on the toolbar");
 	tooltip_ViaClipboard("Via clipboard");
-	tooltip_ViaClipboardForTheCurrentFrameOnly("Via clipboard\n(for the current frame only)");
+	tooltip_ViaClipboardForTheCurrentFrameOnly("Via clipboard\n(For the current frame only)");
 	tooltip_View("View");
 	tooltip_Warning("Warning");
 	tooltip_WhetherToBuildThisLayer("Whether to build this layer");
@@ -1159,6 +1161,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipProjectProperty_ResetBorder("Reset border");
 	tooltipProjectProperty_ResetPalettesToUseTheSharedAsset("Reset palettes to use the shared asset");
 	tooltipProjectProperty_ResetIcon("Reset icon");
+	tooltipProjectProperty_WhetherToCompileInStrictModeTreatsSomeWarningsAsErrors("Whether to compile in strict mode\n(Treats some warnings as errors)");
 
 	tooltipScene_ActorDetails(" Index: {0}\n   Pos: {1},{2}\nBounds: {3},{4},{5},{6}");
 	tooltipScene_Attributes("Attributes:");

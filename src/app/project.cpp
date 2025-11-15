@@ -74,6 +74,7 @@ Project::Project(class Window* wnd, Renderer* rnd, class Workspace* ws) {
 	hasRtc(false);
 	version("1.0.0");
 	caseInsensitive(true);
+	strictOn(true);
 	superFeaturesEnabled(false);
 	borderFrameType(BorderFrameTypes::NONE);
 	customizedSuperPalettes(false);
@@ -156,6 +157,7 @@ Project &Project::operator = (const Project &other) {
 	url(other.url());
 	iconCode(other.iconCode());
 	caseInsensitive(other.caseInsensitive());
+	strictOn(other.strictOn());
 	superFeaturesEnabled(other.superFeaturesEnabled());
 	borderFrameType(other.borderFrameType());
 	borderFrameCode(other.borderFrameCode());
@@ -1915,6 +1917,7 @@ bool Project::open(const char* path_) {
 		version("1.0.0");
 		url("");
 		caseInsensitive(true);
+		strictOn(true);
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
 		created(now);
@@ -1982,6 +1985,7 @@ bool Project::open(const char* path_) {
 		version("1.0.0");
 		url("");
 		caseInsensitive(true);
+		strictOn(true);
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
 		created(now);
@@ -2449,6 +2453,7 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		version("1.0.0");
 		url("");
 		caseInsensitive(true);
+		strictOn(true);
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
 		created(now);
@@ -2820,6 +2825,14 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 		report(msg.c_str(), true);
 	}
 
+	strictOn(true);
+	if (!Jpath::get(doc, strictOn(), "strict_on")) {
+		strictOn(true);
+
+		const std::string msg = Text::format("The project information has no \"strict_on\" field, falls to \"{0}\".", { Text::toString(strictOn()) });
+		report(msg.c_str(), true);
+	}
+
 	superFeaturesEnabled(false);
 	if (!Jpath::get(doc, superFeaturesEnabled(), "super_features", "enabled")) {
 		superFeaturesEnabled(false);
@@ -3068,6 +3081,8 @@ bool Project::saveInformation(std::string &content) {
 	Jpath::set(doc, doc, iconCode(), "icon");
 
 	Jpath::set(doc, doc, caseInsensitive(), "case_insensitive");
+
+	Jpath::set(doc, doc, strictOn(), "strict_on");
 
 	Jpath::set(doc, doc, superFeaturesEnabled(), "super_features", "enabled");
 

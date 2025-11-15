@@ -103,6 +103,7 @@ public:
 	GBBASIC_PROPERTY             (std::string,                   url                                              ) // Serialized in project.
 	GBBASIC_FIELD_READONLY       (std::string,                   iconCode                                         ) // Serialized in project.
 	GBBASIC_PROPERTY             (bool,                          caseInsensitive                                  ) // Serialized in project.
+	GBBASIC_PROPERTY             (bool,                          strictOn                                         ) // Serialized in project.
 	GBBASIC_PROPERTY             (bool,                          superFeaturesEnabled                             ) // Serialized in project.
 	GBBASIC_FIELD_READONLY       (BorderFrameTypes,              borderFrameType                                  ) // Serialized in project.
 	GBBASIC_FIELD_READONLY       (std::string,                   borderFrameCode                                  ) // Serialized in project.

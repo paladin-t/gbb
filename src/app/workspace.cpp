@@ -3734,6 +3734,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 		prj->url(prj_->url());
 		prj->iconCode(prj_->iconCode());
 		prj->caseInsensitive(prj_->caseInsensitive());
+		prj->strictOn(prj_->strictOn());
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
 		prj->borderFrameCode(prj_->borderFrameCode());
@@ -4963,6 +4964,7 @@ void Workspace::compile(
 		std::string sramType = PROJECT_SRAM_TYPE_32KB;
 		bool hasRtc = true;
 		bool caseInsensitive = true;
+		bool strictOn = true;
 		if (project) {
 			if (!project->cartridgeType().empty())
 				cartType = project->cartridgeType();
@@ -4970,6 +4972,7 @@ void Workspace::compile(
 				sramType = project->sramType();
 			hasRtc = project->hasRtc();
 			caseInsensitive = project->caseInsensitive();
+			strictOn = project->strictOn();
 		}
 
 #if GBBASIC_MULTITHREAD_ENABLED
@@ -5128,6 +5131,11 @@ void Workspace::compile(
 			Text::fromString(csiOpt->second, options.strategies.caseInsensitive);
 		else
 			options.strategies.caseInsensitive = caseInsensitive;
+		Text::Dictionary::const_iterator strOpt = arguments.find(COMPILER_STRICT_ON_OPTION_KEY);
+		if (strOpt != arguments.end())
+			Text::fromString(strOpt->second, options.strategies.strictOn);
+		else
+			options.strategies.strictOn = strictOn;
 		Text::Dictionary::const_iterator elnOpt = arguments.find(COMPILER_EXPLICIT_LINE_NUMBER_OPTION_KEY);
 		if (elnOpt != arguments.end())
 			options.strategies.completeLineNumber = false;

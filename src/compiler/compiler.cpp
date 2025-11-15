@@ -1105,7 +1105,7 @@ static Counter operator -- (Counter &val, int) {
 #	define CHECK_COUNTER(CTX, ON_ERROR) \
 		do { \
 			if ((CTX).stackFootprint->max > (CTX).stackSize) { \
-				THROW_STACK_OVERFLOW(ON_ERROR); \
+				THROW_STACK_OVERFLOW((ON_ERROR), !(CTX).strictOn); \
 			} \
 		} while (false)
 #endif /* CHECK_COUNTER */
@@ -3540,10 +3540,12 @@ namespace GBBASIC {
 		} while (false)
 #endif /* THROW_OUT_OF_BOUNDS */
 #ifndef THROW_STACK_OVERFLOW
-	// As warning.
-#	define THROW_STACK_OVERFLOW(ON_ERROR) \
+	// As warning or error.
+#	define THROW_STACK_OVERFLOW(ON_ERROR, IS_WARNING) \
 		do { \
-			throwStackOverflow(ON_ERROR); \
+			throwStackOverflow((ON_ERROR), nullptr, (IS_WARNING)); \
+			if (!(IS_WARNING)) \
+				return; \
 		} while (false)
 #endif /* THROW_STACK_OVERFLOW */
 #ifndef THROW_TABLE_IS_NOT_INITIALIZED
@@ -4364,6 +4366,7 @@ public:
 		const Asm::Instructions* instructions = nullptr;          // Stores the VM instructions.
 
 		bool caseInsensitive = true;                              // Stores whether is running as case insensitive.
+		bool strictOn = true;                                     // Stores whether is running in strict mode.
 		Expect expect;                                            // Stores the syntax expectations.
 		Declaration declaration;                                  // Stores the declaration context.
 		Expression expression;                                    // Stores the expression context.
@@ -6628,7 +6631,7 @@ public:
 	void throwHeapOverflow(Error::Handler onError, Token::Ptr tk = nullptr, bool isWarning = true) const {
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
-		const Error err("Heap overflow", isWarning); // Warning.
+		const Error err("Heap overflow", isWarning); // Warning or error.
 		onError(err, err.format(), tk->begin());
 	}
 	void throwIdHasBeenAlreadyDeclared(Error::Handler onError, Token::Ptr tk = nullptr) const {
@@ -6762,10 +6765,10 @@ public:
 		const Error err("Out of bounds", false);
 		onError(err, err.format(), tk->begin());
 	}
-	void throwStackOverflow(Error::Handler onError, Token::Ptr tk = nullptr) const {
+	void throwStackOverflow(Error::Handler onError, Token::Ptr tk = nullptr, bool isWarning = true) const {
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
-		const Error err("Stack overflow", true); // Warning.
+		const Error err("Stack overflow", isWarning); // Warning or error.
 		onError(err, err.format(), tk->begin());
 	}
 	void throwTableIsNotInitialized(Error::Handler onError, Token::Ptr tk = nullptr) const {
@@ -10768,8 +10771,9 @@ public:
 				if (!declarationRequired || withKey) { // Declaration.
 					const TextLocation &txtLoc = idtk->begin();
 					if (!allocateHeap(ctx, ctx.heapSize, WORD_SIZE, id, RamLocation::Usages::VARIABLE, txtLoc)) {
-						if (allocateHeap(ctx, ctx.heapSize * 2, WORD_SIZE, id, RamLocation::Usages::VARIABLE, txtLoc)) { THROW_HEAP_OVERFLOW(onError, true); }
-						else { THROW_HEAP_OVERFLOW(onError, false); }
+						// Presume doubled heap to allocate again anyway, and report the overflow.
+						if (allocateHeap(ctx, ctx.heapSize * 2, WORD_SIZE, id, RamLocation::Usages::VARIABLE, txtLoc)) { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
+						else { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
 					}
 				} else { // Not declared.
 					if (!fuzzyName.empty()) {
@@ -11055,8 +11059,9 @@ public:
 				const TextLocation &txtLoc = idtk->begin();
 				const int expSize = dimensions->size() * WORD_SIZE;
 				if (!allocateHeap(ctx, ctx.heapSize, expSize, id, RamLocation::Usages::ARRAY, txtLoc)) {
-					if (allocateHeap(ctx, ctx.heapSize * 2, expSize, id, RamLocation::Usages::ARRAY, txtLoc)) { THROW_HEAP_OVERFLOW(onError, true); }
-					else { THROW_HEAP_OVERFLOW(onError, false); }
+					// Presume doubled heap to allocate again anyway, and report the overflow.
+					if (allocateHeap(ctx, ctx.heapSize * 2, expSize, id, RamLocation::Usages::ARRAY, txtLoc)) { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
+					else { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
 				}
 			}
 
@@ -12235,8 +12240,9 @@ private:
 			} else { // Declaration.
 				const TextLocation &txtLoc = idtk->begin();
 				if (!allocateHeap(ctx, ctx.heapSize, WORD_SIZE, id, RamLocation::Usages::LOOP, txtLoc)) {
-					if (allocateHeap(ctx, ctx.heapSize * 2, WORD_SIZE, id, RamLocation::Usages::LOOP, txtLoc)) { THROW_HEAP_OVERFLOW(onError, true); }
-					else { THROW_HEAP_OVERFLOW(onError, false); }
+					// Presume doubled heap to allocate again anyway, and report the overflow.
+					if (allocateHeap(ctx, ctx.heapSize * 2, WORD_SIZE, id, RamLocation::Usages::LOOP, txtLoc)) { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
+					else { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
 				}
 			}
 
@@ -12412,8 +12418,9 @@ private:
 			} else { // Declaration.
 				const TextLocation &txtLoc = idtk->begin();
 				if (!allocateHeap(ctx, ctx.heapSize, WORD_SIZE, id, RamLocation::Usages::LOOP, txtLoc)) {
-					if (allocateHeap(ctx, ctx.heapSize * 2, WORD_SIZE, id, RamLocation::Usages::LOOP, txtLoc)) { THROW_HEAP_OVERFLOW(onError, true); }
-					else { THROW_HEAP_OVERFLOW(onError, false); }
+					// Presume doubled heap to allocate again anyway, and report the overflow.
+					if (allocateHeap(ctx, ctx.heapSize * 2, WORD_SIZE, id, RamLocation::Usages::LOOP, txtLoc)) { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
+					else { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
 				}
 			}
 
@@ -16668,8 +16675,9 @@ public:
 #if DECLARE_WITH_READ_ENABLED
 						const TextLocation &txtLoc = idtk->begin();
 						if (!allocateHeap(ctx, ctx.heapSize, WORD_SIZE, id, RamLocation::Usages::READ, txtLoc)) {
-							if (allocateHeap(ctx, ctx.heapSize * 2, WORD_SIZE, id, RamLocation::Usages::READ, txtLoc)) { THROW_HEAP_OVERFLOW(onError, true); }
-							else { THROW_HEAP_OVERFLOW(onError, false); }
+							// Presume doubled heap to allocate again anyway, and report the overflow.
+							if (allocateHeap(ctx, ctx.heapSize * 2, WORD_SIZE, id, RamLocation::Usages::READ, txtLoc)) { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
+							else { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
 						}
 
 						pointer = &top().inRam.address;
@@ -20713,8 +20721,9 @@ public:
 #if DECLARE_WITH_TOUCH_ENABLED
 								const TextLocation &txtLoc = idtk->begin();
 								if (!allocateHeap(ctx, ctx.heapSize, WORD_SIZE, id, RamLocation::Usages::TOUCH, txtLoc)) {
-									if (allocateHeap(ctx, ctx.heapSize * 2, WORD_SIZE, id, RamLocation::Usages::TOUCH, txtLoc)) { THROW_HEAP_OVERFLOW(onError, true); }
-									else { THROW_HEAP_OVERFLOW(onError, false); }
+									// Presume doubled heap to allocate again anyway, and report the overflow.
+									if (allocateHeap(ctx, ctx.heapSize * 2, WORD_SIZE, id, RamLocation::Usages::TOUCH, txtLoc)) { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
+									else { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
 								}
 
 								pointer = &top().inRam.address;
@@ -22273,8 +22282,9 @@ public:
 #if DECLARE_WITH_VIEWPORT_ENABLED
 					const TextLocation &txtLoc = idtk->begin();
 					if (!allocateHeap(ctx, ctx.heapSize, WORD_SIZE, id, RamLocation::Usages::VIEWPORT, txtLoc)) {
-						if (allocateHeap(ctx, ctx.heapSize * 2, WORD_SIZE, id, RamLocation::Usages::VIEWPORT, txtLoc)) { THROW_HEAP_OVERFLOW(onError, true); }
-						else { THROW_HEAP_OVERFLOW(onError, false); }
+						// Presume doubled heap to allocate again anyway, and report the overflow.
+						if (allocateHeap(ctx, ctx.heapSize * 2, WORD_SIZE, id, RamLocation::Usages::VIEWPORT, txtLoc)) { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
+						else { THROW_HEAP_OVERFLOW(onError, !ctx.strictOn); }
 					}
 
 					pointer = &top().inRam.address;
@@ -38172,6 +38182,7 @@ private:
 		int heapSize = 0;
 		int stackSize = 0;
 		bool caseInsensitive = true;
+		bool strictOn = true;
 		bool declarationRequired = true;
 		bool optimizeCode = true;
 		bool optimizeAssets = true;
@@ -38227,6 +38238,8 @@ public:
 			return (Variant::Long)_options.stackSize;
 		if (key == "case_insensitive")
 			return (bool)_options.caseInsensitive;
+		if (key == "strict_on")
+			return (bool)_options.strictOn;
 		if (key == "declaration_required")
 			return (bool)_options.declarationRequired;
 		if (key == "index_base")
@@ -38288,6 +38301,11 @@ public:
 		}
 		if (key == "case_insensitive") {
 			_options.caseInsensitive = (bool)val;
+
+			return true;
+		}
+		if (key == "strict_on") {
+			_options.strictOn = (bool)val;
 
 			return true;
 		}
@@ -38466,6 +38484,7 @@ private:
 		context.top().heapSize                        =  options.heapSize;
 		context.top().stackSize                       =  options.stackSize;
 		context.top().caseInsensitive                 =  options.caseInsensitive;
+		context.top().strictOn                        =  options.strictOn;
 		context.top().declaration.declarationRequired =  options.declarationRequired;
 		context.top().expression.optimize             =  options.optimizeCode;
 		context.top().instructions                    = &instructions;
@@ -39447,6 +39466,7 @@ bool compile(Program &program, const Options &options) {
 	const int sramType                                                         = Math::clamp(strategies.sramType, 0x00, 0x04);
 	const bool cartridgeHasRtc                                                 = strategies.cartridgeHasRtc;
 	const bool caseInsensitive                                                 = strategies.caseInsensitive;
+	const bool strictOn                                                        = strategies.strictOn;
 	const bool completeLineNumber                                              = strategies.completeLineNumber;
 	const bool declarationRequired                                             = strategies.declarationRequired;
 	const int indexBase                                                        = Math::clamp(strategies.indexBase, 0, 1);
@@ -39531,6 +39551,7 @@ bool compile(Program &program, const Options &options) {
 	compiler.option("heap_size", heapSize);
 	compiler.option("stack_size", stackSize);
 	compiler.option("case_insensitive", caseInsensitive);
+	compiler.option("strict_on", strictOn);
 	compiler.option("declaration_required", declarationRequired);
 	compiler.option("index_base", indexBase);
 	compiler.option("optimize_code", optimizeCode);

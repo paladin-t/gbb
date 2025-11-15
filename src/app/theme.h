@@ -592,6 +592,8 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Version)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Url)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Icon)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Compiling_Compiler)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Compiling_Compiler_StrictOn)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Compiling_Parser)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Compiling_Parser_CaseInsensitive)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_SgbFeatures)
@@ -891,6 +893,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_ResetBorder)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_ResetPalettesToUseTheSharedAsset)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_ResetIcon)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_WhetherToCompileInStrictModeTreatsSomeWarningsAsErrors)
 
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_ActorDetails)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_Attributes)
