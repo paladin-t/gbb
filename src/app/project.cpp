@@ -2820,17 +2820,11 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 	caseInsensitive(true);
 	if (!Jpath::get(doc, caseInsensitive(), "case_insensitive")) {
 		caseInsensitive(true);
-
-		const std::string msg = Text::format("The project information has no \"case_insensitive\" field, falls to \"{0}\".", { Text::toString(caseInsensitive()) });
-		report(msg.c_str(), true);
 	}
 
 	strictOn(true);
 	if (!Jpath::get(doc, strictOn(), "strict_on")) {
 		strictOn(true);
-
-		const std::string msg = Text::format("The project information has no \"strict_on\" field, falls to \"{0}\".", { Text::toString(strictOn()) });
-		report(msg.c_str(), true);
 	}
 
 	superFeaturesEnabled(false);

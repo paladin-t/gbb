@@ -1166,10 +1166,12 @@ public:
 				constexpr const int MAGNIFICATIONS[] = {
 					1, 2, 4, 8
 				};
+				const int cwidth = currentFrame()->width();
+				const int cheight = currentFrame()->height();
 				if (_tools.magnification == -1) {
 					const float PADDING = 32.0f;
-					const float s = (frameWidth + PADDING) / currentFrame()->width();
-					const float t = ((height_ - toolBarHeight) + PADDING) / currentFrame()->height();
+					const float s = (frameWidth + PADDING) / cwidth;
+					const float t = ((height_ - toolBarHeight) + PADDING) / cheight;
 					int m = 0;
 					int n = 0;
 					for (int i = 0; i < GBBASIC_COUNTOF(MAGNIFICATIONS); ++i) {
@@ -1180,9 +1182,10 @@ public:
 					}
 					_tools.magnification = Math::min(m, n);
 				}
+				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS));
 
 				const ImVec2 content = ImGui::GetContentRegionAvail();
-				float width_ = (float)currentFrame()->width();
+				float width_ = (float)cwidth;
 				if (content.x / GBBASIC_TILE_SIZE > 1600 || content.y / GBBASIC_TILE_SIZE > 1600) {
 					width_ *= 32;
 					_tools.scaled = true;

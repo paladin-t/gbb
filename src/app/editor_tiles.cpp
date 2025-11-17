@@ -924,6 +924,7 @@ public:
 					}
 					_tools.magnification = Math::min(m, n);
 				}
+				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS));
 
 				const ImVec2 content = ImGui::GetContentRegionAvail();
 				float width_ = (float)object()->width();
