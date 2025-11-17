@@ -2301,6 +2301,9 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 						}
 					);
 			};
+
+			debug();
+
 			const bool traceless = canvasDevice() && canvasDevice()->traceless();
 			Operations::projectStop(wnd, rnd, this)
 				.then(
