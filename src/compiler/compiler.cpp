@@ -4956,19 +4956,6 @@ public:
 
 		return _children.front();
 	}
-	Token::Array allTokens(bool includeComments) const {
-		Token::Array result;
-		for (const Token::Ptr &tk : _tokens) {
-			if (includeComments) {
-				result.push_back(tk);
-			} else {
-				if (tk->isNot(Token::Types::COMMENT))
-					result.push_back(tk);
-			}
-		}
-
-		return result;
-	}
 	Token::Ptr onlyToken(void) const {
 		if (_tokens.empty())
 			return nullptr;
@@ -5023,14 +5010,14 @@ public:
 
 		return nullptr;
 	}
-	Token::Ptr firstNonNumericTokenInThisOrChildren(void) const {
+	Token::Ptr firstNonNumericToken(void) const {
 		for (int i = 0; i < (int)_tokens.size(); ++i) {
 			const Token::Ptr &tk = _tokens[i];
 			if (tk->isNot(Token::Types::NUMBER) && tk->isNot(Token::Types::COMMENT))
 				return tk;
 		}
 
-		return firstNonNumericTokenInChildren();
+		return nullptr;
 	}
 	Token::Ptr firstNonNumericTokenInChildren(void) const {
 		if (_children.empty())
@@ -5043,6 +5030,39 @@ public:
 		}
 
 		return nullptr;
+	}
+	Token::Ptr firstNonNumericTokenInThisOrChildren(void) const {
+		for (int i = 0; i < (int)_tokens.size(); ++i) {
+			const Token::Ptr &tk = _tokens[i];
+			if (tk->isNot(Token::Types::NUMBER) && tk->isNot(Token::Types::COMMENT))
+				return tk;
+		}
+
+		return firstNonNumericTokenInChildren();
+	}
+	Token::Ptr firstNonNumericTokenInLastChild(void) const {
+		if (_children.empty())
+			return nullptr;
+
+		const Ptr &child = _children.back();
+		Token::Ptr ret = child->firstNonNumericToken();
+		if (ret)
+			return ret;
+
+		return nullptr;
+	}
+	Token::Array allTokens(bool includeComments) const {
+		Token::Array result;
+		for (const Token::Ptr &tk : _tokens) {
+			if (includeComments) {
+				result.push_back(tk);
+			} else {
+				if (tk->isNot(Token::Types::COMMENT))
+					result.push_back(tk);
+			}
+		}
+
+		return result;
 	}
 	Token::Array flatOnlyTokens(const Range &range) const {
 		// Prepare.
@@ -7389,7 +7409,9 @@ public:
 
 		// Emit a `VM_HALT` instructon.
 #if HALT_AT_PAGE_END_ENABLED
-		emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::HALT]);
+		const Token::Ptr tk = firstNonNumericTokenInLastChild();
+		if (!(tk && tk->is(Token::Types::KEYWORD) && tk->text() == "end"))
+			emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::HALT]);
 #endif /* HALT_AT_PAGE_END_ENABLED */
 
 		// Finish.
