@@ -141,6 +141,18 @@ public:
 private:
 	void setBwPalette(PaletteType type, u32 white, u32 light_gray, u32 dark_gray, u32 black);
 
+	void updateVideo(
+		class Window* wnd, class Renderer* rnd,
+		double delta,
+		class Texture* texture, class Texture* textureForBorderFrame,
+		bool isSgb
+	);
+	void updateAudio(
+		class Window* wnd, class Renderer* rnd,
+		double delta,
+		AudioHandler handleAudio
+	);
+
 	bool processStreaming(class Window* wnd, class Renderer* rnd);
 	bool processShellCommand(class Window* wnd, class Renderer* rnd);
 

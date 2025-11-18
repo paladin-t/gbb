@@ -38811,12 +38811,12 @@ private:
 		bytes->writeBytes(COMPILER_INVALID_INSTRUCTION, rest);
 
 		// Resize banks.
-		int banks = Math::ceilIntegerTimesOf((int)compiled->count(), options.bankSize) + options.bank;
-		int cartridgeRomSize = (int)std::ceil(std::log2(banks));
+		const int banksNeeded = Math::ceilIntegerTimesOf((int)compiled->count(), options.bankSize) + options.bank;
+		const int cartridgeRomSize = (int)std::ceil(std::log2(banksNeeded));
+		const int cartridgeSizeCode = cartridgeRomSize - 1;
 
-		banks = (int)Math::pow(2, cartridgeRomSize);
-		--cartridgeRomSize;
-		const int finalSize = banks * options.bankSize;
+		const int finalBanks = (int)Math::pow(2, cartridgeRomSize);
+		const int finalSize = finalBanks * options.bankSize;
 
 		bytes->poke(bytes->count());
 		if ((int)bytes->count() < finalSize) {

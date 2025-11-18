@@ -847,8 +847,6 @@ bool DeviceBinjgb::update(
 	AudioHandler handleAudio
 ) {
 	// Prepare.
-	typedef std::array<float, SOUND_OUTPUT_COUNT> AudioValues;
-
 	if (!_emulator)
 		return false;
 
@@ -864,82 +862,6 @@ bool DeviceBinjgb::update(
 		rnd->target(oldRndTarget);
 		rnd->scale(oldRndScale);
 	};
-	auto renderTextures = [&] (bool isSgb) -> void {
-		constexpr const int BYTES = SDL_BYTESPERPIXEL(SDL_PIXELFORMAT_ABGR8888);
-		if (isSgb) {
-			auto blend = [this, BYTES] (SDL_Texture* tex, double alpha) -> void {
-				if (!_sgbBorderVideoFadeBuffer)
-					_sgbBorderVideoFadeBuffer = new Colour [SGB_SCREEN_WIDTH * SGB_SCREEN_HEIGHT];
-
-				for (int j = 0; j < SGB_SCREEN_HEIGHT; ++j) {
-					for (int i = 0; i < SGB_SCREEN_WIDTH; ++i) {
-						const Colour* pixels = (Colour*)_sgbBorderVideoBuffer;
-						const Colour &srccol = pixels[i + j * SGB_SCREEN_WIDTH];
-						Colour &dstcol = _sgbBorderVideoFadeBuffer[i + j * SGB_SCREEN_WIDTH];
-						dstcol.r = (UInt8)(srccol.r * alpha);
-						dstcol.g = (UInt8)(srccol.g * alpha);
-						dstcol.b = (UInt8)(srccol.b * alpha);
-						dstcol.a = srccol.a;
-					}
-				}
-				SDL_UpdateTexture(tex, nullptr, (void*)_sgbBorderVideoFadeBuffer, SGB_SCREEN_WIDTH * BYTES);
-			};
-
-			rnd->target(textureForBorderFrame);
-			rnd->scale(1);
-			SDL_Texture* tex = (SDL_Texture*)textureForBorderFrame->pointer(rnd);
-			const SgbFrameBuffer* sframe = emulator_get_sgb_frame_buffer(_emulator);
-			switch (_sgbBorderFade) {
-			case SgbFadeOperations::NONE:
-				if (memcmp(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer)) != 0) {
-					_sgbBorderFade = SgbFadeOperations::FADEOUT;
-				}
-
-				break;
-			case SgbFadeOperations::FADEOUT:
-				_sgbBorderFadeTicks += delta;
-				if (_sgbBorderFadeTicks < DEVICE_BINJGB_FADE_SECONDS) {
-					const double alpha = 1.0 - Math::clamp(_sgbBorderFadeTicks / DEVICE_BINJGB_FADE_SECONDS, 0.0, 1.0);
-					blend(tex, alpha);
-				} else {
-					_sgbBorderFade = SgbFadeOperations::FADEIN;
-					_sgbBorderFadeTicks = 0;
-					blend(tex, 0);
-					memcpy(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer));
-					SDL_UpdateTexture(tex, nullptr, (void*)_sgbBorderVideoBuffer, SGB_SCREEN_WIDTH * BYTES);
-				}
-
-				break;
-			case SgbFadeOperations::FADEIN:
-				_sgbBorderFadeTicks += delta;
-				if (_sgbBorderFadeTicks < DEVICE_BINJGB_FADE_SECONDS) {
-					const double alpha = Math::clamp(_sgbBorderFadeTicks / DEVICE_BINJGB_FADE_SECONDS, 0.0, 1.0);
-					blend(tex, alpha);
-				} else {
-					_sgbBorderFade = SgbFadeOperations::NONE;
-					_sgbBorderFadeTicks = 0;
-					blend(tex, 1);
-					if (_sgbBorderVideoFadeBuffer) {
-						delete [] _sgbBorderVideoFadeBuffer;
-						_sgbBorderVideoFadeBuffer = nullptr;
-					}
-				}
-
-				break;
-			case SgbFadeOperations::INIT:
-				if (memcmp(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer)) != 0) {
-					_sgbBorderFade = SgbFadeOperations::FADEIN;
-					memcpy(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer));
-				}
-
-				break;
-			}
-		}
-		rnd->target(texture);
-		rnd->scale(1);
-		const FrameBuffer* frame = emulator_get_frame_buffer(_emulator);
-		SDL_UpdateTexture((SDL_Texture*)texture->pointer(rnd), nullptr, (void*)frame, SCREEN_WIDTH * BYTES);
-	};
 
 	// Fill the keyboard modifiers.
 	if (keyMods)
@@ -952,7 +874,7 @@ bool DeviceBinjgb::update(
 	// Update with paused content.
 	if (_emulatorPaused) {
 		if (texture) {
-			renderTextures(isSgb);
+			updateVideo(wnd, rnd, delta, texture, textureForBorderFrame, isSgb);
 
 			endRendering();
 		}
@@ -1000,7 +922,7 @@ bool DeviceBinjgb::update(
 			}
 
 			if (texture) {
-				renderTextures(isSgb);
+				updateVideo(wnd, rnd, delta, texture, textureForBorderFrame, isSgb);
 			}
 
 			const Ticks ticks = emulator_get_duty_ticks(_emulator);
@@ -1019,86 +941,7 @@ bool DeviceBinjgb::update(
 
 		// Update the audio system.
 		if (event & EMULATOR_EVENT_AUDIO_BUFFER_FULL) {
-			AudioBuffer* srcBuffer = emulator_get_audio_buffer(_emulator);
-			const u32 srcFrames = audio_buffer_get_frames(srcBuffer);
-			const u8* srcData = srcBuffer->data;
-			const int sampleSize = SDL_AUDIO_BITSIZE(_audioSpec.format) / 8;
-			const u32 maxDstFrames = _audioSpec.size / (_audioSpec.channels * sampleSize);
-			const u32 frames = Math::min(srcFrames, maxDstFrames);
-
-			_audioBuffer->poke(0);
-			if (_speed == DEVICE_BASE_SPEED_FACTOR * 1) {
-				for (u32 i = 0; i < frames; ++i) {
-					AudioValues values;
-					for (int j = 0; j < (int)values.size(); ++j) {
-						const float val = DEVICE_BINJGB_AUDIO_CONVERT_FROM_U8(*srcData, 1.0f);
-						values[j] = val;
-						++srcData;
-					}
-					for (int c = 0; c < _audioSpec.channels; ++c) {
-						const int u = c % (int)values.size();
-						const float val = values[u];
-						_audioBuffer->writeSingle(val);
-					}
-				}
-			} else if (_speed >= DEVICE_BASE_SPEED_FACTOR * 1) {
-				for (u32 i = 0; i < frames; i += _speed / DEVICE_BASE_SPEED_FACTOR) {
-					AudioValues values;
-					for (int j = 0; j < (int)values.size(); ++j) {
-						const float val = DEVICE_BINJGB_AUDIO_CONVERT_FROM_U8(*srcData, 1.0f);
-						values[j] = val;
-						srcData += _speed / DEVICE_BASE_SPEED_FACTOR;
-					}
-					for (int c = 0; c < _audioSpec.channels; ++c) {
-						const int u = c % (int)values.size();
-						const float val = values[u];
-						_audioBuffer->writeSingle(val);
-					}
-				}
-			} else /* if (_speed < DEVICE_BASE_SPEED_FACTOR * 1) */ {
-				for (u32 i = 0; i < frames; ++i) {
-					AudioValues values;
-					for (int j = 0; j < (int)values.size(); ++j) {
-						const float val = DEVICE_BINJGB_AUDIO_CONVERT_FROM_U8(*srcData, 1.0f);
-						values[j] = val;
-						++srcData;
-					}
-					for (int j = 0; j < (int)(DEVICE_BASE_SPEED_FACTOR / _speed); ++j) {
-						for (int c = 0; c < _audioSpec.channels; ++c) {
-							const int u = c % (int)values.size();
-							const float val = values[u];
-							_audioBuffer->writeSingle(val);
-						}
-					}
-				}
-			}
-			const Uint32 len = Math::min(
-				(frames * DEVICE_BASE_SPEED_FACTOR / _speed) * _audioSpec.channels * sampleSize,
-				(u32)_audioBuffer->count()
-			);
-
-			bool handledAudio = false;
-			if (handleAudio) {
-				handledAudio = handleAudio((void*)&_audioSpec, _audioBuffer.get(), len);
-			}
-			if (!handledAudio && _audioDeviceId) {
-				const Uint32 inq = SDL_GetQueuedAudioSize(_audioDeviceId);
-				if (inq < (len << 4)) { // Skip the audio frame if the queue is too long.
-					if (_audioCvt.needed) {
-						const size_t newLen = len * _audioCvt.len_mult;
-						if (_audioCvtBufferLength < newLen) {
-							_audioCvtBufferLength = newLen;
-							_audioCvt.buf = (Uint8*)SDL_realloc(_audioCvt.buf, newLen);
-						}
-						_audioCvt.len = (int)len;
-						SDL_memcpy(_audioCvt.buf, _audioBuffer->pointer(), len);
-						SDL_ConvertAudio(&_audioCvt);
-						SDL_QueueAudio(_audioDeviceId, _audioCvt.buf, _audioCvt.len_cvt);
-					} else {
-						SDL_QueueAudio(_audioDeviceId, _audioBuffer->pointer(), len);
-					}
-				}
-			}
+			updateAudio(wnd, rnd, delta, handleAudio);
 		}
 
 		// Break if timeout.
@@ -1242,6 +1085,177 @@ void DeviceBinjgb::setBwPalette(PaletteType type, u32 white, u32 light_gray, u32
 	emulator_set_bw_palette(_emulator, type, &palette);
 }
 
+void DeviceBinjgb::updateVideo(
+	class Window*, class Renderer* rnd,
+	double delta,
+	class Texture* texture, class Texture* textureForBorderFrame,
+	bool isSgb
+) {
+	constexpr const int BYTES = SDL_BYTESPERPIXEL(SDL_PIXELFORMAT_ABGR8888);
+	if (isSgb) {
+		auto blend = [this, BYTES] (SDL_Texture* tex, double alpha) -> void {
+			if (!_sgbBorderVideoFadeBuffer)
+				_sgbBorderVideoFadeBuffer = new Colour [SGB_SCREEN_WIDTH * SGB_SCREEN_HEIGHT];
+
+			for (int j = 0; j < SGB_SCREEN_HEIGHT; ++j) {
+				for (int i = 0; i < SGB_SCREEN_WIDTH; ++i) {
+					const Colour* pixels = (Colour*)_sgbBorderVideoBuffer;
+					const Colour &srccol = pixels[i + j * SGB_SCREEN_WIDTH];
+					Colour &dstcol = _sgbBorderVideoFadeBuffer[i + j * SGB_SCREEN_WIDTH];
+					dstcol.r = (UInt8)(srccol.r * alpha);
+					dstcol.g = (UInt8)(srccol.g * alpha);
+					dstcol.b = (UInt8)(srccol.b * alpha);
+					dstcol.a = srccol.a;
+				}
+			}
+			SDL_UpdateTexture(tex, nullptr, (void*)_sgbBorderVideoFadeBuffer, SGB_SCREEN_WIDTH * BYTES);
+		};
+
+		rnd->target(textureForBorderFrame);
+		rnd->scale(1);
+		SDL_Texture* tex = (SDL_Texture*)textureForBorderFrame->pointer(rnd);
+		const SgbFrameBuffer* sframe = emulator_get_sgb_frame_buffer(_emulator);
+		switch (_sgbBorderFade) {
+		case SgbFadeOperations::NONE:
+			if (memcmp(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer)) != 0) {
+				_sgbBorderFade = SgbFadeOperations::FADEOUT;
+			}
+
+			break;
+		case SgbFadeOperations::FADEOUT:
+			_sgbBorderFadeTicks += delta;
+			if (_sgbBorderFadeTicks < DEVICE_BINJGB_FADE_SECONDS) {
+				const double alpha = 1.0 - Math::clamp(_sgbBorderFadeTicks / DEVICE_BINJGB_FADE_SECONDS, 0.0, 1.0);
+				blend(tex, alpha);
+			} else {
+				_sgbBorderFade = SgbFadeOperations::FADEIN;
+				_sgbBorderFadeTicks = 0;
+				blend(tex, 0);
+				memcpy(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer));
+				SDL_UpdateTexture(tex, nullptr, (void*)_sgbBorderVideoBuffer, SGB_SCREEN_WIDTH * BYTES);
+			}
+
+			break;
+		case SgbFadeOperations::FADEIN:
+			_sgbBorderFadeTicks += delta;
+			if (_sgbBorderFadeTicks < DEVICE_BINJGB_FADE_SECONDS) {
+				const double alpha = Math::clamp(_sgbBorderFadeTicks / DEVICE_BINJGB_FADE_SECONDS, 0.0, 1.0);
+				blend(tex, alpha);
+			} else {
+				_sgbBorderFade = SgbFadeOperations::NONE;
+				_sgbBorderFadeTicks = 0;
+				blend(tex, 1);
+				if (_sgbBorderVideoFadeBuffer) {
+					delete [] _sgbBorderVideoFadeBuffer;
+					_sgbBorderVideoFadeBuffer = nullptr;
+				}
+			}
+
+			break;
+		case SgbFadeOperations::INIT:
+			if (memcmp(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer)) != 0) {
+				_sgbBorderFade = SgbFadeOperations::FADEIN;
+				memcpy(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer));
+			}
+
+			break;
+		}
+	}
+	rnd->target(texture);
+	rnd->scale(1);
+	const FrameBuffer* frame = emulator_get_frame_buffer(_emulator);
+	SDL_UpdateTexture((SDL_Texture*)texture->pointer(rnd), nullptr, (void*)frame, SCREEN_WIDTH * BYTES);
+}
+
+void DeviceBinjgb::updateAudio(
+	class Window*, class Renderer*,
+	double /* delta */,
+	AudioHandler handleAudio
+) {
+	typedef std::array<float, SOUND_OUTPUT_COUNT> AudioValues;
+
+	AudioBuffer* srcBuffer = emulator_get_audio_buffer(_emulator);
+	const u32 srcFrames = audio_buffer_get_frames(srcBuffer);
+	const u8* srcData = srcBuffer->data;
+	const int sampleSize = SDL_AUDIO_BITSIZE(_audioSpec.format) / 8;
+	const u32 maxDstFrames = _audioSpec.size / (_audioSpec.channels * sampleSize);
+	const u32 frames = Math::min(srcFrames, maxDstFrames);
+
+	_audioBuffer->poke(0);
+	if (_speed == DEVICE_BASE_SPEED_FACTOR * 1) {
+		for (u32 i = 0; i < frames; ++i) {
+			AudioValues values;
+			for (int j = 0; j < (int)values.size(); ++j) {
+				const float val = DEVICE_BINJGB_AUDIO_CONVERT_FROM_U8(*srcData, 1.0f);
+				values[j] = val;
+				++srcData;
+			}
+			for (int c = 0; c < _audioSpec.channels; ++c) {
+				const int u = c % (int)values.size();
+				const float val = values[u];
+				_audioBuffer->writeSingle(val);
+			}
+		}
+	} else if (_speed >= DEVICE_BASE_SPEED_FACTOR * 1) {
+		for (u32 i = 0; i < frames; i += _speed / DEVICE_BASE_SPEED_FACTOR) {
+			AudioValues values;
+			for (int j = 0; j < (int)values.size(); ++j) {
+				const float val = DEVICE_BINJGB_AUDIO_CONVERT_FROM_U8(*srcData, 1.0f);
+				values[j] = val;
+				srcData += _speed / DEVICE_BASE_SPEED_FACTOR;
+			}
+			for (int c = 0; c < _audioSpec.channels; ++c) {
+				const int u = c % (int)values.size();
+				const float val = values[u];
+				_audioBuffer->writeSingle(val);
+			}
+		}
+	} else /* if (_speed < DEVICE_BASE_SPEED_FACTOR * 1) */ {
+		for (u32 i = 0; i < frames; ++i) {
+			AudioValues values;
+			for (int j = 0; j < (int)values.size(); ++j) {
+				const float val = DEVICE_BINJGB_AUDIO_CONVERT_FROM_U8(*srcData, 1.0f);
+				values[j] = val;
+				++srcData;
+			}
+			for (int j = 0; j < (int)(DEVICE_BASE_SPEED_FACTOR / _speed); ++j) {
+				for (int c = 0; c < _audioSpec.channels; ++c) {
+					const int u = c % (int)values.size();
+					const float val = values[u];
+					_audioBuffer->writeSingle(val);
+				}
+			}
+		}
+	}
+	const Uint32 len = Math::min(
+		(frames * DEVICE_BASE_SPEED_FACTOR / _speed) * _audioSpec.channels * sampleSize,
+		(u32)_audioBuffer->count()
+	);
+
+	bool handledAudio = false;
+	if (handleAudio) {
+		handledAudio = handleAudio((void*)&_audioSpec, _audioBuffer.get(), len);
+	}
+	if (!handledAudio && _audioDeviceId) {
+		const Uint32 inq = SDL_GetQueuedAudioSize(_audioDeviceId);
+		if (inq < (len << 4)) { // Skip the audio frame if the queue is too long.
+			if (_audioCvt.needed) {
+				const size_t newLen = len * _audioCvt.len_mult;
+				if (_audioCvtBufferLength < newLen) {
+					_audioCvtBufferLength = newLen;
+					_audioCvt.buf = (Uint8*)SDL_realloc(_audioCvt.buf, newLen);
+				}
+				_audioCvt.len = (int)len;
+				SDL_memcpy(_audioCvt.buf, _audioBuffer->pointer(), len);
+				SDL_ConvertAudio(&_audioCvt);
+				SDL_QueueAudio(_audioDeviceId, _audioCvt.buf, _audioCvt.len_cvt);
+			} else {
+				SDL_QueueAudio(_audioDeviceId, _audioBuffer->pointer(), len);
+			}
+		}
+	}
+}
+
 bool DeviceBinjgb::processStreaming(class Window* wnd, class Renderer* rnd) {
 	// Extension feature: stream transfering.
 	if (!deviceHasExtSupport()) // GBB EXTENSION.
@@ -1315,6 +1329,8 @@ bool DeviceBinjgb::processShellCommand(class Window* wnd, class Renderer* rnd) {
 		const std::string osstr = Unicode::toOs(cmd);
 
 		Platform::surf(osstr.c_str());
+
+		fprintf(stdout, "Executed shell command (surf): \"%s\".\n", cmd.c_str());
 	} else if (isBrowse) {
 		if (cmd.length() >= 7) { // "file://".
 			const std::string path = cmd.substr(7);
@@ -1324,12 +1340,18 @@ bool DeviceBinjgb::processShellCommand(class Window* wnd, class Renderer* rnd) {
 				Platform::browse(osstr.c_str());
 			}
 		}
+
+		fprintf(stdout, "Executed shell command (browse): \"%s\".\n", cmd.c_str());
 	} else if (isSync) {
 		if (_debugListener)
 			_debugListener->sync(wnd, rnd, cmd.c_str() + 1);
+
+		fprintf(stdout, "Executed shell command (sync): \"%s\".\n", cmd.c_str());
 	} else if (isDebug) {
 		if (_debugListener)
 			_debugListener->debug(cmd.c_str() + 1);
+
+		fprintf(stdout, "Executed shell command (debug): \"%s\".\n", cmd.c_str());
 	} else if (isCursor) {
 		if (cmd.length() >= 1) { // "^".
 			const std::string mode = cmd.substr(1);
@@ -1354,16 +1376,20 @@ bool DeviceBinjgb::processShellCommand(class Window* wnd, class Renderer* rnd) {
 	} else if (isPause) {
 		if (_debugListener)
 			_debugListener->pause(wnd, rnd);
+
+		fprintf(stdout, "Executed shell command (pause): \"%s\".\n", cmd.c_str());
 	} else if (isStop) {
 		if (_debugListener)
 			_debugListener->stop(wnd, rnd);
+
+		fprintf(stdout, "Executed shell command (stop): \"%s\".\n", cmd.c_str());
 	} else {
 		const std::string osstr = Unicode::toOs(cmd);
 
 		Platform::execute(osstr.c_str());
-	}
 
-	fprintf(stdout, "Executed shell command: \"%s\".\n", cmd.c_str());
+		fprintf(stdout, "Executed shell command: \"%s\".\n", cmd.c_str());
+	}
 
 	return true;
 }
