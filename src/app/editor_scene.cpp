@@ -3998,6 +3998,16 @@ private:
 					Map::Ptr newProps = newObj->propertyLayer();
 					Map::Ptr newActors = newObj->actorLayer();
 					const Trigger::Array* newTriggers = newObj->triggerLayer();
+					if (
+						(newMap->width() != newAttrib->width() || newMap->height() != newAttrib->height()) ||
+						(newMap->width() != newProps->width() || newMap->height() != newProps->height()) ||
+						(newMap->width() != newActors->width() || newMap->height() != newActors->height())
+					) {
+						ws->bubble(ws->theme()->dialogPrompt_SizeOfLayersDoNotMatch(), nullptr);
+
+						break;
+					}
+
 					Command* cmd = enqueue<Commands::Scene::Import>()
 						->with(newMap, newAttrib, newProps, newActors, newTriggers, def, actorRoutines)
 						->with(_setLayer, _tools.layer)
@@ -4072,6 +4082,16 @@ private:
 					Map::Ptr newProps = newObj->propertyLayer();
 					Map::Ptr newActors = newObj->actorLayer();
 					const Trigger::Array* newTriggers = newObj->triggerLayer();
+					if (
+						(newMap->width() != newAttrib->width() || newMap->height() != newAttrib->height()) ||
+						(newMap->width() != newProps->width() || newMap->height() != newProps->height()) ||
+						(newMap->width() != newActors->width() || newMap->height() != newActors->height())
+					) {
+						ws->bubble(ws->theme()->dialogPrompt_SizeOfLayersDoNotMatch(), nullptr);
+
+						break;
+					}
+
 					Command* cmd = enqueue<Commands::Scene::Import>()
 						->with(newMap, newAttrib, newProps, newActors, newTriggers, def, actorRoutines)
 						->with(_setLayer, _tools.layer)

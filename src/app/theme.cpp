@@ -633,6 +633,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Size("Size");
 	dialogPrompt_Size_InPixels("Size (in pixels)");
 	dialogPrompt_Size_InTiles("Size (in tiles)");
+	dialogPrompt_SizeOfLayersDoNotMatch("Size of layers do not match");
 	dialogPrompt_Split("Split");
 	dialogPrompt_Strength("Strength");
 	dialogPrompt_Stroke("Stroke");

@@ -2717,7 +2717,7 @@ private:
 					}
 
 					const ActorAssets::Entry* entry = actors.get(actor);
-					if (entry->definition.following)
+					if (entry && entry->definition.following)
 						++followingCount;
 				}
 				if (followingCount > 1) {
