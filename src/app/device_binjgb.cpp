@@ -930,7 +930,6 @@ bool DeviceBinjgb::update(
 				if (memcmp(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer)) != 0) {
 					_sgbBorderFade = SgbFadeOperations::FADEIN;
 					memcpy(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer));
-					SDL_UpdateTexture(tex, nullptr, (void*)_sgbBorderVideoBuffer, SGB_SCREEN_WIDTH * BYTES);
 				}
 
 				break;
