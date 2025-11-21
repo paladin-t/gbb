@@ -167,6 +167,7 @@ public:
 						nullptr,
 						&gsize, false,
 						true,
+						ImGuiMouseButton_Left,
 						[&] (void) -> void {
 							ImGui::SetCursorPos(pos);
 							const bool clicked = Editing::map(
@@ -182,7 +183,8 @@ public:
 								std::numeric_limits<int>::min(),
 								nullptr,
 								nullptr,
-								nullptr
+								nullptr,
+								ImGuiMouseButton_Left
 							);
 							if (clicked)
 								_cursor = cursor;

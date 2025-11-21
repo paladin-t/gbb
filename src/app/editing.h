@@ -302,6 +302,7 @@ bool tiles(
 	Texture* overlay = nullptr,
 	const Math::Vec2i* gridSize = nullptr, bool showGrids = false,
 	bool showTransparentBackbround = true,
+	int mouseActionButton = 0,
 	PostHandler post = nullptr
 );
 
@@ -317,6 +318,7 @@ bool tiles(
 	Texture* overlay = nullptr,
 	const Math::Vec2i* gridSize = nullptr, bool showGrids = false,
 	bool showTransparentBackbround = true,
+	int mouseActionButton = 0,
 	PostHandler post = nullptr
 );
 
@@ -337,7 +339,8 @@ bool map(
 	int ignoreCel = -1,
 	MapCelGetter getCel = nullptr,
 	MapCelGetter getPlt = nullptr,
-	MapCelGetter getFlip = nullptr
+	MapCelGetter getFlip = nullptr,
+	int mouseActionButton = 0
 );
 
 /**
@@ -356,7 +359,8 @@ bool map(
 	int ignoreCel = -1,
 	MapCelGetter getCel = nullptr,
 	MapCelGetter getPlt = nullptr,
-	MapCelGetter getFlip = nullptr
+	MapCelGetter getFlip = nullptr,
+	int mouseActionButton = 0
 );
 
 /**
@@ -389,7 +393,8 @@ bool frame(
 	const Math::Vec2i* gridSize = nullptr, bool showGrids = false,
 	bool showTransparentBackbround = true,
 	const Math::Vec2i* anchor = nullptr, bool showAnchor = true,
-	const Math::Recti* boundingBox = nullptr, bool showBoundingBox = false
+	const Math::Recti* boundingBox = nullptr, bool showBoundingBox = false,
+	int mouseActionButton = 0
 );
 
 /**
@@ -408,7 +413,8 @@ bool frame(
 	const Math::Vec2i* gridSize = nullptr, bool showGrids = false,
 	bool showTransparentBackbround = true,
 	const Math::Vec2i* anchor = nullptr, bool showAnchor = true,
-	const Math::Recti* boundingBox = nullptr, bool showBoundingBox = false
+	const Math::Recti* boundingBox = nullptr, bool showBoundingBox = false,
+	int mouseActionButton = 0
 );
 
 /**
@@ -430,7 +436,8 @@ bool actors(
 	ActorIndex::Array* hovering = nullptr,
 	const Math::Vec2i* showGrids = nullptr,
 	bool showTransparentBackbround = true,
-	MapCelGetter getCel = nullptr
+	MapCelGetter getCel = nullptr,
+	int mouseActionButton = 0
 );
 
 /**
@@ -451,7 +458,8 @@ bool actors(
 	ActorIndex::Array* hovering = nullptr,
 	const Math::Vec2i* showGrids = nullptr,
 	bool showTransparentBackbround = true,
-	MapCelGetter getCel = nullptr
+	MapCelGetter getCel = nullptr,
+	int mouseActionButton = 0
 );
 
 /**
@@ -469,7 +477,8 @@ bool triggers(
 	Tiler* cursor = nullptr, const Tiler* selection = nullptr,
 	Math::Vec2i* rawCursor = nullptr,
 	TriggerIndex::Array* hovering = nullptr,
-	SceneTriggerQuerier queryTrigger = nullptr
+	SceneTriggerQuerier queryTrigger = nullptr,
+	int mouseActionButton = 0
 );
 
 bool camera(

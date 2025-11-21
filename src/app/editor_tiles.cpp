@@ -252,6 +252,7 @@ private:
 
 		ImVec2 mousePos = ImVec2(-1, -1);
 		ImVec2 mouseDiff = ImVec2(0, 0);
+		int mouseActionButton = ImGuiMouseButton_Left;
 
 		PostHandler post = nullptr;
 		Editing::Tools::PaintableTools postType = Editing::Tools::PENCIL;
@@ -272,6 +273,7 @@ private:
 
 			mousePos = ImVec2(-1, -1);
 			mouseDiff = ImVec2(0, 0);
+			mouseActionButton = ImGuiMouseButton_Left;
 
 			post = nullptr;
 			postType = Editing::Tools::PENCIL;
@@ -871,7 +873,7 @@ public:
 			);
 		}
 
-		shortcuts(wnd, rnd, ws);
+		const bool allowMouseOperations = shortcuts(wnd, rnd, ws);
 
 		const Ref::Splitter splitter = _ref.split();
 
@@ -956,6 +958,7 @@ public:
 						_overlay.texture ? _overlay.texture.get() : nullptr,
 						&_tools.gridUnit, _tools.showGrids && _tools.gridsVisible,
 						_tools.transparentBackbroundVisible,
+						_tools.mouseActionButton,
 						nullptr
 					)
 				);
@@ -970,21 +973,23 @@ public:
 				_painting.set(false);
 			}
 
-			if (_painting.down()) {
-				if (_processors[_tools.painting].down)
-					_processors[_tools.painting].down(rnd);
-			}
-			if (_painting && _painting.moved()) {
-				if (_processors[_tools.painting].move)
-					_processors[_tools.painting].move(rnd);
-			}
-			if (_painting.up()) {
-				if (_processors[_tools.painting].up)
-					_processors[_tools.painting].up(rnd);
-			}
-			if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
-				if (_processors[_tools.painting].hover)
-					_processors[_tools.painting].hover(rnd);
+			if (allowMouseOperations) {
+				if (_painting.down()) {
+					if (_processors[_tools.painting].down)
+						_processors[_tools.painting].down(rnd);
+				}
+				if (_painting && _painting.moved()) {
+					if (_processors[_tools.painting].move)
+						_processors[_tools.painting].move(rnd);
+				}
+				if (_painting.up()) {
+					if (_processors[_tools.painting].up)
+						_processors[_tools.painting].up(rnd);
+				}
+				if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+					if (_processors[_tools.painting].hover)
+						_processors[_tools.painting].hover(rnd);
+				}
 			}
 
 			if (_binding.skipFrame) {
@@ -1332,7 +1337,7 @@ public:
 	}
 
 private:
-	void shortcuts(Window* wnd, Renderer* rnd, Workspace* ws) {
+	bool shortcuts(Window* wnd, Renderer* rnd, Workspace* ws) {
 		const Editing::Shortcut caps(SDL_SCANCODE_UNKNOWN, false, false, false, false, true);
 		const Editing::Shortcut num(SDL_SCANCODE_UNKNOWN, false, false, false, true, false);
 		if (_tools.gridsVisible == caps.pressed()) {
@@ -1350,7 +1355,7 @@ private:
 				_tools.post = nullptr;
 			}
 
-			return;
+			return true;
 		}
 
 		const Editing::Shortcut shift(SDL_SCANCODE_UNKNOWN, false, true, false);
@@ -1368,7 +1373,32 @@ private:
 				_tools.postType = Editing::Tools::HAND;
 			}
 
-			return;
+			return true;
+		} else if (ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {
+			if (!_tools.post) {
+				const Editing::Tools::PaintableTools prevTool = _tools.painting;
+
+				_tools.painting = Editing::Tools::HAND;
+
+				_tools.mouseActionButton = ImGuiMouseButton_Middle;
+
+				_tools.post = [&, prevTool] (void) -> void {
+					if (!ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {
+						_tools.painting = prevTool;
+						_tools.mouseActionButton = ImGuiMouseButton_Left;
+					}
+				};
+				_tools.postType = Editing::Tools::HAND;
+			}
+
+			return true;
+		} else if (ImGui::IsMouseReleased(ImGuiMouseButton_Middle)) {
+			if (_tools.post && _tools.postType == Editing::Tools::HAND) {
+				_tools.post();
+				_tools.post = nullptr;
+
+				return false;
+			}
 		} else if (shift.released()) {
 			if (_tools.post && _tools.postType == Editing::Tools::HAND) {
 				_tools.post();
@@ -1388,7 +1418,7 @@ private:
 				_tools.postType = Editing::Tools::EYEDROPPER;
 			}
 
-			return;
+			return true;
 		} else if (alt.released()) {
 			if (_tools.post && _tools.postType == Editing::Tools::EYEDROPPER) {
 				_tools.post();
@@ -1422,6 +1452,8 @@ private:
 					ws->changePage(wnd, rnd, _project, Workspace::Categories::TILES, index);
 			}
 		}
+
+		return true;
 	}
 
 	void context(Window*, Renderer*, Workspace* ws) {
@@ -2303,6 +2335,7 @@ private:
 	}
 	void handToolUp(Renderer*) {
 		_tools.mouseDiff = ImVec2(0, 0);
+		_tools.mouseActionButton = ImGuiMouseButton_Left;
 	}
 	void handToolHover(Renderer*) {
 		ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);

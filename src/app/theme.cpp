@@ -980,7 +980,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEdit_ToolEllipseFill("Ellipse fill (Shift+E)");
 	tooltipEdit_ToolEraser("Delete (D)");
 	tooltipEdit_ToolEyedropper("Pick (I)\nAlt+LMB");
-	tooltipEdit_ToolHand("Move the edit area (H)\nShift+LMB");
+	tooltipEdit_ToolHand("Move the edit area (H)\nShift+LMB or MMB");
 	tooltipEdit_ToolJumpToRef("Jump to ref (R)");
 	tooltipEdit_ToolLasso("Select (M)");
 	tooltipEdit_ToolLassoWithTilewise("Select (M)\nHold " GBBASIC_MODIFIER_KEY_NAME " for tilewise");

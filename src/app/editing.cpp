@@ -811,6 +811,7 @@ bool tiles(
 	Texture* overlay,
 	const Math::Vec2i* gridSize, bool showGrids,
 	bool showTransparentBackbround,
+	int mouseActionButton,
 	PostHandler post
 ) {
 	ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -967,7 +968,7 @@ bool tiles(
 		const Int y = Math::clamp((int)imgPos.y, 0, ptr->height() - 1);
 
 		if (cursorStamp.empty()) {
-			if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+			if (ImGui::IsMouseDown(mouseActionButton))
 				result = true;
 
 			if (cursor) {
@@ -977,7 +978,7 @@ bool tiles(
 				);
 			}
 		} else if (cursor) {
-			if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+			if (ImGui::IsMouseClicked(mouseActionButton)) {
 				cursorStamp.position = Math::Vec2i(
 					x / cursorStamp.size.x,
 					y / cursorStamp.size.y
@@ -987,14 +988,14 @@ bool tiles(
 					y / cursorStamp.size.y * cursorStamp.size.y
 				);
 				cursor->size = cursorStamp.size;
-			} else if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+			} else if (ImGui::IsMouseDown(mouseActionButton)) {
 				const Math::Vec2i diff = Math::Vec2i(x / cursorStamp.size.x, y / cursorStamp.size.y) -
 					cursorStamp.position +
 					Math::Vec2i(1, 1);
 				const Math::Recti rect = Math::Recti::byXYWH(cursorStamp.position.x, cursorStamp.position.y, diff.x, diff.y);
 				cursor->position = Math::Vec2i(rect.xMin(), rect.yMin()) * cursorStamp.size;
 				cursor->size = Math::Vec2i(rect.width(), rect.height()) * cursorStamp.size;
-			} else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			} else if (ImGui::IsMouseReleased(mouseActionButton)) {
 				result = true;
 			}
 		}
@@ -1015,6 +1016,7 @@ bool tiles(
 	Texture* overlay,
 	const Math::Vec2i* gridSize, bool showGrids,
 	bool showTransparentBackbround,
+	int mouseActionButton,
 	PostHandler post
 ) {
 	return tiles(
@@ -1026,6 +1028,7 @@ bool tiles(
 		overlay,
 		gridSize, showGrids,
 		showTransparentBackbround,
+		mouseActionButton,
 		post
 	);
 }
@@ -1044,7 +1047,8 @@ bool map(
 	int ignoreCel,
 	MapCelGetter getCel,
 	MapCelGetter getPlt,
-	MapCelGetter getFlip
+	MapCelGetter getFlip,
+	int mouseActionButton
 ) {
 	ImGuiStyle &style = ImGui::GetStyle();
 	ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -1175,7 +1179,7 @@ bool map(
 				if (hoveringWnd && focusingWnd && !result) {
 					const ImVec2 mousePos = ImGui::GetMousePos();
 					if (rect.Contains(mousePos)) {
-						if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+						if (ImGui::IsMouseDown(mouseActionButton))
 							result = true;
 
 						if (cursor)
@@ -1288,7 +1292,8 @@ bool map(
 	int ignoreCel,
 	MapCelGetter getCel,
 	MapCelGetter getPlt,
-	MapCelGetter getFlip
+	MapCelGetter getFlip,
+	int mouseActionButton
 ) {
 	return map(
 		rnd, ws,
@@ -1304,7 +1309,8 @@ bool map(
 		ignoreCel,
 		getCel,
 		getPlt,
-		getFlip
+		getFlip,
+		mouseActionButton
 	);
 }
 
@@ -1458,7 +1464,8 @@ bool frame(
 	const Math::Vec2i* gridSize, bool showGrids,
 	bool showTransparentBackbround,
 	const Math::Vec2i* anchor, bool showAnchor,
-	const Math::Recti* boundingBox, bool showBoundingBox
+	const Math::Recti* boundingBox, bool showBoundingBox,
+	int mouseActionButton
 ) {
 	return frame(
 		rnd, ws,
@@ -1472,7 +1479,8 @@ bool frame(
 		gridSize, showGrids,
 		showTransparentBackbround,
 		anchor, showAnchor,
-		boundingBox, showBoundingBox
+		boundingBox, showBoundingBox,
+		mouseActionButton
 	);
 }
 
@@ -1488,7 +1496,8 @@ bool frame(
 	const Math::Vec2i* gridSize, bool showGrids,
 	bool showTransparentBackbround,
 	const Math::Vec2i* anchor_, bool showAnchor,
-	const Math::Recti* boundingBox_, bool showBoundingBox
+	const Math::Recti* boundingBox_, bool showBoundingBox,
+	int mouseActionButton
 ) {
 	Theme* theme = ws->theme();
 
@@ -1504,6 +1513,7 @@ bool frame(
 		overlay,
 		gridSize, showGrids,
 		showTransparentBackbround,
+		mouseActionButton,
 		[&] (void) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
 
@@ -1567,7 +1577,8 @@ bool actors(
 	ActorIndex::Array* hovering,
 	const Math::Vec2i* showGrids,
 	bool showTransparentBackbround,
-	MapCelGetter getCel
+	MapCelGetter getCel,
+	int mouseActionButton
 ) {
 	ImGuiStyle &style = ImGui::GetStyle();
 	ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -1590,6 +1601,7 @@ bool actors(
 	const float scrollX = ImGui::GetScrollX() / scale;
 	const float scrollY = ImGui::GetScrollY() / scale;
 
+	const ImVec2 editPos = ImGui::GetWindowPos();
 	const ImVec2 content = ImGui::GetContentRegionAvail();
 	const int beginX = Math::clamp((int)(scrollX / tileSize.x), 0, map->width());
 	const int beginY = Math::clamp((int)(scrollY / tileSize.y), 0, map->height());
@@ -1617,6 +1629,8 @@ bool actors(
 
 		const Colour DEFAULT_COLORS_ARRAY[] = INDEXED_DEFAULT_COLORS;
 		drawList->PushClipRect(curPos, curPos + widgetSize, true);
+		const ImRect editRect(editPos, editPos + content);
+		const bool hoveringEditArea = editRect.Contains(mousePos);
 		for (int j = beginY; j < endY; ++j) {
 			for (int i = beginX; i < endX; ++i) {
 				const Byte cel = (Byte)scene->actorLayer()->get(i, j);
@@ -1651,11 +1665,11 @@ bool actors(
 						if (exactRect.Contains(mousePos))
 							*rawCursor = Math::Vec2i(i, j);
 					}
-					const float margin = 8.0f;
+					const float margin = 0.0f; // 8.0f;
 					const ImVec2 nearPos = ImVec2((i * (float)tileSize.x - margin) * scale, (j * (float)tileSize.y - margin) * scale) + curPos;
 					const ImVec2 nearSize = ImVec2((float)tileSize.x + margin * 2, (float)tileSize.y + margin * 2) * scale;
 					const ImRect nearRect(nearPos, nearPos + nearSize);
-					if (objRect.Contains(mousePos) || nearRect.Contains(mousePos)) {
+					if (hoveringEditArea && (objRect.Contains(mousePos) || nearRect.Contains(mousePos))) {
 						rawCursor_ = Math::Vec2i(i, j);
 						if (hovering) {
 							const ImVec2 pos_ = mousePos - curPos;
@@ -1747,7 +1761,7 @@ bool actors(
 
 				if (hoveringWnd && focusingWnd && !result) {
 					if (rect.Contains(mousePos)) {
-						if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+						if (ImGui::IsMouseDown(mouseActionButton))
 							result = true;
 
 						if (cursor)
@@ -1860,7 +1874,8 @@ bool actors(
 	ActorIndex::Array* hovering,
 	const Math::Vec2i* showGrids,
 	bool showTransparentBackbround,
-	MapCelGetter getCel
+	MapCelGetter getCel,
+	int mouseActionButton
 ) {
 	return actors(
 		rnd, ws,
@@ -1876,7 +1891,8 @@ bool actors(
 		hovering,
 		showGrids,
 		showTransparentBackbround,
-		getCel
+		getCel,
+		mouseActionButton
 	);
 }
 
@@ -1890,7 +1906,8 @@ bool triggers(
 	Tiler* cursor, const Tiler* selection,
 	Math::Vec2i* rawCursor,
 	TriggerIndex::Array* hovering,
-	SceneTriggerQuerier queryTrigger
+	SceneTriggerQuerier queryTrigger,
+	int mouseActionButton
 ) {
 	ImGuiStyle &style = ImGui::GetStyle();
 	ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -1950,7 +1967,7 @@ bool triggers(
 		const Int x = Math::clamp((int)imgPos.x, 0, (Int)widgetSize.x - 1);
 		const Int y = Math::clamp((int)imgPos.y, 0, (Int)widgetSize.y - 1);
 
-		if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+		if (ImGui::IsMouseDown(mouseActionButton))
 			result = true;
 
 		if (cursor) {
