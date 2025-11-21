@@ -757,6 +757,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEdit_Console)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEdit_Emulator)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEdit_Font)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEdit_Magnifiable)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEdit_Map)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEdit_NextPage)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEdit_PreviousPage)

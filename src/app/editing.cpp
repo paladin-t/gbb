@@ -3780,7 +3780,7 @@ bool magnifiable(
 		xOffset = (width - size * X_COUNT) * 0.5f;
 	}
 
-	constexpr const char* const TOOLTIP = "(-/+)";
+	const char* const TOOLTIP = theme->tooltipEdit_Magnifiable().c_str();
 	const Shortcut shortcuts[] = {
 		Shortcut(SDL_SCANCODE_MINUS),
 		Shortcut(SDL_SCANCODE_EQUALS)

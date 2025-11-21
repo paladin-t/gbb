@@ -968,6 +968,11 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEdit_Console("Console (" GBBASIC_MODIFIER_KEY_NAME "+9)");
 	tooltipEdit_Emulator("Emulator (" GBBASIC_MODIFIER_KEY_NAME "+`)");
 	tooltipEdit_Font("Font (" GBBASIC_MODIFIER_KEY_NAME "+6)");
+#if GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CTRL
+	tooltipEdit_Magnifiable("(-/+ or Ctrl+Mouse Wheel)");
+#elif GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CMD
+	tooltipEdit_Magnifiable("(-/+ or Cmd+Mouse Wheel)");
+#endif /* GBBASIC_MODIFIER_KEY */
 	tooltipEdit_Map("Map (" GBBASIC_MODIFIER_KEY_NAME "+3)");
 	tooltipEdit_NextPage("Next page (" "Ctrl" "+PgDn)");
 	tooltipEdit_PreviousPage("Previous page (" "Ctrl" "+PgUp)");
