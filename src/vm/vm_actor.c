@@ -909,6 +909,8 @@ INLINE BOOLEAN actor_move_in_direction_(SCRIPT_CTX * THIS) {
         if ((--*wait) == 0) {
             THIS->stack_ptr -= 5;
 
+            actor->motion = 0;
+
             return FALSE; // Non-loop.
         }
 
