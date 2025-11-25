@@ -630,7 +630,7 @@ void Platform::notify(const char* title_, const char* message_, const char* icon
 		i = pfd::icon::error;
 	else if (icon == "question")
 		i = pfd::icon::question;
-	pfd::notify notify(title, message, i);
+	pfd::notify_linux notify(title, message, i);
 }
 
 void Platform::notifyAfter(const char* title, const char* message, int tag, const char* sound, int badge, int interval) {
