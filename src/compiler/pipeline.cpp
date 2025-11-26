@@ -2345,8 +2345,8 @@ public:
 				touch(assets, AssetsBundle::Categories::MAP, entry->refMap, incRef);
 
 				SceneAssets::Entry::UniqueRef uref;
-				const SceneAssets::Entry::Ref refActors_ = entry->getRefActors(&uref);
-				(void)refActors_;
+				const SceneAssets::Entry::Ref refActors = entry->getRefActors(&uref);
+				(void)refActors;
 				for (int refActor : uref)
 					touch(assets, AssetsBundle::Categories::ACTOR, refActor, incRef);
 			}
@@ -2476,8 +2476,8 @@ public:
 							++rdst.refCount; // Increase reference count by asset.
 						}
 						SceneAssets::Entry::UniqueRef uref;
-						const SceneAssets::Entry::Ref refActors_ = entry->getRefActors(&uref);
-						(void)refActors_;
+						const SceneAssets::Entry::Ref refActors = entry->getRefActors(&uref);
+						(void)refActors;
 						for (int refActor : uref) {
 							const Source refAct(AssetsBundle::Categories::ACTOR, refActor);
 							Table::iterator rait = _table.find(refAct);
@@ -2698,11 +2698,10 @@ private:
 					_onError(msg, true, AssetsBundle::Categories::MAP, i);
 				}
 
+				int playerCount = 0;
 				int followingCount = 0;
-				SceneAssets::Entry::UniqueRef urefActors;
-				const SceneAssets::Entry::Ref refActors_ = entry->getRefActors(&urefActors);
-				(void)refActors_;
-				for (int actor : urefActors) {
+				const SceneAssets::Entry::Ref refActors = entry->getRefActors(nullptr);
+				for (int actor : refActors) {
 					if (actor < 0 || actor >= actors.count()) {
 						const std::string msg = Text::format(
 							actor == -1 ?
@@ -2717,8 +2716,14 @@ private:
 					}
 
 					const ActorAssets::Entry* entry = actors.get(actor);
+					if (_isPlayerBehaviour && _isPlayerBehaviour(entry->definition.behaviour))
+						++playerCount;
 					if (entry && entry->definition.following)
 						++followingCount;
+				}
+				if (playerCount > 1) {
+					const std::string msg = Text::format("There are {0} actors have assigned with player controllers in scene {1}.", { Text::toString(playerCount), Text::toString(i) });
+					_onError(msg, true, AssetsBundle::Categories::SCENE, i);
 				}
 				if (followingCount > 1) {
 					const std::string msg = Text::format("There are {0} actors have been marked as \"following\" in scene {1}.", { Text::toString(followingCount), Text::toString(i) });

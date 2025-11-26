@@ -671,8 +671,8 @@ public:
 			if (krnl) {
 				const GBBASIC::Kernel::Behaviour::Array &behaviours = krnl->behaviours();
 
-				const SceneAssets::Entry::UniqueRef uniqueActors = entry()->uniqueRefActors;
-				for (SceneAssets::Entry::UniqueRef::const_iterator it = uniqueActors.begin(); it != uniqueActors.end(); ++it) {
+				const SceneAssets::Entry::Ref &actors = entry()->refActors;
+				for (SceneAssets::Entry::Ref::const_iterator it = actors.begin(); it != actors.end(); ++it) {
 					const int cel = *it;
 					const ActorAssets::Entry* entry = project->getActor(cel);
 					if (!entry)
