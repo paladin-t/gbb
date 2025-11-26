@@ -937,6 +937,7 @@ INLINE BOOLEAN actor_move_to_point_(SCRIPT_CTX * THIS) {
         else if (x > actor->position.x) dx =  1;
         if      (y < actor->position.y) dy = -1;
         else if (y > actor->position.y) dy =  1;
+        else    goto end; // Already there, no need to move.
         movable = controller_is_actor_movable(actor, dx, dy, flags);
     }
     if (wait) {
@@ -948,12 +949,13 @@ INLINE BOOLEAN actor_move_to_point_(SCRIPT_CTX * THIS) {
         }
 
         return TRUE; // Loop.
-    } else {
-        actor_move_to_point(actor, x, y);
-        THIS->stack_ptr -= 5;
-
-        return FALSE; // Non-loop.
     }
+
+end:
+    actor_move_to_point(actor, x, y);
+    THIS->stack_ptr -= 5;
+
+    return FALSE; // Non-loop.
 }
 
 INLINE BOOLEAN actor_move_stop_(SCRIPT_CTX * THIS) {
