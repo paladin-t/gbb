@@ -135,6 +135,8 @@ public:
 	static std::string pascalToSnake(const std::string &str);
 	static std::string snakeToPascal(const std::string &str);
 
+	static std::string sanitizeFilename(const std::string &str, char replacementChar = '_');
+
 	static std::string remove(const std::string &str, const std::string &charsToRemove);
 	static std::string trim(const std::string &str, const std::string &delims = " \f\n\r\t\v");
 	static std::string trimLeft(const std::string &str, const std::string &delims = " \f\n\r\t\v");

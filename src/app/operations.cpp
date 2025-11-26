@@ -1352,7 +1352,7 @@ promise::Promise Operations::fileSave(Window* wnd, Renderer* rnd, Workspace* ws,
 			if (path.empty()) {
 				pfd::save_file save(
 					ws->theme()->generic_SaveTo(),
-					title + "." GBBASIC_RICH_PROJECT_EXT,
+					Text::sanitizeFilename(title) + "." GBBASIC_RICH_PROJECT_EXT,
 					GBBASIC_PROJECT_FILE_FILTER
 				);
 				path = save.result();
@@ -2581,7 +2581,7 @@ promise::Promise Operations::fileExportForNotepad(Window* wnd, Renderer* rnd, Wo
 			const std::string &title = prj->title();
 			pfd::save_file save(
 				ws->theme()->generic_SaveTo(),
-				title + "." GBBASIC_RICH_PROJECT_EXT,
+				Text::sanitizeFilename(title) + "." GBBASIC_RICH_PROJECT_EXT,
 				GBBASIC_PROJECT_FILE_FILTER
 			);
 			std::string path = save.result();
@@ -2715,7 +2715,7 @@ promise::Promise Operations::fileDuplicate(Window* wnd, Renderer* rnd, Workspace
 						const std::string title = prj->title() + " Copy";
 						pfd::save_file save(
 							ws->theme()->generic_SaveTo(),
-							title + "." GBBASIC_RICH_PROJECT_EXT,
+							Text::sanitizeFilename(title) + "." GBBASIC_RICH_PROJECT_EXT,
 							GBBASIC_PROJECT_FILE_FILTER
 						);
 						std::string path = save.result();
@@ -4047,7 +4047,7 @@ promise::Promise Operations::projectBuild(Window* wnd, Renderer* rnd, Workspace*
 
 				pfd::save_file save(
 					ws->theme()->generic_SaveTo(),
-					title,
+					Text::sanitizeFilename(title),
 					ex->filter()
 				);
 				path = save.result();

@@ -4072,7 +4072,7 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd) {
 #if defined GBBASIC_OS_HTML
 		pfd::save_file save(
 			theme()->generic_SaveTo(),
-			name + ".zip",
+			Text::sanitizeFilename(name) + ".zip",
 			GBBASIC_JSON_FILE_FILTER
 		);
 		std::string path = save.result();

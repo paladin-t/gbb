@@ -2634,7 +2634,7 @@ private:
 				do {
 					pfd::save_file save(
 						ws->theme()->generic_SaveTo(),
-						entry()->name.empty() ? "gbbasic-actor.c" : entry()->name + ".c",
+						entry()->name.empty() ? "gbbasic-actor.c" : Text::sanitizeFilename(entry()->name) + ".c",
 						GBBASIC_C_FILE_FILTER
 					);
 					std::string path = save.result();
@@ -2729,7 +2729,7 @@ private:
 				do {
 					pfd::save_file save(
 						ws->theme()->generic_SaveTo(),
-						entry()->name.empty() ? "gbbasic-actor.json" : entry()->name + ".json",
+						entry()->name.empty() ? "gbbasic-actor.json" : Text::sanitizeFilename(entry()->name) + ".json",
 						GBBASIC_JSON_FILE_FILTER
 					);
 					std::string path = save.result();
@@ -3507,7 +3507,7 @@ private:
 
 		pfd::save_file save(
 			ws->theme()->generic_SaveTo(),
-			entry()->name.empty() ? "gbbasic-actor.png" : entry()->name + ".png",
+			entry()->name.empty() ? "gbbasic-actor.png" : Text::sanitizeFilename(entry()->name) + ".png",
 			GBBASIC_IMAGE_FILE_FILTER
 		);
 		std::string path = save.result();

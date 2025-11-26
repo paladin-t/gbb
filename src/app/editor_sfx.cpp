@@ -1389,7 +1389,7 @@ private:
 					const std::string &name = sound(_index)->name;
 					pfd::save_file save(
 						ws->theme()->generic_SaveTo(),
-						name.empty() ? "gbbasic-sfx.json" : name + ".json",
+						name.empty() ? "gbbasic-sfx.json" : Text::sanitizeFilename(name) + ".json",
 						GBBASIC_JSON_FILE_FILTER
 					);
 					std::string path = save.result();
@@ -1749,7 +1749,7 @@ private:
 					const std::string &name = sound(_index)->name;
 					pfd::save_file save(
 						ws->theme()->generic_SaveTo(),
-						name.empty() ? "gbbasic-sfx.json" : name + ".json",
+						name.empty() ? "gbbasic-sfx.json" : Text::sanitizeFilename(name) + ".json",
 						GBBASIC_JSON_FILE_FILTER
 					);
 					std::string path = save.result();

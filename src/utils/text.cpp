@@ -9,6 +9,7 @@
 #include "encoding.h"
 #include "text.h"
 #include <bitset>
+#include <cctype>
 #include <cfloat>
 #include <iomanip>
 #include <sstream>
@@ -694,6 +695,101 @@ std::string Text::snakeToPascal(const std::string &str) {
 			} else {
 				result += (char)tolower(c);
 			}
+		}
+	}
+
+	return result;
+}
+
+std::string Text::sanitizeFilename(const std::string &str, char replacementChar) {
+	std::string result = str;
+
+	// Define illegal characters.
+	std::string illegalChars = "/\\?%*:|\"<>";
+
+#if defined GBBASIC_OS_WIN
+	illegalChars += "&$!';`";
+#elif defined GBBASIC_OS_MAC
+	// Do nothing.
+#elif defined GBBASIC_OS_LINUX
+	// Do nothing.
+#endif /* Platform macro. */
+
+	// Replace illegal characters.
+	for (char &c : result) {
+		if (illegalChars.find(c) != std::string::npos) {
+			c = replacementChar;
+		}
+	}
+
+	// Replace control characters.
+	for (char &c : result) {
+		if (std::iscntrl(static_cast<unsigned char>(c))) {
+			c = replacementChar;
+		}
+	}
+
+	// Replace reserved names.
+#if defined GBBASIC_OS_WIN
+	constexpr const char* WINDOWS_RESERVED_NAMES[] = {
+		"CON", "PRN", "AUX", "NUL",
+		"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+		"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+	};
+
+	std::string upperStr = result;
+	std::transform(upperStr.begin(), upperStr.end(), upperStr.begin(), ::toupper);
+
+	for (const char* reserved : WINDOWS_RESERVED_NAMES) {
+		if (upperStr == reserved) {
+			result = "_" + result;
+
+			break;
+		}
+
+		const size_t dotPos = upperStr.find('.');
+		if (dotPos != std::string::npos) {
+			const std::string nameOnly = upperStr.substr(0, dotPos);
+			if (nameOnly == reserved) {
+				result = "_" + result;
+
+				break;
+			}
+		}
+	}
+#endif /* Platform macro. */
+
+	// Remove if ends with dot.
+	if (!result.empty() && (result.back() == '.' || result.back() == ' ')) {
+		result.back() = replacementChar;
+	}
+
+	size_t pos = 0;
+	while ((pos = result.find("..", pos)) != std::string::npos) {
+		result.replace(pos, 2, std::string(2, replacementChar));
+		pos += 2;
+	}
+
+	// Ensure it's not empty.
+	if (result.empty()) {
+		result = "Unnamed";
+	}
+
+	// Limit the length.
+	const size_t maxLen = 255; // Safe for most operating systems.
+	if (result.length() > maxLen) {
+		const size_t lastDot = result.find_last_of('.');
+		if (lastDot != std::string::npos && lastDot > result.length() - 10) {
+			const std::string ext = result.substr(lastDot);
+			const std::string name = result.substr(0, lastDot);
+
+			const size_t keepLen = maxLen - ext.length();
+			if (keepLen > 0)
+				result = name.substr(0, keepLen) + ext;
+			else
+				result = name.substr(0, maxLen);
+		} else {
+			result = result.substr(0, maxLen);
 		}
 	}
 

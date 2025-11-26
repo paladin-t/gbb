@@ -4446,7 +4446,7 @@ private:
 				do {
 					pfd::save_file save(
 						ws->theme()->generic_SaveTo(),
-						song()->name.empty() ? "gbbasic-music.json" : song()->name + ".json",
+						song()->name.empty() ? "gbbasic-music.json" : Text::sanitizeFilename(song()->name) + ".json",
 						GBBASIC_JSON_FILE_FILTER
 					);
 					std::string path = save.result();

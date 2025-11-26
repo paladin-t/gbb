@@ -1494,7 +1494,7 @@ private:
 				do {
 					pfd::save_file save(
 						ws->theme()->generic_SaveTo(),
-						entry()->name.empty() ? "gbbasic-tiles.png" : entry()->name + ".png",
+						entry()->name.empty() ? "gbbasic-tiles.png" : Text::sanitizeFilename(entry()->name) + ".png",
 						GBBASIC_IMAGE_FILE_FILTER
 					);
 					std::string path = save.result();
@@ -2096,7 +2096,7 @@ private:
 				do {
 					pfd::save_file save(
 						ws->theme()->generic_SaveTo(),
-						entry()->name.empty() ? "gbbasic-tiles.json" : entry()->name + ".json",
+						entry()->name.empty() ? "gbbasic-tiles.json" : Text::sanitizeFilename(entry()->name) + ".json",
 						GBBASIC_JSON_FILE_FILTER
 					);
 					std::string path = save.result();
@@ -2151,7 +2151,7 @@ private:
 				do {
 					pfd::save_file save(
 						ws->theme()->generic_SaveTo(),
-						entry()->name.empty() ? "gbbasic-tiles.png" : entry()->name + ".png",
+						entry()->name.empty() ? "gbbasic-tiles.png" : Text::sanitizeFilename(entry()->name) + ".png",
 						GBBASIC_IMAGE_FILE_FILTER
 					);
 					std::string path = save.result();

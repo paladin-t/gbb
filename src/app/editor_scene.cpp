@@ -4248,7 +4248,7 @@ private:
 				do {
 					pfd::save_file save(
 						ws->theme()->generic_SaveTo(),
-						entry()->name.empty() ? "gbbasic-scene.json" : entry()->name + ".json",
+						entry()->name.empty() ? "gbbasic-scene.json" : Text::sanitizeFilename(entry()->name) + ".json",
 						GBBASIC_JSON_FILE_FILTER
 					);
 					std::string path = save.result();

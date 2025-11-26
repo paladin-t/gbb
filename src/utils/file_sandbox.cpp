@@ -1184,7 +1184,7 @@ public:
 			if (path().empty()) {
 				pfd::save_file save(
 					GBBASIC_TITLE,
-					defaultPath(),
+					Text::sanitizeFilename(defaultPath()),
 					fileSyncGetFilters(filters()),
 					confirmOverwrite ? pfd::opt::none : pfd::opt::force_overwrite
 				);
@@ -1208,7 +1208,7 @@ public:
 		if (path().empty()) {
 			pfd::save_file save(
 				GBBASIC_TITLE,
-				defaultPath(),
+				Text::sanitizeFilename(defaultPath()),
 				fileSyncGetFilters(filters()),
 				confirmOverwrite ? pfd::opt::none : pfd::opt::force_overwrite
 			);
