@@ -6264,6 +6264,7 @@ private:
 
 			for (ActorMap::value_type kv : actorMap) {
 				const int refActor = kv.first;
+				(void)refActor;
 				const IndexedActor &indexedActor = kv.second;
 				ActorAssets::Entry* actorEntry = indexedActor.entry;
 				Actor* newActor = nullptr;

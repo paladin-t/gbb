@@ -27,7 +27,7 @@
 */
 
 #ifndef WIDGETS_ABOUT_REVISION
-#	define WIDGETS_ABOUT_REVISION "r29"
+#	define WIDGETS_ABOUT_REVISION "r30"
 #endif /* WIDGETS_ABOUT_REVISION */
 
 /* ===========================================================================} */
@@ -3991,7 +3991,6 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 					TextUnformatted(_theme->windowProjectProperty_Advanced_Palettes());
 
 					SameLine();
-					const float wndWidth = GetWindowWidth();
 
 					const int n = prj->countSuperPaletteColor();
 					if (_superPaletteNames.empty()) {

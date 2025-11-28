@@ -163,9 +163,9 @@ namespace GBBASIC {
 #	define HALT_AT_PAGE_END_ENABLED 1
 #endif /* HALT_AT_PAGE_END_ENABLED */
 
-#ifndef MAP_ON_WITH_IMAGE_ENABLED 
-#	define MAP_ON_WITH_IMAGE_ENABLED  1
-#endif /* MAP_ON_WITH_IMAGE_ENABLED  */
+#ifndef TURN_MAP_ON_WITH_IMAGE_ENABLED 
+#	define TURN_MAP_ON_WITH_IMAGE_ENABLED  1
+#endif /* TURN_MAP_ON_WITH_IMAGE_ENABLED  */
 
 /**< Parser. */
 
@@ -18049,7 +18049,7 @@ public:
 					}
 
 					// Turn on the map or window layer.
-#if MAP_ON_WITH_IMAGE_ENABLED 
+#if TURN_MAP_ON_WITH_IMAGE_ENABLED 
 					do { // `MAP ON` or `WINDOW ON`.
 						// Set the stack footprint guard.
 						COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
@@ -18079,7 +18079,7 @@ public:
 						// Check the stack footprint.
 						CHECK_COUNTER(ctx, onError);
 					} while (false);
-#endif /* MAP_ON_WITH_IMAGE_ENABLED  */
+#endif /* TURN_MAP_ON_WITH_IMAGE_ENABLED  */
 				}
 
 				break;
@@ -18324,7 +18324,7 @@ public:
 					);
 
 					// Turn on the map or window layer.
-#if MAP_ON_WITH_IMAGE_ENABLED 
+#if TURN_MAP_ON_WITH_IMAGE_ENABLED 
 					do { // `MAP ON` or `WINDOW ON`.
 						// Set the stack footprint guard.
 						COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
@@ -18354,7 +18354,7 @@ public:
 						// Check the stack footprint.
 						CHECK_COUNTER(ctx, onError);
 					} while (false);
-#endif /* MAP_ON_WITH_IMAGE_ENABLED  */
+#endif /* TURN_MAP_ON_WITH_IMAGE_ENABLED  */
 				}
 
 				break;
@@ -39081,14 +39081,14 @@ private:
 			//   0x53 - 1.2MB ( 80 banks)
 			//   0x54 - 1.5MB ( 96 banks)
 			const bool cartridgeHasRtc = options.cartridgeHasRtc;
-			if (cartridgeHasRtc && cartridgeRomSize > 0x06) {
+			if (cartridgeHasRtc && cartridgeSizeCode > 0x06) {
 				const Error err("ROM overflow with RTC enabled, consider shrinking the ROM or disabling the RTC feature", false);
 				onError(err, err.format(), TextLocation::INVALID());
 
 				return bytes;
 			}
 			if (resized) {
-				const std::string romSizeStr = Text::toHex(cartridgeRomSize, 2, '0', true);
+				const std::string romSizeStr = Text::toHex(cartridgeSizeCode, 2, '0', true);
 				header.setRomSizeCode(romSizeStr);
 			}
 
