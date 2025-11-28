@@ -1017,7 +1017,7 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			prj->addGlobalFontPages(fontConfigPath, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2));
 		}
 		{
-			prj->touchPalette();
+			const PaletteAssets &paletteData = prj->touchPalette();
 
 			prj->activeFontIndex(0);
 
@@ -1026,6 +1026,8 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			prj->isMinorCodeEditorEnabled(false);
 			prj->activeMinorCodeIndex(-1);
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
+
+			prj->synchronizeSuperPalettes(paletteData);
 		}
 		prj->hasDirtyInformation(true);
 		prj->hasDirtyAsset(true);
@@ -1818,6 +1820,7 @@ promise::Promise Operations::fileAdd(Window* wnd, Renderer* rnd, Workspace* ws, 
 
 			Project::Ptr prj(new Project(wnd, rnd, ws));
 			if (!prj->open(path)) {
+				// Cannot resolve the title due to failed to open the project.
 				prj->title("Missing...");
 			}
 
