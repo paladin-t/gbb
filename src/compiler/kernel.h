@@ -77,11 +77,12 @@ public:
 		std::string type;
 		std::string id;
 		int value = 0;
+		std::string syntax;
 		Localization::Dictionary name;
 		int animation = -1;
 
 		Behaviour();
-		Behaviour(const std::string &y, const std::string &id_, int val, const Localization::Dictionary &dict, int anim);
+		Behaviour(const std::string &y, const std::string &id_, int val, const std::string &syn, const Localization::Dictionary &dict, int anim);
 	};
 
 public:
@@ -97,11 +98,11 @@ public:
 	GBBASIC_PROPERTY(std::string, memoryStackSize)
 	GBBASIC_PROPERTY(int, objectsMaxActorCount)
 	GBBASIC_PROPERTY(int, objectsMaxTriggerCount)
-	GBBASIC_PROPERTY(Text::Array, identifiers)
 	GBBASIC_PROPERTY(Snippet::Array, snippets)
 	GBBASIC_PROPERTY(Animations::Array, animations)
-	GBBASIC_PROPERTY(Behaviour::Array, behaviours)
 	GBBASIC_PROPERTY(int, projectileAnimationIndex)
+	GBBASIC_PROPERTY(Behaviour::Array, behaviours)
+	// `properties` and `natives` are not stored in this `Kernel` structure.
 
 public:
 	GBBASIC_CLASS_TYPE('K', 'R', 'N', 'L')

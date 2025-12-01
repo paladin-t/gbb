@@ -897,7 +897,7 @@ public:
 	void toggleDocument(const char* path /* nullable */);
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
-	void createMinorCodeEditor(const Text::Array &ids);
+	void createMinorCodeEditor(void);
 	void destroyMinorCodeEditor(void);
 	void syncMajorCodeEditorDataToMinor(Window* wnd, Renderer* rnd);
 	void syncMinorCodeEditorDataToMajor(Window* wnd, Renderer* rnd);

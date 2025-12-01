@@ -19,7 +19,6 @@
     "mac_actor_count": 21,
     "mac_trigger_count": 31
   },
-  "identifiers": [ ],
   "snippets": [
     {
       "type": "object",
@@ -172,116 +171,6 @@
       }
     }
   ],
-  "behaviours": [
-    {
-      "type": "none",
-      "id": "none",
-      "value": "0x00",
-      "name": {
-        "english": "None"
-      },
-      "animation": "none"
-    },
-    {
-      "type": "player",
-      "id": "plpl",
-      "value": "0x01",
-      "name": {
-        "english": "Platformer Player"
-      },
-      "animation": "platformer"
-    },
-    {
-      "type": "npc",
-      "id": "plmv",
-      "value": "0x02",
-      "name": {
-        "english": "Platformer Move"
-      },
-      "animation": "platformer"
-    },
-    {
-      "type": "npc",
-      "id": "plid",
-      "value": "0x03",
-      "name": {
-        "english": "Platformer Idle"
-      },
-      "animation": "platformer"
-    },
-    {
-      "type": "player",
-      "id": "tdpl",
-      "value": "0x05",
-      "name": {
-        "english": "Topdown Player"
-      },
-      "animation": "topdown"
-    },
-    {
-      "type": "player",
-      "id": "tdrp",
-      "value": "0x45",
-      "name": {
-        "english": "Topdown Rigid Player"
-      },
-      "animation": "topdown"
-    },
-    {
-      "type": "npc",
-      "id": "tdmv",
-      "value": "0x07",
-      "name": {
-        "english": "Topdown Move"
-      },
-      "animation": "topdown"
-    },
-    {
-      "type": "npc",
-      "id": "tdrm",
-      "value": "0x47",
-      "name": {
-        "english": "Topdown Rigid Move"
-      },
-      "animation": "topdown"
-    },
-    {
-      "type": "npc",
-      "id": "tdid",
-      "value": "0x08",
-      "name": {
-        "english": "Topdown Idle"
-      },
-      "animation": "topdown"
-    },
-    {
-      "type": "player",
-      "id": "pcpl",
-      "value": "0x09",
-      "name": {
-        "english": "Point&Click Player"
-      },
-      "animation": "pointandclick"
-    },
-    {
-      "type": "player",
-      "id": "pcpm",
-      "value": "0x8A",
-      "name": {
-        "english": "Point&Click Player with Mouse"
-      },
-      "animation": "pointandclick"
-    },
-    {
-      "type": "player",
-      "id": "pcpt",
-      "value": "0x8B",
-      "name": {
-        "english": "Point&Click Player with Touch"
-      },
-      "animation": "pointandclick"
-    }
-  ],
   "animations": [
     {
       "type": "none",
@@ -428,5 +317,129 @@
         }
       ]
     }
-  ]
+  ],
+  "behaviours": [
+    {
+      "type": "none",
+      "id": "none",
+      "value": "0x00",
+      "syntax": "NONE_BEHAVIOUR",
+      "name": {
+        "english": "None"
+      },
+      "animation": "none"
+    },
+    {
+      "type": "player",
+      "id": "plpl",
+      "value": "0x01",
+      "syntax": "PLATFORMER_PLAYER_BEHAVIOUR",
+      "name": {
+        "english": "Platformer Player"
+      },
+      "animation": "platformer"
+    },
+    {
+      "type": "npc",
+      "id": "plmv",
+      "value": "0x02",
+      "syntax": "PLATFORMER_MOVE_BEHAVIOUR",
+      "name": {
+        "english": "Platformer Move"
+      },
+      "animation": "platformer"
+    },
+    {
+      "type": "npc",
+      "id": "plid",
+      "value": "0x03",
+      "syntax": "PLATFORMER_IDLE_BEHAVIOUR",
+      "name": {
+        "english": "Platformer Idle"
+      },
+      "animation": "platformer"
+    },
+    {
+      "type": "player",
+      "id": "tdpl",
+      "value": "0x05",
+      "syntax": "TOPDOWN_PLAYER_BEHAVIOUR",
+      "name": {
+        "english": "Topdown Player"
+      },
+      "animation": "topdown"
+    },
+    {
+      "type": "player",
+      "id": "tdrp",
+      "value": "0x45",
+      "syntax": null,
+      "name": {
+        "english": "Topdown Rigid Player"
+      },
+      "animation": "topdown"
+    },
+    {
+      "type": "npc",
+      "id": "tdmv",
+      "value": "0x07",
+      "syntax": "TOPDOWN_MOVE_BEHAVIOUR",
+      "name": {
+        "english": "Topdown Move"
+      },
+      "animation": "topdown"
+    },
+    {
+      "type": "npc",
+      "id": "tdrm",
+      "value": "0x47",
+      "syntax": null,
+      "name": {
+        "english": "Topdown Rigid Move"
+      },
+      "animation": "topdown"
+    },
+    {
+      "type": "npc",
+      "id": "tdid",
+      "value": "0x08",
+      "syntax": "TOPDOWN_IDLE_BEHAVIOUR",
+      "name": {
+        "english": "Topdown Idle"
+      },
+      "animation": "topdown"
+    },
+    {
+      "type": "player",
+      "id": "pcpl",
+      "value": "0x09",
+      "syntax": "POINTNCLICK_PLAYER_BEHAVIOUR",
+      "name": {
+        "english": "Point&Click Player"
+      },
+      "animation": "pointandclick"
+    },
+    {
+      "type": "player",
+      "id": "pcpm",
+      "value": "0x8A",
+      "syntax": "POINTNCLICK_PLAYER_WITH_MOUSE_BEHAVIOUR",
+      "name": {
+        "english": "Point&Click Player with Mouse"
+      },
+      "animation": "pointandclick"
+    },
+    {
+      "type": "player",
+      "id": "pcpt",
+      "value": "0x8B",
+      "syntax": "POINTNCLICK_PLAYER_WITH_TOUCH_BEHAVIOUR",
+      "name": {
+        "english": "Point&Click Player with Touch"
+      },
+      "animation": "pointandclick"
+    }
+  ],
+  "properties": [ ],
+  "natives": [ ]
 }

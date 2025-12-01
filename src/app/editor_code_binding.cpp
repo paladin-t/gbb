@@ -73,12 +73,10 @@ private:
 		}
 	} _index;
 	struct {
-		Text::Array identifiers;
 		unsigned revision = 0;
 		bool filled = false;
 
 		void clear(bool clearRevision) {
-			identifiers.clear();
 			if (clearRevision)
 				revision = 0;
 			filled = false;
@@ -102,7 +100,6 @@ public:
 		ChangedHandler changed,
 		const std::string &title,
 		Project* prj,
-		const Text::Array &ids,
 		const std::string &index,
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel, const GotoHandler &goto_,
 		const char* confirmTxt, const char* cancelTxt, const char* gotoTxt
@@ -114,12 +111,8 @@ public:
 		_project(prj),
 		_confirmedHandler(confirm), _canceledHandler(cancel), _gotoHandler(goto_)
 	{
-		SetLanguageDefinition(EditorCodeLanguageDefinition::languageDefinition());
-
-		for (const std::string &id : ids)
-			addIdentifier(id.c_str());
-
-		_inCodeDefinitions.identifiers = ids;
+		const GBBASIC::Kernel::Ptr &krnl = ws->activeKernel();
+		SetLanguageDefinition(EditorCodeLanguageDefinition::languageDefinition(krnl ? krnl->path().c_str() : nullptr));
 
 		if (confirmTxt)
 			_confirmText = confirmTxt;
@@ -622,10 +615,8 @@ private:
 		_inCodeDefinitions.revision = revision;
 
 		// Initialize with default definition.
-		SetLanguageDefinition(EditorCodeLanguageDefinition::languageDefinition());
-
-		for (const std::string &id : _inCodeDefinitions.identifiers)
-			addIdentifier(id.c_str());
+		const GBBASIC::Kernel::Ptr &krnl = ws->activeKernel();
+		SetLanguageDefinition(EditorCodeLanguageDefinition::languageDefinition(krnl ? krnl->path().c_str() : nullptr));
 
 		// Initialize with macros.
 		Text::Set added;
@@ -671,7 +662,6 @@ EditorCodeBinding* EditorCodeBinding::create(
 	ChangedHandler changed,
 	const std::string &title,
 	class Project* prj,
-	const Text::Array &ids,
 	const std::string &index,
 	const ConfirmedHandler &confirm, const CanceledHandler &cancel, const GotoHandler &goto_,
 	const char* confirmTxt, const char* cancelTxt, const char* gotoTxt
@@ -682,7 +672,6 @@ EditorCodeBinding* EditorCodeBinding::create(
 		changed,
 		title,
 		prj,
-		ids,
 		index,
 		confirm, cancel, goto_,
 		confirmTxt, cancelTxt, gotoTxt

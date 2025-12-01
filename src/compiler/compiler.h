@@ -885,7 +885,7 @@ bool link(Program &program, const Options &options);
 /**
  * @brief Traverses all identifiers.
  */
-void identifiers(IdentifierHandler handler);
+void identifiers(const char* kernelConfigPath, IdentifierHandler handler);
 
 }
 

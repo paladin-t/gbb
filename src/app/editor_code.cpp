@@ -84,14 +84,10 @@ private:
 		}
 	} _cache;
 	struct {
-		Text::Array identifiers;
-
 		unsigned revision = 0;
 		bool filled = false;
 
 		void clear(bool clearRevision) {
-			// Do not clear `identifiers`.
-
 			if (clearRevision)
 				revision = 0;
 			filled = false;
@@ -193,15 +189,11 @@ public:
 	static int refCount;
 
 public:
-	EditorCodeImpl(const Text::Array &ids, bool isMajor) :
+	EditorCodeImpl(class Workspace* ws, bool isMajor) :
 		_isMajor(isMajor)
 	{
-		SetLanguageDefinition(EditorCodeLanguageDefinition::languageDefinition());
-
-		for (const std::string &id : ids)
-			addIdentifier(id.c_str());
-
-		_inCodeDefinitions.identifiers = ids;
+		const GBBASIC::Kernel::Ptr &krnl = ws->activeKernel();
+		SetLanguageDefinition(EditorCodeLanguageDefinition::languageDefinition(krnl ? krnl->path().c_str() : nullptr));
 	}
 	virtual ~EditorCodeImpl() override {
 		close(_index);
@@ -756,8 +748,11 @@ public:
 			ClearErrorMarkers();
 
 			return Variant(true);
-		case CLEAR_LANGUAGE_DEFINITION:
-			_inCodeDefinitions.clear(false);
+		case CLEAR_LANGUAGE_DEFINITION: {
+				const bool clearRevision = unpack<bool>(argc, argv, 0, false);
+
+				_inCodeDefinitions.clear(clearRevision);
+			}
 
 			return Variant(true);
 		case UPDATE_INDEX: {
@@ -1624,10 +1619,8 @@ private:
 		_inCodeDefinitions.revision = revision;
 
 		// Initialize with default definition.
-		SetLanguageDefinition(EditorCodeLanguageDefinition::languageDefinition());
-
-		for (const std::string &id : _inCodeDefinitions.identifiers)
-			addIdentifier(id.c_str());
+		const GBBASIC::Kernel::Ptr &krnl = ws->activeKernel();
+		SetLanguageDefinition(EditorCodeLanguageDefinition::languageDefinition(krnl ? krnl->path().c_str() : nullptr));
 
 		// Initialize with macros.
 		Text::Set added;
@@ -1716,8 +1709,8 @@ EditorCodeImpl::Debounce EditorCodeImpl::_debounce = EditorCodeImpl::Debounce(ST
 
 int EditorCodeImpl::refCount = 0;
 
-EditorCode* EditorCode::create(const Text::Array &ids, bool isMajor) {
-	EditorCodeImpl* result = new EditorCodeImpl(ids, isMajor);
+EditorCode* EditorCode::create(class Workspace* ws, bool isMajor) {
+	EditorCodeImpl* result = new EditorCodeImpl(ws, isMajor);
 	result->initialize(EditorCodeImpl::refCount++);
 
 	return result;
