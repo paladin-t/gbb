@@ -965,7 +965,10 @@ public:
 	 * @brief Compiles for temporary usage, i.e. audio processing.
 	 */
 	static Bytes::Ptr compile(
-		const std::string &romPath, const std::string &symPath, const std::string &symbols, const std::string &aliasesPath, const std::string &aliases,
+		const std::string &configPath, const std::string &config, 
+		const std::string &romPath,
+		const std::string &symPath, const std::string &symbols,
+		const std::string &aliasesPath, const std::string &aliases,
 		const std::string &title, AssetsBundle::Ptr assets,
 		int bootstrapBank,
 		CompilerOutputHandler print_, CompilerOutputHandler warn_, CompilerOutputHandler error_

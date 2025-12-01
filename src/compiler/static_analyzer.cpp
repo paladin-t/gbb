@@ -178,6 +178,7 @@ private:
 		program.assets = assets;
 
 		// Initialize the compiler options.
+		options.config = krnl->path();
 		options.rom = rom;
 		options.sym = sym;
 		options.aliases = aliases;

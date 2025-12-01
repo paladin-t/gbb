@@ -234,7 +234,12 @@ public:
 	 * @param[out] symTxt
 	 * @param[out] aliasesTxt
 	 */
-	bool load(Dictionary &dict, const std::string &symPath, std::string &symTxt, const std::string &aliasesPath, std::string &aliasesTxt, ErrorHandler onError);
+	bool load(
+		Dictionary &dict,
+		const std::string &symPath, std::string &symTxt,
+		const std::string &aliasesPath, std::string &aliasesTxt,
+		ErrorHandler onError
+	);
 
 	bool parseSymbols(const std::string &symbols);
 	bool parseAliases(const std::string &aliases);

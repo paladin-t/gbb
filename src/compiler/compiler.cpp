@@ -39168,6 +39168,7 @@ namespace GBBASIC {
 bool load(Program &program, Options &options) {
 	// Prepare.
 	const std::string &src              = options.input;
+	const std::string &config           = options.config;
 	const std::string &rom              = options.rom;
 	const std::string &sym              = options.sym;
 	const std::string &aliases          = options.aliases;
@@ -39236,6 +39237,47 @@ bool load(Program &program, Options &options) {
 		onPrint("Succeeded to load the font.");
 	} while (false);
 
+	// Load the configuration.
+	do {
+		// Prepare.
+		std::string path = config;
+		if (path.empty()) {
+			path = rom;
+			if (Text::endsWith(path, "." GBBASIC_CLASSIC_ROM_EXT, true))
+				path = path.substr(0, path.length() - 3);
+			else if (Text::endsWith(path, "." GBBASIC_COLORED_ROM_EXT, true))
+				path = path.substr(0, path.length() - 4);
+			path += ".json";
+			if (!Path::fileExists(path.c_str()))
+				path.clear();
+		}
+		if (path.empty())
+			break;
+		if (!Path::fileExists(path.c_str()))
+			break;
+
+		// Read the config file.
+		File::Ptr file(File::create());
+		if (!file->open(path.c_str(), Stream::READ)) {
+			onError("Cannot open the config file.", true, -1, -1, -1);
+			++errors;
+
+			break;
+		}
+		std::string config;
+		if (!file->readString(config)) {
+			file->close();
+			onError("Failed to read the config.", true, -1, -1, -1);
+			++errors;
+
+			break;
+		}
+		file->close();
+
+		program.config = config;
+		onPrint("Succeeded to load the config.");
+	} while (false);
+
 	// Load the symbols.
 	do {
 		// Prepare.
@@ -39277,6 +39319,7 @@ bool load(Program &program, Options &options) {
 		onPrint("Succeeded to load the symbols.");
 	} while (false);
 
+	// Load the aliases.
 	do {
 		// Prepare.
 		std::string path = aliases;

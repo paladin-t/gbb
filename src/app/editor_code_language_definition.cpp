@@ -357,6 +357,8 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 				ImGui::CodeEditor::Identifier id;
 				id.Declaration = "Builtin";
 				langDef.PreprocIds.insert(std::make_pair(key_, id));
+			} else {
+				// Do nothing.
 			}
 		}
 	);

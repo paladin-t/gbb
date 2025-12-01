@@ -131,6 +131,7 @@ bool Kernel::open(const char* path_, const char* menu) {
 		for (int i = 0; i < n; ++i) {
 			if (!Jpath::get(doc, tmp, "identifiers", i))
 				return false;
+
 			identifiers_.push_back(tmp);
 		}
 	}

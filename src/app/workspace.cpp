@@ -4946,6 +4946,7 @@ void Workspace::compile(
 		const bool commandlineOnly = params->commandlineOnly;
 		const bool doNotQuit = params->doNotQuit;
 
+		std::string config;
 		std::string rom;
 		std::string sym;
 		std::string aliases;
@@ -4953,6 +4954,7 @@ void Workspace::compile(
 		std::string heapSize;
 		std::string stackSize;
 		if (kernel) {
+			config = kernel->path();
 			std::string dir;
 			Path::split(kernel->path(), nullptr, nullptr, &dir);
 			rom = Path::combine(dir.c_str(), kernel->kernelRom().c_str());
@@ -5022,6 +5024,7 @@ void Workspace::compile(
 		Text::Dictionary::const_iterator dstOpt = arguments.find(COMPILER_OUTPUT_OPTION_KEY);
 		if (dstOpt != arguments.end())
 			options.output = dstOpt->second;
+		options.config = config;
 		Text::Dictionary::const_iterator vmOpt = arguments.find(COMPILER_ROM_OPTION_KEY);
 		if (vmOpt != arguments.end())
 			options.rom = vmOpt->second;
@@ -5478,7 +5481,10 @@ void Workspace::compile(
 }
 
 Bytes::Ptr Workspace::compile(
-	const std::string &romPath, const std::string &symPath, const std::string &symbols, const std::string &aliasesPath, const std::string &aliases,
+	const std::string &configPath, const std::string &config, 
+	const std::string &romPath,
+	const std::string &symPath, const std::string &symbols,
+	const std::string &aliasesPath, const std::string &aliases,
 	const std::string &title, AssetsBundle::Ptr assets,
 	int bootstrapBank,
 	CompilerOutputHandler print_, CompilerOutputHandler warn_, CompilerOutputHandler error_
@@ -5486,12 +5492,14 @@ Bytes::Ptr Workspace::compile(
 	GBBASIC::Program program;
 	GBBASIC::Options options;
 
+	program.config = config;
 	program.symbols = symbols;
 	program.aliases = aliases;
 	program.assets = assets;
 
 	bool resIsOk = true;
 	CompilingErrors errors;
+	options.config = configPath;
 	options.rom = romPath;
 	options.sym = symPath;
 	options.aliases = aliasesPath;
