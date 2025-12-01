@@ -390,10 +390,10 @@ promise::Promise Operations::popupWait(Window*, Renderer*, Workspace* ws) {
 		);
 }
 
-promise::Promise Operations::popupStarterKits(Window*, Renderer*, Workspace* ws, const char* template_, const char* content, const char* default_, unsigned flags) {
+promise::Promise Operations::popupProjectCreating(Window*, Renderer*, Workspace* ws, const char* template_, const char* content, const char* default_, unsigned flags) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
-			ImGui::StarterKitsPopupBox::ConfirmedHandler confirm(
+			ImGui::ProjectCreatingPopupBox::ConfirmedHandler confirm(
 				[ws, df] (int idx, const char* name) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
@@ -401,7 +401,7 @@ promise::Promise Operations::popupStarterKits(Window*, Renderer*, Workspace* ws,
 				},
 				nullptr
 			);
-			ImGui::StarterKitsPopupBox::CanceledHandler cancel(
+			ImGui::ProjectCreatingPopupBox::CanceledHandler cancel(
 				[ws, df] (void) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
@@ -409,7 +409,7 @@ promise::Promise Operations::popupStarterKits(Window*, Renderer*, Workspace* ws,
 				},
 				nullptr
 			);
-			ws->starterKitsPopupBox(
+			ws->projectCreatingPopupBox(
 				template_ ? template_ : ws->theme()->dialogStarterKits_StarterKit().c_str(),
 				content ? content : ws->theme()->dialogStarterKits_ProjectName().c_str(),
 				default_ ? default_ : "", flags,
@@ -420,13 +420,13 @@ promise::Promise Operations::popupStarterKits(Window*, Renderer*, Workspace* ws,
 	);
 }
 
-promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* ws, AssetsBundle::Categories category) {
+promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspace* ws, AssetsBundle::Categories category) {
 	typedef std::map<int, int> Changing;
 
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
-			ImGui::SortAssetsPopupBox::ConfirmedHandler confirm(
-				[ws, df] (ImGui::SortAssetsPopupBox::Orders orders) -> void {
+			ImGui::AssetsSortingPopupBox::ConfirmedHandler confirm(
+				[ws, df] (ImGui::AssetsSortingPopupBox::Orders orders) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
 					Project::Ptr &prj = ws->currentProject();
@@ -438,7 +438,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::FONT];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::FONT];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -465,7 +465,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)Workspace::Categories::CODE];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)Workspace::Categories::CODE];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -493,7 +493,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::TILES];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::TILES];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -534,7 +534,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::MAP];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::MAP];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -575,7 +575,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::MUSIC];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::MUSIC];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -602,7 +602,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::SFX];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::SFX];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -635,7 +635,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::ACTOR];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::ACTOR];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -691,7 +691,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::SCENE];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::SCENE];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -722,7 +722,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 				},
 				nullptr
 			);
-			ImGui::SortAssetsPopupBox::CanceledHandler cancel(
+			ImGui::AssetsSortingPopupBox::CanceledHandler cancel(
 				[ws, df] (void) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
@@ -730,7 +730,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 				},
 				nullptr
 			);
-			ws->sortAssetsPopupBox(
+			ws->assetsSortingPopupBox(
 				rnd,
 				category,
 				confirm,
@@ -1064,7 +1064,7 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			fileClose(wnd, rnd, ws)
 				.then(
 					[wnd, rnd, ws, next, df] (bool /* ok */) -> promise::Promise {
-						return popupStarterKits(wnd, rnd, ws, ws->theme()->dialogStarterKits_StarterKit().c_str(), ws->theme()->dialogStarterKits_ProjectName().c_str(), GBBASIC_NONAME_PROJECT_NAME, ImGuiInputTextFlags_None)
+						return popupProjectCreating(wnd, rnd, ws, ws->theme()->dialogStarterKits_StarterKit().c_str(), ws->theme()->dialogStarterKits_ProjectName().c_str(), GBBASIC_NONAME_PROJECT_NAME, ImGuiInputTextFlags_None)
 							.then(
 								[ws, next, df] (int idx, const char* name) -> promise::Promise {
 									WORKSPACE_AUTO_CLOSE_POPUP(ws)
@@ -2884,7 +2884,7 @@ promise::Promise Operations::editSortAssets(Window* wnd, Renderer* rnd, Workspac
 						if (!ok)
 							return never(wnd, rnd, ws);
 
-						return popupSortAssets(wnd, rnd, ws, category)
+						return popupAssetsSorting(wnd, rnd, ws, category)
 							.then(
 								[ws, df] (bool ok) -> void {
 									WORKSPACE_AUTO_CLOSE_POPUP(ws)

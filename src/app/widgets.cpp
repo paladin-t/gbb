@@ -613,7 +613,7 @@ void InputPopupBox::update(Workspace*) {
 	}
 }
 
-StarterKitsPopupBox::StarterKitsPopupBox(
+ProjectCreatingPopupBox::ProjectCreatingPopupBox(
 	Theme* theme,
 	const std::string &title,
 	const std::string &template_,
@@ -635,10 +635,10 @@ StarterKitsPopupBox::StarterKitsPopupBox(
 		_cancelText = cancelTxt;
 }
 
-StarterKitsPopupBox::~StarterKitsPopupBox() {
+ProjectCreatingPopupBox::~ProjectCreatingPopupBox() {
 }
 
-void StarterKitsPopupBox::update(Workspace* ws) {
+void ProjectCreatingPopupBox::update(Workspace* ws) {
 	struct Data {
 		Theme* theme = nullptr;
 		const EntryWithPath::Array* entries = nullptr;
@@ -773,7 +773,7 @@ void StarterKitsPopupBox::update(Workspace* ws) {
 	}
 }
 
-SortAssetsPopupBox::SortAssetsPopupBox(
+AssetsSortingPopupBox::AssetsSortingPopupBox(
 	Renderer* rnd,
 	Theme* theme,
 	const std::string &title,
@@ -812,10 +812,10 @@ SortAssetsPopupBox::SortAssetsPopupBox(
 		_cancelText = cancelTxt;
 }
 
-SortAssetsPopupBox::~SortAssetsPopupBox() {
+AssetsSortingPopupBox::~AssetsSortingPopupBox() {
 }
 
-void SortAssetsPopupBox::update(Workspace* ws) {
+void AssetsSortingPopupBox::update(Workspace* ws) {
 	ImGuiIO &io = GetIO();
 	ImGuiStyle &style = GetStyle();
 

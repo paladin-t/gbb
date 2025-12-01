@@ -2956,22 +2956,22 @@ void Workspace::inputPopupBox(
 	);
 }
 
-void Workspace::starterKitsPopupBox(
+void Workspace::projectCreatingPopupBox(
 	const std::string &template_,
 	const std::string &content,
 	const std::string &default_, unsigned flags,
-	const ImGui::StarterKitsPopupBox::ConfirmedHandler &confirm_,
-	const ImGui::StarterKitsPopupBox::CanceledHandler &cancel
+	const ImGui::ProjectCreatingPopupBox::ConfirmedHandler &confirm_,
+	const ImGui::ProjectCreatingPopupBox::CanceledHandler &cancel
 ) {
 	const char* btnConfirm = nullptr;
 	const char* btnCancel = nullptr;
 
-	ImGui::StarterKitsPopupBox::ConfirmedHandler confirm = confirm_;
+	ImGui::ProjectCreatingPopupBox::ConfirmedHandler confirm = confirm_;
 
 	btnConfirm = theme()->generic_Ok().c_str();
 	btnCancel = theme()->generic_Cancel().c_str();
 	if (confirm_.empty()) {
-		confirm = ImGui::StarterKitsPopupBox::ConfirmedHandler(
+		confirm = ImGui::ProjectCreatingPopupBox::ConfirmedHandler(
 			[&] (int, const char*) -> void {
 				popupBox(nullptr);
 			},
@@ -2981,7 +2981,7 @@ void Workspace::starterKitsPopupBox(
 
 	popupBox(
 		ImGui::PopupBox::Ptr(
-			new ImGui::StarterKitsPopupBox(
+			new ImGui::ProjectCreatingPopupBox(
 				theme(),
 				GBBASIC_TITLE,
 				template_,
@@ -2993,24 +2993,24 @@ void Workspace::starterKitsPopupBox(
 	);
 }
 
-void Workspace::sortAssetsPopupBox(
+void Workspace::assetsSortingPopupBox(
 	Renderer* rnd,
 	AssetsBundle::Categories category,
-	const ImGui::SortAssetsPopupBox::ConfirmedHandler &confirm_,
-	const ImGui::SortAssetsPopupBox::CanceledHandler &cancel
+	const ImGui::AssetsSortingPopupBox::ConfirmedHandler &confirm_,
+	const ImGui::AssetsSortingPopupBox::CanceledHandler &cancel
 ) {
 	Project::Ptr &prj = currentProject();
 
 	const char* btnConfirm = nullptr;
 	const char* btnCancel = nullptr;
 
-	ImGui::SortAssetsPopupBox::ConfirmedHandler confirm = confirm_;
+	ImGui::AssetsSortingPopupBox::ConfirmedHandler confirm = confirm_;
 
 	btnConfirm = theme()->generic_Ok().c_str();
 	btnCancel = theme()->generic_Cancel().c_str();
 	if (confirm_.empty()) {
-		confirm = ImGui::SortAssetsPopupBox::ConfirmedHandler(
-			[&] (ImGui::SortAssetsPopupBox::Orders) -> void {
+		confirm = ImGui::AssetsSortingPopupBox::ConfirmedHandler(
+			[&] (ImGui::AssetsSortingPopupBox::Orders) -> void {
 				popupBox(nullptr);
 			},
 			nullptr
@@ -3019,7 +3019,7 @@ void Workspace::sortAssetsPopupBox(
 
 	popupBox(
 		ImGui::PopupBox::Ptr(
-			new ImGui::SortAssetsPopupBox(
+			new ImGui::AssetsSortingPopupBox(
 				rnd,
 				theme(),
 				GBBASIC_TITLE,

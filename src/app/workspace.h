@@ -756,18 +756,18 @@ public:
 		const ImGui::InputPopupBox::ConfirmedHandler &confirm /* nullable */,
 		const ImGui::InputPopupBox::CanceledHandler &cancel /* nullable */
 	);
-	void starterKitsPopupBox(
+	void projectCreatingPopupBox(
 		const std::string &template_,
 		const std::string &content,
 		const std::string &default_, unsigned flags,
-		const ImGui::StarterKitsPopupBox::ConfirmedHandler &confirm /* nullable */,
-		const ImGui::StarterKitsPopupBox::CanceledHandler &cancel /* nullable */
+		const ImGui::ProjectCreatingPopupBox::ConfirmedHandler &confirm /* nullable */,
+		const ImGui::ProjectCreatingPopupBox::CanceledHandler &cancel /* nullable */
 	);
-	void sortAssetsPopupBox(
+	void assetsSortingPopupBox(
 		Renderer* rnd,
 		AssetsBundle::Categories category,
-		const ImGui::SortAssetsPopupBox::ConfirmedHandler &confirm /* nullable */,
-		const ImGui::SortAssetsPopupBox::CanceledHandler &cancel /* nullable */
+		const ImGui::AssetsSortingPopupBox::ConfirmedHandler &confirm /* nullable */,
+		const ImGui::AssetsSortingPopupBox::CanceledHandler &cancel /* nullable */
 	);
 	void searchPopupBox(
 		const std::string &content,

@@ -307,7 +307,7 @@ public:
 	virtual void update(Workspace* ws) override;
 };
 
-class StarterKitsPopupBox : public PopupBox {
+class ProjectCreatingPopupBox : public PopupBox {
 public:
 	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, int, const char*> {
 		using Handler::Handler;
@@ -334,7 +334,7 @@ private:
 	Initializer _init;
 
 public:
-	StarterKitsPopupBox(
+	ProjectCreatingPopupBox(
 		Theme* theme,
 		const std::string &title,
 		const std::string &template_,
@@ -342,12 +342,12 @@ public:
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */
 	);
-	virtual ~StarterKitsPopupBox() override;
+	virtual ~ProjectCreatingPopupBox() override;
 
 	virtual void update(Workspace* ws) override;
 };
 
-class SortAssetsPopupBox : public PopupBox {
+class AssetsSortingPopupBox : public PopupBox {
 public:
 	typedef std::vector<int> Order;
 	typedef std::map<unsigned, Order> Orders;
@@ -376,7 +376,7 @@ private:
 	Initializer _init;
 
 public:
-	SortAssetsPopupBox(
+	AssetsSortingPopupBox(
 		Renderer* rnd,
 		Theme* theme,
 		const std::string &title,
@@ -385,7 +385,7 @@ public:
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */
 	);
-	virtual ~SortAssetsPopupBox() override;
+	virtual ~AssetsSortingPopupBox() override;
 
 	virtual void update(Workspace* ws) override;
 };

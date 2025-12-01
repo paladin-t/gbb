@@ -35,8 +35,8 @@ public:
 	static promise::Promise popupWait(Window* wnd, Renderer* rnd, Workspace* ws, const char* content);
 	static promise::Promise popupWait(Window* wnd, Renderer* rnd, Workspace* ws, bool dim, const char* content, bool instantly, bool exclusive = false);
 	static promise::Promise popupWait(Window* wnd, Renderer* rnd, Workspace* ws);
-	static promise::Promise popupStarterKits(Window* wnd, Renderer* rnd, Workspace* ws, const char* template_, const char* content, const char* default_ = nullptr, unsigned flags = 0);
-	static promise::Promise popupSortAssets(Window* wnd, Renderer* rnd, Workspace* ws, AssetsBundle::Categories category);
+	static promise::Promise popupProjectCreating(Window* wnd, Renderer* rnd, Workspace* ws, const char* template_, const char* content, const char* default_ = nullptr, unsigned flags = 0);
+	static promise::Promise popupAssetsSorting(Window* wnd, Renderer* rnd, Workspace* ws, AssetsBundle::Categories category);
 	static promise::Promise popupExternalFontResolver(Window* wnd, Renderer* rnd, Workspace* ws, const char* content);
 	static promise::Promise popupExternalMapResolver(Window* wnd, Renderer* rnd, Workspace* ws, const char* content);
 	static promise::Promise popupExternalSceneResolver(Window* wnd, Renderer* rnd, Workspace* ws);
