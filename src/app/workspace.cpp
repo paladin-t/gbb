@@ -5662,8 +5662,6 @@ bool Workspace::loadConfig(Window*, Renderer*, const rapidjson::Document &doc) {
 	Jpath::get(doc, settings().applicationFirstRun, "application", "first_run");
 	Jpath::get(doc, settings().applicationLoadedExampleRevision, "application", "loaded_example_revision");
 
-	Jpath::get(doc, settings().kernelActiveIndex, "kernel", "active_index");
-
 	Jpath::get(doc, settings().exporterSettings, "exporter", "settings");
 	Jpath::get(doc, settings().exporterArgs, "exporter", "args");
 
@@ -5763,8 +5761,6 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 	Jpath::set(doc, doc, settings().applicationFirstRun, "application", "first_run");
 	Jpath::set(doc, doc, settings().applicationLoadedExampleRevision, "application", "loaded_example_revision");
 
-	Jpath::set(doc, doc, settings().kernelActiveIndex, "kernel", "active_index");
-
 	Jpath::set(doc, doc, settings().exporterSettings, "exporter", "settings");
 	Jpath::set(doc, doc, settings().exporterArgs, "exporter", "args");
 
@@ -5847,8 +5843,8 @@ void Workspace::loadKernels(void) {
 			if (!krnl->open(path.c_str(), theme()->menu_Kernels().c_str()))
 				continue; // Not a kernel.
 
-			if (name == "default")
-				kernels().insert(kernels().begin(), krnl);
+			if (krnl->id() == "default")
+				kernels().insert(kernels().begin(), krnl); // Default kernel is always in the front.
 			else
 				kernels().push_back(krnl);
 
@@ -5883,8 +5879,7 @@ void Workspace::loadKernels(void) {
 			krnl->behaviours(defaultKrnl->behaviours());
 	}
 
-	const int index = Math::clamp(settings().kernelActiveIndex, 0, (int)kernels().size());
-	activeKernelIndex(index);
+	activeKernelIndex(0);
 
 	const std::string src = getSourceCodePath(nullptr);
 	hasKernelSourceCode(Path::fileExists(src.c_str()));

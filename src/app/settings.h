@@ -45,8 +45,6 @@ struct Settings {
 	bool applicationFirstRun = true;
 	unsigned applicationLoadedExampleRevision = 0;
 
-	int kernelActiveIndex = -1;
-
 	std::string exporterSettings;
 	std::string exporterArgs;
 	Bytes::Ptr exporterIcon = nullptr; // Non-serialized.

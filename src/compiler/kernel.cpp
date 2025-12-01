@@ -81,6 +81,7 @@ bool Kernel::open(const char* path_, const char* menu) {
 		return false;
 
 	// Parse the properties.
+	std::string id_;
 	Localization::Dictionary title_;
 	std::string kernelRom_;
 	std::string kernelSymbols_;
@@ -95,6 +96,9 @@ bool Kernel::open(const char* path_, const char* menu) {
 	Animations::Array animations_;
 	int projectileAnimationIndex_ = -1;
 	Behaviour::Array behaviours_;
+
+	if (!Jpath::get(doc, id_, "id"))
+		return false;
 
 	rapidjson::Value* val = nullptr;
 	if (!Jpath::get(doc, val, "title") || !val)
@@ -268,6 +272,7 @@ bool Kernel::open(const char* path_, const char* menu) {
 	behaviours_.shrink_to_fit();
 
 	path(path_);
+	id(id_);
 	title(title_);
 	kernelRom(kernelRom_);
 	kernelSymbols(kernelSymbols_);
@@ -298,6 +303,7 @@ bool Kernel::open(const char* path_, const char* menu) {
 bool Kernel::close(void) {
 	// Clear the properties.
 	path().clear();
+	id().clear();
 	entry().clear();
 	title().clear();
 	kernelRom().clear();
