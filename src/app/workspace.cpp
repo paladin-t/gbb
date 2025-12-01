@@ -2567,11 +2567,7 @@ class EditorCode* Workspace::touchCodeEditor(Window* wnd, Renderer* rnd, Project
 
 	EditorCode* editor = (EditorCode*)entry->editor;
 	if (!editor) {
-		Text::Array ids;
-		const GBBASIC::Kernel::Ptr &krnl = activeKernel();
-		if (krnl)
-			ids = krnl->identifiers();
-		editor = EditorCode::create(ids, isMajor);
+		editor = EditorCode::create(this, isMajor);
 		editor->open(wnd, rnd, this, prj, idx, (unsigned)(~0), -1);
 		editor->enter(this);
 		entry->editor = editor;
@@ -3191,11 +3187,6 @@ void Workspace::showCodeBindingEditor(
 	GBBASIC_ASSERT(currentProject() && "Impossible.");
 
 	auto bind = [wnd, rnd, this, changed, index] (void) -> void {
-		Text::Array ids;
-		const GBBASIC::Kernel::Ptr &krnl = activeKernel();
-		if (krnl)
-			ids = krnl->identifiers();
-
 		EditorCodeBinding::ConfirmedHandler confirm(
 			[this] (void) -> void {
 				popupBox(nullptr);
@@ -3232,7 +3223,6 @@ void Workspace::showCodeBindingEditor(
 					changed,
 					theme()->windowScene_CodeBinding(),
 					currentProject().get(),
-					ids,
 					index,
 					confirm, cancel, goto_,
 					theme()->generic_Ok().c_str(), theme()->generic_Cancel().c_str(), theme()->generic_Goto().c_str()
@@ -4171,7 +4161,7 @@ void Workspace::toggleDocument(const char* path) {
 }
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
-void Workspace::createMinorCodeEditor(const Text::Array &ids) {
+void Workspace::createMinorCodeEditor(void) {
 	Project::Ptr &prj = currentProject();
 
 	if (!prj)
@@ -4180,7 +4170,7 @@ void Workspace::createMinorCodeEditor(const Text::Array &ids) {
 	if (prj->minorCodeEditor())
 		return;
 
-	prj->minorCodeEditor(EditorCode::create(ids, false));
+	prj->minorCodeEditor(EditorCode::create(this, false));
 }
 
 void Workspace::destroyMinorCodeEditor(void) {
@@ -4468,12 +4458,12 @@ void Workspace::clearLanguageDefinition(void) {
 		CodeAssets::Entry* entry = prj->getCode(i);
 		Editable* editor = entry->editor;
 		if (editor)
-			editor->post(Editable::CLEAR_LANGUAGE_DEFINITION);
+			editor->post(Editable::CLEAR_LANGUAGE_DEFINITION, false);
 	}
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 	if (prj->minorCodeEditor()) {
-		prj->minorCodeEditor()->post(Editable::CLEAR_LANGUAGE_DEFINITION);
+		prj->minorCodeEditor()->post(Editable::CLEAR_LANGUAGE_DEFINITION, false);
 	}
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 }
@@ -4946,6 +4936,7 @@ void Workspace::compile(
 		const bool commandlineOnly = params->commandlineOnly;
 		const bool doNotQuit = params->doNotQuit;
 
+		std::string config;
 		std::string rom;
 		std::string sym;
 		std::string aliases;
@@ -4953,6 +4944,7 @@ void Workspace::compile(
 		std::string heapSize;
 		std::string stackSize;
 		if (kernel) {
+			config = kernel->path();
 			std::string dir;
 			Path::split(kernel->path(), nullptr, nullptr, &dir);
 			rom = Path::combine(dir.c_str(), kernel->kernelRom().c_str());
@@ -5022,6 +5014,7 @@ void Workspace::compile(
 		Text::Dictionary::const_iterator dstOpt = arguments.find(COMPILER_OUTPUT_OPTION_KEY);
 		if (dstOpt != arguments.end())
 			options.output = dstOpt->second;
+		options.config = config;
 		Text::Dictionary::const_iterator vmOpt = arguments.find(COMPILER_ROM_OPTION_KEY);
 		if (vmOpt != arguments.end())
 			options.rom = vmOpt->second;
@@ -5478,7 +5471,10 @@ void Workspace::compile(
 }
 
 Bytes::Ptr Workspace::compile(
-	const std::string &romPath, const std::string &symPath, const std::string &symbols, const std::string &aliasesPath, const std::string &aliases,
+	const std::string &configPath, const std::string &config, 
+	const std::string &romPath,
+	const std::string &symPath, const std::string &symbols,
+	const std::string &aliasesPath, const std::string &aliases,
 	const std::string &title, AssetsBundle::Ptr assets,
 	int bootstrapBank,
 	CompilerOutputHandler print_, CompilerOutputHandler warn_, CompilerOutputHandler error_
@@ -5486,12 +5482,14 @@ Bytes::Ptr Workspace::compile(
 	GBBASIC::Program program;
 	GBBASIC::Options options;
 
+	program.config = config;
 	program.symbols = symbols;
 	program.aliases = aliases;
 	program.assets = assets;
 
 	bool resIsOk = true;
 	CompilingErrors errors;
+	options.config = configPath;
 	options.rom = romPath;
 	options.sym = symPath;
 	options.aliases = aliasesPath;
@@ -10643,11 +10641,7 @@ void Workspace::code(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 
 			bool newOpened = false;
 			if (!prj->minorCodeEditor()) {
-				Text::Array ids;
-				const GBBASIC::Kernel::Ptr &krnl = activeKernel();
-				if (krnl)
-					ids = krnl->identifiers();
-				createMinorCodeEditor(ids);
+				createMinorCodeEditor();
 				prj->minorCodeEditor()->open(wnd, rnd, this, prj.get(), prj->activeMinorCodeIndex(), (unsigned)(~0), -1);
 				if (!focusMajor)
 					prj->minorCodeEditor()->enter(this);

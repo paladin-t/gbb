@@ -563,7 +563,12 @@ SymbolLocation::SymbolLocation(int b, int a, int s) : bank(b), address(a), size(
 SymbolTable::SymbolTable() {
 }
 
-bool SymbolTable::load(Dictionary &dict, const std::string &symPath, std::string &symTxt, const std::string &aliasesPath, std::string &aliasesTxt, ErrorHandler onError) {
+bool SymbolTable::load(
+	Dictionary &dict,
+	const std::string &symPath, std::string &symTxt,
+	const std::string &aliasesPath, std::string &aliasesTxt,
+	ErrorHandler onError
+) {
 	symTxt.clear();
 	aliasesTxt.clear();
 

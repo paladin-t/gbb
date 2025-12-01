@@ -18,7 +18,7 @@
 
 class EditorCodeLanguageDefinition {
 public:
-	static ImGui::CodeEditor::LanguageDefinition languageDefinition(void);
+	static ImGui::CodeEditor::LanguageDefinition languageDefinition(const char* kernelConfigPath);
 };
 
 /* ===========================================================================} */

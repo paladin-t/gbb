@@ -44,7 +44,7 @@ public:
 
 	virtual void renderStatus(class Window* wnd, class Renderer* rnd, class Workspace* ws, float x, float y, float width, float height) = 0;
 
-	static EditorCode* create(const Text::Array &ids, bool isMajor);
+	static EditorCode* create(class Workspace* ws, bool isMajor);
 	static void destroy(EditorCode* ptr);
 };
 

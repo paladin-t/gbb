@@ -322,7 +322,8 @@ private:
 		std::function<bool(void)> playActorTesting = nullptr;
 		std::function<bool(void)> stopActorTesting = nullptr;
 		bool isPlaying = false;
-		bool isPlayerSymbolsLoaded = false;
+		bool isPlayerConfigLoaded = false;
+		std::string playerConfigText;
 		std::string playerSymbolsText;
 		std::string playerAliasesText;
 
@@ -355,7 +356,8 @@ private:
 			playActorTesting = nullptr;
 			stopActorTesting = nullptr;
 			isPlaying = false;
-			isPlayerSymbolsLoaded = false;
+			isPlayerConfigLoaded = false;
+			playerConfigText.clear();
 			playerSymbolsText.clear();
 			playerAliasesText.clear();
 
@@ -3758,7 +3760,8 @@ private:
 		// Stop playing.
 		_tools.isPlaying = false;
 #if EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_FINISH
-		_tools.isPlayerSymbolsLoaded = false;
+		_tools.isPlayerConfigLoaded = false;
+		_tools.playerConfigText.clear();
 		_tools.playerSymbolsText.clear();
 		_tools.playerAliasesText.clear();
 #endif /* EDITOR_ACTOR_UNLOAD_SYMBOLS_ON_FINISH */
@@ -3797,19 +3800,38 @@ private:
 
 		std::string dir;
 		Path::split(krnl->path(), nullptr, nullptr, &dir);
+		const std::string config = krnl->path();
 		const std::string rom = Path::combine(dir.c_str(), krnl->kernelRom().c_str());
 		const std::string sym = Path::combine(dir.c_str(), krnl->kernelSymbols().c_str());
 		const std::string aliases = Path::combine(dir.c_str(), krnl->kernelAliases().c_str());
 		const int bootstrapBank = krnl->bootstrapBank();
 
 		// Load and parse the symbols.
-		if (!tools.isPlayerSymbolsLoaded) {
+		if (!tools.isPlayerConfigLoaded) {
+			std::string configTxt;
+			File::Ptr file(File::create());
+			if (!file->open(config.c_str(), Stream::READ)) {
+				self->warn(ws, "No valid config.", true);
+
+				return nullptr;
+			}
+			if (!file->readString(configTxt)) {
+				file->close();
+
+				self->warn(ws, "No valid config.", true);
+
+				return nullptr;
+			}
+			file->close();
+
 			Editing::SymbolTable::Dictionary dict;
 			std::string symTxt;
 			std::string aliasesTxt;
 			Editing::SymbolTable symbols;
 			const bool loaded = symbols.load(
-				dict, sym, symTxt, aliases, aliasesTxt,
+				dict,
+				sym, symTxt,
+				aliases, aliasesTxt,
 				[self, ws] (const char* msg) -> void {
 					self->warn(ws, msg, true);
 				}
@@ -3820,9 +3842,10 @@ private:
 				return nullptr;
 			}
 
-			tools.isPlayerSymbolsLoaded = true;
-			tools.playerSymbolsText     = symTxt;
-			tools.playerAliasesText     = aliasesTxt;
+			tools.isPlayerConfigLoaded = true;
+			tools.playerConfigText     = configTxt;
+			tools.playerSymbolsText    = symTxt;
+			tools.playerAliasesText    = aliasesTxt;
 		}
 
 		// Compile.
@@ -3869,7 +3892,10 @@ private:
 		} while (false);
 
 		const Bytes::Ptr rom_ = Workspace::compile(
-			rom, sym, tools.playerSymbolsText, aliases, tools.playerAliasesText,
+			config, tools.playerConfigText,
+			rom,
+			sym, tools.playerSymbolsText,
+			aliases, tools.playerAliasesText,
 			"Actor", assets,
 			bootstrapBank,
 			print_, warn_, error_

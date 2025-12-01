@@ -43,7 +43,6 @@ public:
 		ChangedHandler changed,
 		const std::string &title,
 		class Project* prj,
-		const Text::Array &ids,
 		const std::string &index,
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel, const GotoHandler &goto_,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */, const char* gotoTxt /* nullable */

@@ -897,7 +897,7 @@ public:
 	void toggleDocument(const char* path /* nullable */);
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
-	void createMinorCodeEditor(const Text::Array &ids);
+	void createMinorCodeEditor(void);
 	void destroyMinorCodeEditor(void);
 	void syncMajorCodeEditorDataToMinor(Window* wnd, Renderer* rnd);
 	void syncMinorCodeEditorDataToMajor(Window* wnd, Renderer* rnd);
@@ -965,7 +965,10 @@ public:
 	 * @brief Compiles for temporary usage, i.e. audio processing.
 	 */
 	static Bytes::Ptr compile(
-		const std::string &romPath, const std::string &symPath, const std::string &symbols, const std::string &aliasesPath, const std::string &aliases,
+		const std::string &configPath, const std::string &config, 
+		const std::string &romPath,
+		const std::string &symPath, const std::string &symbols,
+		const std::string &aliasesPath, const std::string &aliases,
 		const std::string &title, AssetsBundle::Ptr assets,
 		int bootstrapBank,
 		CompilerOutputHandler print_, CompilerOutputHandler warn_, CompilerOutputHandler error_

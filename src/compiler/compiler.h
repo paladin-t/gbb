@@ -587,6 +587,10 @@ struct Program {
 	/**< Input. */
 
 	/**
+	 * @brief The read content of the configuration.
+	 */
+	std::string config;
+	/**
 	 * @brief The generated ROM.
 	 */
 	Bytes::Ptr rom = nullptr;
@@ -777,6 +781,10 @@ struct Options {
 	 */
 	std::string output;
 	/**
+	 * @brief The path of the configuration file of the VM ROM.
+	 */
+	std::string config;
+	/**
 	 * @brief The path of the VM ROM file.
 	 */
 	std::string rom;
@@ -877,7 +885,7 @@ bool link(Program &program, const Options &options);
 /**
  * @brief Traverses all identifiers.
  */
-void identifiers(IdentifierHandler handler);
+void identifiers(const char* kernelConfigPath, IdentifierHandler handler);
 
 }
 

@@ -117,7 +117,7 @@ static bool tokenize(const char* inBegin, const char* inEnd, const char* &outBeg
 	return paletteIndex != ImGui::CodeEditor::PaletteIndex::Max;
 }
 
-ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefinition(void) {
+ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefinition(const char* kernelConfigPath) {
 	// Prepare.
 	ImGui::CodeEditor::LanguageDefinition langDef;
 
@@ -343,6 +343,7 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 
 	// Pre-processing identifiers.
 	GBBASIC::identifiers(
+		kernelConfigPath,
 		[&] (const std::string &key, const std::string &type) -> void {
 			if (type == "constant") {
 				std::string key_(key);
@@ -355,8 +356,17 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 				}
 
 				ImGui::CodeEditor::Identifier id;
-				id.Declaration = "Builtin";
+				id.Declaration = "Constant";
 				langDef.PreprocIds.insert(std::make_pair(key_, id));
+			} else if (type == "native") {
+				std::string key_(key);
+				Text::toLowerCase(key_);
+
+				ImGui::CodeEditor::Identifier id;
+				id.Declaration = "Native function";
+				langDef.Ids.insert(std::make_pair(key_, id));
+			} else {
+				// Do nothing.
 			}
 		}
 	);

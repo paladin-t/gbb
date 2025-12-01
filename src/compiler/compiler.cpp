@@ -614,18 +614,6 @@ namespace GBBASIC {
 #	define CONTROLLER_ALWAYS_BEHAVE                                 0x80
 #	define CONTROLLER_RIGIDLY_BEHAVE                                0x40
 #	define CONTROLLER_BEHAVIOUR_OPTIONS                            (CONTROLLER_ALWAYS_BEHAVE | CONTROLLER_RIGIDLY_BEHAVE)
-#	define CONTROLLER_BEHAVIOUR_NONE                                0x00
-#	define CONTROLLER_BEHAVIOUR_PLATFORMER_PLAYER                   0x01
-#	define CONTROLLER_BEHAVIOUR_PLATFORMER_MOVE                     0x02
-#	define CONTROLLER_BEHAVIOUR_PLATFORMER_IDLE                     0x03
-#	define CONTROLLER_BEHAVIOUR_TOPDOWN_PLAYER                      0x04
-#		define CONTROLLER_BEHAVIOUR_TOPDOWN_PLAYER_ARBITRARY        0x05
-#	define CONTROLLER_BEHAVIOUR_TOPDOWN_MOVE                        0x06
-#		define CONTROLLER_BEHAVIOUR_TOPDOWN_MOVE_ARBITRARY          0x07
-#	define CONTROLLER_BEHAVIOUR_TOPDOWN_IDLE                        0x08
-#	define CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER                  0x09
-#	define CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER_WITH_MOUSE      (0x0a | CONTROLLER_ALWAYS_BEHAVE)
-#	define CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER_WITH_TOUCH      (0x0b | CONTROLLER_ALWAYS_BEHAVE)
 #	define CONTROLLER_MOVABLE_FLAG_NONE                             0x00
 #	define CONTROLLER_MOVABLE_FLAG_COLLISIONS                       0x01
 #	define CONTROLLER_MOVABLE_FLAG_FULL                             0x02
@@ -29195,7 +29183,7 @@ public:
 		return false;
 	}
 
-	void initialize(BuiltinTable &builtins, FunctionTable &functions, OperatorTable &operators) {
+	void initialize(const char* kernelConfig, BuiltinTable &builtins, FunctionTable &functions, OperatorTable &operators) {
 		// Prepare.
 		const bool anyCase = _options.caseInsensitive;
 
@@ -29203,6 +29191,19 @@ public:
 		#define ADD_BUILTIN(ID, VAL)              builtins.add((ID), (VAL), anyCase)
 		#define ADD_FUNCTION(ID, INST)            functions.add((ID), (INST))
 		#define ADD_OPERATOR(ID, INST)            operators.add((ID), (INST))
+
+		// Load the kernel config.
+		bool kernelConfigLoaded = false;
+		rapidjson::Document kernelConfigDoc;
+		do {
+			if (!kernelConfig)
+				break;
+
+			if (!Json::fromString(kernelConfigDoc, kernelConfig))
+				break;
+
+			kernelConfigLoaded = true;
+		} while (false);
 
 		// Add the statements for the parser.
 		// This information is used by the parser to understand the tokens.
@@ -29503,257 +29504,285 @@ public:
 			/**< Syntax. */
 
 			// Object.
-			ADD_BUILTIN("nothing",                                   BuiltinTable::Entry(0)                                                 ); // For code...
+			ADD_BUILTIN("nothing",                                   BuiltinTable::Entry(0)                                           ); // For code...
 
 			// Boolean.
-			ADD_BUILTIN("false",                                     BuiltinTable::Entry(0)                                                 ); // For code...
-			ADD_BUILTIN("true",                                      BuiltinTable::Entry(1)                                                 );
+			ADD_BUILTIN("false",                                     BuiltinTable::Entry(0)                                           ); // For code...
+			ADD_BUILTIN("true",                                      BuiltinTable::Entry(1)                                           );
 
 			/**< Registers. */
 
 			// System.
-			ADD_BUILTIN("time",                                      BuiltinTable::Entry(Asm::Types::SYS_TIME)                              ); // For code...
+			ADD_BUILTIN("time",                                      BuiltinTable::Entry(Asm::Types::SYS_TIME)                        ); // For code...
 
 			/**< Constants. */
 
 			// Directions.
-			ADD_BUILTIN("DOWN_DIR",                                  BuiltinTable::Entry(DIRECTION_DOWN)                                    ); // For point and vector calculation...
-			ADD_BUILTIN("RIGHT_DIR",                                 BuiltinTable::Entry(DIRECTION_RIGHT)                                   );
-			ADD_BUILTIN("UP_DIR",                                    BuiltinTable::Entry(DIRECTION_UP)                                      );
-			ADD_BUILTIN("LEFT_DIR",                                  BuiltinTable::Entry(DIRECTION_LEFT)                                    );
-			ADD_BUILTIN("NONE_DIR",                                  BuiltinTable::Entry(DIRECTION_NONE)                                    );
+			ADD_BUILTIN("DOWN_DIR",                                  BuiltinTable::Entry(DIRECTION_DOWN)                              ); // For point and vector calculation...
+			ADD_BUILTIN("RIGHT_DIR",                                 BuiltinTable::Entry(DIRECTION_RIGHT)                             );
+			ADD_BUILTIN("UP_DIR",                                    BuiltinTable::Entry(DIRECTION_UP)                                );
+			ADD_BUILTIN("LEFT_DIR",                                  BuiltinTable::Entry(DIRECTION_LEFT)                              );
+			ADD_BUILTIN("NONE_DIR",                                  BuiltinTable::Entry(DIRECTION_NONE)                              );
 
 			// Properties.
-			ADD_BUILTIN("PALETTE_PROP",                              BuiltinTable::Entry(PROPERTY_PALETTE)                                  ); // For properties...
-			ADD_BUILTIN("BANK_PROP",                                 BuiltinTable::Entry(PROPERTY_BANK)                                     );
-			ADD_BUILTIN("OBJPAL_PROP",                               BuiltinTable::Entry(PROPERTY_OBJPAL)                                   );
-			ADD_BUILTIN("HFLIP_PROP",                                BuiltinTable::Entry(PROPERTY_HFLIP)                                    );
-			ADD_BUILTIN("VFLIP_PROP",                                BuiltinTable::Entry(PROPERTY_VFLIP)                                    );
-			ADD_BUILTIN("PRIORITY_PROP",                             BuiltinTable::Entry(PROPERTY_PRIORITY)                                 );
-			ADD_BUILTIN("HIDDEN_PROP",                               BuiltinTable::Entry(PROPERTY_HIDDEN)                                   );
-			ADD_BUILTIN("ACTIVE_PROP",                               BuiltinTable::Entry(PROPERTY_ACTIVE)                                   );
-			ADD_BUILTIN("ENABLED_PROP",                              BuiltinTable::Entry(PROPERTY_ENABLED)                                  );
-			ADD_BUILTIN("PINNED_PROP",                               BuiltinTable::Entry(PROPERTY_PINNED)                                   );
-			ADD_BUILTIN("PERSISTENT_PROP",                           BuiltinTable::Entry(PROPERTY_PERSISTENT)                               );
-			ADD_BUILTIN("FOLLOWING_PROP",                            BuiltinTable::Entry(PROPERTY_FOLLOWING)                                );
-			ADD_BUILTIN("ANIMATION_LOOP_PROP",                       BuiltinTable::Entry(PROPERTY_ANIMATION_LOOP)                           );
-			ADD_BUILTIN("ANIMATION_PAUSED_PROP",                     BuiltinTable::Entry(PROPERTY_ANIMATION_PAUSED)                         );
-			ADD_BUILTIN("MOVEMENT_INTERRUPT_PROP",                   BuiltinTable::Entry(PROPERTY_MOVEMENT_INTERRUPT)                       );
-			ADD_BUILTIN("POSITION_PROP",                             BuiltinTable::Entry(PROPERTY_POSITION)                                 );
-			ADD_BUILTIN("POSITION_X_PROP",                           BuiltinTable::Entry(PROPERTY_POSITION_X)                               );
-			ADD_BUILTIN("POSITION_Y_PROP",                           BuiltinTable::Entry(PROPERTY_POSITION_Y)                               );
-			ADD_BUILTIN("DIRECTION_PROP",                            BuiltinTable::Entry(PROPERTY_DIRECTION)                                );
-			ADD_BUILTIN("ANGLE_PROP",                                BuiltinTable::Entry(PROPERTY_ANGLE)                                    );
-			ADD_BUILTIN("BOUNDS_PROP",                               BuiltinTable::Entry(PROPERTY_BOUNDS)                                   );
-			ADD_BUILTIN("BOUNDS_LEFT_PROP",                          BuiltinTable::Entry(PROPERTY_BOUNDS_LEFT)                              );
-			ADD_BUILTIN("BOUNDS_RIGHT_PROP",                         BuiltinTable::Entry(PROPERTY_BOUNDS_RIGHT)                             );
-			ADD_BUILTIN("BOUNDS_TOP_PROP",                           BuiltinTable::Entry(PROPERTY_BOUNDS_TOP)                               );
-			ADD_BUILTIN("BOUNDS_BOTTOM_PROP",                        BuiltinTable::Entry(PROPERTY_BOUNDS_BOTTOM)                            );
-			ADD_BUILTIN("BASE_TILE_PROP",                            BuiltinTable::Entry(PROPERTY_BASE_TILE)                                );
-			ADD_BUILTIN("FRAMES_PROP",                               BuiltinTable::Entry(PROPERTY_FRAMES)                                   );
-			ADD_BUILTIN("FRAME_INDEX_PROP",                          BuiltinTable::Entry(PROPERTY_FRAME_INDEX)                              );
-			ADD_BUILTIN("ANIMATION_INTERVAL_PROP",                   BuiltinTable::Entry(PROPERTY_ANIMATION_INTERVAL)                       );
-			ADD_BUILTIN("ANIMATIONS_PROP",                           BuiltinTable::Entry(PROPERTY_ANIMATIONS)                               );
-			ADD_BUILTIN("ANIMATION_PROP",                            BuiltinTable::Entry(PROPERTY_ANIMATION)                                );
-			ADD_BUILTIN("ANIMATION_INDEX_PROP",                      BuiltinTable::Entry(PROPERTY_ANIMATION_INDEX)                          );
-			ADD_BUILTIN("MOVE_SPEED_PROP",                           BuiltinTable::Entry(PROPERTY_MOVE_SPEED)                               );
-			ADD_BUILTIN("BEHAVIOUR_PROP",                            BuiltinTable::Entry(PROPERTY_BEHAVIOUR)                                );
-			ADD_BUILTIN("COLLISION_GROUP_PROP",                      BuiltinTable::Entry(PROPERTY_COLLISION_GROUP)                          );
-			ADD_BUILTIN("STRONG_PROP",                               BuiltinTable::Entry(PROPERTY_STRONG)                                   );
-			ADD_BUILTIN("LIFE_TIME_PROP",                            BuiltinTable::Entry(PROPERTY_LIFE_TIME)                                );
-			ADD_BUILTIN("INITIAL_OFFSET_PROP",                       BuiltinTable::Entry(PROPERTY_INITIAL_OFFSET)                           );
-			ADD_BUILTIN("IS_16x16_GRID",                             BuiltinTable::Entry(PROPERTY_IS_16x16_GRID)                            );
-			ADD_BUILTIN("IS_16x16_PLAYER",                           BuiltinTable::Entry(PROPERTY_IS_16x16_PLAYER)                          );
-			ADD_BUILTIN("CLAMP_CAMERA_PROP",                         BuiltinTable::Entry(PROPERTY_CLAMP_CAMERA)                             );
-			ADD_BUILTIN("GRAVITY_PROP",                              BuiltinTable::Entry(PROPERTY_GRAVITY)                                  );
-			ADD_BUILTIN("JUMP_GRAVITY_PROP",                         BuiltinTable::Entry(PROPERTY_JUMP_GRAVITY)                             );
-			ADD_BUILTIN("JUMP_MAX_COUNT_PROP",                       BuiltinTable::Entry(PROPERTY_JUMP_MAX_COUNT)                           );
-			ADD_BUILTIN("JUMP_MAX_TICKS_PROP",                       BuiltinTable::Entry(PROPERTY_JUMP_MAX_TICKS)                           );
-			ADD_BUILTIN("CLIMB_VELOCITY_PROP",                       BuiltinTable::Entry(PROPERTY_CLIMB_VELOCITY)                           );
+			ADD_BUILTIN("PALETTE_PROP",                              BuiltinTable::Entry(PROPERTY_PALETTE)                            ); // For properties...
+			ADD_BUILTIN("BANK_PROP",                                 BuiltinTable::Entry(PROPERTY_BANK)                               );
+			ADD_BUILTIN("OBJPAL_PROP",                               BuiltinTable::Entry(PROPERTY_OBJPAL)                             );
+			ADD_BUILTIN("HFLIP_PROP",                                BuiltinTable::Entry(PROPERTY_HFLIP)                              );
+			ADD_BUILTIN("VFLIP_PROP",                                BuiltinTable::Entry(PROPERTY_VFLIP)                              );
+			ADD_BUILTIN("PRIORITY_PROP",                             BuiltinTable::Entry(PROPERTY_PRIORITY)                           );
+			ADD_BUILTIN("HIDDEN_PROP",                               BuiltinTable::Entry(PROPERTY_HIDDEN)                             );
+			ADD_BUILTIN("ACTIVE_PROP",                               BuiltinTable::Entry(PROPERTY_ACTIVE)                             );
+			ADD_BUILTIN("ENABLED_PROP",                              BuiltinTable::Entry(PROPERTY_ENABLED)                            );
+			ADD_BUILTIN("PINNED_PROP",                               BuiltinTable::Entry(PROPERTY_PINNED)                             );
+			ADD_BUILTIN("PERSISTENT_PROP",                           BuiltinTable::Entry(PROPERTY_PERSISTENT)                         );
+			ADD_BUILTIN("FOLLOWING_PROP",                            BuiltinTable::Entry(PROPERTY_FOLLOWING)                          );
+			ADD_BUILTIN("ANIMATION_LOOP_PROP",                       BuiltinTable::Entry(PROPERTY_ANIMATION_LOOP)                     );
+			ADD_BUILTIN("ANIMATION_PAUSED_PROP",                     BuiltinTable::Entry(PROPERTY_ANIMATION_PAUSED)                   );
+			ADD_BUILTIN("MOVEMENT_INTERRUPT_PROP",                   BuiltinTable::Entry(PROPERTY_MOVEMENT_INTERRUPT)                 );
+			ADD_BUILTIN("POSITION_PROP",                             BuiltinTable::Entry(PROPERTY_POSITION)                           );
+			ADD_BUILTIN("POSITION_X_PROP",                           BuiltinTable::Entry(PROPERTY_POSITION_X)                         );
+			ADD_BUILTIN("POSITION_Y_PROP",                           BuiltinTable::Entry(PROPERTY_POSITION_Y)                         );
+			ADD_BUILTIN("DIRECTION_PROP",                            BuiltinTable::Entry(PROPERTY_DIRECTION)                          );
+			ADD_BUILTIN("ANGLE_PROP",                                BuiltinTable::Entry(PROPERTY_ANGLE)                              );
+			ADD_BUILTIN("BOUNDS_PROP",                               BuiltinTable::Entry(PROPERTY_BOUNDS)                             );
+			ADD_BUILTIN("BOUNDS_LEFT_PROP",                          BuiltinTable::Entry(PROPERTY_BOUNDS_LEFT)                        );
+			ADD_BUILTIN("BOUNDS_RIGHT_PROP",                         BuiltinTable::Entry(PROPERTY_BOUNDS_RIGHT)                       );
+			ADD_BUILTIN("BOUNDS_TOP_PROP",                           BuiltinTable::Entry(PROPERTY_BOUNDS_TOP)                         );
+			ADD_BUILTIN("BOUNDS_BOTTOM_PROP",                        BuiltinTable::Entry(PROPERTY_BOUNDS_BOTTOM)                      );
+			ADD_BUILTIN("BASE_TILE_PROP",                            BuiltinTable::Entry(PROPERTY_BASE_TILE)                          );
+			ADD_BUILTIN("FRAMES_PROP",                               BuiltinTable::Entry(PROPERTY_FRAMES)                             );
+			ADD_BUILTIN("FRAME_INDEX_PROP",                          BuiltinTable::Entry(PROPERTY_FRAME_INDEX)                        );
+			ADD_BUILTIN("ANIMATION_INTERVAL_PROP",                   BuiltinTable::Entry(PROPERTY_ANIMATION_INTERVAL)                 );
+			ADD_BUILTIN("ANIMATIONS_PROP",                           BuiltinTable::Entry(PROPERTY_ANIMATIONS)                         );
+			ADD_BUILTIN("ANIMATION_PROP",                            BuiltinTable::Entry(PROPERTY_ANIMATION)                          );
+			ADD_BUILTIN("ANIMATION_INDEX_PROP",                      BuiltinTable::Entry(PROPERTY_ANIMATION_INDEX)                    );
+			ADD_BUILTIN("MOVE_SPEED_PROP",                           BuiltinTable::Entry(PROPERTY_MOVE_SPEED)                         );
+			ADD_BUILTIN("BEHAVIOUR_PROP",                            BuiltinTable::Entry(PROPERTY_BEHAVIOUR)                          );
+			ADD_BUILTIN("COLLISION_GROUP_PROP",                      BuiltinTable::Entry(PROPERTY_COLLISION_GROUP)                    );
+			ADD_BUILTIN("STRONG_PROP",                               BuiltinTable::Entry(PROPERTY_STRONG)                             );
+			ADD_BUILTIN("LIFE_TIME_PROP",                            BuiltinTable::Entry(PROPERTY_LIFE_TIME)                          );
+			ADD_BUILTIN("INITIAL_OFFSET_PROP",                       BuiltinTable::Entry(PROPERTY_INITIAL_OFFSET)                     );
+			ADD_BUILTIN("IS_16x16_GRID",                             BuiltinTable::Entry(PROPERTY_IS_16x16_GRID)                      );
+			ADD_BUILTIN("IS_16x16_PLAYER",                           BuiltinTable::Entry(PROPERTY_IS_16x16_PLAYER)                    );
+			ADD_BUILTIN("CLAMP_CAMERA_PROP",                         BuiltinTable::Entry(PROPERTY_CLAMP_CAMERA)                       );
+			ADD_BUILTIN("GRAVITY_PROP",                              BuiltinTable::Entry(PROPERTY_GRAVITY)                            );
+			ADD_BUILTIN("JUMP_GRAVITY_PROP",                         BuiltinTable::Entry(PROPERTY_JUMP_GRAVITY)                       );
+			ADD_BUILTIN("JUMP_MAX_COUNT_PROP",                       BuiltinTable::Entry(PROPERTY_JUMP_MAX_COUNT)                     );
+			ADD_BUILTIN("JUMP_MAX_TICKS_PROP",                       BuiltinTable::Entry(PROPERTY_JUMP_MAX_TICKS)                     );
+			ADD_BUILTIN("CLIMB_VELOCITY_PROP",                       BuiltinTable::Entry(PROPERTY_CLIMB_VELOCITY)                     );
 			/* Not inuse.
-			ADD_BUILTIN("SIZE_PROP",                                 BuiltinTable::Entry(PROPERTY_SIZE)                                     );
+			ADD_BUILTIN("SIZE_PROP",                                 BuiltinTable::Entry(PROPERTY_SIZE)                               );
 			*/
-			ADD_BUILTIN("WIDTH_PROP",                                BuiltinTable::Entry(PROPERTY_SIZE_WIDTH)                               );
-			ADD_BUILTIN("HEIGHT_PROP",                               BuiltinTable::Entry(PROPERTY_SIZE_HEIGHT)                              );
-			ADD_BUILTIN("CAMERA_DEADZONE_PROP",                      BuiltinTable::Entry(PROPERTY_CAMERA_DEADZONE)                          );
-			ADD_BUILTIN("CAMERA_DEADZONE_X_PROP",                    BuiltinTable::Entry(PROPERTY_CAMERA_DEADZONE_X)                        );
-			ADD_BUILTIN("CAMERA_DEADZONE_Y_PROP",                    BuiltinTable::Entry(PROPERTY_CAMERA_DEADZONE_Y)                        );
-			ADD_BUILTIN("BLOCKING_PROP",                             BuiltinTable::Entry(PROPERTY_BLOCKING)                                 );
-			ADD_BUILTIN("BLOCKING_X_PROP",                           BuiltinTable::Entry(PROPERTY_BLOCKING_X)                               );
-			ADD_BUILTIN("BLOCKING_LEFT_PROP",                        BuiltinTable::Entry(PROPERTY_BLOCKING_LEFT)                            );
-			ADD_BUILTIN("BLOCKING_RIGHT_PROP",                       BuiltinTable::Entry(PROPERTY_BLOCKING_RIGHT)                           );
-			ADD_BUILTIN("BLOCKING_Y_PROP",                           BuiltinTable::Entry(PROPERTY_BLOCKING_Y)                               );
-			ADD_BUILTIN("BLOCKING_UP_PROP",                          BuiltinTable::Entry(PROPERTY_BLOCKING_UP)                              );
-			ADD_BUILTIN("BLOCKING_DOWN_PROP",                        BuiltinTable::Entry(PROPERTY_BLOCKING_DOWN)                            );
+			ADD_BUILTIN("WIDTH_PROP",                                BuiltinTable::Entry(PROPERTY_SIZE_WIDTH)                         );
+			ADD_BUILTIN("HEIGHT_PROP",                               BuiltinTable::Entry(PROPERTY_SIZE_HEIGHT)                        );
+			ADD_BUILTIN("CAMERA_DEADZONE_PROP",                      BuiltinTable::Entry(PROPERTY_CAMERA_DEADZONE)                    );
+			ADD_BUILTIN("CAMERA_DEADZONE_X_PROP",                    BuiltinTable::Entry(PROPERTY_CAMERA_DEADZONE_X)                  );
+			ADD_BUILTIN("CAMERA_DEADZONE_Y_PROP",                    BuiltinTable::Entry(PROPERTY_CAMERA_DEADZONE_Y)                  );
+			ADD_BUILTIN("BLOCKING_PROP",                             BuiltinTable::Entry(PROPERTY_BLOCKING)                           );
+			ADD_BUILTIN("BLOCKING_X_PROP",                           BuiltinTable::Entry(PROPERTY_BLOCKING_X)                         );
+			ADD_BUILTIN("BLOCKING_LEFT_PROP",                        BuiltinTable::Entry(PROPERTY_BLOCKING_LEFT)                      );
+			ADD_BUILTIN("BLOCKING_RIGHT_PROP",                       BuiltinTable::Entry(PROPERTY_BLOCKING_RIGHT)                     );
+			ADD_BUILTIN("BLOCKING_Y_PROP",                           BuiltinTable::Entry(PROPERTY_BLOCKING_Y)                         );
+			ADD_BUILTIN("BLOCKING_UP_PROP",                          BuiltinTable::Entry(PROPERTY_BLOCKING_UP)                        );
+			ADD_BUILTIN("BLOCKING_DOWN_PROP",                        BuiltinTable::Entry(PROPERTY_BLOCKING_DOWN)                      );
 
 			// Events.
-			ADD_BUILTIN("ENTER",                                     BuiltinTable::Entry(EVENT_ENTER)                                       ); // For trigger...
-			ADD_BUILTIN("LEAVE",                                     BuiltinTable::Entry(EVENT_LEAVE)                                       );
-			ADD_BUILTIN("CHANGE",                                    BuiltinTable::Entry(EVENT_CHANGE)                                      );
-			ADD_BUILTIN("CONFIRM",                                   BuiltinTable::Entry(EVENT_CONFIRM)                                     );
+			ADD_BUILTIN("ENTER",                                     BuiltinTable::Entry(EVENT_ENTER)                                 ); // For trigger...
+			ADD_BUILTIN("LEAVE",                                     BuiltinTable::Entry(EVENT_LEAVE)                                 );
+			ADD_BUILTIN("CHANGE",                                    BuiltinTable::Entry(EVENT_CHANGE)                                );
+			ADD_BUILTIN("CONFIRM",                                   BuiltinTable::Entry(EVENT_CONFIRM)                               );
 
 			// Exceptions.
-			ADD_BUILTIN("UNKNOWN_PARAMETER",                         BuiltinTable::Entry(EXCEPTION_UNKNOWN_PARAMETER)                       ); // For exception...
-			ADD_BUILTIN("DEVICE_ERROR",                              BuiltinTable::Entry(EXCEPTION_DEVICE_ERROR)                            );
+			ADD_BUILTIN("UNKNOWN_PARAMETER",                         BuiltinTable::Entry(EXCEPTION_UNKNOWN_PARAMETER)                 ); // For exception...
+			ADD_BUILTIN("DEVICE_ERROR",                              BuiltinTable::Entry(EXCEPTION_DEVICE_ERROR)                      );
 
 			// Graphics.
-			ADD_BUILTIN("SOLID_MODE",                                BuiltinTable::Entry(GRAPHICS_MODE_SOLID)                               ); // For graphics primitives...
-			ADD_BUILTIN("OR_MODE",                                   BuiltinTable::Entry(GRAPHICS_MODE_OR)                                  );
-			ADD_BUILTIN("XOR_MODE",                                  BuiltinTable::Entry(GRAPHICS_MODE_XOR)                                 );
-			ADD_BUILTIN("AND_MODE",                                  BuiltinTable::Entry(GRAPHICS_MODE_AND)                                 );
+			ADD_BUILTIN("SOLID_MODE",                                BuiltinTable::Entry(GRAPHICS_MODE_SOLID)                         ); // For graphics primitives...
+			ADD_BUILTIN("OR_MODE",                                   BuiltinTable::Entry(GRAPHICS_MODE_OR)                            );
+			ADD_BUILTIN("XOR_MODE",                                  BuiltinTable::Entry(GRAPHICS_MODE_XOR)                           );
+			ADD_BUILTIN("AND_MODE",                                  BuiltinTable::Entry(GRAPHICS_MODE_AND)                           );
 
-			ADD_BUILTIN("WHITE",                                     BuiltinTable::Entry(GRAPHICS_PALETTE_WHITE)                            ); // For graphics primitives...
-			ADD_BUILTIN("SILVER",                                    BuiltinTable::Entry(GRAPHICS_PALETTE_SILVER)                           );
-			ADD_BUILTIN("GRAY",                                      BuiltinTable::Entry(GRAPHICS_PALETTE_GRAY)                             );
-			ADD_BUILTIN("BLACK",                                     BuiltinTable::Entry(GRAPHICS_PALETTE_BLACK)                            );
+			ADD_BUILTIN("WHITE",                                     BuiltinTable::Entry(GRAPHICS_PALETTE_WHITE)                      ); // For graphics primitives...
+			ADD_BUILTIN("SILVER",                                    BuiltinTable::Entry(GRAPHICS_PALETTE_SILVER)                     );
+			ADD_BUILTIN("GRAY",                                      BuiltinTable::Entry(GRAPHICS_PALETTE_GRAY)                       );
+			ADD_BUILTIN("BLACK",                                     BuiltinTable::Entry(GRAPHICS_PALETTE_BLACK)                      );
 
-			ADD_BUILTIN("SGB_PALETTE_01",                            BuiltinTable::Entry(GRAPHICS_SGB_PALETTE_01)                           ); // For graphics primitives...
-			ADD_BUILTIN("SGB_PALETTE_23",                            BuiltinTable::Entry(GRAPHICS_SGB_PALETTE_23)                           );
-			ADD_BUILTIN("SGB_PALETTE_03",                            BuiltinTable::Entry(GRAPHICS_SGB_PALETTE_03)                           );
-			ADD_BUILTIN("SGB_PALETTE_12",                            BuiltinTable::Entry(GRAPHICS_SGB_PALETTE_12)                           );
+			ADD_BUILTIN("SGB_PALETTE_01",                            BuiltinTable::Entry(GRAPHICS_SGB_PALETTE_01)                     ); // For graphics primitives...
+			ADD_BUILTIN("SGB_PALETTE_23",                            BuiltinTable::Entry(GRAPHICS_SGB_PALETTE_23)                     );
+			ADD_BUILTIN("SGB_PALETTE_03",                            BuiltinTable::Entry(GRAPHICS_SGB_PALETTE_03)                     );
+			ADD_BUILTIN("SGB_PALETTE_12",                            BuiltinTable::Entry(GRAPHICS_SGB_PALETTE_12)                     );
 
-			ADD_BUILTIN("MAP_LAYER",                                 BuiltinTable::Entry(GRAPHICS_LAYER_MAP)                                ); // `MAP_LAYER` and `SPRITE_LAYER` are for the `VM_PALETTE` instruction...
-			ADD_BUILTIN("WINDOW_LAYER",                              BuiltinTable::Entry(GRAPHICS_LAYER_WINDOW)                             ); // All of these three are for the fill instruction...
-			ADD_BUILTIN("SPRITE_LAYER",                              BuiltinTable::Entry(GRAPHICS_LAYER_SPRITE)                             );
+			ADD_BUILTIN("MAP_LAYER",                                 BuiltinTable::Entry(GRAPHICS_LAYER_MAP)                          ); // `MAP_LAYER` and `SPRITE_LAYER` are for the `VM_PALETTE` instruction...
+			ADD_BUILTIN("WINDOW_LAYER",                              BuiltinTable::Entry(GRAPHICS_LAYER_WINDOW)                       ); // All of these three are for the fill instruction...
+			ADD_BUILTIN("SPRITE_LAYER",                              BuiltinTable::Entry(GRAPHICS_LAYER_SPRITE)                       );
 
 			// Audio.
-			ADD_BUILTIN("MINIMAL_PRIORITY",                          BuiltinTable::Entry(AUDIO_SFX_PRIORITY_MINIMAL)                        ); // For `VM_SOUND`...
-			ADD_BUILTIN("NORMAL_PRIORITY",                           BuiltinTable::Entry(AUDIO_SFX_PRIORITY_NORMAL)                         );
-			ADD_BUILTIN("HIGH_PRIORITY",                             BuiltinTable::Entry(AUDIO_SFX_PRIORITY_HIGH)                           );
+			ADD_BUILTIN("MINIMAL_PRIORITY",                          BuiltinTable::Entry(AUDIO_SFX_PRIORITY_MINIMAL)                  ); // For `VM_SOUND`...
+			ADD_BUILTIN("NORMAL_PRIORITY",                           BuiltinTable::Entry(AUDIO_SFX_PRIORITY_NORMAL)                   );
+			ADD_BUILTIN("HIGH_PRIORITY",                             BuiltinTable::Entry(AUDIO_SFX_PRIORITY_HIGH)                     );
 
 			// Input.
-			ADD_BUILTIN("UP_BTN",                                    BuiltinTable::Entry(INPUT_BUTTON_UP)                                   ); // For input primitives...
-			ADD_BUILTIN("DOWN_BTN",                                  BuiltinTable::Entry(INPUT_BUTTON_DOWN)                                 );
-			ADD_BUILTIN("LEFT_BTN",                                  BuiltinTable::Entry(INPUT_BUTTON_LEFT)                                 );
-			ADD_BUILTIN("RIGHT_BTN",                                 BuiltinTable::Entry(INPUT_BUTTON_RIGHT)                                );
-			ADD_BUILTIN("A_BTN",                                     BuiltinTable::Entry(INPUT_BUTTON_A)                                    );
-			ADD_BUILTIN("B_BTN",                                     BuiltinTable::Entry(INPUT_BUTTON_B)                                    );
-			ADD_BUILTIN("SELECT_BTN",                                BuiltinTable::Entry(INPUT_BUTTON_SELECT)                               );
-			ADD_BUILTIN("START_BTN",                                 BuiltinTable::Entry(INPUT_BUTTON_START)                                );
+			ADD_BUILTIN("UP_BTN",                                    BuiltinTable::Entry(INPUT_BUTTON_UP)                             ); // For input primitives...
+			ADD_BUILTIN("DOWN_BTN",                                  BuiltinTable::Entry(INPUT_BUTTON_DOWN)                           );
+			ADD_BUILTIN("LEFT_BTN",                                  BuiltinTable::Entry(INPUT_BUTTON_LEFT)                           );
+			ADD_BUILTIN("RIGHT_BTN",                                 BuiltinTable::Entry(INPUT_BUTTON_RIGHT)                          );
+			ADD_BUILTIN("A_BTN",                                     BuiltinTable::Entry(INPUT_BUTTON_A)                              );
+			ADD_BUILTIN("B_BTN",                                     BuiltinTable::Entry(INPUT_BUTTON_B)                              );
+			ADD_BUILTIN("SELECT_BTN",                                BuiltinTable::Entry(INPUT_BUTTON_SELECT)                         );
+			ADD_BUILTIN("START_BTN",                                 BuiltinTable::Entry(INPUT_BUTTON_START)                          );
 
-			ADD_BUILTIN("TOUCH_BUTTON_0",                            BuiltinTable::Entry(INPUT_MOUSE_BUTTON_0)                              );
-			ADD_BUILTIN("TOUCH_BUTTON_ANY",                          BuiltinTable::Entry(INPUT_MOUSE_BUTTON_ANY)                            );
-			ADD_BUILTIN("MOUSE_BUTTON_0",                            BuiltinTable::Entry(INPUT_MOUSE_BUTTON_0)                              );
-			ADD_BUILTIN("MOUSE_BUTTON_1",                            BuiltinTable::Entry(INPUT_MOUSE_BUTTON_1)                              );
-			ADD_BUILTIN("MOUSE_BUTTON_ANY",                          BuiltinTable::Entry(INPUT_MOUSE_BUTTON_ANY)                            );
+			ADD_BUILTIN("TOUCH_BUTTON_0",                            BuiltinTable::Entry(INPUT_MOUSE_BUTTON_0)                        );
+			ADD_BUILTIN("TOUCH_BUTTON_ANY",                          BuiltinTable::Entry(INPUT_MOUSE_BUTTON_ANY)                      );
+			ADD_BUILTIN("MOUSE_BUTTON_0",                            BuiltinTable::Entry(INPUT_MOUSE_BUTTON_0)                        );
+			ADD_BUILTIN("MOUSE_BUTTON_1",                            BuiltinTable::Entry(INPUT_MOUSE_BUTTON_1)                        );
+			ADD_BUILTIN("MOUSE_BUTTON_ANY",                          BuiltinTable::Entry(INPUT_MOUSE_BUTTON_ANY)                      );
 
 			// Persistence.
-			ADD_BUILTIN("SRAM_ADDRESS",                              BuiltinTable::Entry(SRAM_ADDRESS)                                      ); // For persistence...
-			ADD_BUILTIN("FILE_ADDRESS",                              BuiltinTable::Entry(SRAM_OFFSET)                                       ); // For persistence...
+			ADD_BUILTIN("SRAM_ADDRESS",                              BuiltinTable::Entry(SRAM_ADDRESS)                                ); // For persistence...
+			ADD_BUILTIN("FILE_ADDRESS",                              BuiltinTable::Entry(SRAM_OFFSET)                                 ); // For persistence...
 
 			// Serial port.
-			ADD_BUILTIN("SERIAL_ERROR",                              BuiltinTable::Entry(SERIAL_ERROR)                                      ); // For serial port and device query...
-			ADD_BUILTIN("SERIAL_BUSY",                               BuiltinTable::Entry(SERIAL_BUSY)                                       );
-			ADD_BUILTIN("SERIAL_IDLE",                               BuiltinTable::Entry(SERIAL_IDLE)                                       );
+			ADD_BUILTIN("SERIAL_ERROR",                              BuiltinTable::Entry(SERIAL_ERROR)                                ); // For serial port and device query...
+			ADD_BUILTIN("SERIAL_BUSY",                               BuiltinTable::Entry(SERIAL_BUSY)                                 );
+			ADD_BUILTIN("SERIAL_IDLE",                               BuiltinTable::Entry(SERIAL_IDLE)                                 );
 
 			// Scene.
-			ADD_BUILTIN("SCENE_MAP_LAYER",                           BuiltinTable::Entry(SCENE_LAYER_MAP)                                   );
-			ADD_BUILTIN("SCENE_ATTR_LAYER",                          BuiltinTable::Entry(SCENE_LAYER_ATTR)                                  );
-			ADD_BUILTIN("SCENE_PROP_LAYER",                          BuiltinTable::Entry(SCENE_LAYER_PROP)                                  );
-			ADD_BUILTIN("SCENE_ACTOR_LAYER",                         BuiltinTable::Entry(SCENE_LAYER_ACTOR)                                 );
-			ADD_BUILTIN("SCENE_TRIGGER_LAYER",                       BuiltinTable::Entry(SCENE_LAYER_TRIGGER)                               );
-			ADD_BUILTIN("SCENE_DEF_LAYER",                           BuiltinTable::Entry(SCENE_LAYER_DEF)                                   );
-			ADD_BUILTIN("SCENE_ALL_LAYERS",                          BuiltinTable::Entry(SCENE_LAYER_ALL)                                   );
+			ADD_BUILTIN("SCENE_MAP_LAYER",                           BuiltinTable::Entry(SCENE_LAYER_MAP)                             );
+			ADD_BUILTIN("SCENE_ATTR_LAYER",                          BuiltinTable::Entry(SCENE_LAYER_ATTR)                            );
+			ADD_BUILTIN("SCENE_PROP_LAYER",                          BuiltinTable::Entry(SCENE_LAYER_PROP)                            );
+			ADD_BUILTIN("SCENE_ACTOR_LAYER",                         BuiltinTable::Entry(SCENE_LAYER_ACTOR)                           );
+			ADD_BUILTIN("SCENE_TRIGGER_LAYER",                       BuiltinTable::Entry(SCENE_LAYER_TRIGGER)                         );
+			ADD_BUILTIN("SCENE_DEF_LAYER",                           BuiltinTable::Entry(SCENE_LAYER_DEF)                             );
+			ADD_BUILTIN("SCENE_ALL_LAYERS",                          BuiltinTable::Entry(SCENE_LAYER_ALL)                             );
 
-			ADD_BUILTIN("CAMERA_SHAKE_X",                            BuiltinTable::Entry(SCENE_CAMERA_SHAKE_X)                              );
-			ADD_BUILTIN("CAMERA_SHAKE_Y",                            BuiltinTable::Entry(SCENE_CAMERA_SHAKE_Y)                              );
+			ADD_BUILTIN("CAMERA_SHAKE_X",                            BuiltinTable::Entry(SCENE_CAMERA_SHAKE_X)                        );
+			ADD_BUILTIN("CAMERA_SHAKE_Y",                            BuiltinTable::Entry(SCENE_CAMERA_SHAKE_Y)                        );
 
 			// Actor.
-			ADD_BUILTIN("ANY_TEMPLATE",                              BuiltinTable::Entry(ACTOR_TEMPLATE_ANY)                                );
+			ADD_BUILTIN("ANY_TEMPLATE",                              BuiltinTable::Entry(ACTOR_TEMPLATE_ANY)                          );
 
 			// Controller.
-			ADD_BUILTIN("RIGID_BEHAVIOUR",                           BuiltinTable::Entry(CONTROLLER_RIGIDLY_BEHAVE)                         ); // For controller...
-			ADD_BUILTIN("NONE_BEHAVIOUR",                            BuiltinTable::Entry(CONTROLLER_BEHAVIOUR_NONE)                         ); // For controller...
-			ADD_BUILTIN("PLATFORMER_PLAYER_BEHAVIOUR",               BuiltinTable::Entry(CONTROLLER_BEHAVIOUR_PLATFORMER_PLAYER)            );
-			ADD_BUILTIN("PLATFORMER_MOVE_BEHAVIOUR",                 BuiltinTable::Entry(CONTROLLER_BEHAVIOUR_PLATFORMER_MOVE)              );
-			ADD_BUILTIN("PLATFORMER_IDLE_BEHAVIOUR",                 BuiltinTable::Entry(CONTROLLER_BEHAVIOUR_PLATFORMER_IDLE)              );
-			ADD_BUILTIN("TOPDOWN_PLAYER_BEHAVIOUR",                  BuiltinTable::Entry(CONTROLLER_BEHAVIOUR_TOPDOWN_PLAYER_ARBITRARY)     );
-			ADD_BUILTIN("TOPDOWN_MOVE_BEHAVIOUR",                    BuiltinTable::Entry(CONTROLLER_BEHAVIOUR_TOPDOWN_MOVE_ARBITRARY)       );
-			ADD_BUILTIN("TOPDOWN_IDLE_BEHAVIOUR",                    BuiltinTable::Entry(CONTROLLER_BEHAVIOUR_TOPDOWN_IDLE)                 );
-			ADD_BUILTIN("POINTNCLICK_PLAYER_BEHAVIOUR",              BuiltinTable::Entry(CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER)           );
-			ADD_BUILTIN("POINTNCLICK_PLAYER_WITH_MOUSE_BEHAVIOUR",   BuiltinTable::Entry(CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER_WITH_MOUSE));
-			ADD_BUILTIN("POINTNCLICK_PLAYER_WITH_TOUCH_BEHAVIOUR",   BuiltinTable::Entry(CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER_WITH_TOUCH));
+			ADD_BUILTIN("RIGID_BEHAVIOUR",                           BuiltinTable::Entry(CONTROLLER_RIGIDLY_BEHAVE)                   ); // For controller...
 
-			ADD_BUILTIN("MOVABLE_FOR_NONE_FLAG",                     BuiltinTable::Entry(CONTROLLER_MOVABLE_FLAG_NONE)                      );
-			ADD_BUILTIN("MOVABLE_FOR_COLLISIONS_FLAG",               BuiltinTable::Entry(CONTROLLER_MOVABLE_FLAG_COLLISIONS)                );
-			ADD_BUILTIN("MOVABLE_FOR_FULL_FLAG",                     BuiltinTable::Entry(CONTROLLER_MOVABLE_FLAG_FULL)                      );
+			ADD_BUILTIN("MOVABLE_FOR_NONE_FLAG",                     BuiltinTable::Entry(CONTROLLER_MOVABLE_FLAG_NONE)                );
+			ADD_BUILTIN("MOVABLE_FOR_COLLISIONS_FLAG",               BuiltinTable::Entry(CONTROLLER_MOVABLE_FLAG_COLLISIONS)          );
+			ADD_BUILTIN("MOVABLE_FOR_FULL_FLAG",                     BuiltinTable::Entry(CONTROLLER_MOVABLE_FLAG_FULL)                );
 
 			// Projectile.
-			ADD_BUILTIN("PROJECTILE_NONE_FLAG",                      BuiltinTable::Entry(PROJECTILE_FLAG_NONE)                              );
-			ADD_BUILTIN("PROJECTILE_ANIMATION_NO_LOOP_FLAG",         BuiltinTable::Entry(PROJECTILE_FLAG_ANIMATION_NO_LOOP)                 );
-			ADD_BUILTIN("PROJECTILE_STRONG_FLAG",                    BuiltinTable::Entry(PROJECTILE_FLAG_STRONG)                            );
+			ADD_BUILTIN("PROJECTILE_NONE_FLAG",                      BuiltinTable::Entry(PROJECTILE_FLAG_NONE)                        );
+			ADD_BUILTIN("PROJECTILE_ANIMATION_NO_LOOP_FLAG",         BuiltinTable::Entry(PROJECTILE_FLAG_ANIMATION_NO_LOOP)           );
+			ADD_BUILTIN("PROJECTILE_STRONG_FLAG",                    BuiltinTable::Entry(PROJECTILE_FLAG_STRONG)                      );
 
 			// Effects.
-			ADD_BUILTIN("PULSE_EFFECT",                              BuiltinTable::Entry(EFFECTS_PULSE)                                     ); // For graphics effects...
-			ADD_BUILTIN("PARALLAX_EFFECT",                           BuiltinTable::Entry(EFFECTS_PARALLAX)                                  );
-			ADD_BUILTIN("WOBBLE_EFFECT",                             BuiltinTable::Entry(EFFECTS_WOBBLE)                                    );
+			ADD_BUILTIN("PULSE_EFFECT",                              BuiltinTable::Entry(EFFECTS_PULSE)                               ); // For graphics effects...
+			ADD_BUILTIN("PARALLAX_EFFECT",                           BuiltinTable::Entry(EFFECTS_PARALLAX)                            );
+			ADD_BUILTIN("WOBBLE_EFFECT",                             BuiltinTable::Entry(EFFECTS_WOBBLE)                              );
 
 			// Device.
-			ADD_BUILTIN("TEXT_MODE",                                 BuiltinTable::Entry(DEVICE_SCREEN_TEXT)                                ); // For screen option...
-			ADD_BUILTIN("GRAPHICS_MODE",                             BuiltinTable::Entry(DEVICE_SCREEN_GRAPHICS)                            );
-			ADD_BUILTIN("OBJECTS_MODE",                              BuiltinTable::Entry(DEVICE_SCREEN_OBJECTS)                             );
+			ADD_BUILTIN("TEXT_MODE",                                 BuiltinTable::Entry(DEVICE_SCREEN_TEXT)                          ); // For screen option...
+			ADD_BUILTIN("GRAPHICS_MODE",                             BuiltinTable::Entry(DEVICE_SCREEN_GRAPHICS)                      );
+			ADD_BUILTIN("OBJECTS_MODE",                              BuiltinTable::Entry(DEVICE_SCREEN_OBJECTS)                       );
 
-			ADD_BUILTIN("VRAM_BANK0",                                BuiltinTable::Entry(DEVICE_VRAM_USAGE_BANK_0)                          ); // For VRAM option...
-			ADD_BUILTIN("VRAM_TILES",                                BuiltinTable::Entry(DEVICE_VRAM_USAGE_TILES)                           );
-			ADD_BUILTIN("VRAM_BANK1",                                BuiltinTable::Entry(DEVICE_VRAM_USAGE_BANK_1)                          );
-			ADD_BUILTIN("VRAM_ATTRIBUTES",                           BuiltinTable::Entry(DEVICE_VRAM_USAGE_ATTRIBUTES)                      );
+			ADD_BUILTIN("VRAM_BANK0",                                BuiltinTable::Entry(DEVICE_VRAM_USAGE_BANK_0)                    ); // For VRAM option...
+			ADD_BUILTIN("VRAM_TILES",                                BuiltinTable::Entry(DEVICE_VRAM_USAGE_TILES)                     );
+			ADD_BUILTIN("VRAM_BANK1",                                BuiltinTable::Entry(DEVICE_VRAM_USAGE_BANK_1)                    );
+			ADD_BUILTIN("VRAM_ATTRIBUTES",                           BuiltinTable::Entry(DEVICE_VRAM_USAGE_ATTRIBUTES)                );
 
-			ADD_BUILTIN("ACTIVE_TRIGGERS",                           BuiltinTable::Entry(DEVICE_TRIGGER_ACTIVE_TRIGGERS)                    ); // For both device option and query...
+			ADD_BUILTIN("ACTIVE_TRIGGERS",                           BuiltinTable::Entry(DEVICE_TRIGGER_ACTIVE_TRIGGERS)              ); // For both device option and query...
 
-			ADD_BUILTIN("RTC_SEC",                                   BuiltinTable::Entry(DEVICE_RTC_SEC)                                    ); // For both device option and query...
-			ADD_BUILTIN("RTC_MIN",                                   BuiltinTable::Entry(DEVICE_RTC_MIN)                                    );
-			ADD_BUILTIN("RTC_HR",                                    BuiltinTable::Entry(DEVICE_RTC_HOUR)                                   );
-			ADD_BUILTIN("RTC_DAY",                                   BuiltinTable::Entry(DEVICE_RTC_DAY)                                    );
+			ADD_BUILTIN("RTC_SEC",                                   BuiltinTable::Entry(DEVICE_RTC_SEC)                              ); // For both device option and query...
+			ADD_BUILTIN("RTC_MIN",                                   BuiltinTable::Entry(DEVICE_RTC_MIN)                              );
+			ADD_BUILTIN("RTC_HR",                                    BuiltinTable::Entry(DEVICE_RTC_HOUR)                             );
+			ADD_BUILTIN("RTC_DAY",                                   BuiltinTable::Entry(DEVICE_RTC_DAY)                              );
 
-			ADD_BUILTIN("FAST_CPU_ENABLED",                          BuiltinTable::Entry(DEVICE_OPTION_FAST_CPU_ENABLED)                    ); // For device option...
-			ADD_BUILTIN("AUTO_UPDATE_ENABLED",                       BuiltinTable::Entry(DEVICE_OPTION_AUTO_UPDATE_ENABLED)                 );
-			ADD_BUILTIN("ACTOR_HIT_WITH_DETAILS_ENABLED"  ,          BuiltinTable::Entry(DEVICE_OPTION_ACTOR_HIT_WITH_DETAILS_ENABLED)      );
-			ADD_BUILTIN("OBJECT_SPRITE_BASE",                        BuiltinTable::Entry(DEVICE_OPTION_OBJECT_SPRITE_BASE)                  );
-			ADD_BUILTIN("SRAM_BANK",                                 BuiltinTable::Entry(DEVICE_OPTION_SRAM_BANK)                           );
-			ADD_BUILTIN("SRAM_ENABLED",                              BuiltinTable::Entry(DEVICE_OPTION_SRAM_ENABLED)                        );
-			ADD_BUILTIN("VRAM_BANK",                                 BuiltinTable::Entry(DEVICE_OPTION_VRAM_BANK)                           );
-			ADD_BUILTIN("VRAM_USAGE",                                BuiltinTable::Entry(DEVICE_OPTION_VRAM_USAGE)                          );
-			ADD_BUILTIN("SCREEN_ENABLED",                            BuiltinTable::Entry(DEVICE_OPTION_SCREEN_ENABLED)                      );
-			ADD_BUILTIN("SCREEN_MODE",                               BuiltinTable::Entry(DEVICE_OPTION_SCREEN_MODE)                         );
-			ADD_BUILTIN("MAP_ENABLED",                               BuiltinTable::Entry(DEVICE_OPTION_MAP_ENABLED)                         );
-			ADD_BUILTIN("WINDOW_ENABLED",                            BuiltinTable::Entry(DEVICE_OPTION_WINDOW_ENABLED)                      );
-			ADD_BUILTIN("SPRITE_ENABLED",                            BuiltinTable::Entry(DEVICE_OPTION_SPRITE_ENABLED)                      );
-			ADD_BUILTIN("SPRITE8x16_ENABLED",                        BuiltinTable::Entry(DEVICE_OPTION_SPRITE8x16_ENABLED)                  );
-			ADD_BUILTIN("SOUND_ENABLED",                             BuiltinTable::Entry(DEVICE_OPTION_SOUND_ENABLED)                       );
-			ADD_BUILTIN("MUSIC_POSITION",                            BuiltinTable::Entry(DEVICE_OPTION_MUSIC_POSITION)                      );
-			ADD_BUILTIN("SERIAL_ENABLED",                            BuiltinTable::Entry(DEVICE_OPTION_SERIAL_ENABLED)                      );
-			ADD_BUILTIN("RTC_ENABLED",                               BuiltinTable::Entry(DEVICE_OPTION_RTC_ENABLED)                         );
-			ADD_BUILTIN("RTC_START",                                 BuiltinTable::Entry(DEVICE_OPTION_RTC_START)                           );
-			ADD_BUILTIN("RTC_LATCH",                                 BuiltinTable::Entry(DEVICE_OPTION_RTC_LATCH)                           );
+			ADD_BUILTIN("FAST_CPU_ENABLED",                          BuiltinTable::Entry(DEVICE_OPTION_FAST_CPU_ENABLED)              ); // For device option...
+			ADD_BUILTIN("AUTO_UPDATE_ENABLED",                       BuiltinTable::Entry(DEVICE_OPTION_AUTO_UPDATE_ENABLED)           );
+			ADD_BUILTIN("ACTOR_HIT_WITH_DETAILS_ENABLED"  ,          BuiltinTable::Entry(DEVICE_OPTION_ACTOR_HIT_WITH_DETAILS_ENABLED));
+			ADD_BUILTIN("OBJECT_SPRITE_BASE",                        BuiltinTable::Entry(DEVICE_OPTION_OBJECT_SPRITE_BASE)            );
+			ADD_BUILTIN("SRAM_BANK",                                 BuiltinTable::Entry(DEVICE_OPTION_SRAM_BANK)                     );
+			ADD_BUILTIN("SRAM_ENABLED",                              BuiltinTable::Entry(DEVICE_OPTION_SRAM_ENABLED)                  );
+			ADD_BUILTIN("VRAM_BANK",                                 BuiltinTable::Entry(DEVICE_OPTION_VRAM_BANK)                     );
+			ADD_BUILTIN("VRAM_USAGE",                                BuiltinTable::Entry(DEVICE_OPTION_VRAM_USAGE)                    );
+			ADD_BUILTIN("SCREEN_ENABLED",                            BuiltinTable::Entry(DEVICE_OPTION_SCREEN_ENABLED)                );
+			ADD_BUILTIN("SCREEN_MODE",                               BuiltinTable::Entry(DEVICE_OPTION_SCREEN_MODE)                   );
+			ADD_BUILTIN("MAP_ENABLED",                               BuiltinTable::Entry(DEVICE_OPTION_MAP_ENABLED)                   );
+			ADD_BUILTIN("WINDOW_ENABLED",                            BuiltinTable::Entry(DEVICE_OPTION_WINDOW_ENABLED)                );
+			ADD_BUILTIN("SPRITE_ENABLED",                            BuiltinTable::Entry(DEVICE_OPTION_SPRITE_ENABLED)                );
+			ADD_BUILTIN("SPRITE8x16_ENABLED",                        BuiltinTable::Entry(DEVICE_OPTION_SPRITE8x16_ENABLED)            );
+			ADD_BUILTIN("SOUND_ENABLED",                             BuiltinTable::Entry(DEVICE_OPTION_SOUND_ENABLED)                 );
+			ADD_BUILTIN("MUSIC_POSITION",                            BuiltinTable::Entry(DEVICE_OPTION_MUSIC_POSITION)                );
+			ADD_BUILTIN("SERIAL_ENABLED",                            BuiltinTable::Entry(DEVICE_OPTION_SERIAL_ENABLED)                );
+			ADD_BUILTIN("RTC_ENABLED",                               BuiltinTable::Entry(DEVICE_OPTION_RTC_ENABLED)                   );
+			ADD_BUILTIN("RTC_START",                                 BuiltinTable::Entry(DEVICE_OPTION_RTC_START)                     );
+			ADD_BUILTIN("RTC_LATCH",                                 BuiltinTable::Entry(DEVICE_OPTION_RTC_LATCH)                     );
 
-			ADD_BUILTIN("IS_CGB",                                    BuiltinTable::Entry(DEVICE_QUERY_IS_CGB)                               ); // For device query...
-			ADD_BUILTIN("IS_SGB",                                    BuiltinTable::Entry(DEVICE_QUERY_IS_SGB)                               );
-			ADD_BUILTIN("IS_AGB",                                    BuiltinTable::Entry(DEVICE_QUERY_IS_AGB)                               );
-			ADD_BUILTIN("IS_GBB",                                    BuiltinTable::Entry(DEVICE_QUERY_IS_GBB)                               );
-			ADD_BUILTIN("MAX_THREADS",                               BuiltinTable::Entry(DEVICE_QUERY_MAX_THREADS)                          );
-			ADD_BUILTIN("ACTIVE_THREADS",                            BuiltinTable::Entry(DEVICE_QUERY_ACTIVE_THREADS)                       );
-			ADD_BUILTIN("FREE_THREADS",                              BuiltinTable::Entry(DEVICE_QUERY_FREE_THREADS)                         );
-			ADD_BUILTIN("CURRENT_THREAD_ID",                         BuiltinTable::Entry(DEVICE_QUERY_CURRENT_THREAD_ID)                    );
-			ADD_BUILTIN("SRAM_BANKS",                                BuiltinTable::Entry(DEVICE_QUERY_SRAM_BANKS)                           );
-			ADD_BUILTIN("SRAM_LENGTH",                               BuiltinTable::Entry(DEVICE_QUERY_SRAM_LENGTH)                          );
-			ADD_BUILTIN("VRAM_BANKS",                                BuiltinTable::Entry(DEVICE_QUERY_VRAM_BANKS)                           );
-			ADD_BUILTIN("MAP_X",                                     BuiltinTable::Entry(DEVICE_QUERY_MAP_X)                                );
-			ADD_BUILTIN("MAP_Y",                                     BuiltinTable::Entry(DEVICE_QUERY_MAP_Y)                                );
-			ADD_BUILTIN("CAMERA_X",                                  BuiltinTable::Entry(DEVICE_QUERY_CAMERA_X)                             );
-			ADD_BUILTIN("CAMERA_Y",                                  BuiltinTable::Entry(DEVICE_QUERY_CAMERA_Y)                             );
-			ADD_BUILTIN("MAX_ACTORS",                                BuiltinTable::Entry(DEVICE_QUERY_MAX_ACTORS)                           );
-			ADD_BUILTIN("INSTANTIATED_ACTORS",                       BuiltinTable::Entry(DEVICE_QUERY_INSTANTIATED_ACTORS)                  );
-			ADD_BUILTIN("FREE_ACTORS",                               BuiltinTable::Entry(DEVICE_QUERY_FREE_ACTORS)                          );
-			ADD_BUILTIN("ACTIVE_ACTORS",                             BuiltinTable::Entry(DEVICE_QUERY_ACTIVE_ACTORS)                        );
-			ADD_BUILTIN("MAX_PROJECTILES",                           BuiltinTable::Entry(DEVICE_QUERY_MAX_PROJECTILES)                      );
-			ADD_BUILTIN("ACTIVE_PROJECTILES",                        BuiltinTable::Entry(DEVICE_QUERY_ACTIVE_PROJECTILES)                   );
-			ADD_BUILTIN("FREE_PROJECTILES",                          BuiltinTable::Entry(DEVICE_QUERY_FREE_PROJECTILES)                     );
-			ADD_BUILTIN("MAX_TRIGGERS",                              BuiltinTable::Entry(DEVICE_QUERY_MAX_TRIGGERS)                         );
-			ADD_BUILTIN("FREE_TRIGGERS",                             BuiltinTable::Entry(DEVICE_QUERY_FREE_TRIGGERS)                        );
-			ADD_BUILTIN("SERIAL_STATUS",                             BuiltinTable::Entry(DEVICE_QUERY_SERIAL_STATUS)                        );
-			ADD_BUILTIN("SYS_TIME",                                  BuiltinTable::Entry(DEVICE_QUERY_SYS_TIME)                             );
-			ADD_BUILTIN("DIV_REG",                                   BuiltinTable::Entry(DEVICE_QUERY_DIV_REG)                              );
-			ADD_BUILTIN("PLATFORM_FLAGS",                            BuiltinTable::Entry(DEVICE_QUERY_PLATFORM_FLAGS)                       );
+			ADD_BUILTIN("IS_CGB",                                    BuiltinTable::Entry(DEVICE_QUERY_IS_CGB)                         ); // For device query...
+			ADD_BUILTIN("IS_SGB",                                    BuiltinTable::Entry(DEVICE_QUERY_IS_SGB)                         );
+			ADD_BUILTIN("IS_AGB",                                    BuiltinTable::Entry(DEVICE_QUERY_IS_AGB)                         );
+			ADD_BUILTIN("IS_GBB",                                    BuiltinTable::Entry(DEVICE_QUERY_IS_GBB)                         );
+			ADD_BUILTIN("MAX_THREADS",                               BuiltinTable::Entry(DEVICE_QUERY_MAX_THREADS)                    );
+			ADD_BUILTIN("ACTIVE_THREADS",                            BuiltinTable::Entry(DEVICE_QUERY_ACTIVE_THREADS)                 );
+			ADD_BUILTIN("FREE_THREADS",                              BuiltinTable::Entry(DEVICE_QUERY_FREE_THREADS)                   );
+			ADD_BUILTIN("CURRENT_THREAD_ID",                         BuiltinTable::Entry(DEVICE_QUERY_CURRENT_THREAD_ID)              );
+			ADD_BUILTIN("SRAM_BANKS",                                BuiltinTable::Entry(DEVICE_QUERY_SRAM_BANKS)                     );
+			ADD_BUILTIN("SRAM_LENGTH",                               BuiltinTable::Entry(DEVICE_QUERY_SRAM_LENGTH)                    );
+			ADD_BUILTIN("VRAM_BANKS",                                BuiltinTable::Entry(DEVICE_QUERY_VRAM_BANKS)                     );
+			ADD_BUILTIN("MAP_X",                                     BuiltinTable::Entry(DEVICE_QUERY_MAP_X)                          );
+			ADD_BUILTIN("MAP_Y",                                     BuiltinTable::Entry(DEVICE_QUERY_MAP_Y)                          );
+			ADD_BUILTIN("CAMERA_X",                                  BuiltinTable::Entry(DEVICE_QUERY_CAMERA_X)                       );
+			ADD_BUILTIN("CAMERA_Y",                                  BuiltinTable::Entry(DEVICE_QUERY_CAMERA_Y)                       );
+			ADD_BUILTIN("MAX_ACTORS",                                BuiltinTable::Entry(DEVICE_QUERY_MAX_ACTORS)                     );
+			ADD_BUILTIN("INSTANTIATED_ACTORS",                       BuiltinTable::Entry(DEVICE_QUERY_INSTANTIATED_ACTORS)            );
+			ADD_BUILTIN("FREE_ACTORS",                               BuiltinTable::Entry(DEVICE_QUERY_FREE_ACTORS)                    );
+			ADD_BUILTIN("ACTIVE_ACTORS",                             BuiltinTable::Entry(DEVICE_QUERY_ACTIVE_ACTORS)                  );
+			ADD_BUILTIN("MAX_PROJECTILES",                           BuiltinTable::Entry(DEVICE_QUERY_MAX_PROJECTILES)                );
+			ADD_BUILTIN("ACTIVE_PROJECTILES",                        BuiltinTable::Entry(DEVICE_QUERY_ACTIVE_PROJECTILES)             );
+			ADD_BUILTIN("FREE_PROJECTILES",                          BuiltinTable::Entry(DEVICE_QUERY_FREE_PROJECTILES)               );
+			ADD_BUILTIN("MAX_TRIGGERS",                              BuiltinTable::Entry(DEVICE_QUERY_MAX_TRIGGERS)                   );
+			ADD_BUILTIN("FREE_TRIGGERS",                             BuiltinTable::Entry(DEVICE_QUERY_FREE_TRIGGERS)                  );
+			ADD_BUILTIN("SERIAL_STATUS",                             BuiltinTable::Entry(DEVICE_QUERY_SERIAL_STATUS)                  );
+			ADD_BUILTIN("SYS_TIME",                                  BuiltinTable::Entry(DEVICE_QUERY_SYS_TIME)                       );
+			ADD_BUILTIN("DIV_REG",                                   BuiltinTable::Entry(DEVICE_QUERY_DIV_REG)                        );
+			ADD_BUILTIN("PLATFORM_FLAGS",                            BuiltinTable::Entry(DEVICE_QUERY_PLATFORM_FLAGS)                 );
+
+			// Process entries from the kernel.
+			if (kernelConfigLoaded) {
+				// Prepare.
+				const rapidjson::Document &doc = kernelConfigDoc;
+
+				// Controllers from the kernel.
+				int n = Jpath::count(doc, "behaviours");
+				for (int i = 0; i < n; ++i) {
+					if (Jpath::typeOf(doc, "behaviours", i, "syntax") != Jpath::STRING)
+						continue;
+
+					std::string sid, sval;
+					if (!Jpath::get(doc, sid, "behaviours", i, "syntax") || !Jpath::get(doc, sval, "behaviours", i, "value"))
+						continue;
+					int val = -1;
+					if (!Text::fromString(sval, val))
+						continue;
+
+					ADD_BUILTIN(sid, BuiltinTable::Entry(val));
+				}
+
+				// Properties from the kernel.
+				n = Jpath::count(doc, "properties");
+				for (int i = 0; i < n; ++i) {
+					if (Jpath::typeOf(doc, "properties", i, "syntax") != Jpath::STRING)
+						continue;
+
+					std::string sid, sval;
+					if (!Jpath::get(doc, sid, "properties", i, "syntax") || !Jpath::get(doc, sval, "properties", i, "value"))
+						continue;
+					int val = -1;
+					if (!Text::fromString(sval, val))
+						continue;
+
+					ADD_BUILTIN(sid, BuiltinTable::Entry(val));
+				}
+			}
 		} while (false);
 
 		// Add the function entries for the compiler.
@@ -39168,6 +39197,7 @@ namespace GBBASIC {
 bool load(Program &program, Options &options) {
 	// Prepare.
 	const std::string &src              = options.input;
+	const std::string &config           = options.config;
 	const std::string &rom              = options.rom;
 	const std::string &sym              = options.sym;
 	const std::string &aliases          = options.aliases;
@@ -39236,9 +39266,62 @@ bool load(Program &program, Options &options) {
 		onPrint("Succeeded to load the font.");
 	} while (false);
 
+	// Load the configuration.
+	do {
+		// Prepare.
+		if (!program.config.empty()) {
+			onPrint("Succeeded to load the config.");
+
+			break;
+		}
+
+		std::string path = config;
+		if (path.empty()) {
+			path = rom;
+			if (Text::endsWith(path, "." GBBASIC_CLASSIC_ROM_EXT, true))
+				path = path.substr(0, path.length() - 3);
+			else if (Text::endsWith(path, "." GBBASIC_COLORED_ROM_EXT, true))
+				path = path.substr(0, path.length() - 4);
+			path += ".json";
+			if (!Path::fileExists(path.c_str()))
+				path.clear();
+		}
+		if (path.empty())
+			break;
+		if (!Path::fileExists(path.c_str()))
+			break;
+
+		// Read the config file.
+		File::Ptr file(File::create());
+		if (!file->open(path.c_str(), Stream::READ)) {
+			onError("Cannot open the config file.", true, -1, -1, -1);
+			++errors;
+
+			break;
+		}
+		std::string config;
+		if (!file->readString(config)) {
+			file->close();
+			onError("Failed to read the config.", true, -1, -1, -1);
+			++errors;
+
+			break;
+		}
+		file->close();
+
+		program.config = config;
+		onPrint("Succeeded to load the config.");
+	} while (false);
+
 	// Load the symbols.
 	do {
 		// Prepare.
+		if (!program.symbols.empty()) {
+			onPrint("Succeeded to load the symbols.");
+
+			break;
+		}
+
 		std::string path = sym;
 		if (path.empty()) {
 			path = rom;
@@ -39277,8 +39360,15 @@ bool load(Program &program, Options &options) {
 		onPrint("Succeeded to load the symbols.");
 	} while (false);
 
+	// Load the aliases.
 	do {
 		// Prepare.
+		if (!program.aliases.empty()) {
+			onPrint("Succeeded to load the aliases.");
+
+			break;
+		}
+
 		std::string path = aliases;
 		if (path.empty()) {
 			path = rom;
@@ -39595,7 +39685,7 @@ bool compile(Program &program, const Options &options) {
 	programmer.option("title", title);
 	programmer.symbols(symbols);
 
-	parser.initialize(compiler.builtins(), compiler.functions(), compiler.operators());
+	parser.initialize(program.config.c_str(), compiler.builtins(), compiler.functions(), compiler.operators());
 	parser.linesOfCode(0);
 
 	Pipeline::Ptr pipeline(Pipeline::create(piping.useWorkQueue, piping.lessConsoleOutput));
@@ -39856,18 +39946,21 @@ bool link(Program &program, const Options &options) {
 	return errors == 0;
 }
 
-void identifiers(IdentifierHandler handler) {
+void identifiers(const char* kernelConfigPath, IdentifierHandler handler) {
+	// Prepare.
 	if (!handler)
-		return;
+		return; // Nothing to do.
 
+	// Get entries from parser.
 	BuiltinTable builtins;
 	FunctionTable functions;
 	OperatorTable operators;
 	Parser parser;
-	parser.initialize(builtins, functions, operators);
+	parser.initialize(nullptr, builtins, functions, operators);
 	const Parser::StatementDictionary &statements = parser.statements();
 	const Text::Array &statementsWithReturned = parser.statementsWithReturned();
 
+	// Handle identifiers.
 	builtins.foreach(
 		[handler] (const std::string &key, const BuiltinTable::Entry &/* entry */) -> void {
 			std::string lkey = key;
@@ -39894,6 +39987,80 @@ void identifiers(IdentifierHandler handler) {
 	for (Text::Array::const_iterator it = statementsWithReturned.begin(); it != statementsWithReturned.end(); ++it) {
 		handler(*it, "statement_with_returned");
 	}
+
+	// Load config from kernel.
+	do {
+		if (!kernelConfigPath)
+			break;
+
+		// Read the config file.
+		File::Ptr file(File::create());
+		if (!file->open(kernelConfigPath, Stream::READ)) {
+			fprintf(stderr, "Cannot open the config file.\n");
+
+			break;
+		}
+		std::string config;
+		if (!file->readString(config)) {
+			file->close();
+			fprintf(stderr, "Failed to read the config.\n");
+
+			break;
+		}
+		file->close();
+
+		rapidjson::Document doc;
+		if (!Json::fromString(doc, config.c_str())) {
+			fprintf(stderr, "Failed to parse the config.\n");
+
+			break;
+		}
+
+		// Controllers from the kernel.
+		int n = Jpath::count(doc, "behaviours");
+		for (int i = 0; i < n; ++i) {
+			if (Jpath::typeOf(doc, "behaviours", i, "syntax") != Jpath::STRING)
+				continue;
+
+			std::string sid, sval;
+			if (!Jpath::get(doc, sid, "behaviours", i, "syntax") || !Jpath::get(doc, sval, "behaviours", i, "value"))
+				continue;
+			int val = -1;
+			if (!Text::fromString(sval, val))
+				continue;
+
+			handler(sid, "constant");
+		}
+
+		// Properties from the kernel.
+		n = Jpath::count(doc, "properties");
+		for (int i = 0; i < n; ++i) {
+			if (Jpath::typeOf(doc, "properties", i, "syntax") != Jpath::STRING)
+				continue;
+
+			std::string sid, sval;
+			if (!Jpath::get(doc, sid, "properties", i, "syntax") || !Jpath::get(doc, sval, "properties", i, "value"))
+				continue;
+			int val = -1;
+			if (!Text::fromString(sval, val))
+				continue;
+
+			handler(sid, "constant");
+		}
+
+		// Native functions from the kernel.
+		n = Jpath::count(doc, "natives");
+		for (int i = 0; i < n; ++i) {
+			if (Jpath::typeOf(doc, "natives", i, "syntax") != Jpath::STRING)
+				continue;
+
+			std::string sid;
+			if (!Jpath::get(doc, sid, "natives", i, "syntax"))
+				continue;
+
+			handler(sid, "native");
+		}
+	} while (false);
 }
 
 }

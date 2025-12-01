@@ -279,7 +279,8 @@ private:
 		double playerStopDelay = 0.0;
 		double playerMaxDuration = 0.0;
 		double playerPlayedTicks = 0.0;
-		bool isPlayerSymbolsLoaded = false;
+		bool isPlayerConfigLoaded = false;
+		std::string playerConfigText;
 		std::string playerSymbolsText;
 		std::string playerAliasesText;
 		Editing::SymbolLocation playerIsPlayingLocation;
@@ -302,7 +303,8 @@ private:
 			playerStopDelay = 0.0;
 			playerMaxDuration = 0.0;
 			playerPlayedTicks = 0.0;
-			isPlayerSymbolsLoaded = false;
+			isPlayerConfigLoaded = false;
+			playerConfigText.clear();
 			playerSymbolsText.clear();
 			playerAliasesText.clear();
 			playerIsPlayingLocation = Editing::SymbolLocation();
@@ -2712,7 +2714,8 @@ private:
 		_tools.playerMaxDuration = 0.0;
 		_tools.playerPlayedTicks = 0.0;
 #if EDITOR_SFX_UNLOAD_SYMBOLS_ON_FINISH
-		_tools.isPlayerSymbolsLoaded = false;
+		_tools.isPlayerConfigLoaded = false;
+		_tools.playerConfigText.clear();
 		_tools.playerSymbolsText.clear();
 		_tools.playerAliasesText.clear();
 		_tools.playerIsPlayingLocation = Editing::SymbolLocation();
@@ -2806,20 +2809,39 @@ private:
 
 		std::string dir;
 		Path::split(krnl->path(), nullptr, nullptr, &dir);
+		const std::string config = krnl->path();
 		const std::string rom = Path::combine(dir.c_str(), krnl->kernelRom().c_str());
 		const std::string sym = Path::combine(dir.c_str(), krnl->kernelSymbols().c_str());
 		const std::string aliases = Path::combine(dir.c_str(), krnl->kernelAliases().c_str());
 		const int bootstrapBank = krnl->bootstrapBank();
 
 		// Load and parse the symbols.
-		if (!tools.isPlayerSymbolsLoaded) {
+		if (!tools.isPlayerConfigLoaded) {
+			std::string configTxt;
+			File::Ptr file(File::create());
+			if (!file->open(config.c_str(), Stream::READ)) {
+				self->warn(ws, "No valid config.", true);
+
+				return nullptr;
+			}
+			if (!file->readString(configTxt)) {
+				file->close();
+
+				self->warn(ws, "No valid config.", true);
+
+				return nullptr;
+			}
+			file->close();
+
 			Editing::SymbolTable::Dictionary dict;
 			dict[EDITOR_SFX_PLAYER_IS_PLAYING_RAM_STUB]  = Editing::SymbolLocation();
 			std::string symTxt;
 			std::string aliasesTxt;
 			Editing::SymbolTable symbols;
 			const bool loaded = symbols.load(
-				dict, sym, symTxt, aliases, aliasesTxt,
+				dict,
+				sym, symTxt,
+				aliases, aliasesTxt,
 				[self, ws] (const char* msg) -> void {
 					self->warn(ws, msg, true);
 				}
@@ -2833,7 +2855,8 @@ private:
 			const Editing::SymbolLocation &isPlayingLoc  = dict[EDITOR_SFX_PLAYER_IS_PLAYING_RAM_STUB];
 			tools.playerIsPlayingLocation                = isPlayingLoc;
 			tools.playerIsPlayingLocation.address       += EDITOR_SFX_PLAYER_IS_PLAYING_RAM_OFFSET;
-			tools.isPlayerSymbolsLoaded                  = true;
+			tools.isPlayerConfigLoaded                   = true;
+			tools.playerConfigText                       = configTxt;
 			tools.playerSymbolsText                      = symTxt;
 			tools.playerAliasesText                      = aliasesTxt;
 		}
@@ -2848,7 +2871,10 @@ private:
 		assets->sfx.add(entry_);
 
 		const Bytes::Ptr rom_ = Workspace::compile(
-			rom, sym, tools.playerSymbolsText, aliases, tools.playerAliasesText,
+			config, tools.playerConfigText,
+			rom,
+			sym, tools.playerSymbolsText,
+			aliases, tools.playerAliasesText,
 			"SFX", assets,
 			bootstrapBank,
 			print_, warn_, error_
