@@ -95,6 +95,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Enabled)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Goto)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Import)
+	GBBASIC_PROPERTY_READONLY(std::string, generic_Install)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Later)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_New)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_No)
@@ -111,6 +112,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, generic_SaveTo)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Search)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Size)
+	GBBASIC_PROPERTY_READONLY(std::string, generic_Uninstall)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Yes)
 
 	GBBASIC_PROPERTY_READONLY(std::string, menu_1Bpp)
@@ -493,8 +495,9 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogAsk_SaveTheCurrentProject)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogInput_Input)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogInput_ProjectName)
-	GBBASIC_PROPERTY_READONLY(std::string, dialogStarterKits_ProjectName)
-	GBBASIC_PROPERTY_READONLY(std::string, dialogStarterKits_StarterKit)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogProjectCreating_Kernel)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogProjectCreating_ProjectName)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogProjectCreating_StarterKit)
 
 	GBBASIC_PROPERTY_READONLY(std::string, tabPreferences_Debug)
 	GBBASIC_PROPERTY_READONLY(std::string, tabPreferences_Device)
@@ -579,6 +582,9 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Input_Onscreen_SwapAB)
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Input_WaitingForInput)
 
+	GBBASIC_PROPERTY_READONLY(std::string, windowInstalledKernels)
+
+	GBBASIC_PROPERTY_READONLY(std::string, windowCreateProject)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Title)
@@ -607,6 +613,10 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_Border_Custom)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_Preview)
 
+	GBBASIC_PROPERTY_READONLY(std::string, windowSortAssets)
+
+	GBBASIC_PROPERTY_READONLY(std::string, windowSearch)
+
 	GBBASIC_PROPERTY_READONLY(std::string, windowPalette)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator)
@@ -630,6 +640,8 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowAudio_Instruments)
 	GBBASIC_PROPERTY_READONLY(std::string, windowAudio_Noise)
 	GBBASIC_PROPERTY_READONLY(std::string, windowAudio_Wave)
+
+	GBBASIC_PROPERTY_READONLY(std::string, windowSfx)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowFont)
 	GBBASIC_PROPERTY_READONLY(std::string, windowFont_Arbitrary)
@@ -705,6 +717,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_IconView)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_Import)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ImportAsNew)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltip_InstalledKernels)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_JumpToRefMap)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_JumpToRefTiles)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_LayerActors)
@@ -984,6 +997,7 @@ public:
 	GBBASIC_PROPERTY_PTR(class Texture, iconDocument)
 	GBBASIC_PROPERTY_PTR(class Texture, iconIconView)
 	GBBASIC_PROPERTY_PTR(class Texture, iconListView)
+	GBBASIC_PROPERTY_PTR(class Texture, iconKernels)
 	GBBASIC_PROPERTY_PTR(class Texture, iconSave)
 	GBBASIC_PROPERTY_PTR(class Texture, iconWorking)
 	GBBASIC_PROPERTY_PTR(class Texture, iconInfo)

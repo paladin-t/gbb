@@ -2556,6 +2556,7 @@ private:
 				);
 				ws->showExternalFileBrowser(
 					rnd,
+					ws->theme()->windowActor(),
 					ws->theme()->generic__Path(),
 					GBBASIC_IMAGE_FILE_FILTER,
 					true,
@@ -2802,6 +2803,7 @@ private:
 				);
 				ws->showExternalFileBrowser(
 					rnd,
+					ws->theme()->windowActor(),
 					ws->theme()->generic__Path(),
 					GBBASIC_IMAGE_FILE_FILTER,
 					false,

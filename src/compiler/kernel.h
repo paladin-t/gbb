@@ -118,7 +118,7 @@ public:
 	 */
 	virtual bool clone(Object** ptr) const override;
 
-	bool open(const char* path, const char* menu);
+	bool open(const char* path);
 	bool close(void);
 };
 

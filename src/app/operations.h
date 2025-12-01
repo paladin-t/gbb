@@ -35,12 +35,12 @@ public:
 	static promise::Promise popupWait(Window* wnd, Renderer* rnd, Workspace* ws, const char* content);
 	static promise::Promise popupWait(Window* wnd, Renderer* rnd, Workspace* ws, bool dim, const char* content, bool instantly, bool exclusive = false);
 	static promise::Promise popupWait(Window* wnd, Renderer* rnd, Workspace* ws);
-	static promise::Promise popupProjectCreating(Window* wnd, Renderer* rnd, Workspace* ws, const char* template_, const char* content, const char* default_ = nullptr, unsigned flags = 0);
+	static promise::Promise popupProjectCreating(Window* wnd, Renderer* rnd, Workspace* ws, const char* template_, const char* kernel, const char* content, const char* default_ = nullptr, unsigned flags = 0);
 	static promise::Promise popupAssetsSorting(Window* wnd, Renderer* rnd, Workspace* ws, AssetsBundle::Categories category);
 	static promise::Promise popupExternalFontResolver(Window* wnd, Renderer* rnd, Workspace* ws, const char* content);
 	static promise::Promise popupExternalMapResolver(Window* wnd, Renderer* rnd, Workspace* ws, const char* content);
 	static promise::Promise popupExternalSceneResolver(Window* wnd, Renderer* rnd, Workspace* ws);
-	static promise::Promise popupExternalFileResolver(Window* wnd, Renderer* rnd, Workspace* ws, const char* content, const Text::Array &filter);
+	static promise::Promise popupExternalFileResolver(Window* wnd, Renderer* rnd, Workspace* ws, const char* title, const char* content, const Text::Array &filter);
 	static promise::Promise popupRomBuildSettings(Window* wnd, Renderer* rnd, Workspace* ws, Exporter::Ptr ex);
 	static promise::Promise popupEmulatorBuildSettings(Window* wnd, Renderer* rnd, Workspace* ws, Exporter::Ptr ex, const char* settings, const char* args, bool hasIcon);
 

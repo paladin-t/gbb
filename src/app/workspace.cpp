@@ -2958,6 +2958,7 @@ void Workspace::inputPopupBox(
 
 void Workspace::projectCreatingPopupBox(
 	const std::string &template_,
+	const std::string &kernel,
 	const std::string &content,
 	const std::string &default_, unsigned flags,
 	const ImGui::ProjectCreatingPopupBox::ConfirmedHandler &confirm_,
@@ -2983,8 +2984,9 @@ void Workspace::projectCreatingPopupBox(
 		ImGui::PopupBox::Ptr(
 			new ImGui::ProjectCreatingPopupBox(
 				theme(),
-				GBBASIC_TITLE,
+				theme()->windowCreateProject(),
 				template_,
+				kernel,
 				content, default_, flags,
 				confirm, cancel,
 				btnConfirm, btnCancel
@@ -3022,7 +3024,7 @@ void Workspace::assetsSortingPopupBox(
 			new ImGui::AssetsSortingPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				theme()->windowSortAssets(),
 				prj.get(),
 				(unsigned)category,
 				confirm, cancel,
@@ -3058,7 +3060,7 @@ void Workspace::searchPopupBox(
 		ImGui::PopupBox::Ptr(
 			new ImGui::SearchPopupBox(
 				theme(),
-				GBBASIC_TITLE,
+				theme()->windowSearch(),
 				settings(),
 				content, default_, flags,
 				confirm, cancel,
@@ -3372,7 +3374,7 @@ void Workspace::showExternalFontBrowser(
 			new ImGui::FontResolverPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				theme()->windowFont(),
 				Math::Vec2i(8, 8), Math::Vec2i(GBBASIC_FONT_MIN_SIZE, GBBASIC_FONT_MIN_SIZE), Math::Vec2i(GBBASIC_FONT_MAX_SIZE, GBBASIC_FONT_MAX_SIZE), theme()->generic_Size().c_str(), "x",
 				content, "",
 				filter,
@@ -3436,7 +3438,7 @@ void Workspace::showExternalMapBrowser(
 			new ImGui::MapResolverPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				theme()->windowMap(),
 				withTiles ? theme()->dialogPrompt_FromTiles().c_str() : nullptr, withPath ? theme()->dialogPrompt_FromImage().c_str() : nullptr,
 				prj->preferencesMapRef(), 0, Math::max(0, prj->tilesPageCount() - 1), theme()->dialogPrompt_TilesPage().c_str(),
 				content, "",
@@ -3502,7 +3504,7 @@ void Workspace::showExternalSceneBrowser(
 			new ImGui::SceneResolverPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				theme()->windowScene(),
 				prj.get(),
 				prj->preferencesSceneRefMap(), 0, Math::max(0, prj->mapPageCount() - 1), theme()->dialogPrompt_MapPage().c_str(),
 				prj->preferencesSceneUseGravity(), theme()->dialogPrompt_UseGravity().c_str(),
@@ -3517,6 +3519,7 @@ void Workspace::showExternalSceneBrowser(
 
 void Workspace::showExternalFileBrowser(
 	Renderer* rnd,
+	const std::string &title,
 	const std::string &content,
 	const Text::Array &filter,
 	bool requireExisting,
@@ -3546,7 +3549,7 @@ void Workspace::showExternalFileBrowser(
 			new ImGui::FileResolverPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				title,
 				content, "",
 				filter,
 				requireExisting,
@@ -3562,6 +3565,7 @@ void Workspace::showExternalFileBrowser(
 
 void Workspace::showExternalFileBrowser(
 	Renderer* rnd,
+	const std::string &title,
 	const std::string &content,
 	const Text::Array &filter,
 	bool requireExisting,
@@ -3592,7 +3596,7 @@ void Workspace::showExternalFileBrowser(
 			new ImGui::FileResolverPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				title,
 				content, "",
 				filter,
 				requireExisting,
@@ -3609,6 +3613,7 @@ void Workspace::showExternalFileBrowser(
 
 void Workspace::showExternalFileBrowser(
 	Renderer* rnd,
+	const std::string &title,
 	const std::string &content,
 	const Text::Array &filter,
 	bool requireExisting,
@@ -3641,7 +3646,7 @@ void Workspace::showExternalFileBrowser(
 				new ImGui::FileResolverPopupBox(
 					rnd,
 					theme(),
-					GBBASIC_TITLE,
+					title,
 					content, "",
 					filter,
 					requireExisting,
@@ -3660,6 +3665,7 @@ void Workspace::showExternalFileBrowser(
 
 void Workspace::showExternalFileBrowser(
 	Renderer* rnd,
+	const std::string &title,
 	const std::string &content,
 	const Text::Array &filter,
 	bool requireExisting,
@@ -3691,7 +3697,7 @@ void Workspace::showExternalFileBrowser(
 			new ImGui::FileResolverPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				title,
 				content, "",
 				filter,
 				requireExisting,
@@ -3868,6 +3874,39 @@ void Workspace::closeSearchResult(void) {
 		EditorSearchResult::destroy(editor);
 		searchResultTextBox(nullptr);
 	}
+}
+
+void Workspace::showKernels(Window*, Renderer* rnd) {
+	ImGui::InstalledKernelsPopupBox::ConfirmedHandler confirm(
+		[this] (void) -> void {
+			popupBox(nullptr);
+		},
+		nullptr
+	);
+	ImGui::InstalledKernelsPopupBox::AddedHandler add(
+		[this] (void) -> void {
+			clearLanguageDefinition(true);
+		},
+		nullptr
+	);
+	ImGui::InstalledKernelsPopupBox::RemovedHandler remove(
+		[this] (void) -> void {
+			clearLanguageDefinition(true);
+		},
+		nullptr
+	);
+	popupBox(
+		ImGui::PopupBox::Ptr(
+			new ImGui::InstalledKernelsPopupBox(
+				rnd,
+				theme(),
+				theme()->windowInstalledKernels(),
+				kernels(),
+				confirm, add, remove,
+				theme()->generic_Ok().c_str(), theme()->generic_Install().c_str(), theme()->generic_Uninstall().c_str()
+			)
+		)
+	);
 }
 
 void Workspace::showPreferences(Window* wnd, Renderer* rnd, const char* tab) {
@@ -4408,7 +4447,7 @@ bool Workspace::analyze(bool force) {
 	);
 
 	auto finish = [] (Workspace* ws) -> void {
-		ws->clearLanguageDefinition();
+		ws->clearLanguageDefinition(false);
 		ws->clearAnalyzedCodeInformation();
 		ws->clearCodePageNames();
 
@@ -4444,12 +4483,12 @@ void Workspace::clearAnalyzingResult(void) {
 
 	staticAnalyzer()->clear();
 
-	clearLanguageDefinition();
+	clearLanguageDefinition(false);
 	clearAnalyzedCodeInformation();
 	clearAssetPageNames();
 }
 
-void Workspace::clearLanguageDefinition(void) {
+void Workspace::clearLanguageDefinition(bool clearRevision) {
 	const Project::Ptr &prj = currentProject();
 	if (!prj || !prj->assets())
 		return;
@@ -4458,12 +4497,12 @@ void Workspace::clearLanguageDefinition(void) {
 		CodeAssets::Entry* entry = prj->getCode(i);
 		Editable* editor = entry->editor;
 		if (editor)
-			editor->post(Editable::CLEAR_LANGUAGE_DEFINITION, false);
+			editor->post(Editable::CLEAR_LANGUAGE_DEFINITION, clearRevision);
 	}
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 	if (prj->minorCodeEditor()) {
-		prj->minorCodeEditor()->post(Editable::CLEAR_LANGUAGE_DEFINITION, false);
+		prj->minorCodeEditor()->post(Editable::CLEAR_LANGUAGE_DEFINITION, clearRevision);
 	}
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 }
@@ -5840,7 +5879,7 @@ void Workspace::loadKernels(void) {
 			Path::split(path, &name, nullptr, nullptr);
 
 			GBBASIC::Kernel::Ptr krnl(new GBBASIC::Kernel());
-			if (!krnl->open(path.c_str(), theme()->menu_Kernels().c_str()))
+			if (!krnl->open(path.c_str()))
 				continue; // Not a kernel.
 
 			if (krnl->id() == "default")
@@ -7747,6 +7786,9 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 		VariableGuard<decltype(style.ChildBorderSize)> guardChildBorderSize(&style.ChildBorderSize, style.ChildBorderSize, 1);
 
 		if (ImGui::BeginMenu(theme()->menu_Application())) {
+			if (ImGui::MenuItem(theme()->menu_Kernels())) {
+				showKernels(wnd, rnd);
+			}
 			if (ImGui::MenuItem(theme()->menu_Preferences())) {
 				showPreferences(wnd, rnd, nullptr);
 			}
@@ -9412,6 +9454,10 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 	case Categories::HOME:
 		if (showRecentProjects()) {
 			if (!docOpened) {
+				if (ImGui::MenuBarImageButton(theme()->iconKernels()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_InstalledKernels().c_str())) {
+					showKernels(wnd, rnd);
+				}
+				width += ImGui::GetItemRectSize().x;
 				if (settings().recentIconView) {
 					if (ImGui::MenuBarImageButton(theme()->iconListView()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_ListView().c_str())) {
 						settings().recentIconView = false;

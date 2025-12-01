@@ -1880,7 +1880,7 @@ bool Project::open(const char* path_) {
 			iconCode(txt);
 		}
 
-		//kernel
+		kernel("default");
 		const long long now = DateTime::now();
 		contentType(ContentTypes::ROM);
 		RomInspector header;

@@ -390,7 +390,7 @@ promise::Promise Operations::popupWait(Window*, Renderer*, Workspace* ws) {
 		);
 }
 
-promise::Promise Operations::popupProjectCreating(Window*, Renderer*, Workspace* ws, const char* template_, const char* content, const char* default_, unsigned flags) {
+promise::Promise Operations::popupProjectCreating(Window*, Renderer*, Workspace* ws, const char* template_, const char* kernel, const char* content, const char* default_, unsigned flags) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
 			ImGui::ProjectCreatingPopupBox::ConfirmedHandler confirm(
@@ -410,8 +410,9 @@ promise::Promise Operations::popupProjectCreating(Window*, Renderer*, Workspace*
 				nullptr
 			);
 			ws->projectCreatingPopupBox(
-				template_ ? template_ : ws->theme()->dialogStarterKits_StarterKit().c_str(),
-				content ? content : ws->theme()->dialogStarterKits_ProjectName().c_str(),
+				template_ ? template_ : ws->theme()->dialogProjectCreating_StarterKit().c_str(),
+				kernel ? kernel : ws->theme()->dialogProjectCreating_Kernel().c_str(),
+				content ? content : ws->theme()->dialogProjectCreating_ProjectName().c_str(),
 				default_ ? default_ : "", flags,
 				confirm,
 				cancel
@@ -838,7 +839,7 @@ promise::Promise Operations::popupExternalSceneResolver(Window*, Renderer* rnd, 
 	);
 }
 
-promise::Promise Operations::popupExternalFileResolver(Window*, Renderer* rnd, Workspace* ws, const char* content, const Text::Array &filter) {
+promise::Promise Operations::popupExternalFileResolver(Window*, Renderer* rnd, Workspace* ws, const char* title, const char* content, const Text::Array &filter) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
 			ImGui::FileResolverPopupBox::ConfirmedHandler_Path confirm(
@@ -859,6 +860,7 @@ promise::Promise Operations::popupExternalFileResolver(Window*, Renderer* rnd, W
 			);
 			ws->showExternalFileBrowser(
 				rnd,
+				title,
 				content,
 				filter,
 				true,
@@ -1064,7 +1066,7 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			fileClose(wnd, rnd, ws)
 				.then(
 					[wnd, rnd, ws, next, df] (bool /* ok */) -> promise::Promise {
-						return popupProjectCreating(wnd, rnd, ws, ws->theme()->dialogStarterKits_StarterKit().c_str(), ws->theme()->dialogStarterKits_ProjectName().c_str(), GBBASIC_NONAME_PROJECT_NAME, ImGuiInputTextFlags_None)
+						return popupProjectCreating(wnd, rnd, ws, ws->theme()->dialogProjectCreating_Kernel().c_str(), ws->theme()->dialogProjectCreating_StarterKit().c_str(), ws->theme()->dialogProjectCreating_ProjectName().c_str(), GBBASIC_NONAME_PROJECT_NAME, ImGuiInputTextFlags_None)
 							.then(
 								[ws, next, df] (int idx, const char* name) -> promise::Promise {
 									WORKSPACE_AUTO_CLOSE_POPUP(ws)
@@ -1145,6 +1147,7 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 				}
 
 				ws->currentProject(prj);
+				ws->activeKernelIndex(0);
 				if (prj->contentType() == Project::ContentTypes::BASIC) {
 					ws->category(Workspace::Categories::CODE);
 				} else {
@@ -1245,6 +1248,7 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 
 						ws->closeSearchResult();
 						ws->currentProject(nullptr);
+						// TODO: set active kernel.
 						ws->popupBox(nullptr);
 						ws->category(Workspace::Categories::HOME);
 						ws->categoryOfAudio(Workspace::Categories::MUSIC);

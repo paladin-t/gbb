@@ -62,7 +62,7 @@ bool Kernel::clone(Object** ptr) const { // Non-clonable.
 	return false;
 }
 
-bool Kernel::open(const char* path_, const char* menu) {
+bool Kernel::open(const char* path_) {
 	// Read from file.
 	File::Ptr file(File::create());
 	if (!file->open(path_, Stream::READ))
@@ -293,7 +293,6 @@ bool Kernel::open(const char* path_, const char* menu) {
 	const char* entrystr = Localization::get(title_);
 	if (entrystr)
 		entry_ = entrystr;
-	entry_ = menu + std::string("/") + entry_;
 	entry(Entry(entry_));
 
 	// Finish.

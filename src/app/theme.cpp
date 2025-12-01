@@ -296,6 +296,7 @@ bool Theme::open(class Renderer* rnd) {
 	generic_Enabled("Enabled");
 	generic_Goto("Goto");
 	generic_Import("Import");
+	generic_Install("Install");
 	generic_Later("Later");
 	generic_New("New");
 	generic_No("No");
@@ -312,6 +313,7 @@ bool Theme::open(class Renderer* rnd) {
 	generic_SaveTo("Save to");
 	generic_Search("Search");
 	generic_Size("Size");
+	generic_Uninstall("Uninstall");
 	generic_Yes("Yes");
 
 	menu_1Bpp("1BPP");
@@ -384,7 +386,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Jump("Jump");
 	menu_JumpToTheActor("Jump to The Actor");
 	menu_JumpToTheMap("Jump to The Map");
-	menu_Kernels("Kernels");
+	menu_Kernels("Kernels...");
 	menu_Library("Library");
 	menu_Manual("Manual...");
 	menu_Map("Map");
@@ -694,8 +696,9 @@ bool Theme::open(class Renderer* rnd) {
 	dialogAsk_SaveTheCurrentProject("Save the current project?");
 	dialogInput_Input("Input");
 	dialogInput_ProjectName("Project name:");
-	dialogStarterKits_ProjectName("Project name:");
-	dialogStarterKits_StarterKit("Starter kit:");
+	dialogProjectCreating_Kernel("Kernel:");
+	dialogProjectCreating_ProjectName("Project name:");
+	dialogProjectCreating_StarterKit("Starter kit:");
 
 	tabPreferences_Debug("Debug");
 	tabPreferences_Device("Device");
@@ -780,6 +783,10 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Input_Onscreen_SwapAB("Swap A/B");
 	windowPreferences_Input_WaitingForInput("Waiting for input...");
 
+	windowInstalledKernels("Installed Kernels");
+
+	windowCreateProject("Create Project");
+
 	windowProjectProperty("Property");
 	windowProjectProperty_Project_Title("  Title");    windowProjectProperty_Project_Path("Path ");
 	windowProjectProperty_Project_Cart("   Cart");
@@ -802,6 +809,10 @@ bool Theme::open(class Renderer* rnd) {
 	windowProjectProperty_Advanced_Border_Default("Default");
 	windowProjectProperty_Advanced_Border_Custom("Custom");
 	windowProjectProperty_Advanced_Preview(" Preview");
+
+	windowSortAssets("Sort Assets");
+
+	windowSearch("Search");
 
 	windowPalette("Palette");
 
@@ -826,6 +837,8 @@ bool Theme::open(class Renderer* rnd) {
 	windowAudio_Instruments("Instruments");
 	windowAudio_Noise("NOISE");
 	windowAudio_Wave("WAVE");
+
+	windowSfx("SFX");
 
 	windowFont("Font");
 	windowFont_Arbitrary("Arbitrary");
@@ -916,6 +929,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_IconView("Icon view");
 	tooltip_Import("Import");
 	tooltip_ImportAsNew("Import as new");
+	tooltip_InstalledKernels("Installed kernels");
 	tooltip_JumpToRefMap("Jump to ref map");
 	tooltip_JumpToRefTiles("Jump to ref tiles");
 	tooltip_LayerActors("Placed actors");
@@ -1255,6 +1269,7 @@ bool Theme::open(class Renderer* rnd) {
 	iconDocument(createTexture(rnd, RES_ICON_DOCUMENT, GBBASIC_COUNTOF(RES_ICON_DOCUMENT), nullptr));
 	iconIconView(createTexture(rnd, RES_ICON_ICON_VIEW, GBBASIC_COUNTOF(RES_ICON_ICON_VIEW), nullptr));
 	iconListView(createTexture(rnd, RES_ICON_LIST_VIEW, GBBASIC_COUNTOF(RES_ICON_LIST_VIEW), nullptr));
+	iconKernels(createTexture(rnd, RES_ICON_KERNELS, GBBASIC_COUNTOF(RES_ICON_KERNELS), nullptr));
 	iconSave(createTexture(rnd, RES_ICON_SAVE, GBBASIC_COUNTOF(RES_ICON_SAVE), nullptr));
 	iconWorking(createTexture(rnd, RES_ICON_WORKING, GBBASIC_COUNTOF(RES_ICON_WORKING), nullptr));
 	iconInfo(createTexture(rnd, RES_ICON_INFO, GBBASIC_COUNTOF(RES_ICON_INFO), nullptr));
@@ -1421,6 +1436,7 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconDocument(), nullptr);
 	destroyTexture(rnd, iconIconView(), nullptr);
 	destroyTexture(rnd, iconListView(), nullptr);
+	destroyTexture(rnd, iconKernels(), nullptr);
 	destroyTexture(rnd, iconWorking(), nullptr);
 	destroyTexture(rnd, iconInfo(), nullptr);
 	destroyTexture(rnd, iconSave(), nullptr);

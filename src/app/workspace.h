@@ -758,6 +758,7 @@ public:
 	);
 	void projectCreatingPopupBox(
 		const std::string &template_,
+		const std::string &kernel,
 		const std::string &content,
 		const std::string &default_, unsigned flags,
 		const ImGui::ProjectCreatingPopupBox::ConfirmedHandler &confirm /* nullable */,
@@ -832,6 +833,7 @@ public:
 	);
 	void showExternalFileBrowser(
 		Renderer* rnd,
+		const std::string &title,
 		const std::string &content,
 		const Text::Array &filter,
 		bool requireExisting,
@@ -842,6 +844,7 @@ public:
 	);
 	void showExternalFileBrowser(
 		Renderer* rnd,
+		const std::string &title,
 		const std::string &content,
 		const Text::Array &filter,
 		bool requireExisting,
@@ -853,6 +856,7 @@ public:
 	);
 	void showExternalFileBrowser(
 		Renderer* rnd,
+		const std::string &title,
 		const std::string &content,
 		const Text::Array &filter,
 		bool requireExisting,
@@ -865,6 +869,7 @@ public:
 	);
 	void showExternalFileBrowser(
 		Renderer* rnd,
+		const std::string &title,
 		const std::string &content,
 		const Text::Array &filter,
 		bool requireExisting,
@@ -889,6 +894,7 @@ public:
 	void showProjectProperty(Window* wnd, Renderer* rnd, Project* prj);
 	void showSearchResult(const std::string &pattern, const Editing::Tools::SearchResult::Array &found);
 	void closeSearchResult(void);
+	void showKernels(Window* wnd, Renderer* rnd);
 	void showPreferences(Window* wnd, Renderer* rnd, const char* tab /* nullable */);
 	void showActivities(Renderer* rnd);
 	void showAbout(Renderer* rnd);
@@ -920,7 +926,7 @@ public:
 	bool analyzing(void) const;
 	bool analyze(bool force);
 	void clearAnalyzingResult(void);
-	void clearLanguageDefinition(void);
+	void clearLanguageDefinition(bool clearRevision);
 	unsigned getLanguageDefinitionRevision(void) const;
 	const GBBASIC::Macro::List* getMacroDefinitions(void);
 	const Text::Array* getDestinitions(void);

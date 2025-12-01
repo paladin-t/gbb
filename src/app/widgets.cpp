@@ -617,12 +617,14 @@ ProjectCreatingPopupBox::ProjectCreatingPopupBox(
 	Theme* theme,
 	const std::string &title,
 	const std::string &template_,
+	const std::string &kernel,
 	const std::string &content, const std::string &default_, unsigned flags,
 	const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 	const char* confirmTxt, const char* cancelTxt
 ) : _theme(theme),
 	_title(title),
 	_template(template_),
+	_kernel(kernel),
 	_content(content), _default(default_), _flags(flags),
 	_confirmedHandler(confirm), _canceledHandler(cancel)
 {
@@ -708,6 +710,14 @@ void ProjectCreatingPopupBox::update(Workspace* ws) {
 				},
 				(void*)&data
 			);
+		}
+		PopID();
+
+		PushID("#Krnl");
+		if (_templateCursor == 0) { // No starter kit selected, then choose a kernel.
+			TextUnformatted(_kernel);
+
+			// TODO
 		}
 		PopID();
 
@@ -4477,6 +4487,108 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			_canceledHandler();
 
 			return;
+		}
+	}
+}
+
+InstalledKernelsPopupBox::InstalledKernelsPopupBox(
+	Renderer* rnd,
+	Theme* theme,
+	const std::string &title,
+	GBBASIC::Kernel::Array &kernels,
+	const ConfirmedHandler &confirm, const AddedHandler &add, const RemovedHandler &remove,
+	const char* confirmTxt, const char* addTxt, const char* removeTxt
+) : _renderer(rnd),
+	_theme(theme),
+	_title(title),
+	_kernels(kernels),
+	_confirmedHandler(confirm), _addedHandler(add), _removedHandler(remove)
+{
+	if (confirmTxt)
+		_confirmText = confirmTxt;
+
+	if (addTxt)
+		_addText = addTxt;
+	if (removeTxt)
+		_removeText = removeTxt;
+}
+
+InstalledKernelsPopupBox::~InstalledKernelsPopupBox() {
+}
+
+void InstalledKernelsPopupBox::update(Workspace* ws) {
+	ImGuiIO &io = GetIO();
+	ImGuiStyle &style = GetStyle();
+
+	bool isOpen = true;
+	bool toConfirm = false;
+	bool toAdd = false;
+	bool toRemove = false;
+
+	if (_init.begin()) {
+		OpenPopup(_title);
+
+		const ImVec2 pos = io.DisplaySize/* * io.DisplayFramebufferScale*/ * 0.5f;
+		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	}
+
+	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 480.0f);
+	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
+	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
+		const char* remove = _removeText.empty() ? "Uninstall" : _removeText.c_str();
+
+		// TODO
+
+		const char* confirm = _confirmText.c_str();
+		const char* add = _addText.empty() ? "Install" : _addText.c_str();
+
+		if (_confirmText.empty()) {
+			confirm = "Ok";
+		}
+
+		CentralizeButton(2);
+
+		if (Button(confirm, ImVec2(WIDGETS_BUTTON_WIDTH, 0)) && _init.end()) {
+			toConfirm = true;
+
+			CloseCurrentPopup();
+		}
+
+		SameLine();
+		if (Button(add, ImVec2(WIDGETS_BUTTON_WIDTH, 0)) && _init.end()) {
+			toAdd = true;
+		}
+
+		if (!_init.begin() && !_init.end())
+			CentralizeWindow();
+
+		EnsureWindowVisible();
+
+		EndPopup();
+	}
+
+	if (isOpen)
+		_init.update();
+
+	if (toConfirm) {
+		_init.reset();
+
+		if (!_confirmedHandler.empty()) {
+			_confirmedHandler();
+
+			return;
+		}
+	}
+	if (toAdd) {
+		_init.reset();
+
+		if (!_addedHandler.empty()) {
+			_addedHandler();
+		}
+	}
+	if (toRemove) {
+		if (!_removedHandler.empty()) {
+			_removedHandler();
 		}
 	}
 }
