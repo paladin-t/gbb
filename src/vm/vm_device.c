@@ -81,8 +81,10 @@ void device_init(void) BANKED {
     BOOLEAN IS_GBB       = FALSE;
 
     if (ExtensionMode) {
-        const UINT8 ext  = *(UINT8 *)EXTENSION_STATUS_REG;
-        IS_GBB           = !!(ext & ANY_EXT_TYPE); // `ext == GB_EXT_TYPE || ext == CGB_EXT_TYPE || ext == SGB_EXT_TYPE;`
+        const UINT8 extf = *(UINT8 *)EXTENSION_STATUS_REG;
+        const UINT8 trsf = *(UINT8 *)TRANSFER_STATUS_REG;
+        // Is GBB when `EXTF` is set and `TRSF` is 0.
+        IS_GBB           = (extf == GB_EXT_TYPE || extf == CGB_EXT_TYPE || extf == SGB_EXT_TYPE) && (trsf == 0x00);
     }
 
     device_type |= DEVICE_TYPE_GB;
@@ -238,7 +240,8 @@ void vm_option(SCRIPT_CTX * THIS) OLDCALL BANKED {
             WX_REG = 0, HIDE_WIN;
             HIDE_SPRITES;
             move_bkg(0, 0);
-            load_default_font(); // Initialize the text mode.
+            font_init(); // Initialize the text mode.
+            load_default_font();
         } else if (val == DEVICE_SCREEN_GRAPHICS) {
             // To the graphics mode.
             move_bkg(0, 0);
@@ -248,7 +251,7 @@ void vm_option(SCRIPT_CTX * THIS) OLDCALL BANKED {
             // Uninstall VBL and LCD ISRs if they were installed by the graphics mode.
             const UINT8 m = get_mode();
             if ((m & 0x07) == M_DRAWING) // Was graphics mode.
-                mode(M_TEXT_OUT);
+                mode(M_TEXT_OUT); // Turn to the text mode first to exit the graphics mode.
         }
         *(THIS->stack_ptr++) = TRUE;
 

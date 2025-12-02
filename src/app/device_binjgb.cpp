@@ -639,6 +639,10 @@ bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, 
 	setBwPalette(PALETTE_TYPE_OBP1, _classicPalette[0].toRGBA(), _classicPalette[1].toRGBA(), _classicPalette[2].toRGBA(), _classicPalette[3].toRGBA());
 
 	if (deviceHasExtSupport()) { // GBB EXTENSION.
+		// Initialize the extension RAM to zero.
+		for (int i = 0; i < DEVICE_BINJGB_EXTENSION_AREA_SIZE; ++i)
+			emulator_write_u8_raw(_emulator, (Address)(DEVICE_BINJGB_EXTENSION_START_ADDRESS + i), 0);
+
 		// Turn on the extension features.
 		if (_enabledDeviceType == DeviceTypes::CLASSIC_EXTENDED)
 			emulator_write_u8_raw(_emulator, DEVICE_BINJGB_EXTENSION_STATUS_REG, DEVICE_BINJGB_CPU_GB_EXT_TYPE);
@@ -646,8 +650,6 @@ bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, 
 			emulator_write_u8_raw(_emulator, DEVICE_BINJGB_EXTENSION_STATUS_REG, DEVICE_BINJGB_CPU_CGB_EXT_TYPE);
 		else if (_enabledDeviceType == DeviceTypes::SUPER_EXTENDED)
 			emulator_write_u8_raw(_emulator, DEVICE_BINJGB_EXTENSION_STATUS_REG, DEVICE_BINJGB_CPU_SGB_EXT_TYPE);
-		for (int i = 1; i < DEVICE_BINJGB_EXTENSION_AREA_SIZE; ++i)
-			emulator_write_u8_raw(_emulator, (Address)(DEVICE_BINJGB_EXTENSION_START_ADDRESS + i), 0);
 
 		// Set the platform flags.
 		u8 flags = 0;

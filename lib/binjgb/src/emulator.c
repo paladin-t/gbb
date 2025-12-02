@@ -4858,6 +4858,7 @@ Result init_emulator(Emulator* e, const EmulatorInit* init) {
   randomize_buffer(&random_seed, e->state.ext_ram.data, EXT_RAM_MAX_SIZE);
   randomize_buffer(&random_seed, e->state.wram.data, WORK_RAM_SIZE);
   randomize_buffer(&random_seed, e->state.hram, HIGH_RAM_SIZE);
+  memset(e->state.not_usable.data, 0, NOT_USABLE_RAM_SIZE); // GBB EXTENSION.
 
   e->state.cpu_tick = CPU_TICK;
   calculate_next_ppu_intr(e);
