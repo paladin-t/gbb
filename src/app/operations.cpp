@@ -1075,7 +1075,7 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			fileClose(wnd, rnd, ws)
 				.then(
 					[wnd, rnd, ws, next, df] (bool /* ok */) -> promise::Promise {
-						return popupProjectCreating(wnd, rnd, ws, ws->theme()->dialogProjectCreating_Kernel().c_str(), ws->theme()->dialogProjectCreating_StarterKit().c_str(), ws->theme()->dialogProjectCreating_ProjectName().c_str(), GBBASIC_NONAME_PROJECT_NAME, ImGuiInputTextFlags_None)
+						return popupProjectCreating(wnd, rnd, ws, ws->theme()->dialogProjectCreating_StarterKit().c_str(), ws->theme()->dialogProjectCreating_Kernel().c_str(), ws->theme()->dialogProjectCreating_ProjectName().c_str(), GBBASIC_NONAME_PROJECT_NAME, ImGuiInputTextFlags_None)
 							.then(
 								[ws, next, df] (int templateIndex, int kernelIndex, const char* name) -> promise::Promise {
 									WORKSPACE_AUTO_CLOSE_POPUP(ws)
