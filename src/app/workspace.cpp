@@ -793,6 +793,25 @@ void Workspace::skipFrame(int n) {
 	_skipping = n;
 }
 
+int Workspace::getKernelIndex(const std::string &id) const {
+	for (int i = 0; i < (int)kernels().size(); ++i) {
+		const GBBASIC::Kernel::Ptr &krnl = kernels()[i];
+		if (krnl && krnl->id() == id)
+			return i;
+	}
+
+	return -1;
+}
+
+const std::string* Workspace::getKernelId(int index) const {
+	if (index < 0 || index >= (int)kernels().size())
+		return nullptr;
+
+	const GBBASIC::Kernel::Ptr &krnl = kernels()[index];
+
+	return &krnl->id();
+}
+
 GBBASIC::Kernel::Ptr Workspace::activeKernel(void) const {
 	const int krnlIndex = activeKernelIndex();
 	if (krnlIndex < 0 || krnlIndex >= (int)kernels().size())
@@ -3723,6 +3742,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 		const long long now = DateTime::now();
 		if (!prj_->title().empty())
 			prj->title(prj_->title());
+		prj->kernel(prj_->kernel());
 		prj->cartridgeType(prj_->cartridgeType());
 		prj->sramType(prj_->sramType());
 		prj->hasRtc(prj_->hasRtc());
@@ -3876,7 +3896,7 @@ void Workspace::closeSearchResult(void) {
 	}
 }
 
-void Workspace::showKernels(Window*, Renderer* rnd) {
+void Workspace::showInstalledKernels(Window*, Renderer* rnd) {
 	ImGui::InstalledKernelsPopupBox::ConfirmedHandler confirm(
 		[this] (void) -> void {
 			popupBox(nullptr);
@@ -7787,7 +7807,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 
 		if (ImGui::BeginMenu(theme()->menu_Application())) {
 			if (ImGui::MenuItem(theme()->menu_Kernels())) {
-				showKernels(wnd, rnd);
+				showInstalledKernels(wnd, rnd);
 			}
 			if (ImGui::MenuItem(theme()->menu_Preferences())) {
 				showPreferences(wnd, rnd, nullptr);
@@ -9455,7 +9475,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 		if (showRecentProjects()) {
 			if (!docOpened) {
 				if (ImGui::MenuBarImageButton(theme()->iconKernels()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_InstalledKernels().c_str())) {
-					showKernels(wnd, rnd);
+					showInstalledKernels(wnd, rnd);
 				}
 				width += ImGui::GetItemRectSize().x;
 				if (settings().recentIconView) {

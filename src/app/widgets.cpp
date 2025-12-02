@@ -3563,9 +3563,46 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				}
 				PopID();
 
+				PushID("#Krnl");
+				{
+					const float x = GetCursorPosX();
+					const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
+
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Project_Kernel());
+
+					SameLine();
+
+					const int n = (int)ws->kernels().size();
+					int idx = ws->getKernelIndex(prj->kernel());
+					idx = Math::clamp(idx, 0, n - 1);
+					const float u = GetCursorPosX() - x;
+					SetNextItemWidth(w * 0.5f - u);
+					if (
+						Combo(
+							"", &idx,
+							[] (void* data, int idx, const char** outText) -> bool {
+								const GBBASIC::Kernel::Array* kernels = (const GBBASIC::Kernel::Array*)data;
+								const GBBASIC::Kernel::Ptr &krnl = (*kernels)[idx];
+								const Localization::Dictionary &name = krnl->title();
+								const char* title = Localization::get(name);
+								*outText = title;
+
+								return true;
+							},
+							&ws->kernels(), n
+						)
+					) {
+						const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[idx];
+						const std::string &id = krnl->id();
+						prj->kernel(id);
+					}
+				}
+				PopID();
+
 				PushID("#CrtTyp");
 				{
-					AlignTextToFramePadding();
+					SameLine();
 					TextUnformatted(_theme->windowProjectProperty_Project_Cart());
 
 					SameLine();
@@ -4397,6 +4434,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 		const bool appliable =
 			prj->title()                   != _project->title()                ||
+			prj->kernel()                  != _project->kernel()               ||
 			prj->cartridgeType()           != _project->cartridgeType()        ||
 			prj->sramType()                != _project->sramType()             ||
 			prj->hasRtc()                  != _project->hasRtc()               ||

@@ -589,6 +589,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Title)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Path)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Kernel)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Cart)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Sram)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Sram_None)

@@ -789,7 +789,7 @@ bool Theme::open(class Renderer* rnd) {
 
 	windowProjectProperty("Property");
 	windowProjectProperty_Project_Title("  Title");    windowProjectProperty_Project_Path("Path ");
-	windowProjectProperty_Project_Cart("   Cart");
+	windowProjectProperty_Project_Kernel(" Kernel");   windowProjectProperty_Project_Cart("Cart ");
 	windowProjectProperty_Project_Sram("   SRAM");      windowProjectProperty_Project_Rtc("RTC  ");
 	windowProjectProperty_Project_Desc("   Desc");
 	windowProjectProperty_Project_Author(" Author");  windowProjectProperty_Project_Genre("Genre");
