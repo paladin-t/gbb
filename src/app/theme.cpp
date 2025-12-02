@@ -816,13 +816,8 @@ bool Theme::open(class Renderer* rnd) {
 
 	windowPalette("Palette");
 
-	windowEmulator("Emulator");
-
-	windowCode("Code");
-	windowCodeSplitted("Code Splitted");
 	windowCode_SearchFor("Search for");
 
-	windowTiles("Tiles");
 	windowTiles_CreateMap("Create map");
 
 	windowMap("Map");
@@ -831,7 +826,6 @@ bool Theme::open(class Renderer* rnd) {
 	windowMap_CreateScene("Create scene");
 	windowMap_RefTiles("Tiles #{0}");
 
-	windowAudio("Audio");
 	windowAudio_Duty1("DUTY 1");
 	windowAudio_Duty2("DUTY 2");
 	windowAudio_Instruments("Instruments");
@@ -862,10 +856,6 @@ bool Theme::open(class Renderer* rnd) {
 	windowScene_TriggerEventTypeEnter("Enter");
 	windowScene_TriggerEventTypeLeave("Leave");
 	windowScene_TriggerEventTypeNone("None");
-
-	windowConsole("Console");
-
-	windowDocument("Document");
 
 	windowSearchResult("Search Result");
 	windowSearchResult_CaseSensitive("Case sensitive");

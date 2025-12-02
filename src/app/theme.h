@@ -619,13 +619,8 @@ public:
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowPalette)
 
-	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator)
-
-	GBBASIC_PROPERTY_READONLY(std::string, windowCode)
-	GBBASIC_PROPERTY_READONLY(std::string, windowCodeSplitted)
 	GBBASIC_PROPERTY_READONLY(std::string, windowCode_SearchFor)
 
-	GBBASIC_PROPERTY_READONLY(std::string, windowTiles)
 	GBBASIC_PROPERTY_READONLY(std::string, windowTiles_CreateMap)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap)
@@ -634,7 +629,6 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_CreateScene)
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_RefTiles)
 
-	GBBASIC_PROPERTY_READONLY(std::string, windowAudio)
 	GBBASIC_PROPERTY_READONLY(std::string, windowAudio_Duty1)
 	GBBASIC_PROPERTY_READONLY(std::string, windowAudio_Duty2)
 	GBBASIC_PROPERTY_READONLY(std::string, windowAudio_Instruments)
@@ -665,10 +659,6 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowScene_TriggerEventTypeEnter)
 	GBBASIC_PROPERTY_READONLY(std::string, windowScene_TriggerEventTypeLeave)
 	GBBASIC_PROPERTY_READONLY(std::string, windowScene_TriggerEventTypeNone)
-
-	GBBASIC_PROPERTY_READONLY(std::string, windowConsole)
-
-	GBBASIC_PROPERTY_READONLY(std::string, windowDocument)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowSearchResult)
 	GBBASIC_PROPERTY_READONLY(std::string, windowSearchResult_CaseSensitive)

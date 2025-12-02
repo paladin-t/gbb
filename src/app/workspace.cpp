@@ -10471,7 +10471,7 @@ void Workspace::font(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 	FontAssets::Entry* entry = prj->getFont(prj->activeFontIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowFont(), nullptr, flags)) {
+	if (ImGui::Begin("#Fnt", nullptr, flags)) {
 		if (entry) {
 			touchFontEditor(wnd, rnd, prj.get(), prj->activeFontIndex(), entry)
 				->update(
@@ -10554,7 +10554,7 @@ void Workspace::code(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 		if (!entry)
 			flags |= ImGuiWindowFlags_NoScrollWithMouse;
 		EditorCode* editor = nullptr;
-		if (ImGui::Begin(theme()->windowCode(), nullptr, flags)) {
+		if (ImGui::Begin("#Cd", nullptr, flags)) {
 			// Get the entry and editor.
 			if (!entry) {
 				prj->addCodePage("");
@@ -10674,7 +10674,7 @@ void Workspace::code(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 		);
 
 		// Show and update the editor window.
-		if (ImGui::Begin(theme()->windowCodeSplitted(), nullptr, flags)) {
+		if (ImGui::Begin("#Cdm", nullptr, flags)) {
 			// Open new editor if necessary.
 			const int minorIdx = Math::clamp(prj->activeMinorCodeIndex(), 0, prj->codePageCount() - 1);
 			if (minorIdx != prj->activeMinorCodeIndex())
@@ -10771,7 +10771,7 @@ void Workspace::tiles(Window* wnd, Renderer* rnd, float marginTop, float marginB
 	TilesAssets::Entry* entry = prj->getTiles(prj->activeTilesIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowTiles(), nullptr, flags)) {
+	if (ImGui::Begin("#Tl", nullptr, flags)) {
 		if (entry) {
 			touchTilesEditor(wnd, rnd, prj.get(), prj->activeTilesIndex(), entry)
 				->update(
@@ -10809,7 +10809,7 @@ void Workspace::map(Window* wnd, Renderer* rnd, float marginTop, float marginBot
 	MapAssets::Entry* entry = prj->getMap(prj->activeMapIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowMap(), nullptr, flags)) {
+	if (ImGui::Begin("#Mp", nullptr, flags)) {
 		if (entry) {
 			if (!entry->editor) {
 				BaseAssets::Entry* refAsset = prj->tilesPageCount() == 0 ? nullptr : prj->getTiles(entry->ref);
@@ -10853,7 +10853,7 @@ void Workspace::music(Window* wnd, Renderer* rnd, float marginTop, float marginB
 	MusicAssets::Entry* entry = prj->getMusic(prj->activeMusicIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowAudio(), nullptr, flags)) {
+	if (ImGui::Begin("#Ad", nullptr, flags)) {
 		if (entry) {
 			touchMusicEditor(wnd, rnd, prj.get(), prj->activeMusicIndex(), entry)
 				->update(
@@ -10896,7 +10896,7 @@ void Workspace::sfx(Window* wnd, Renderer* rnd, float marginTop, float marginBot
 	SfxAssets::Entry* entry = prj->getSfx(prj->activeSfxIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowAudio(), nullptr, flags)) {
+	if (ImGui::Begin("#Ad", nullptr, flags)) {
 		if (entry) {
 			touchSfxEditor(wnd, rnd, prj.get(), prj->activeSfxIndex(), entry)
 				->update(
@@ -10942,7 +10942,7 @@ void Workspace::actor(Window* wnd, Renderer* rnd, float marginTop, float marginB
 	ActorAssets::Entry* entry = prj->getActor(prj->activeActorIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowActor(), nullptr, flags)) {
+	if (ImGui::Begin("#Act", nullptr, flags)) {
 		if (entry) {
 			touchActorEditor(wnd, rnd, prj.get(), prj->activeActorIndex(), entry)
 				->update(
@@ -10980,7 +10980,7 @@ void Workspace::scene(Window* wnd, Renderer* rnd, float marginTop, float marginB
 	SceneAssets::Entry* entry = prj->getScene(prj->activeSceneIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowScene(), nullptr, flags)) {
+	if (ImGui::Begin("#Sc", nullptr, flags)) {
 		if (entry) {
 			if (!entry->editor) {
 				BaseAssets::Entry* refAsset = prj->mapPageCount() == 0 ? nullptr : prj->getMap(entry->refMap);
@@ -11012,7 +11012,7 @@ void Workspace::console(Window* wnd, Renderer* rnd, float marginTop, float margi
 	editor->update(
 		wnd, rnd,
 		this,
-		theme()->windowConsole().c_str(),
+		"#Con",
 		0, marginTop, (float)rnd->width(), (float)rnd->height() - (marginTop + marginBottom),
 		delta
 	);
@@ -11041,7 +11041,7 @@ void Workspace::document(Window* wnd, Renderer* rnd, float marginTop, float marg
 		ImVec2((float)rnd->width(), (float)rnd->height() - (marginTop + marginBottom)),
 		ImGuiCond_Always
 	);
-	if (ImGui::Begin(theme()->windowConsole(), nullptr, flags)) {
+	if (ImGui::Begin("#Doc", nullptr, flags)) {
 		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);
 
 		const ImVec2 size = ImGui::GetContentRegionAvail();
@@ -11080,7 +11080,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 	);
 	const ImGuiWindowFlags flags = WORKSPACE_WND_FLAGS_CONTENT | ImGuiWindowFlags_NoScrollWithMouse;
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::GetStyleColorVec4(ImGuiCol_ChildBg));
-	if (ImGui::Begin(theme()->windowEmulator(), nullptr, flags)) {
+	if (ImGui::Begin("#Emu", nullptr, flags)) {
 		// Prepare.
 		const float statusBarHeight = ImGui::GetTextLineHeightWithSpacing() + style.FramePadding.y * 2;
 
