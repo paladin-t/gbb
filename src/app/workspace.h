@@ -901,7 +901,7 @@ public:
 	void showActivities(Renderer* rnd);
 	void showAbout(Renderer* rnd);
 	std::string getSourceCodePath(std::string* name /* nullable */) const;
-	void ejectSourceCode(Window* wnd, Renderer* rnd);
+	void ejectSourceCode(Window* wnd, Renderer* rnd, bool wait);
 	void toggleDocument(const char* path /* nullable */);
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED

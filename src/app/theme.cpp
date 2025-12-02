@@ -360,6 +360,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Download("Download");
 	menu_Duplicate("Duplicate");
 	menu_EjectSourceCodeVm("Eject Source Code (VM)...");
+	menu_EjectVm("Eject VM");
 	menu_Examples("Examples");
 	menu_ExportSelection("Export Selection");
 	menu_Find("Find");
@@ -369,11 +370,13 @@ bool Theme::open(class Renderer* rnd) {
 	menu_ForTiles("For Tiles");
 	menu_FromLibrary("From Library...");
 	menu_FxHammerFile("FxHammer File...");
+	menu_GitHub("GitHub");
 	menu_Goto("Goto");
 	menu_Grids("Grids");
 	menu_Help("Help");
-	menu_Hflip("H-flip");
 	menu_Hex("HEX");
+	menu_Hflip("H-flip");
+	menu_Howto("Howto");
 	menu_Image("Image");
 	menu_ImageFile("Image File...");
 	menu_Import("Import...");
@@ -508,6 +511,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_CannotUseThisImage("Cannot use this image");
 	dialogPrompt_Checking("Checking...");
 	dialogPrompt_ClearedProjects("Cleared projects");
+	dialogPrompt_ClickAgainToUninstall("Click again to uninstall \"%s\"");
 	dialogPrompt_ClickToPut("Click to put");
 	dialogPrompt_ClimbVelocity("Climb velocity");
 	dialogPrompt_CollisionGroup("Collision group");

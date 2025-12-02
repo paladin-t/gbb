@@ -4549,12 +4549,14 @@ InstalledKernelsPopupBox::InstalledKernelsPopupBox(
 	const std::string &title,
 	GBBASIC::Kernel::Array &kernels,
 	const ConfirmedHandler &confirm, const AddedHandler &add, const RemovedHandler &remove,
-	const char* confirmTxt, const char* addTxt, const char* removeTxt
+	const char* confirmTxt, const char* addTxt, const char* removeTxt,
+	SourceCodeEjectingHandler ejectSourceCode
 ) : _renderer(rnd),
 	_theme(theme),
 	_title(title),
 	_kernels(kernels),
-	_confirmedHandler(confirm), _addedHandler(add), _removedHandler(remove)
+	_confirmedHandler(confirm), _addedHandler(add), _removedHandler(remove),
+	_ejectSourceCode(ejectSourceCode)
 {
 	if (confirmTxt)
 		_confirmText = confirmTxt;
@@ -4575,7 +4577,7 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 	bool isOpen = true;
 	bool toConfirm = false;
 	bool toAdd = false;
-	bool toRemove = false;
+	int toRemove = -1;
 
 	if (_init.begin()) {
 		OpenPopup(_title);
@@ -4585,11 +4587,87 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 	}
 
 	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 480.0f);
+	const float height = Math::min(width, _renderer->height() * 0.8f - 66.0f);
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
 		const char* remove = _removeText.empty() ? "Uninstall" : _removeText.c_str();
 
-		// TODO
+		{
+			VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(1, 1));
+
+			BeginChild("@Kr", ImVec2(width - style.WindowPadding.x * 1.7f, height), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
+			{
+				const GBBASIC::Kernel::Array &kernels = ws->kernels();
+				for (int i = 0; i < (int)kernels.size(); ++i) {
+					const GBBASIC::Kernel::Ptr &krnl = kernels[i];
+					const Localization::Dictionary &name = krnl->title();
+					const char* title = Localization::get(name);
+
+					PushID(krnl->id());
+					{
+						VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(0, 0));
+
+						const ImVec2 spos = GetCursorScreenPos();
+						const ImVec2 pos = GetCursorPos();
+						const ImVec2 size(width - style.ChildBorderSize - style.ScrollbarSize - style.WindowPadding.x, 19.0f);
+						Dummy(
+							size,
+							GetStyleColorVec4(IsMouseHoveringRect(spos, spos + size) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg)
+						);
+						SetCursorPos(pos);
+
+						if (i == 0) {
+							BeginDisabled();
+							{
+								ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE));
+							}
+							EndDisabled();
+						} else {
+							if (ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, remove)) {
+								if (/* _tobeUninstalledKernelIndex == -1 || */ _tobeUninstalledKernelIndex != i) {
+									_tobeUninstalledKernelIndex = i;
+								} else {
+									toRemove = _tobeUninstalledKernelIndex;
+									_tobeUninstalledKernelIndex = -1;
+								}
+							}
+						}
+						SameLine();
+
+						Dummy(ImVec2(4, 0));
+						SameLine();
+
+						AlignTextToFramePadding();
+						TextUnformatted(title);
+					}
+					PopID();
+				}
+			}
+			EndChild();
+
+			if (_tobeUninstalledKernelIndex >= 1) {
+				const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[_tobeUninstalledKernelIndex];
+				const Localization::Dictionary &name = krnl->title();
+				const char* title = Localization::get(name);
+
+				Text(_theme->dialogPrompt_ClickAgainToUninstall().c_str(), title);
+			}
+
+			if (_ejectSourceCode) {
+				if (Url(_theme->menu_EjectVm().c_str(), nullptr))
+					_ejectSourceCode();
+				SameLine();
+				Dummy(ImVec2(10, 0));
+				SameLine();
+			}
+			Url(_theme->menu_GitHub().c_str(), "https://github.com/paladin-t/gbb/tree/main/src/vm");
+			SameLine();
+			Dummy(ImVec2(10, 0));
+			SameLine();
+			Url(_theme->menu_Howto().c_str(), "https://paladin-t.github.io/kits/gbb/learn/creating-a-custom-kernel.html");
+
+			NewLine(3);
+		}
 
 		const char* confirm = _confirmText.c_str();
 		const char* add = _addText.empty() ? "Install" : _addText.c_str();
@@ -4638,9 +4716,9 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 			_addedHandler();
 		}
 	}
-	if (toRemove) {
+	if (toRemove >= 1) {
 		if (!_removedHandler.empty()) {
-			_removedHandler();
+			_removedHandler(toRemove);
 		}
 	}
 }

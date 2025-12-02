@@ -981,15 +981,18 @@ public:
 	struct AddedHandler : public Handler<AddedHandler, void> {
 		using Handler::Handler;
 	};
-	struct RemovedHandler : public Handler<RemovedHandler, void> {
+	struct RemovedHandler : public Handler<RemovedHandler, void, int> {
 		using Handler::Handler;
 	};
+
+	typedef std::function<void(void)> SourceCodeEjectingHandler;
 
 private:
 	Renderer* _renderer = nullptr; // Foreign.
 	Theme* _theme = nullptr; // Foreign.
 	std::string _title;
 	GBBASIC::Kernel::Array &_kernels; // Foreign.
+	int _tobeUninstalledKernelIndex = -1;
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;
@@ -997,6 +1000,7 @@ private:
 	std::string _addText;
 	RemovedHandler _removedHandler = nullptr;
 	std::string _removeText;
+	SourceCodeEjectingHandler _ejectSourceCode = nullptr;
 
 	Initializer _init;
 
@@ -1007,7 +1011,8 @@ public:
 		const std::string &title,
 		GBBASIC::Kernel::Array &kernels,
 		const ConfirmedHandler &confirm, const AddedHandler &add, const RemovedHandler &remove,
-		const char* confirmTxt /* nullable */, const char* addTxt /* nullable */, const char* removeTxt /* nullable */
+		const char* confirmTxt /* nullable */, const char* addTxt /* nullable */, const char* removeTxt /* nullable */,
+		SourceCodeEjectingHandler ejectSourceCode /* nullable */
 	);
 	virtual ~InstalledKernelsPopupBox() override;
 

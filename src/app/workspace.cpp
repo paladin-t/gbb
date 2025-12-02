@@ -3913,7 +3913,7 @@ void Workspace::closeSearchResult(void) {
 	}
 }
 
-void Workspace::showInstalledKernels(Window*, Renderer* rnd) {
+void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd) {
 	ImGui::InstalledKernelsPopupBox::ConfirmedHandler confirm(
 		[this] (void) -> void {
 			popupBox(nullptr);
@@ -3922,12 +3922,16 @@ void Workspace::showInstalledKernels(Window*, Renderer* rnd) {
 	);
 	ImGui::InstalledKernelsPopupBox::AddedHandler add(
 		[this] (void) -> void {
+			// TODO
+
 			clearLanguageDefinition(true);
 		},
 		nullptr
 	);
 	ImGui::InstalledKernelsPopupBox::RemovedHandler remove(
-		[this] (void) -> void {
+		[this] (int idx) -> void {
+			// TODO
+
 			clearLanguageDefinition(true);
 		},
 		nullptr
@@ -3940,7 +3944,8 @@ void Workspace::showInstalledKernels(Window*, Renderer* rnd) {
 				theme()->windowInstalledKernels(),
 				kernels(),
 				confirm, add, remove,
-				theme()->generic_Ok().c_str(), theme()->generic_Install().c_str(), theme()->generic_Uninstall().c_str()
+				theme()->generic_Ok().c_str(), theme()->generic_Install().c_str(), theme()->generic_Uninstall().c_str(),
+				std::bind(&Workspace::ejectSourceCode, this, wnd, rnd, false)
 			)
 		)
 	);
@@ -4117,7 +4122,7 @@ std::string Workspace::getSourceCodePath(std::string* name_) const {
 	return src;
 }
 
-void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd) {
+void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, bool wait) {
 	if (kernels().empty()) {
 		const std::string msg = "Cannot find valid kernel.";
 		error(msg.c_str());
@@ -4192,7 +4197,10 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd) {
 		bubble(theme()->dialogPrompt_ExportedSourceCode(), nullptr);
 	};
 
-	Operations::popupWait(wnd, rnd, this, true, theme()->dialogPrompt_Ejecting().c_str(), true, false)
+	promise::Promise begin = wait ?
+		Operations::popupWait(wnd, rnd, this, true, theme()->dialogPrompt_Ejecting().c_str(), true, false) :
+		Operations::always(wnd, rnd, this);
+	begin
 		.then(
 			[next] (void) -> promise::Promise {
 				return promise::newPromise(next);
@@ -8012,7 +8020,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			if (hasKernelSourceCode()) {
 				ImGui::Separator();
 				if (ImGui::MenuItem(theme()->menu_EjectSourceCodeVm())) {
-					ejectSourceCode(wnd, rnd);
+					ejectSourceCode(wnd, rnd, true);
 				}
 			}
 			ImGui::Separator();
