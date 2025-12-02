@@ -658,6 +658,13 @@
 			"All files (*.*)", "*" \
 		}
 #endif /* GBBASIC_FX_HAMMER_FILE_FILTER */
+// The kernel package file filter.
+#ifndef GBBASIC_KERNEL_PACKAGE_FILE_FILTER
+#	define GBBASIC_KERNEL_PACKAGE_FILE_FILTER { \
+			"Kernel package files (*.zip)", "*.zip", \
+			"All files (*.*)", "*" \
+		}
+#endif /* GBBASIC_KERNEL_PACKAGE_FILE_FILTER */
 
 /* ===========================================================================} */
 

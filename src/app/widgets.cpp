@@ -3579,6 +3579,23 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 				PushID("#Krnl");
 				{
+					struct Context {
+						const GBBASIC::Kernel::Array* kernels = nullptr;
+						std::string missingKernelName;
+
+						Context() {
+						}
+						Context(const GBBASIC::Kernel::Array &kernels_, bool missing, const std::string &missingKernelId, const std::string &missingText) {
+							kernels = &kernels_;
+							if (missing) {
+								missingKernelName = missingKernelId;
+								missingKernelName += " (";
+								missingKernelName += missingText;
+								missingKernelName += ")";
+							}
+						}
+					};
+
 					const float x = GetCursorPosX();
 					const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
 
@@ -3589,22 +3606,33 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 					const int n = (int)ws->kernels().size();
 					int idx = ws->getKernelIndex(prj->kernel());
-					idx = Math::clamp(idx, 0, n - 1);
+					const bool missing = idx == -1;
+					if (missing)
+						idx = n;
+					else
+						idx = Math::clamp(idx, 0, n - 1);
 					const float u = GetCursorPosX() - x;
 					SetNextItemWidth(w * 0.5f - u);
+					Context data(ws->kernels(), missing, prj->kernel(), _theme->dialogPrompt_Missing());
 					if (
 						Combo(
 							"", &idx,
 							[] (void* data, int idx, const char** outText) -> bool {
-								const GBBASIC::Kernel::Array* kernels = (const GBBASIC::Kernel::Array*)data;
-								const GBBASIC::Kernel::Ptr &krnl = (*kernels)[idx];
-								const Localization::Dictionary &name = krnl->title();
-								const char* title = Localization::get(name);
-								*outText = title;
+								Context* data_ = (Context*)data;
+								const GBBASIC::Kernel::Array* kernels = data_->kernels;
+								const std::string &missingKernelName = data_->missingKernelName;
+								if (idx < (int)kernels->size()) {
+									const GBBASIC::Kernel::Ptr &krnl = (*kernels)[idx];
+									const Localization::Dictionary &name = krnl->title();
+									const char* title = Localization::get(name);
+									*outText = title;
+								} else {
+									*outText = missingKernelName.c_str();
+								}
 
 								return true;
 							},
-							&ws->kernels(), n
+							(void*)&data, missing ? n + 1 : n
 						)
 					) {
 						const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[idx];
@@ -4653,16 +4681,18 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 				Text(_theme->dialogPrompt_ClickAgainToUninstall().c_str(), title);
 			}
 
+			NewLine(2);
+
 			if (_ejectSourceCode) {
 				if (Url(_theme->menu_EjectVm().c_str(), nullptr))
 					_ejectSourceCode();
 				SameLine();
-				Dummy(ImVec2(10, 0));
+				Dummy(ImVec2(14, 0));
 				SameLine();
 			}
 			Url(_theme->menu_GitHub().c_str(), "https://github.com/paladin-t/gbb/tree/main/src/vm");
 			SameLine();
-			Dummy(ImVec2(10, 0));
+			Dummy(ImVec2(14, 0));
 			SameLine();
 			Url(_theme->menu_Howto().c_str(), "https://paladin-t.github.io/kits/gbb/learn/creating-a-custom-kernel.html");
 
@@ -4678,7 +4708,7 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 
 		CentralizeButton(2);
 
-		if (Button(confirm, ImVec2(WIDGETS_BUTTON_WIDTH, 0)) && _init.end()) {
+		if ((Button(confirm, ImVec2(WIDGETS_BUTTON_WIDTH, 0)) || IsKeyReleased(SDL_SCANCODE_RETURN) || IsKeyReleased(SDL_SCANCODE_ESCAPE)) && _init.end()) {
 			toConfirm = true;
 
 			CloseCurrentPopup();

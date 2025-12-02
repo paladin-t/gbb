@@ -19,6 +19,7 @@
 #include "theme.h"
 #include "resource/inline_resource.h"
 #include "../compiler/compiler.h"
+#include "../utils/archive.h"
 #include "../utils/datetime.h"
 #include "../utils/encoding.h"
 #include "../utils/file_sandbox.h"
@@ -3846,6 +3847,101 @@ promise::Promise Operations::sceneRemovePage(Window* wnd, Renderer* rnd, Workspa
 						df.reject();
 					}
 				);
+		}
+	);
+}
+
+promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace* ws) {
+	auto next = [wnd, rnd, ws] (promise::Defer df) -> void {
+		pfd::open_file open(
+			ws->theme()->generic_Open(),
+			"",
+			GBBASIC_KERNEL_PACKAGE_FILE_FILTER,
+			pfd::opt::none
+		);
+		if (open.result().empty() || open.result().front().empty()) {
+			df.reject();
+
+			return;
+		}
+
+		Archive::Ptr arc(Archive::create(Archive::ZIP));
+
+		// TODO
+
+		df.resolve(true);
+	};
+
+	return promise::newPromise(
+		[&] (promise::Defer df) -> void {
+			popupWait(wnd, rnd, ws, ws->theme()->dialogPrompt_Installing().c_str())
+				.then(
+					[next, df] (void) -> promise::Promise {
+						return promise::newPromise(std::bind(next, df));
+					}
+				);
+		}
+	);
+}
+
+promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, int index) {
+	typedef std::function<const std::string &(const GBBASIC::Kernel::Ptr &)> FileNameHandler;
+
+	auto refCount = [&] (const std::string &fullPath, FileNameHandler getFileName) -> int {
+		int result = 0;
+		for (int i = 0; i < (int)ws->kernels().size(); ++i) {
+			const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[i];
+			const std::string &fileName = getFileName(krnl);
+			if (fileName.empty())
+				continue;
+
+			const std::string &path = krnl->path();
+			std::string dir;
+			Path::split(path, nullptr, nullptr, &dir);
+			const std::string fullPath_ = Path::combine(dir.c_str(), fileName.c_str());
+
+			if (fullPath == fullPath_)
+				++result;
+		}
+
+		return result;
+	};
+	auto uninstall = [refCount] (const GBBASIC::Kernel::Ptr &krnl, const std::string &dir, FileNameHandler getFileName) -> void {
+		const std::string &fileName = getFileName(krnl);
+		if (fileName.empty())
+			return;
+
+		const std::string fullPath = Path::combine(dir.c_str(), fileName.c_str());
+		const int refs = refCount(fullPath, getFileName);
+		if (refs > 1) // Is referenced by more than one kernels, ignore.
+			return;
+
+		if (Path::fileExists(fullPath.c_str()))
+			Path::removeFile(fullPath.c_str(), true);
+	};
+
+	return promise::newPromise(
+		[&] (promise::Defer df) -> void {
+			const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[index];
+
+			const std::string &path = krnl->path();
+			std::string dir;
+			Path::split(path, nullptr, nullptr, &dir);
+
+			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> const std::string & { return krnl->kernelRom(); });
+			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> const std::string & { return krnl->kernelSymbols(); });
+			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> const std::string & { return krnl->kernelAliases(); });
+			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> const std::string & { return krnl->kernelSourceCode(); });
+
+			if (Path::fileExists(path.c_str()))
+				Path::removeFile(path.c_str(), true);
+
+			ws->kernels().erase(ws->kernels().begin() + index);
+
+			if (ws->activeKernelIndex() == index)
+				ws->activeKernelIndex(0);
+
+			df.resolve(true);
 		}
 	);
 }

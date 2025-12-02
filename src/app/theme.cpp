@@ -571,6 +571,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Index("Index");
 	dialogPrompt_InitialOffset("Initial offset");
 	dialogPrompt_InitialVolume("Initial volume");
+	dialogPrompt_Installing("Installing...");
 	dialogPrompt_Interval("Interval");
 	dialogPrompt_InvalidBorderImageSize256x224pxRequired("Invalid border image size,\n256x224px required");
 	dialogPrompt_InvalidData("Invalid data");
@@ -587,6 +588,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_MaxJumpCount("Max jump count");
 	dialogPrompt_MaxJumpTicks("Max jump ticks");
 	dialogPrompt_MaxSize("Max size");
+	dialogPrompt_Missing("Missing");
 	dialogPrompt_MoveSpeed("Move speed");
 	dialogPrompt_Name("Name");
 	dialogPrompt_NoData("No data");

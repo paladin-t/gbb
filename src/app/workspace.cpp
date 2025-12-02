@@ -3921,18 +3921,31 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd) {
 		nullptr
 	);
 	ImGui::InstalledKernelsPopupBox::AddedHandler add(
-		[this] (void) -> void {
-			// TODO
+		[wnd, rnd, this] (void) -> void {
+			Operations::kernelInstall(wnd, rnd, this)
+				.then(
+					[wnd, rnd, this] (bool /* ok */) -> void {
+						clearLanguageDefinition(true);
 
-			clearLanguageDefinition(true);
+						showInstalledKernels(wnd, rnd);
+					}
+				)
+				.fail(
+					[wnd, rnd, this] (void) -> void {
+						showInstalledKernels(wnd, rnd);
+					}
+				);
 		},
 		nullptr
 	);
 	ImGui::InstalledKernelsPopupBox::RemovedHandler remove(
-		[this] (int idx) -> void {
-			// TODO
-
-			clearLanguageDefinition(true);
+		[wnd, rnd, this] (int idx) -> void {
+			Operations::kernelUninstall(wnd, rnd, this, idx)
+				.then(
+					[this] (bool /* ok */) -> void {
+						clearLanguageDefinition(true);
+					}
+				);
 		},
 		nullptr
 	);
