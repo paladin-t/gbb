@@ -2992,7 +2992,7 @@ void Workspace::projectCreatingPopupBox(
 	btnCancel = theme()->generic_Cancel().c_str();
 	if (confirm_.empty()) {
 		confirm = ImGui::ProjectCreatingPopupBox::ConfirmedHandler(
-			[&] (int, const char*) -> void {
+			[&] (int, int, const char*) -> void {
 				popupBox(nullptr);
 			},
 			nullptr
@@ -3734,10 +3734,13 @@ void Workspace::showExternalFileBrowser(
 
 void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 	auto set = [this, prj] (Project* prj_) -> void {
+		const bool needReloadKernel =
+			prj->kernel()        != prj_->kernel();
 		const bool needReAnalyze =
+			prj->kernel()        != prj_->kernel()        ||
 			prj->cartridgeType() != prj_->cartridgeType() ||
-			prj->sramType() != prj_->sramType() ||
-			prj->hasRtc() != prj_->hasRtc();
+			prj->sramType()      != prj_->sramType()      ||
+			prj->hasRtc()        != prj_->hasRtc();
 
 		const long long now = DateTime::now();
 		if (!prj_->title().empty())
@@ -3762,6 +3765,20 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 		prj->modified(now);
 
 		prj->hasDirtyInformation(true);
+
+		if (needReloadKernel) {
+			const std::string &kernelId = prj->kernel();
+			int kernelIdx = getKernelIndex(kernelId);
+			if (kernelIdx >= 0) {
+				const int n = (int)kernels().size();
+				kernelIdx = Math::clamp(kernelIdx, 0, n - 1);
+			} else {
+				kernelIdx = 0;
+			}
+			activeKernelIndex(kernelIdx);
+
+			clearLanguageDefinition(true);
+		}
 
 		if (needReAnalyze)
 			analyze(true);

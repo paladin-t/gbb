@@ -309,7 +309,7 @@ public:
 
 class ProjectCreatingPopupBox : public PopupBox {
 public:
-	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, int, const char*> {
+	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, int, int, const char*> {
 		using Handler::Handler;
 	};
 	struct CanceledHandler : public Handler<CanceledHandler, void> {
@@ -322,6 +322,7 @@ private:
 	std::string _template;
 	int _templateCursor = 0;
 	std::string _kernel;
+	int _kernelIndex = 0;
 	std::string _content;
 	std::string _default;
 	unsigned _flags = 0;

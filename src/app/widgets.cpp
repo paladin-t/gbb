@@ -717,7 +717,21 @@ void ProjectCreatingPopupBox::update(Workspace* ws) {
 		if (_templateCursor == 0) { // No starter kit selected, then choose a kernel.
 			TextUnformatted(_kernel);
 
-			// TODO
+			const int n = (int)ws->kernels().size();
+			_kernelIndex = Math::clamp(_kernelIndex, 0, n - 1);
+			Combo(
+				"", &_kernelIndex,
+				[] (void* data, int idx, const char** outText) -> bool {
+					const GBBASIC::Kernel::Array* kernels = (const GBBASIC::Kernel::Array*)data;
+					const GBBASIC::Kernel::Ptr &krnl = (*kernels)[idx];
+					const Localization::Dictionary &name = krnl->title();
+					const char* title = Localization::get(name);
+					*outText = title;
+
+					return true;
+				},
+				&ws->kernels(), n
+			);
 		}
 		PopID();
 
@@ -767,7 +781,7 @@ void ProjectCreatingPopupBox::update(Workspace* ws) {
 		_init.reset();
 
 		if (!_confirmedHandler.empty()) {
-			_confirmedHandler(_templateCursor - 1, _buffer);
+			_confirmedHandler(_templateCursor - 1, _kernelIndex, _buffer);
 
 			return;
 		}

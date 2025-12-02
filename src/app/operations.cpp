@@ -394,10 +394,10 @@ promise::Promise Operations::popupProjectCreating(Window*, Renderer*, Workspace*
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
 			ImGui::ProjectCreatingPopupBox::ConfirmedHandler confirm(
-				[ws, df] (int idx, const char* name) -> void {
+				[ws, df] (int templateIndex, int kernelIndex, const char* name) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
-					df.resolve(idx, name);
+					df.resolve(templateIndex, kernelIndex, name);
 				},
 				nullptr
 			);
@@ -947,14 +947,14 @@ promise::Promise Operations::popupEmulatorBuildSettings(Window*, Renderer* rnd, 
 }
 
 promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, const char* fontConfigPath) {
-	auto next = [wnd, rnd, ws, fontConfigPath] (promise::Defer df, int idx, std::string name) -> void {
+	auto next = [wnd, rnd, ws, fontConfigPath] (promise::Defer df, int templateIndex, int kernelIndex, std::string name) -> void {
 		Project::Ptr templatePrj = nullptr;
 		do {
-			if (idx < 0)
+			if (templateIndex < 0)
 				break;
 
 			const EntryWithPath::Array &starterKits = ws->starterKits();
-			const EntryWithPath &entry = starterKits[idx];
+			const EntryWithPath &entry = starterKits[templateIndex];
 			templatePrj = Project::Ptr(new Project(wnd, rnd, ws));
 			if (!templatePrj->open(entry.path().c_str())) {
 				templatePrj = nullptr;
@@ -995,11 +995,19 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			prj->order(PROJECT_DEFAULT_ORDER);
 		} else {
 			prj->title(name);
+
 			Bytes::Ptr bytes(Bytes::create());
 			bytes->writeBytes((Byte*)RES_ICON_PROJECT_DEFAULT, sizeof(RES_ICON_PROJECT_DEFAULT));
 			std::string iconCode;
 			if (Base64::fromBytes(iconCode, bytes.get()))
 				prj->iconCode(iconCode);
+
+			const std::string* kernelId = ws->getKernelId(kernelIndex);
+			if (kernelId)
+				prj->kernel(*kernelId);
+			else
+				prj->kernel("default");
+
 			prj->cartridgeType(PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED);
 			prj->sramType(PROJECT_SRAM_TYPE_32KB);
 			prj->hasRtc(false);
@@ -1068,11 +1076,11 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 					[wnd, rnd, ws, next, df] (bool /* ok */) -> promise::Promise {
 						return popupProjectCreating(wnd, rnd, ws, ws->theme()->dialogProjectCreating_Kernel().c_str(), ws->theme()->dialogProjectCreating_StarterKit().c_str(), ws->theme()->dialogProjectCreating_ProjectName().c_str(), GBBASIC_NONAME_PROJECT_NAME, ImGuiInputTextFlags_None)
 							.then(
-								[ws, next, df] (int idx, const char* name) -> promise::Promise {
+								[ws, next, df] (int templateIndex, int kernelIndex, const char* name) -> promise::Promise {
 									WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
 									const std::string name_ = name;
-									return promise::newPromise(std::bind(next, std::placeholders::_1, idx, name_))
+									return promise::newPromise(std::bind(next, std::placeholders::_1, templateIndex, kernelIndex, name_))
 										.then(
 											[df] (Project::Ptr prj) -> void {
 												df.resolve(prj);
@@ -1146,8 +1154,16 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 					return;
 				}
 
+				const std::string &kernelId = prj->kernel();
+				int kernelIdx = ws->getKernelIndex(kernelId);
+				if (kernelIdx >= 0) {
+					const int n = (int)ws->kernels().size();
+					kernelIdx = Math::clamp(kernelIdx, 0, n - 1);
+				} else {
+					kernelIdx = 0;
+				}
+				ws->activeKernelIndex(kernelIdx);
 				ws->currentProject(prj);
-				ws->activeKernelIndex(0);
 				if (prj->contentType() == Project::ContentTypes::BASIC) {
 					ws->category(Workspace::Categories::CODE);
 				} else {
@@ -1248,7 +1264,7 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 
 						ws->closeSearchResult();
 						ws->currentProject(nullptr);
-						// TODO: set active kernel.
+						ws->activeKernelIndex(0);
 						ws->popupBox(nullptr);
 						ws->category(Workspace::Categories::HOME);
 						ws->categoryOfAudio(Workspace::Categories::MUSIC);
