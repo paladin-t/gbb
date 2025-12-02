@@ -42,6 +42,7 @@ Kernel::Behaviour::Behaviour(const std::string &y, const std::string &id_, int v
 }
 
 Kernel::Kernel() {
+	readonly(false);
 	bootstrapBank(0);
 	objectsMaxActorCount(ASSETS_ACTOR_MAX_COUNT);
 	objectsMaxTriggerCount(ASSETS_TRIGGER_MAX_COUNT);
@@ -81,6 +82,7 @@ bool Kernel::open(const char* path_) {
 		return false;
 
 	// Parse the properties.
+	bool readonly_ = false;
 	std::string id_;
 	Localization::Dictionary title_;
 	std::string kernelRom_;
@@ -96,6 +98,12 @@ bool Kernel::open(const char* path_) {
 	Animations::Array animations_;
 	int projectileAnimationIndex_ = -1;
 	Behaviour::Array behaviours_;
+
+	const std::string writableDir = Path::writableDirectory();
+	const std::string userPath = Path::combine(writableDir.c_str(), KERNEL_USER_BINARIES_DIR);
+	const std::string absdir0 = Path::absoluteOf(userPath);
+	const std::string abspath0 = Path::absoluteOf(path_);
+	readonly_ = !Path::isParentOf(absdir0.c_str(), abspath0.c_str());
 
 	if (!Jpath::get(doc, id_, "id"))
 		return false;
@@ -272,6 +280,7 @@ bool Kernel::open(const char* path_) {
 	behaviours_.shrink_to_fit();
 
 	path(path_);
+	readonly(readonly_);
 	id(id_);
 	title(title_);
 	kernelRom(kernelRom_);

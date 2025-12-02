@@ -4114,7 +4114,7 @@ std::string Workspace::getSourceCodePath(std::string* name_) const {
 	std::string name;
 	Path::split(krnlPath, &name, nullptr, nullptr);
 
-	const std::string src = Path::combine(KERNEL_BINARIES_DIR, (name + ".zip").c_str());
+	const std::string src = Path::combine(KERNEL_SYSTEM_BINARIES_DIR, (name + ".zip").c_str());
 
 	if (name_)
 		*name_ = name;
@@ -5915,6 +5915,7 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 }
 
 void Workspace::loadKernels(void) {
+	// Prepare.
 	auto load = [this] (const FileInfos::Ptr &fileInfos) -> void {
 		for (int i = 0; i < fileInfos->count(); ++i) {
 			FileInfo::Ptr fileInfo = fileInfos->get(i);
@@ -5938,16 +5939,25 @@ void Workspace::loadKernels(void) {
 
 	kernels().clear();
 
-	DirectoryInfo::Ptr dirInfo = DirectoryInfo::make(KERNEL_BINARIES_DIR);
+	// Load the system kernels.
+	DirectoryInfo::Ptr dirInfo = DirectoryInfo::make(KERNEL_SYSTEM_BINARIES_DIR);
 	FileInfos::Ptr fileInfos = dirInfo->getFiles("*.json", true);
 	load(fileInfos);
 #if WORKSPACE_ALTERNATIVE_ROOT_PATH_ENABLED
-	const std::string altPath = Path::combine(WORKSPACE_ALTERNATIVE_ROOT_PATH, KERNEL_BINARIES_DIR);
+	const std::string altPath = Path::combine(WORKSPACE_ALTERNATIVE_ROOT_PATH, KERNEL_SYSTEM_BINARIES_DIR);
 	dirInfo = DirectoryInfo::make(altPath.c_str());
 	fileInfos = dirInfo->getFiles("*.json", true);
 	load(fileInfos);
 #endif /* WORKSPACE_ALTERNATIVE_ROOT_PATH_ENABLED */
 
+	// Load the user kernels.
+	const std::string writableDir = Path::writableDirectory();
+	const std::string userPath = Path::combine(writableDir.c_str(), KERNEL_USER_BINARIES_DIR);
+	DirectoryInfo::Ptr userDirInfo = DirectoryInfo::make(userPath.c_str());
+	FileInfos::Ptr userFileInfos = userDirInfo->getFiles("*.json", true);
+	load(userFileInfos);
+
+	// Load the information.
 	if (kernels().empty()) {
 		messagePopupBox(theme()->dialogPrompt_CannotFindAnyKernel(), nullptr, nullptr, nullptr);
 

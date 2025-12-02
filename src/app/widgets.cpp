@@ -4616,7 +4616,7 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 						);
 						SetCursorPos(pos);
 
-						if (i == 0) {
+						if (krnl->readonly()) {
 							BeginDisabled();
 							{
 								ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE));
