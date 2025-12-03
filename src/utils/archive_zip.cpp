@@ -372,7 +372,7 @@ public:
 		do {
 			memset(buf, 0, sizeof(buf));
 			size = unzReadCurrentFile(_unzipFile, buf, sizeof(buf));
-			val.assign(buf, size);
+			val.append(buf, size);
 		} while (size > 0);
 
 		unzCloseCurrentFile(_unzipFile);

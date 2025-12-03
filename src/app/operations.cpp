@@ -24,6 +24,7 @@
 #include "../utils/encoding.h"
 #include "../utils/file_sandbox.h"
 #include "../utils/filesystem.h"
+#include "../../lib/jpath/jpath.hpp"
 #if defined GBBASIC_OS_HTML
 #	include <emscripten.h>
 #endif /* GBBASIC_OS_HTML */
@@ -3853,6 +3854,7 @@ promise::Promise Operations::sceneRemovePage(Window* wnd, Renderer* rnd, Workspa
 
 promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace* ws) {
 	auto next = [wnd, rnd, ws] (promise::Defer df) -> void {
+		// Open file.
 		pfd::open_file open(
 			ws->theme()->generic_Open(),
 			"",
@@ -3865,9 +3867,120 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 			return;
 		}
 
-		Archive::Ptr arc(Archive::create(Archive::ZIP));
+		std::string path = open.result().front();
+		if (path.empty()) {
+			df.reject();
 
+			return;
+		}
+		Path::uniform(path);
+
+		// Open the package.
+		Archive::Ptr arc(Archive::create(Archive::ZIP));
+		if (!arc->open(path.c_str(), Stream::READ)) {
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotOpenKernelPackage()));
+
+			return;
+		}
+
+		// Find the kernel manifest.
+		Text::Array entries;
+		if (!arc->all(entries)) {
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotReadKernelPackage()));
+
+			return;
+		}
+
+		rapidjson::Document doc;
+		Text::Array::const_iterator it = std::find_if(
+			entries.begin(), entries.end(),
+			[&] (const std::string &entry) -> bool {
+				std::string str;
+				if (!arc->toString(str, entry.c_str()))
+					return false;
+
+				rapidjson::Document doc_;
+				doc_.SetNull();
+				if (!Json::fromString(doc_, str.c_str()))
+					return false;
+
+				const bool likeManifest = // These are essential for a kernel's manifest.
+					Jpath::has(doc_, "id") &&
+					Jpath::has(doc_, "title") &&
+					Jpath::has(doc_, "kernel", "rom") && Jpath::has(doc_, "kernel", "symbols") &&
+					Jpath::has(doc_, "bootstrap", "bank");
+				if (likeManifest)
+					doc.CopyFrom(doc_, doc.GetAllocator(), true);
+
+				return likeManifest;
+			}
+		);
+		if (it == entries.end() || doc.IsNull()) {
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotFindKernelManifest()));
+
+			return;
+		}
+
+		// Read the kernel manifest.
+		std::string kernelId;
+		std::string romEntry;
+		std::string symbolsEntry;
+		std::string aliasesEntry;
+
+		const bool readEntries =
+			Jpath::get(doc, kernelId, "id") &&
+			Jpath::get(doc, romEntry, "kernel", "rom") &&
+			Jpath::get(doc, symbolsEntry, "kernel", "symbols") &&
+			Jpath::get(doc, aliasesEntry, "kernel", "aliases");
+		if (!readEntries) {
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotReadKernelManifest()));
+
+			return;
+		}
+
+		// Check whether the kernel has been already installed.
+		const int existingKernel = ws->getKernelIndex(kernelId);
+		if (existingKernel >= 0) {
+			df.reject(std::string(Text::format(ws->theme()->dialogPrompt_KernelError_AKernelWithIdAlreadyExists(), { kernelId })));
+
+			return;
+		}
+
+		// Validate the content.
+		const bool entriesExist =
+			!kernelId.empty() &&
+			(!romEntry.empty() && arc->exists(romEntry.c_str())) &&
+			(!symbolsEntry.empty() && arc->exists(symbolsEntry.c_str())) &&
+			(!aliasesEntry.empty() && arc->exists(aliasesEntry.c_str()));
+		if (!entriesExist) {
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_MissingKernelComponent()));
+
+			return;
+		}
+
+		// Install the kernel.
+		const std::string writableDir = Path::writableDirectory();
+		const std::string userPath = Path::combine(writableDir.c_str(), KERNEL_USER_BINARIES_DIR);
+		const std::string subDir = Text::sanitizeFilename(kernelId);
+		const std::string kernelDir = Path::combine(userPath.c_str(), subDir.c_str());
+
+		if (!Path::touchDirectory(kernelDir.c_str())) {
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotCreateKernelDirectory()));
+
+			return;
+		}
+
+		if (!arc->toDirectory(kernelDir.c_str())) {
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotInstallKernelFiles()));
+
+			return;
+		}
+
+		// Load the installed kernel into workspace.
 		// TODO
+
+		// Finish.
+		arc->close();
 
 		df.resolve(true);
 	};

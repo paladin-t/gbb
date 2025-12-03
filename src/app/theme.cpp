@@ -696,6 +696,14 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Waveform_15("Waveform 15");
 	dialogPrompt_WordWrap("Word wrap");
 	dialogPrompt_Writing("Writing");
+	dialogPrompt_KernelError_AKernelWithIdAlreadyExists("A kernel with ID \"{0}\" already exists.");
+	dialogPrompt_KernelError_CannotCreateKernelDirectory("Cannot create kernel directory.");
+	dialogPrompt_KernelError_CannotFindKernelManifest("Cannot find kernel manifest.");
+	dialogPrompt_KernelError_CannotInstallKernelFiles("Cannot install kernel files.");
+	dialogPrompt_KernelError_CannotOpenKernelPackage("Cannot open kernel package.");
+	dialogPrompt_KernelError_CannotReadKernelManifest("Cannot read kernel manifest.");
+	dialogPrompt_KernelError_CannotReadKernelPackage("Cannot read kernel package.");
+	dialogPrompt_KernelError_MissingKernelComponent("Missing kernel component.");
 	dialogAsk_BrowseTheExportedFile("Browser the exported file?");
 	dialogAsk_ClearAllRecentProjects("Clear all recent projects?");
 	dialogAsk_ProjectHasBeenBuiltAndIsBeingHostedAt_StopHostingAndBrowseThePackage("The project has been built and is being hosted\nat {0}.\nStop hosting and browse the package?");

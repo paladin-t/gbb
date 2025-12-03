@@ -3931,7 +3931,18 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd) {
 					}
 				)
 				.fail(
-					[wnd, rnd, this] (void) -> void {
+					[wnd, rnd, this] (std::string reason) -> void { // Error occurred.
+						ImGui::MessagePopupBox::ConfirmedHandler confirm = ImGui::MessagePopupBox::ConfirmedHandler(
+							[wnd, rnd, this] (void) -> void {
+								showInstalledKernels(wnd, rnd);
+							},
+							nullptr
+						);
+						messagePopupBox(reason, confirm, nullptr, nullptr);
+					}
+				)
+				.fail(
+					[wnd, rnd, this] (void) -> void { // User canceled.
 						showInstalledKernels(wnd, rnd);
 					}
 				);
