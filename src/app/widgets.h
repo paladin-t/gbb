@@ -307,9 +307,9 @@ public:
 	virtual void update(Workspace* ws) override;
 };
 
-class StarterKitsPopupBox : public PopupBox {
+class ProjectCreatingPopupBox : public PopupBox {
 public:
-	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, int, const char*> {
+	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, int, int, const char*> {
 		using Handler::Handler;
 	};
 	struct CanceledHandler : public Handler<CanceledHandler, void> {
@@ -321,6 +321,8 @@ private:
 	std::string _title;
 	std::string _template;
 	int _templateCursor = 0;
+	std::string _kernel;
+	int _kernelIndex = 0;
 	std::string _content;
 	std::string _default;
 	unsigned _flags = 0;
@@ -334,20 +336,21 @@ private:
 	Initializer _init;
 
 public:
-	StarterKitsPopupBox(
+	ProjectCreatingPopupBox(
 		Theme* theme,
 		const std::string &title,
 		const std::string &template_,
+		const std::string &kernel,
 		const std::string &content, const std::string &default_, unsigned flags,
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */
 	);
-	virtual ~StarterKitsPopupBox() override;
+	virtual ~ProjectCreatingPopupBox() override;
 
 	virtual void update(Workspace* ws) override;
 };
 
-class SortAssetsPopupBox : public PopupBox {
+class AssetsSortingPopupBox : public PopupBox {
 public:
 	typedef std::vector<int> Order;
 	typedef std::map<unsigned, Order> Orders;
@@ -376,7 +379,7 @@ private:
 	Initializer _init;
 
 public:
-	SortAssetsPopupBox(
+	AssetsSortingPopupBox(
 		Renderer* rnd,
 		Theme* theme,
 		const std::string &title,
@@ -385,7 +388,7 @@ public:
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */
 	);
-	virtual ~SortAssetsPopupBox() override;
+	virtual ~AssetsSortingPopupBox() override;
 
 	virtual void update(Workspace* ws) override;
 };
@@ -966,6 +969,52 @@ public:
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */, const char* applyTxt /* nullable */
 	);
 	virtual ~ProjectPropertyPopupBox() override;
+
+	virtual void update(Workspace* ws) override;
+};
+
+class InstalledKernelsPopupBox : public PopupBox {
+public:
+	struct ConfirmedHandler : public Handler<ConfirmedHandler, void> {
+		using Handler::Handler;
+	};
+	struct AddedHandler : public Handler<AddedHandler, void> {
+		using Handler::Handler;
+	};
+	struct RemovedHandler : public Handler<RemovedHandler, void, int> {
+		using Handler::Handler;
+	};
+
+	typedef std::function<void(void)> SourceCodeEjectingHandler;
+
+private:
+	Renderer* _renderer = nullptr; // Foreign.
+	Theme* _theme = nullptr; // Foreign.
+	std::string _title;
+	GBBASIC::Kernel::Array &_kernels; // Foreign.
+	int _tobeUninstalledKernelIndex = -1;
+
+	ConfirmedHandler _confirmedHandler = nullptr;
+	std::string _confirmText;
+	AddedHandler _addedHandler = nullptr;
+	std::string _addText;
+	RemovedHandler _removedHandler = nullptr;
+	std::string _removeText;
+	SourceCodeEjectingHandler _ejectSourceCode = nullptr;
+
+	Initializer _init;
+
+public:
+	InstalledKernelsPopupBox(
+		Renderer* rnd,
+		Theme* theme,
+		const std::string &title,
+		GBBASIC::Kernel::Array &kernels,
+		const ConfirmedHandler &confirm, const AddedHandler &add, const RemovedHandler &remove,
+		const char* confirmTxt /* nullable */, const char* addTxt /* nullable */, const char* removeTxt /* nullable */,
+		SourceCodeEjectingHandler ejectSourceCode /* nullable */
+	);
+	virtual ~InstalledKernelsPopupBox() override;
 
 	virtual void update(Workspace* ws) override;
 };

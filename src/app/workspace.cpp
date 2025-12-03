@@ -793,6 +793,25 @@ void Workspace::skipFrame(int n) {
 	_skipping = n;
 }
 
+int Workspace::getKernelIndex(const std::string &id) const {
+	for (int i = 0; i < (int)kernels().size(); ++i) {
+		const GBBASIC::Kernel::Ptr &krnl = kernels()[i];
+		if (krnl && krnl->id() == id)
+			return i;
+	}
+
+	return -1;
+}
+
+const std::string* Workspace::getKernelId(int index) const {
+	if (index < 0 || index >= (int)kernels().size())
+		return nullptr;
+
+	const GBBASIC::Kernel::Ptr &krnl = kernels()[index];
+
+	return &krnl->id();
+}
+
 GBBASIC::Kernel::Ptr Workspace::activeKernel(void) const {
 	const int krnlIndex = activeKernelIndex();
 	if (krnlIndex < 0 || krnlIndex >= (int)kernels().size())
@@ -837,6 +856,11 @@ int Workspace::parseKernelBehaviour(const std::string &id) const {
 	}
 
 	return 0;
+}
+
+void Workspace::reloadKernels(void) {
+	unloadKernels();
+	loadKernels();
 }
 
 void Workspace::addMapPageFrom(Window* wnd, Renderer* rnd, int index) {
@@ -2956,23 +2980,24 @@ void Workspace::inputPopupBox(
 	);
 }
 
-void Workspace::starterKitsPopupBox(
+void Workspace::projectCreatingPopupBox(
 	const std::string &template_,
+	const std::string &kernel,
 	const std::string &content,
 	const std::string &default_, unsigned flags,
-	const ImGui::StarterKitsPopupBox::ConfirmedHandler &confirm_,
-	const ImGui::StarterKitsPopupBox::CanceledHandler &cancel
+	const ImGui::ProjectCreatingPopupBox::ConfirmedHandler &confirm_,
+	const ImGui::ProjectCreatingPopupBox::CanceledHandler &cancel
 ) {
 	const char* btnConfirm = nullptr;
 	const char* btnCancel = nullptr;
 
-	ImGui::StarterKitsPopupBox::ConfirmedHandler confirm = confirm_;
+	ImGui::ProjectCreatingPopupBox::ConfirmedHandler confirm = confirm_;
 
 	btnConfirm = theme()->generic_Ok().c_str();
 	btnCancel = theme()->generic_Cancel().c_str();
 	if (confirm_.empty()) {
-		confirm = ImGui::StarterKitsPopupBox::ConfirmedHandler(
-			[&] (int, const char*) -> void {
+		confirm = ImGui::ProjectCreatingPopupBox::ConfirmedHandler(
+			[&] (int, int, const char*) -> void {
 				popupBox(nullptr);
 			},
 			nullptr
@@ -2981,10 +3006,11 @@ void Workspace::starterKitsPopupBox(
 
 	popupBox(
 		ImGui::PopupBox::Ptr(
-			new ImGui::StarterKitsPopupBox(
+			new ImGui::ProjectCreatingPopupBox(
 				theme(),
-				GBBASIC_TITLE,
+				theme()->windowCreateProject(),
 				template_,
+				kernel,
 				content, default_, flags,
 				confirm, cancel,
 				btnConfirm, btnCancel
@@ -2993,24 +3019,24 @@ void Workspace::starterKitsPopupBox(
 	);
 }
 
-void Workspace::sortAssetsPopupBox(
+void Workspace::assetsSortingPopupBox(
 	Renderer* rnd,
 	AssetsBundle::Categories category,
-	const ImGui::SortAssetsPopupBox::ConfirmedHandler &confirm_,
-	const ImGui::SortAssetsPopupBox::CanceledHandler &cancel
+	const ImGui::AssetsSortingPopupBox::ConfirmedHandler &confirm_,
+	const ImGui::AssetsSortingPopupBox::CanceledHandler &cancel
 ) {
 	Project::Ptr &prj = currentProject();
 
 	const char* btnConfirm = nullptr;
 	const char* btnCancel = nullptr;
 
-	ImGui::SortAssetsPopupBox::ConfirmedHandler confirm = confirm_;
+	ImGui::AssetsSortingPopupBox::ConfirmedHandler confirm = confirm_;
 
 	btnConfirm = theme()->generic_Ok().c_str();
 	btnCancel = theme()->generic_Cancel().c_str();
 	if (confirm_.empty()) {
-		confirm = ImGui::SortAssetsPopupBox::ConfirmedHandler(
-			[&] (ImGui::SortAssetsPopupBox::Orders) -> void {
+		confirm = ImGui::AssetsSortingPopupBox::ConfirmedHandler(
+			[&] (ImGui::AssetsSortingPopupBox::Orders) -> void {
 				popupBox(nullptr);
 			},
 			nullptr
@@ -3019,10 +3045,10 @@ void Workspace::sortAssetsPopupBox(
 
 	popupBox(
 		ImGui::PopupBox::Ptr(
-			new ImGui::SortAssetsPopupBox(
+			new ImGui::AssetsSortingPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				theme()->windowSortAssets(),
 				prj.get(),
 				(unsigned)category,
 				confirm, cancel,
@@ -3058,7 +3084,7 @@ void Workspace::searchPopupBox(
 		ImGui::PopupBox::Ptr(
 			new ImGui::SearchPopupBox(
 				theme(),
-				GBBASIC_TITLE,
+				theme()->windowSearch(),
 				settings(),
 				content, default_, flags,
 				confirm, cancel,
@@ -3372,7 +3398,7 @@ void Workspace::showExternalFontBrowser(
 			new ImGui::FontResolverPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				theme()->windowFont(),
 				Math::Vec2i(8, 8), Math::Vec2i(GBBASIC_FONT_MIN_SIZE, GBBASIC_FONT_MIN_SIZE), Math::Vec2i(GBBASIC_FONT_MAX_SIZE, GBBASIC_FONT_MAX_SIZE), theme()->generic_Size().c_str(), "x",
 				content, "",
 				filter,
@@ -3436,7 +3462,7 @@ void Workspace::showExternalMapBrowser(
 			new ImGui::MapResolverPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				theme()->windowMap(),
 				withTiles ? theme()->dialogPrompt_FromTiles().c_str() : nullptr, withPath ? theme()->dialogPrompt_FromImage().c_str() : nullptr,
 				prj->preferencesMapRef(), 0, Math::max(0, prj->tilesPageCount() - 1), theme()->dialogPrompt_TilesPage().c_str(),
 				content, "",
@@ -3502,7 +3528,7 @@ void Workspace::showExternalSceneBrowser(
 			new ImGui::SceneResolverPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				theme()->windowScene(),
 				prj.get(),
 				prj->preferencesSceneRefMap(), 0, Math::max(0, prj->mapPageCount() - 1), theme()->dialogPrompt_MapPage().c_str(),
 				prj->preferencesSceneUseGravity(), theme()->dialogPrompt_UseGravity().c_str(),
@@ -3517,6 +3543,7 @@ void Workspace::showExternalSceneBrowser(
 
 void Workspace::showExternalFileBrowser(
 	Renderer* rnd,
+	const std::string &title,
 	const std::string &content,
 	const Text::Array &filter,
 	bool requireExisting,
@@ -3546,7 +3573,7 @@ void Workspace::showExternalFileBrowser(
 			new ImGui::FileResolverPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				title,
 				content, "",
 				filter,
 				requireExisting,
@@ -3562,6 +3589,7 @@ void Workspace::showExternalFileBrowser(
 
 void Workspace::showExternalFileBrowser(
 	Renderer* rnd,
+	const std::string &title,
 	const std::string &content,
 	const Text::Array &filter,
 	bool requireExisting,
@@ -3592,7 +3620,7 @@ void Workspace::showExternalFileBrowser(
 			new ImGui::FileResolverPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				title,
 				content, "",
 				filter,
 				requireExisting,
@@ -3609,6 +3637,7 @@ void Workspace::showExternalFileBrowser(
 
 void Workspace::showExternalFileBrowser(
 	Renderer* rnd,
+	const std::string &title,
 	const std::string &content,
 	const Text::Array &filter,
 	bool requireExisting,
@@ -3641,7 +3670,7 @@ void Workspace::showExternalFileBrowser(
 				new ImGui::FileResolverPopupBox(
 					rnd,
 					theme(),
-					GBBASIC_TITLE,
+					title,
 					content, "",
 					filter,
 					requireExisting,
@@ -3660,6 +3689,7 @@ void Workspace::showExternalFileBrowser(
 
 void Workspace::showExternalFileBrowser(
 	Renderer* rnd,
+	const std::string &title,
 	const std::string &content,
 	const Text::Array &filter,
 	bool requireExisting,
@@ -3691,7 +3721,7 @@ void Workspace::showExternalFileBrowser(
 			new ImGui::FileResolverPopupBox(
 				rnd,
 				theme(),
-				GBBASIC_TITLE,
+				title,
 				content, "",
 				filter,
 				requireExisting,
@@ -3709,14 +3739,18 @@ void Workspace::showExternalFileBrowser(
 
 void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 	auto set = [this, prj] (Project* prj_) -> void {
+		const bool needReloadKernel =
+			prj->kernel()        != prj_->kernel();
 		const bool needReAnalyze =
+			prj->kernel()        != prj_->kernel()        ||
 			prj->cartridgeType() != prj_->cartridgeType() ||
-			prj->sramType() != prj_->sramType() ||
-			prj->hasRtc() != prj_->hasRtc();
+			prj->sramType()      != prj_->sramType()      ||
+			prj->hasRtc()        != prj_->hasRtc();
 
 		const long long now = DateTime::now();
 		if (!prj_->title().empty())
 			prj->title(prj_->title());
+		prj->kernel(prj_->kernel());
 		prj->cartridgeType(prj_->cartridgeType());
 		prj->sramType(prj_->sramType());
 		prj->hasRtc(prj_->hasRtc());
@@ -3736,6 +3770,20 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 		prj->modified(now);
 
 		prj->hasDirtyInformation(true);
+
+		if (needReloadKernel) {
+			const std::string &kernelId = prj->kernel();
+			int kernelIdx = getKernelIndex(kernelId);
+			if (kernelIdx >= 0) {
+				const int n = (int)kernels().size();
+				kernelIdx = Math::clamp(kernelIdx, 0, n - 1);
+			} else {
+				kernelIdx = 0;
+			}
+			activeKernelIndex(kernelIdx);
+
+			clearLanguageDefinition(true);
+		}
 
 		if (needReAnalyze)
 			analyze(true);
@@ -3868,6 +3916,68 @@ void Workspace::closeSearchResult(void) {
 		EditorSearchResult::destroy(editor);
 		searchResultTextBox(nullptr);
 	}
+}
+
+void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd) {
+	ImGui::InstalledKernelsPopupBox::ConfirmedHandler confirm(
+		[this] (void) -> void {
+			popupBox(nullptr);
+		},
+		nullptr
+	);
+	ImGui::InstalledKernelsPopupBox::AddedHandler add(
+		[wnd, rnd, this] (void) -> void {
+			Operations::kernelInstall(wnd, rnd, this)
+				.then(
+					[wnd, rnd, this] (bool /* ok */) -> void {
+						clearLanguageDefinition(true);
+
+						showInstalledKernels(wnd, rnd);
+					}
+				)
+				.fail(
+					[wnd, rnd, this] (std::string reason) -> void { // Error occurred.
+						ImGui::MessagePopupBox::ConfirmedHandler confirm = ImGui::MessagePopupBox::ConfirmedHandler(
+							[wnd, rnd, this] (void) -> void {
+								showInstalledKernels(wnd, rnd);
+							},
+							nullptr
+						);
+						messagePopupBox(reason, confirm, nullptr, nullptr);
+					}
+				)
+				.fail(
+					[wnd, rnd, this] (void) -> void { // User canceled.
+						showInstalledKernels(wnd, rnd);
+					}
+				);
+		},
+		nullptr
+	);
+	ImGui::InstalledKernelsPopupBox::RemovedHandler remove(
+		[wnd, rnd, this] (int idx) -> void {
+			Operations::kernelUninstall(wnd, rnd, this, idx)
+				.then(
+					[this] (bool /* ok */) -> void {
+						clearLanguageDefinition(true);
+					}
+				);
+		},
+		nullptr
+	);
+	popupBox(
+		ImGui::PopupBox::Ptr(
+			new ImGui::InstalledKernelsPopupBox(
+				rnd,
+				theme(),
+				theme()->windowInstalledKernels(),
+				kernels(),
+				confirm, add, remove,
+				theme()->generic_Ok().c_str(), theme()->generic_Install().c_str(), theme()->generic_Uninstall().c_str(),
+				std::bind(&Workspace::ejectSourceCode, this, wnd, rnd, false)
+			)
+		)
+	);
 }
 
 void Workspace::showPreferences(Window* wnd, Renderer* rnd, const char* tab) {
@@ -4033,7 +4143,7 @@ std::string Workspace::getSourceCodePath(std::string* name_) const {
 	std::string name;
 	Path::split(krnlPath, &name, nullptr, nullptr);
 
-	const std::string src = Path::combine(KERNEL_BINARIES_DIR, (name + ".zip").c_str());
+	const std::string src = Path::combine(KERNEL_SYSTEM_BINARIES_DIR, (name + ".zip").c_str());
 
 	if (name_)
 		*name_ = name;
@@ -4041,7 +4151,7 @@ std::string Workspace::getSourceCodePath(std::string* name_) const {
 	return src;
 }
 
-void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd) {
+void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, bool wait) {
 	if (kernels().empty()) {
 		const std::string msg = "Cannot find valid kernel.";
 		error(msg.c_str());
@@ -4116,7 +4226,10 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd) {
 		bubble(theme()->dialogPrompt_ExportedSourceCode(), nullptr);
 	};
 
-	Operations::popupWait(wnd, rnd, this, true, theme()->dialogPrompt_Ejecting().c_str(), true, false)
+	promise::Promise begin = wait ?
+		Operations::popupWait(wnd, rnd, this, true, theme()->dialogPrompt_Ejecting().c_str(), true, false) :
+		Operations::always(wnd, rnd, this);
+	begin
 		.then(
 			[next] (void) -> promise::Promise {
 				return promise::newPromise(next);
@@ -4408,7 +4521,7 @@ bool Workspace::analyze(bool force) {
 	);
 
 	auto finish = [] (Workspace* ws) -> void {
-		ws->clearLanguageDefinition();
+		ws->clearLanguageDefinition(false);
 		ws->clearAnalyzedCodeInformation();
 		ws->clearCodePageNames();
 
@@ -4444,12 +4557,12 @@ void Workspace::clearAnalyzingResult(void) {
 
 	staticAnalyzer()->clear();
 
-	clearLanguageDefinition();
+	clearLanguageDefinition(false);
 	clearAnalyzedCodeInformation();
 	clearAssetPageNames();
 }
 
-void Workspace::clearLanguageDefinition(void) {
+void Workspace::clearLanguageDefinition(bool clearRevision) {
 	const Project::Ptr &prj = currentProject();
 	if (!prj || !prj->assets())
 		return;
@@ -4458,12 +4571,12 @@ void Workspace::clearLanguageDefinition(void) {
 		CodeAssets::Entry* entry = prj->getCode(i);
 		Editable* editor = entry->editor;
 		if (editor)
-			editor->post(Editable::CLEAR_LANGUAGE_DEFINITION, false);
+			editor->post(Editable::CLEAR_LANGUAGE_DEFINITION, clearRevision);
 	}
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 	if (prj->minorCodeEditor()) {
-		prj->minorCodeEditor()->post(Editable::CLEAR_LANGUAGE_DEFINITION, false);
+		prj->minorCodeEditor()->post(Editable::CLEAR_LANGUAGE_DEFINITION, clearRevision);
 	}
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 }
@@ -5662,8 +5775,6 @@ bool Workspace::loadConfig(Window*, Renderer*, const rapidjson::Document &doc) {
 	Jpath::get(doc, settings().applicationFirstRun, "application", "first_run");
 	Jpath::get(doc, settings().applicationLoadedExampleRevision, "application", "loaded_example_revision");
 
-	Jpath::get(doc, settings().kernelActiveIndex, "kernel", "active_index");
-
 	Jpath::get(doc, settings().exporterSettings, "exporter", "settings");
 	Jpath::get(doc, settings().exporterArgs, "exporter", "args");
 
@@ -5763,8 +5874,6 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 	Jpath::set(doc, doc, settings().applicationFirstRun, "application", "first_run");
 	Jpath::set(doc, doc, settings().applicationLoadedExampleRevision, "application", "loaded_example_revision");
 
-	Jpath::set(doc, doc, settings().kernelActiveIndex, "kernel", "active_index");
-
 	Jpath::set(doc, doc, settings().exporterSettings, "exporter", "settings");
 	Jpath::set(doc, doc, settings().exporterArgs, "exporter", "args");
 
@@ -5835,6 +5944,7 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 }
 
 void Workspace::loadKernels(void) {
+	// Prepare.
 	auto load = [this] (const FileInfos::Ptr &fileInfos) -> void {
 		for (int i = 0; i < fileInfos->count(); ++i) {
 			FileInfo::Ptr fileInfo = fileInfos->get(i);
@@ -5844,11 +5954,11 @@ void Workspace::loadKernels(void) {
 			Path::split(path, &name, nullptr, nullptr);
 
 			GBBASIC::Kernel::Ptr krnl(new GBBASIC::Kernel());
-			if (!krnl->open(path.c_str(), theme()->menu_Kernels().c_str()))
+			if (!krnl->open(path.c_str()))
 				continue; // Not a kernel.
 
-			if (name == "default")
-				kernels().insert(kernels().begin(), krnl);
+			if (krnl->id() == "default")
+				kernels().insert(kernels().begin(), krnl); // Default kernel is always in the front.
 			else
 				kernels().push_back(krnl);
 
@@ -5858,16 +5968,25 @@ void Workspace::loadKernels(void) {
 
 	kernels().clear();
 
-	DirectoryInfo::Ptr dirInfo = DirectoryInfo::make(KERNEL_BINARIES_DIR);
+	// Load the system kernels.
+	DirectoryInfo::Ptr dirInfo = DirectoryInfo::make(KERNEL_SYSTEM_BINARIES_DIR);
 	FileInfos::Ptr fileInfos = dirInfo->getFiles("*.json", true);
 	load(fileInfos);
 #if WORKSPACE_ALTERNATIVE_ROOT_PATH_ENABLED
-	const std::string altPath = Path::combine(WORKSPACE_ALTERNATIVE_ROOT_PATH, KERNEL_BINARIES_DIR);
+	const std::string altPath = Path::combine(WORKSPACE_ALTERNATIVE_ROOT_PATH, KERNEL_SYSTEM_BINARIES_DIR);
 	dirInfo = DirectoryInfo::make(altPath.c_str());
 	fileInfos = dirInfo->getFiles("*.json", true);
 	load(fileInfos);
 #endif /* WORKSPACE_ALTERNATIVE_ROOT_PATH_ENABLED */
 
+	// Load the user kernels.
+	const std::string writableDir = Path::writableDirectory();
+	const std::string userPath = Path::combine(writableDir.c_str(), KERNEL_USER_BINARIES_DIR);
+	DirectoryInfo::Ptr userDirInfo = DirectoryInfo::make(userPath.c_str());
+	FileInfos::Ptr userFileInfos = userDirInfo->getFiles("*.json", true);
+	load(userFileInfos);
+
+	// Load the information.
 	if (kernels().empty()) {
 		messagePopupBox(theme()->dialogPrompt_CannotFindAnyKernel(), nullptr, nullptr, nullptr);
 
@@ -5883,8 +6002,7 @@ void Workspace::loadKernels(void) {
 			krnl->behaviours(defaultKrnl->behaviours());
 	}
 
-	const int index = Math::clamp(settings().kernelActiveIndex, 0, (int)kernels().size());
-	activeKernelIndex(index);
+	activeKernelIndex(0);
 
 	const std::string src = getSourceCodePath(nullptr);
 	hasKernelSourceCode(Path::fileExists(src.c_str()));
@@ -7752,6 +7870,9 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 		VariableGuard<decltype(style.ChildBorderSize)> guardChildBorderSize(&style.ChildBorderSize, style.ChildBorderSize, 1);
 
 		if (ImGui::BeginMenu(theme()->menu_Application())) {
+			if (ImGui::MenuItem(theme()->menu_Kernels())) {
+				showInstalledKernels(wnd, rnd);
+			}
 			if (ImGui::MenuItem(theme()->menu_Preferences())) {
 				showPreferences(wnd, rnd, nullptr);
 			}
@@ -7938,7 +8059,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			if (hasKernelSourceCode()) {
 				ImGui::Separator();
 				if (ImGui::MenuItem(theme()->menu_EjectSourceCodeVm())) {
-					ejectSourceCode(wnd, rnd);
+					ejectSourceCode(wnd, rnd, true);
 				}
 			}
 			ImGui::Separator();
@@ -9417,6 +9538,10 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 	case Categories::HOME:
 		if (showRecentProjects()) {
 			if (!docOpened) {
+				if (ImGui::MenuBarImageButton(theme()->iconKernels()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_InstalledKernels().c_str())) {
+					showInstalledKernels(wnd, rnd);
+				}
+				width += ImGui::GetItemRectSize().x;
 				if (settings().recentIconView) {
 					if (ImGui::MenuBarImageButton(theme()->iconListView()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_ListView().c_str())) {
 						settings().recentIconView = false;
@@ -10430,7 +10555,7 @@ void Workspace::font(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 	FontAssets::Entry* entry = prj->getFont(prj->activeFontIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowFont(), nullptr, flags)) {
+	if (ImGui::Begin("#Fnt", nullptr, flags)) {
 		if (entry) {
 			touchFontEditor(wnd, rnd, prj.get(), prj->activeFontIndex(), entry)
 				->update(
@@ -10513,7 +10638,7 @@ void Workspace::code(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 		if (!entry)
 			flags |= ImGuiWindowFlags_NoScrollWithMouse;
 		EditorCode* editor = nullptr;
-		if (ImGui::Begin(theme()->windowCode(), nullptr, flags)) {
+		if (ImGui::Begin("#Cd", nullptr, flags)) {
 			// Get the entry and editor.
 			if (!entry) {
 				prj->addCodePage("");
@@ -10633,7 +10758,7 @@ void Workspace::code(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 		);
 
 		// Show and update the editor window.
-		if (ImGui::Begin(theme()->windowCodeSplitted(), nullptr, flags)) {
+		if (ImGui::Begin("#Cdm", nullptr, flags)) {
 			// Open new editor if necessary.
 			const int minorIdx = Math::clamp(prj->activeMinorCodeIndex(), 0, prj->codePageCount() - 1);
 			if (minorIdx != prj->activeMinorCodeIndex())
@@ -10730,7 +10855,7 @@ void Workspace::tiles(Window* wnd, Renderer* rnd, float marginTop, float marginB
 	TilesAssets::Entry* entry = prj->getTiles(prj->activeTilesIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowTiles(), nullptr, flags)) {
+	if (ImGui::Begin("#Tl", nullptr, flags)) {
 		if (entry) {
 			touchTilesEditor(wnd, rnd, prj.get(), prj->activeTilesIndex(), entry)
 				->update(
@@ -10768,7 +10893,7 @@ void Workspace::map(Window* wnd, Renderer* rnd, float marginTop, float marginBot
 	MapAssets::Entry* entry = prj->getMap(prj->activeMapIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowMap(), nullptr, flags)) {
+	if (ImGui::Begin("#Mp", nullptr, flags)) {
 		if (entry) {
 			if (!entry->editor) {
 				BaseAssets::Entry* refAsset = prj->tilesPageCount() == 0 ? nullptr : prj->getTiles(entry->ref);
@@ -10812,7 +10937,7 @@ void Workspace::music(Window* wnd, Renderer* rnd, float marginTop, float marginB
 	MusicAssets::Entry* entry = prj->getMusic(prj->activeMusicIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowAudio(), nullptr, flags)) {
+	if (ImGui::Begin("#Ad", nullptr, flags)) {
 		if (entry) {
 			touchMusicEditor(wnd, rnd, prj.get(), prj->activeMusicIndex(), entry)
 				->update(
@@ -10855,7 +10980,7 @@ void Workspace::sfx(Window* wnd, Renderer* rnd, float marginTop, float marginBot
 	SfxAssets::Entry* entry = prj->getSfx(prj->activeSfxIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowAudio(), nullptr, flags)) {
+	if (ImGui::Begin("#Ad", nullptr, flags)) {
 		if (entry) {
 			touchSfxEditor(wnd, rnd, prj.get(), prj->activeSfxIndex(), entry)
 				->update(
@@ -10901,7 +11026,7 @@ void Workspace::actor(Window* wnd, Renderer* rnd, float marginTop, float marginB
 	ActorAssets::Entry* entry = prj->getActor(prj->activeActorIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowActor(), nullptr, flags)) {
+	if (ImGui::Begin("#Act", nullptr, flags)) {
 		if (entry) {
 			touchActorEditor(wnd, rnd, prj.get(), prj->activeActorIndex(), entry)
 				->update(
@@ -10939,7 +11064,7 @@ void Workspace::scene(Window* wnd, Renderer* rnd, float marginTop, float marginB
 	SceneAssets::Entry* entry = prj->getScene(prj->activeSceneIndex());
 	if (!entry)
 		flags |= ImGuiWindowFlags_NoScrollWithMouse;
-	if (ImGui::Begin(theme()->windowScene(), nullptr, flags)) {
+	if (ImGui::Begin("#Sc", nullptr, flags)) {
 		if (entry) {
 			if (!entry->editor) {
 				BaseAssets::Entry* refAsset = prj->mapPageCount() == 0 ? nullptr : prj->getMap(entry->refMap);
@@ -10971,7 +11096,7 @@ void Workspace::console(Window* wnd, Renderer* rnd, float marginTop, float margi
 	editor->update(
 		wnd, rnd,
 		this,
-		theme()->windowConsole().c_str(),
+		"#Con",
 		0, marginTop, (float)rnd->width(), (float)rnd->height() - (marginTop + marginBottom),
 		delta
 	);
@@ -11000,7 +11125,7 @@ void Workspace::document(Window* wnd, Renderer* rnd, float marginTop, float marg
 		ImVec2((float)rnd->width(), (float)rnd->height() - (marginTop + marginBottom)),
 		ImGuiCond_Always
 	);
-	if (ImGui::Begin(theme()->windowConsole(), nullptr, flags)) {
+	if (ImGui::Begin("#Doc", nullptr, flags)) {
 		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 4);
 
 		const ImVec2 size = ImGui::GetContentRegionAvail();
@@ -11039,7 +11164,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 	);
 	const ImGuiWindowFlags flags = WORKSPACE_WND_FLAGS_CONTENT | ImGuiWindowFlags_NoScrollWithMouse;
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::GetStyleColorVec4(ImGuiCol_ChildBg));
-	if (ImGui::Begin(theme()->windowEmulator(), nullptr, flags)) {
+	if (ImGui::Begin("#Emu", nullptr, flags)) {
 		// Prepare.
 		const float statusBarHeight = ImGui::GetTextLineHeightWithSpacing() + style.FramePadding.y * 2;
 

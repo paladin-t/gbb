@@ -59,6 +59,10 @@ public:
 		ImU32 selectedButtonHoveredColor;
 		ImU32 selectedButtonActiveColor;
 
+		ImU32 dangerButtonColor;
+		ImU32 dangerButtonHoveredColor;
+		ImU32 dangerButtonActiveColor;
+
 		ImU32 tabTextColor;
 		ImU32 tabPendingColor;
 		ImU32 tabPendingHoveredColor;
@@ -95,6 +99,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Enabled)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Goto)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Import)
+	GBBASIC_PROPERTY_READONLY(std::string, generic_Install)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Later)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_New)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_No)
@@ -111,6 +116,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, generic_SaveTo)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Search)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Size)
+	GBBASIC_PROPERTY_READONLY(std::string, generic_Uninstall)
 	GBBASIC_PROPERTY_READONLY(std::string, generic_Yes)
 
 	GBBASIC_PROPERTY_READONLY(std::string, menu_1Bpp)
@@ -157,6 +163,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Download)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Duplicate)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_EjectSourceCodeVm)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_EjectVm)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Examples)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_ExportSelection)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Find)
@@ -166,11 +173,13 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, menu_ForTiles)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_FromLibrary)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_FxHammerFile)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_GitHub)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Goto)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Grids)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Help)
-	GBBASIC_PROPERTY_READONLY(std::string, menu_Hflip)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Hex)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_Hflip)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_Howto)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Image)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_ImageFile)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Import)
@@ -305,6 +314,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotUseThisImage)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Checking)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ClearedProjects)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ClickAgainToUninstall)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ClickToPut)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ClimbVelocity)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CollisionGroup)
@@ -364,6 +374,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Index)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_InitialOffset)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_InitialVolume)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Installing)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Interval)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_InvalidBorderImageSize256x224pxRequired)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_InvalidData)
@@ -380,6 +391,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_MaxJumpCount)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_MaxJumpTicks)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_MaxSize)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Missing)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_MoveSpeed)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Name)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_NoData)
@@ -484,6 +496,14 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Waveform_15)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_WordWrap)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Writing)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_KernelError_AKernelWithIdAlreadyExists)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_KernelError_CannotCreateKernelDirectory)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_KernelError_CannotFindKernelManifest)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_KernelError_CannotInstallKernelFiles)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_KernelError_CannotOpenKernelPackage)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_KernelError_CannotReadKernelManifest)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_KernelError_CannotReadKernelPackage)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_KernelError_MissingKernelComponent)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogAsk_BrowseTheExportedFile)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogAsk_ClearAllRecentProjects)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogAsk_ProjectHasBeenBuiltAndIsBeingHostedAt_StopHostingAndBrowseThePackage)
@@ -493,8 +513,9 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogAsk_SaveTheCurrentProject)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogInput_Input)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogInput_ProjectName)
-	GBBASIC_PROPERTY_READONLY(std::string, dialogStarterKits_ProjectName)
-	GBBASIC_PROPERTY_READONLY(std::string, dialogStarterKits_StarterKit)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogProjectCreating_Kernel)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogProjectCreating_ProjectName)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogProjectCreating_StarterKit)
 
 	GBBASIC_PROPERTY_READONLY(std::string, tabPreferences_Debug)
 	GBBASIC_PROPERTY_READONLY(std::string, tabPreferences_Device)
@@ -579,10 +600,15 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Input_Onscreen_SwapAB)
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Input_WaitingForInput)
 
+	GBBASIC_PROPERTY_READONLY(std::string, windowInstalledKernels)
+	GBBASIC_PROPERTY_READONLY(std::string, windowInstalledKernels_Kernels)
+
+	GBBASIC_PROPERTY_READONLY(std::string, windowCreateProject)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Title)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Path)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Kernel)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Cart)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Sram)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Sram_None)
@@ -607,15 +633,14 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_Border_Custom)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Advanced_Preview)
 
+	GBBASIC_PROPERTY_READONLY(std::string, windowSortAssets)
+
+	GBBASIC_PROPERTY_READONLY(std::string, windowSearch)
+
 	GBBASIC_PROPERTY_READONLY(std::string, windowPalette)
 
-	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator)
-
-	GBBASIC_PROPERTY_READONLY(std::string, windowCode)
-	GBBASIC_PROPERTY_READONLY(std::string, windowCodeSplitted)
 	GBBASIC_PROPERTY_READONLY(std::string, windowCode_SearchFor)
 
-	GBBASIC_PROPERTY_READONLY(std::string, windowTiles)
 	GBBASIC_PROPERTY_READONLY(std::string, windowTiles_CreateMap)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap)
@@ -624,12 +649,13 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_CreateScene)
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_RefTiles)
 
-	GBBASIC_PROPERTY_READONLY(std::string, windowAudio)
 	GBBASIC_PROPERTY_READONLY(std::string, windowAudio_Duty1)
 	GBBASIC_PROPERTY_READONLY(std::string, windowAudio_Duty2)
 	GBBASIC_PROPERTY_READONLY(std::string, windowAudio_Instruments)
 	GBBASIC_PROPERTY_READONLY(std::string, windowAudio_Noise)
 	GBBASIC_PROPERTY_READONLY(std::string, windowAudio_Wave)
+
+	GBBASIC_PROPERTY_READONLY(std::string, windowSfx)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowFont)
 	GBBASIC_PROPERTY_READONLY(std::string, windowFont_Arbitrary)
@@ -653,10 +679,6 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowScene_TriggerEventTypeEnter)
 	GBBASIC_PROPERTY_READONLY(std::string, windowScene_TriggerEventTypeLeave)
 	GBBASIC_PROPERTY_READONLY(std::string, windowScene_TriggerEventTypeNone)
-
-	GBBASIC_PROPERTY_READONLY(std::string, windowConsole)
-
-	GBBASIC_PROPERTY_READONLY(std::string, windowDocument)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowSearchResult)
 	GBBASIC_PROPERTY_READONLY(std::string, windowSearchResult_CaseSensitive)
@@ -705,6 +727,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_IconView)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_Import)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ImportAsNew)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltip_InstalledKernels)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_JumpToRefMap)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_JumpToRefTiles)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_LayerActors)
@@ -984,6 +1007,7 @@ public:
 	GBBASIC_PROPERTY_PTR(class Texture, iconDocument)
 	GBBASIC_PROPERTY_PTR(class Texture, iconIconView)
 	GBBASIC_PROPERTY_PTR(class Texture, iconListView)
+	GBBASIC_PROPERTY_PTR(class Texture, iconKernels)
 	GBBASIC_PROPERTY_PTR(class Texture, iconSave)
 	GBBASIC_PROPERTY_PTR(class Texture, iconWorking)
 	GBBASIC_PROPERTY_PTR(class Texture, iconInfo)

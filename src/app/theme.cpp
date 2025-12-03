@@ -271,6 +271,9 @@ bool Theme::open(class Renderer* rnd) {
 	styleDefault().selectedButtonColor                      = ImGui::GetColorU32(ImVec4(0.34f, 0.66f, 0.51f, 1.00f));
 	styleDefault().selectedButtonHoveredColor               = ImGui::GetColorU32(ImVec4(0.22f, 0.55f, 0.40f, 1.00f));
 	styleDefault().selectedButtonActiveColor                = ImGui::GetColorU32(ImVec4(0.18f, 0.51f, 0.36f, 1.00f));
+	styleDefault().dangerButtonColor                        = ImGui::GetColorU32(ImVec4(0.93f, 0.22f, 0.43f, 1.00f));
+	styleDefault().dangerButtonHoveredColor                 = ImGui::GetColorU32(ImVec4(0.93f, 0.34f, 0.60f, 1.00f));
+	styleDefault().dangerButtonActiveColor                  = ImGui::GetColorU32(ImVec4(0.93f, 0.12f, 0.39f, 1.00f));
 	styleDefault().tabTextColor                             = ImGui::GetColorU32(ImVec4(1.00f, 1.00f, 1.00f, 1.00f));
 	styleDefault().tabPendingColor                          = ImGui::GetColorU32(ImVec4(0.40f, 0.13f, 0.47f, 1.00f));
 	styleDefault().tabPendingHoveredColor                   = ImGui::GetColorU32(ImVec4(0.50f, 0.23f, 0.57f, 1.00f));
@@ -296,6 +299,7 @@ bool Theme::open(class Renderer* rnd) {
 	generic_Enabled("Enabled");
 	generic_Goto("Goto");
 	generic_Import("Import");
+	generic_Install("Install");
 	generic_Later("Later");
 	generic_New("New");
 	generic_No("No");
@@ -312,6 +316,7 @@ bool Theme::open(class Renderer* rnd) {
 	generic_SaveTo("Save to");
 	generic_Search("Search");
 	generic_Size("Size");
+	generic_Uninstall("Uninstall");
 	generic_Yes("Yes");
 
 	menu_1Bpp("1BPP");
@@ -358,6 +363,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Download("Download");
 	menu_Duplicate("Duplicate");
 	menu_EjectSourceCodeVm("Eject Source Code (VM)...");
+	menu_EjectVm("Eject VM");
 	menu_Examples("Examples");
 	menu_ExportSelection("Export Selection");
 	menu_Find("Find");
@@ -367,11 +373,13 @@ bool Theme::open(class Renderer* rnd) {
 	menu_ForTiles("For Tiles");
 	menu_FromLibrary("From Library...");
 	menu_FxHammerFile("FxHammer File...");
+	menu_GitHub("GitHub");
 	menu_Goto("Goto");
 	menu_Grids("Grids");
 	menu_Help("Help");
-	menu_Hflip("H-flip");
 	menu_Hex("HEX");
+	menu_Hflip("H-flip");
+	menu_Howto("Howto");
 	menu_Image("Image");
 	menu_ImageFile("Image File...");
 	menu_Import("Import...");
@@ -384,7 +392,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Jump("Jump");
 	menu_JumpToTheActor("Jump to The Actor");
 	menu_JumpToTheMap("Jump to The Map");
-	menu_Kernels("Kernels");
+	menu_Kernels("Kernels...");
 	menu_Library("Library");
 	menu_Manual("Manual...");
 	menu_Map("Map");
@@ -506,6 +514,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_CannotUseThisImage("Cannot use this image");
 	dialogPrompt_Checking("Checking...");
 	dialogPrompt_ClearedProjects("Cleared projects");
+	dialogPrompt_ClickAgainToUninstall("Click again to uninstall \"%s\"");
 	dialogPrompt_ClickToPut("Click to put");
 	dialogPrompt_ClimbVelocity("Climb velocity");
 	dialogPrompt_CollisionGroup("Collision group");
@@ -565,6 +574,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Index("Index");
 	dialogPrompt_InitialOffset("Initial offset");
 	dialogPrompt_InitialVolume("Initial volume");
+	dialogPrompt_Installing("Installing...");
 	dialogPrompt_Interval("Interval");
 	dialogPrompt_InvalidBorderImageSize256x224pxRequired("Invalid border image size,\n256x224px required");
 	dialogPrompt_InvalidData("Invalid data");
@@ -581,6 +591,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_MaxJumpCount("Max jump count");
 	dialogPrompt_MaxJumpTicks("Max jump ticks");
 	dialogPrompt_MaxSize("Max size");
+	dialogPrompt_Missing("Missing");
 	dialogPrompt_MoveSpeed("Move speed");
 	dialogPrompt_Name("Name");
 	dialogPrompt_NoData("No data");
@@ -685,6 +696,14 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Waveform_15("Waveform 15");
 	dialogPrompt_WordWrap("Word wrap");
 	dialogPrompt_Writing("Writing");
+	dialogPrompt_KernelError_AKernelWithIdAlreadyExists("A kernel with ID \"{0}\" already exists.");
+	dialogPrompt_KernelError_CannotCreateKernelDirectory("Cannot create kernel directory.");
+	dialogPrompt_KernelError_CannotFindKernelManifest("Cannot find kernel manifest.");
+	dialogPrompt_KernelError_CannotInstallKernelFiles("Cannot install kernel files.");
+	dialogPrompt_KernelError_CannotOpenKernelPackage("Cannot open kernel package.");
+	dialogPrompt_KernelError_CannotReadKernelManifest("Cannot read kernel manifest.");
+	dialogPrompt_KernelError_CannotReadKernelPackage("Cannot read kernel package.");
+	dialogPrompt_KernelError_MissingKernelComponent("Missing kernel component.");
 	dialogAsk_BrowseTheExportedFile("Browser the exported file?");
 	dialogAsk_ClearAllRecentProjects("Clear all recent projects?");
 	dialogAsk_ProjectHasBeenBuiltAndIsBeingHostedAt_StopHostingAndBrowseThePackage("The project has been built and is being hosted\nat {0}.\nStop hosting and browse the package?");
@@ -694,8 +713,9 @@ bool Theme::open(class Renderer* rnd) {
 	dialogAsk_SaveTheCurrentProject("Save the current project?");
 	dialogInput_Input("Input");
 	dialogInput_ProjectName("Project name:");
-	dialogStarterKits_ProjectName("Project name:");
-	dialogStarterKits_StarterKit("Starter kit:");
+	dialogProjectCreating_Kernel("Kernel:");
+	dialogProjectCreating_ProjectName("Project name:");
+	dialogProjectCreating_StarterKit("Starter kit:");
 
 	tabPreferences_Debug("Debug");
 	tabPreferences_Device("Device");
@@ -780,9 +800,14 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Input_Onscreen_SwapAB("Swap A/B");
 	windowPreferences_Input_WaitingForInput("Waiting for input...");
 
+	windowInstalledKernels("Installed Kernels");
+	windowInstalledKernels_Kernels("Kernels:");
+
+	windowCreateProject("Create Project");
+
 	windowProjectProperty("Property");
 	windowProjectProperty_Project_Title("  Title");    windowProjectProperty_Project_Path("Path ");
-	windowProjectProperty_Project_Cart("   Cart");
+	windowProjectProperty_Project_Kernel(" Kernel");   windowProjectProperty_Project_Cart("Cart ");
 	windowProjectProperty_Project_Sram("   SRAM");      windowProjectProperty_Project_Rtc("RTC  ");
 	windowProjectProperty_Project_Desc("   Desc");
 	windowProjectProperty_Project_Author(" Author");  windowProjectProperty_Project_Genre("Genre");
@@ -803,15 +828,14 @@ bool Theme::open(class Renderer* rnd) {
 	windowProjectProperty_Advanced_Border_Custom("Custom");
 	windowProjectProperty_Advanced_Preview(" Preview");
 
+	windowSortAssets("Sort Assets");
+
+	windowSearch("Search");
+
 	windowPalette("Palette");
 
-	windowEmulator("Emulator");
-
-	windowCode("Code");
-	windowCodeSplitted("Code Splitted");
 	windowCode_SearchFor("Search for");
 
-	windowTiles("Tiles");
 	windowTiles_CreateMap("Create map");
 
 	windowMap("Map");
@@ -820,12 +844,13 @@ bool Theme::open(class Renderer* rnd) {
 	windowMap_CreateScene("Create scene");
 	windowMap_RefTiles("Tiles #{0}");
 
-	windowAudio("Audio");
 	windowAudio_Duty1("DUTY 1");
 	windowAudio_Duty2("DUTY 2");
 	windowAudio_Instruments("Instruments");
 	windowAudio_Noise("NOISE");
 	windowAudio_Wave("WAVE");
+
+	windowSfx("SFX");
 
 	windowFont("Font");
 	windowFont_Arbitrary("Arbitrary");
@@ -849,10 +874,6 @@ bool Theme::open(class Renderer* rnd) {
 	windowScene_TriggerEventTypeEnter("Enter");
 	windowScene_TriggerEventTypeLeave("Leave");
 	windowScene_TriggerEventTypeNone("None");
-
-	windowConsole("Console");
-
-	windowDocument("Document");
 
 	windowSearchResult("Search Result");
 	windowSearchResult_CaseSensitive("Case sensitive");
@@ -916,6 +937,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_IconView("Icon view");
 	tooltip_Import("Import");
 	tooltip_ImportAsNew("Import as new");
+	tooltip_InstalledKernels("Installed kernels");
 	tooltip_JumpToRefMap("Jump to ref map");
 	tooltip_JumpToRefTiles("Jump to ref tiles");
 	tooltip_LayerActors("Placed actors");
@@ -1255,6 +1277,7 @@ bool Theme::open(class Renderer* rnd) {
 	iconDocument(createTexture(rnd, RES_ICON_DOCUMENT, GBBASIC_COUNTOF(RES_ICON_DOCUMENT), nullptr));
 	iconIconView(createTexture(rnd, RES_ICON_ICON_VIEW, GBBASIC_COUNTOF(RES_ICON_ICON_VIEW), nullptr));
 	iconListView(createTexture(rnd, RES_ICON_LIST_VIEW, GBBASIC_COUNTOF(RES_ICON_LIST_VIEW), nullptr));
+	iconKernels(createTexture(rnd, RES_ICON_KERNELS, GBBASIC_COUNTOF(RES_ICON_KERNELS), nullptr));
 	iconSave(createTexture(rnd, RES_ICON_SAVE, GBBASIC_COUNTOF(RES_ICON_SAVE), nullptr));
 	iconWorking(createTexture(rnd, RES_ICON_WORKING, GBBASIC_COUNTOF(RES_ICON_WORKING), nullptr));
 	iconInfo(createTexture(rnd, RES_ICON_INFO, GBBASIC_COUNTOF(RES_ICON_INFO), nullptr));
@@ -1421,6 +1444,7 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconDocument(), nullptr);
 	destroyTexture(rnd, iconIconView(), nullptr);
 	destroyTexture(rnd, iconListView(), nullptr);
+	destroyTexture(rnd, iconKernels(), nullptr);
 	destroyTexture(rnd, iconWorking(), nullptr);
 	destroyTexture(rnd, iconInfo(), nullptr);
 	destroyTexture(rnd, iconSave(), nullptr);
@@ -1747,6 +1771,12 @@ void Theme::setColor(const std::string &idx, const ImColor &col) {
 		styleDefault().selectedButtonHoveredColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "selected_button_active")
 		styleDefault().selectedButtonActiveColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "danger_button")
+		styleDefault().dangerButtonColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "danger_button_hovered")
+		styleDefault().dangerButtonHoveredColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "danger_button_active")
+		styleDefault().dangerButtonActiveColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "tab_text")
 		styleDefault().tabTextColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "tab_pending")

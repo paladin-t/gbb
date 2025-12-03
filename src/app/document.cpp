@@ -393,7 +393,7 @@ public:
 			sc = 3.0f;
 		ImGui::SetNextWindowSizeConstraints(ImVec2(320.0f, 240.0f), ImVec2(1e10, 1e10));
 		ImGui::SetNextWindowSize(ImVec2(600.0f * sc, 400.0f  *sc), ImGuiCond_Appearing);
-		if (ImGui::Begin(_title.empty() ? theme->windowDocument().c_str() : _title.c_str(), nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav)) {
+		if (ImGui::Begin(_title.empty() ? "#Doc" : _title.c_str(), nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav)) {
 			ImGui::BeginChild("@Content", ImVec2(0.0f, ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing()), false, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
 			{
 				document(wnd, rnd, theme);

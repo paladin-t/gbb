@@ -19,10 +19,12 @@
 #include "theme.h"
 #include "resource/inline_resource.h"
 #include "../compiler/compiler.h"
+#include "../utils/archive.h"
 #include "../utils/datetime.h"
 #include "../utils/encoding.h"
 #include "../utils/file_sandbox.h"
 #include "../utils/filesystem.h"
+#include "../../lib/jpath/jpath.hpp"
 #if defined GBBASIC_OS_HTML
 #	include <emscripten.h>
 #endif /* GBBASIC_OS_HTML */
@@ -390,18 +392,18 @@ promise::Promise Operations::popupWait(Window*, Renderer*, Workspace* ws) {
 		);
 }
 
-promise::Promise Operations::popupStarterKits(Window*, Renderer*, Workspace* ws, const char* template_, const char* content, const char* default_, unsigned flags) {
+promise::Promise Operations::popupProjectCreating(Window*, Renderer*, Workspace* ws, const char* template_, const char* kernel, const char* content, const char* default_, unsigned flags) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
-			ImGui::StarterKitsPopupBox::ConfirmedHandler confirm(
-				[ws, df] (int idx, const char* name) -> void {
+			ImGui::ProjectCreatingPopupBox::ConfirmedHandler confirm(
+				[ws, df] (int templateIndex, int kernelIndex, const char* name) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
-					df.resolve(idx, name);
+					df.resolve(templateIndex, kernelIndex, name);
 				},
 				nullptr
 			);
-			ImGui::StarterKitsPopupBox::CanceledHandler cancel(
+			ImGui::ProjectCreatingPopupBox::CanceledHandler cancel(
 				[ws, df] (void) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
@@ -409,9 +411,10 @@ promise::Promise Operations::popupStarterKits(Window*, Renderer*, Workspace* ws,
 				},
 				nullptr
 			);
-			ws->starterKitsPopupBox(
-				template_ ? template_ : ws->theme()->dialogStarterKits_StarterKit().c_str(),
-				content ? content : ws->theme()->dialogStarterKits_ProjectName().c_str(),
+			ws->projectCreatingPopupBox(
+				template_ ? template_ : ws->theme()->dialogProjectCreating_StarterKit().c_str(),
+				kernel ? kernel : ws->theme()->dialogProjectCreating_Kernel().c_str(),
+				content ? content : ws->theme()->dialogProjectCreating_ProjectName().c_str(),
 				default_ ? default_ : "", flags,
 				confirm,
 				cancel
@@ -420,13 +423,13 @@ promise::Promise Operations::popupStarterKits(Window*, Renderer*, Workspace* ws,
 	);
 }
 
-promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* ws, AssetsBundle::Categories category) {
+promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspace* ws, AssetsBundle::Categories category) {
 	typedef std::map<int, int> Changing;
 
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
-			ImGui::SortAssetsPopupBox::ConfirmedHandler confirm(
-				[ws, df] (ImGui::SortAssetsPopupBox::Orders orders) -> void {
+			ImGui::AssetsSortingPopupBox::ConfirmedHandler confirm(
+				[ws, df] (ImGui::AssetsSortingPopupBox::Orders orders) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
 					Project::Ptr &prj = ws->currentProject();
@@ -438,7 +441,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::FONT];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::FONT];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -465,7 +468,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)Workspace::Categories::CODE];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)Workspace::Categories::CODE];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -493,7 +496,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::TILES];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::TILES];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -534,7 +537,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::MAP];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::MAP];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -575,7 +578,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::MUSIC];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::MUSIC];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -602,7 +605,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::SFX];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::SFX];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -635,7 +638,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::ACTOR];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::ACTOR];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -691,7 +694,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 
 					do {
 						Changing changing;
-						const ImGui::SortAssetsPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::SCENE];
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::SCENE];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
 							if (idx != i)
@@ -722,7 +725,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 				},
 				nullptr
 			);
-			ImGui::SortAssetsPopupBox::CanceledHandler cancel(
+			ImGui::AssetsSortingPopupBox::CanceledHandler cancel(
 				[ws, df] (void) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
@@ -730,7 +733,7 @@ promise::Promise Operations::popupSortAssets(Window*, Renderer* rnd, Workspace* 
 				},
 				nullptr
 			);
-			ws->sortAssetsPopupBox(
+			ws->assetsSortingPopupBox(
 				rnd,
 				category,
 				confirm,
@@ -838,7 +841,7 @@ promise::Promise Operations::popupExternalSceneResolver(Window*, Renderer* rnd, 
 	);
 }
 
-promise::Promise Operations::popupExternalFileResolver(Window*, Renderer* rnd, Workspace* ws, const char* content, const Text::Array &filter) {
+promise::Promise Operations::popupExternalFileResolver(Window*, Renderer* rnd, Workspace* ws, const char* title, const char* content, const Text::Array &filter) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
 			ImGui::FileResolverPopupBox::ConfirmedHandler_Path confirm(
@@ -859,6 +862,7 @@ promise::Promise Operations::popupExternalFileResolver(Window*, Renderer* rnd, W
 			);
 			ws->showExternalFileBrowser(
 				rnd,
+				title,
 				content,
 				filter,
 				true,
@@ -945,14 +949,14 @@ promise::Promise Operations::popupEmulatorBuildSettings(Window*, Renderer* rnd, 
 }
 
 promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, const char* fontConfigPath) {
-	auto next = [wnd, rnd, ws, fontConfigPath] (promise::Defer df, int idx, std::string name) -> void {
+	auto next = [wnd, rnd, ws, fontConfigPath] (promise::Defer df, int templateIndex, int kernelIndex, std::string name) -> void {
 		Project::Ptr templatePrj = nullptr;
 		do {
-			if (idx < 0)
+			if (templateIndex < 0)
 				break;
 
 			const EntryWithPath::Array &starterKits = ws->starterKits();
-			const EntryWithPath &entry = starterKits[idx];
+			const EntryWithPath &entry = starterKits[templateIndex];
 			templatePrj = Project::Ptr(new Project(wnd, rnd, ws));
 			if (!templatePrj->open(entry.path().c_str())) {
 				templatePrj = nullptr;
@@ -993,11 +997,19 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			prj->order(PROJECT_DEFAULT_ORDER);
 		} else {
 			prj->title(name);
+
 			Bytes::Ptr bytes(Bytes::create());
 			bytes->writeBytes((Byte*)RES_ICON_PROJECT_DEFAULT, sizeof(RES_ICON_PROJECT_DEFAULT));
 			std::string iconCode;
 			if (Base64::fromBytes(iconCode, bytes.get()))
 				prj->iconCode(iconCode);
+
+			const std::string* kernelId = ws->getKernelId(kernelIndex);
+			if (kernelId)
+				prj->kernel(*kernelId);
+			else
+				prj->kernel("default");
+
 			prj->cartridgeType(PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED);
 			prj->sramType(PROJECT_SRAM_TYPE_32KB);
 			prj->hasRtc(false);
@@ -1064,13 +1076,13 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			fileClose(wnd, rnd, ws)
 				.then(
 					[wnd, rnd, ws, next, df] (bool /* ok */) -> promise::Promise {
-						return popupStarterKits(wnd, rnd, ws, ws->theme()->dialogStarterKits_StarterKit().c_str(), ws->theme()->dialogStarterKits_ProjectName().c_str(), GBBASIC_NONAME_PROJECT_NAME, ImGuiInputTextFlags_None)
+						return popupProjectCreating(wnd, rnd, ws, ws->theme()->dialogProjectCreating_StarterKit().c_str(), ws->theme()->dialogProjectCreating_Kernel().c_str(), ws->theme()->dialogProjectCreating_ProjectName().c_str(), GBBASIC_NONAME_PROJECT_NAME, ImGuiInputTextFlags_None)
 							.then(
-								[ws, next, df] (int idx, const char* name) -> promise::Promise {
+								[ws, next, df] (int templateIndex, int kernelIndex, const char* name) -> promise::Promise {
 									WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
 									const std::string name_ = name;
-									return promise::newPromise(std::bind(next, std::placeholders::_1, idx, name_))
+									return promise::newPromise(std::bind(next, std::placeholders::_1, templateIndex, kernelIndex, name_))
 										.then(
 											[df] (Project::Ptr prj) -> void {
 												df.resolve(prj);
@@ -1144,6 +1156,15 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 					return;
 				}
 
+				const std::string &kernelId = prj->kernel();
+				int kernelIdx = ws->getKernelIndex(kernelId);
+				if (kernelIdx >= 0) {
+					const int n = (int)ws->kernels().size();
+					kernelIdx = Math::clamp(kernelIdx, 0, n - 1);
+				} else {
+					kernelIdx = 0;
+				}
+				ws->activeKernelIndex(kernelIdx);
 				ws->currentProject(prj);
 				if (prj->contentType() == Project::ContentTypes::BASIC) {
 					ws->category(Workspace::Categories::CODE);
@@ -1245,6 +1266,7 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 
 						ws->closeSearchResult();
 						ws->currentProject(nullptr);
+						ws->activeKernelIndex(0);
 						ws->popupBox(nullptr);
 						ws->category(Workspace::Categories::HOME);
 						ws->categoryOfAudio(Workspace::Categories::MUSIC);
@@ -2884,7 +2906,7 @@ promise::Promise Operations::editSortAssets(Window* wnd, Renderer* rnd, Workspac
 						if (!ok)
 							return never(wnd, rnd, ws);
 
-						return popupSortAssets(wnd, rnd, ws, category)
+						return popupAssetsSorting(wnd, rnd, ws, category)
 							.then(
 								[ws, df] (bool ok) -> void {
 									WORKSPACE_AUTO_CLOSE_POPUP(ws)
@@ -3826,6 +3848,249 @@ promise::Promise Operations::sceneRemovePage(Window* wnd, Renderer* rnd, Workspa
 						df.reject();
 					}
 				);
+		}
+	);
+}
+
+promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace* ws) {
+	auto next = [wnd, rnd, ws] (promise::Defer df) -> void {
+		// Open file.
+		pfd::open_file open(
+			ws->theme()->generic_Open(),
+			"",
+			GBBASIC_KERNEL_PACKAGE_FILE_FILTER,
+			pfd::opt::none
+		);
+		if (open.result().empty() || open.result().front().empty()) {
+			df.reject();
+
+			return;
+		}
+
+		std::string path = open.result().front();
+		if (path.empty()) {
+			df.reject();
+
+			return;
+		}
+		Path::uniform(path);
+
+		// Open the package.
+		Archive::Ptr arc(Archive::create(Archive::ZIP));
+		if (!arc->open(path.c_str(), Stream::READ)) {
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotOpenKernelPackage()));
+
+			return;
+		}
+
+		// Find the kernel manifest.
+		Text::Array entries;
+		if (!arc->all(entries)) {
+			arc->close();
+
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotReadKernelPackage()));
+
+			return;
+		}
+
+		rapidjson::Document doc;
+		Text::Array::const_iterator it = std::find_if(
+			entries.begin(), entries.end(),
+			[&] (const std::string &entry) -> bool {
+				std::string str;
+				if (!arc->toString(str, entry.c_str()))
+					return false;
+
+				rapidjson::Document doc_;
+				doc_.SetNull();
+				if (!Json::fromString(doc_, str.c_str()))
+					return false;
+
+				const bool likeManifest = // These are essential for a kernel's manifest.
+					Jpath::has(doc_, "id") &&
+					Jpath::has(doc_, "title") &&
+					Jpath::has(doc_, "kernel", "rom") && Jpath::has(doc_, "kernel", "symbols") &&
+					Jpath::has(doc_, "bootstrap", "bank");
+				if (likeManifest)
+					doc.CopyFrom(doc_, doc.GetAllocator(), true);
+
+				return likeManifest;
+			}
+		);
+		if (it == entries.end() || doc.IsNull()) {
+			arc->close();
+
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotFindKernelManifest()));
+
+			return;
+		}
+
+		// Read the kernel manifest.
+		std::string kernelId;
+		std::string romEntry;
+		std::string symbolsEntry;
+		std::string aliasesEntry;
+
+		const bool readEntries =
+			Jpath::get(doc, kernelId, "id") &&
+			Jpath::get(doc, romEntry, "kernel", "rom") &&
+			Jpath::get(doc, symbolsEntry, "kernel", "symbols") &&
+			Jpath::get(doc, aliasesEntry, "kernel", "aliases");
+		if (!readEntries) {
+			arc->close();
+
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotReadKernelManifest()));
+
+			return;
+		}
+
+		// Check whether the kernel has been already installed.
+		const int existingKernel = ws->getKernelIndex(kernelId);
+		if (existingKernel >= 0) {
+			arc->close();
+
+			df.reject(std::string(Text::format(ws->theme()->dialogPrompt_KernelError_AKernelWithIdAlreadyExists(), { kernelId })));
+
+			return;
+		}
+
+		// Validate the content.
+		const bool entriesExist =
+			!kernelId.empty() &&
+			(!romEntry.empty() && arc->exists(romEntry.c_str())) &&
+			(!symbolsEntry.empty() && arc->exists(symbolsEntry.c_str())) &&
+			(!aliasesEntry.empty() && arc->exists(aliasesEntry.c_str()));
+		if (!entriesExist) {
+			arc->close();
+
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_MissingKernelComponent()));
+
+			return;
+		}
+
+		// Install the kernel.
+		const std::string writableDir = Path::writableDirectory();
+		const std::string userPath = Path::combine(writableDir.c_str(), KERNEL_USER_BINARIES_DIR);
+		const std::string subDir = Text::sanitizeFilename(kernelId);
+		const std::string kernelDir = Path::combine(userPath.c_str(), subDir.c_str());
+
+		if (!Path::touchDirectory(kernelDir.c_str())) {
+			arc->close();
+
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotCreateKernelDirectory()));
+
+			return;
+		}
+
+		if (!arc->toDirectory(kernelDir.c_str())) {
+			arc->close();
+
+			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotInstallKernelFiles()));
+
+			return;
+		}
+
+		arc->close(); // Nothing to do with the archive now.
+
+		// Load the installed kernel into workspace.
+		ws->reloadKernels();
+
+		// Active the new installed kernel if the current project is using it.
+		const Project::Ptr &prj = ws->currentProject();
+		if (prj && prj->kernel() == kernelId) {
+			const int idx = ws->getKernelIndex(kernelId);
+			ws->activeKernelIndex(idx);
+		}
+
+		// Finish.
+		df.resolve(true);
+	};
+
+	return promise::newPromise(
+		[&] (promise::Defer df) -> void {
+			popupWait(wnd, rnd, ws, ws->theme()->dialogPrompt_Installing().c_str())
+				.then(
+					[next, df] (void) -> promise::Promise {
+						return promise::newPromise(std::bind(next, df));
+					}
+				);
+		}
+	);
+}
+
+promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, int index) {
+	typedef std::function<std::string(const GBBASIC::Kernel::Ptr &)> FileNameHandler;
+
+	auto refCount = [&] (const std::string &fullPath, FileNameHandler getFileName) -> int {
+		int result = 0;
+		for (int i = 0; i < (int)ws->kernels().size(); ++i) {
+			const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[i];
+			const std::string fileName = getFileName(krnl);
+			if (fileName.empty())
+				continue;
+
+			const std::string &path = krnl->path();
+			std::string dir;
+			Path::split(path, nullptr, nullptr, &dir);
+			const std::string fullPath_ = Path::combine(dir.c_str(), fileName.c_str());
+
+			if (fullPath == fullPath_)
+				++result;
+		}
+
+		return result;
+	};
+	auto uninstall = [refCount] (const GBBASIC::Kernel::Ptr &krnl, const std::string &dir, FileNameHandler getFileName) -> void {
+		const std::string fileName = getFileName(krnl);
+		if (fileName.empty())
+			return;
+
+		const std::string fullPath = Path::combine(dir.c_str(), fileName.c_str());
+		const int refs = refCount(fullPath, getFileName);
+		if (refs > 1) // Is referenced by more than one kernels, ignore.
+			return;
+
+		if (Path::fileExists(fullPath.c_str())) {
+			Path::removeFile(fullPath.c_str(), true); // Remove the file.
+
+			std::string parentDir;
+			Path::split(fullPath, nullptr, nullptr, &parentDir);
+			DirectoryInfo::Ptr dirInfo = DirectoryInfo::make(parentDir.c_str());
+			FileInfos::Ptr fileInfos = dirInfo->getFiles("*;*.*", true);
+			if (fileInfos->count() == 0)
+				dirInfo->remove(true); // Remove the parent directory if it's empty.
+		}
+	};
+
+	return promise::newPromise(
+		[&] (promise::Defer df) -> void {
+			const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[index];
+
+			const std::string &path = krnl->path();
+			std::string dir;
+			Path::split(path, nullptr, nullptr, &dir);
+
+			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> std::string { return krnl->kernelRom(); });
+			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> std::string { return krnl->kernelSymbols(); });
+			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> std::string { return krnl->kernelAliases(); });
+			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> std::string { return krnl->kernelSourceCode(); });
+			uninstall(
+				krnl, dir,
+				[&path] (const GBBASIC::Kernel::Ptr &) -> std::string {
+					std::string name;
+					std::string ext;
+					Path::split(path, &name, &ext, nullptr);
+
+					return name + "." + ext;
+				}
+			);
+
+			ws->kernels().erase(ws->kernels().begin() + index);
+
+			if (ws->activeKernelIndex() == index)
+				ws->activeKernelIndex(0);
+
+			df.resolve(true);
 		}
 	);
 }

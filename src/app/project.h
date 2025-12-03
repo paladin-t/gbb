@@ -93,6 +93,7 @@ public:
 	GBBASIC_PROPERTY             (std::string,                   path                                             ) // Serialized in project.
 	GBBASIC_PROPERTY             (FileSync::Ptr,                 fileSync                                         ) // Non-serialized. For notepad mode.
 	GBBASIC_FIELD                (std::string,                   title                                            ) // Serialized in project.
+	GBBASIC_PROPERTY             (std::string,                   kernel                                           ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   cartridgeType                                    ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   sramType                                         ) // Serialized in project.
 	GBBASIC_PROPERTY             (bool,                          hasRtc                                           ) // Serialized in project.

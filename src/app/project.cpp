@@ -147,6 +147,7 @@ Project &Project::operator = (const Project &other) {
 	contentType(other.contentType());
 	path(other.path());
 	title(other.title());
+	kernel(other.kernel());
 	cartridgeType(other.cartridgeType());
 	sramType(other.sramType());
 	hasRtc(other.hasRtc());
@@ -1879,6 +1880,7 @@ bool Project::open(const char* path_) {
 			iconCode(txt);
 		}
 
+		kernel("default");
 		const long long now = DateTime::now();
 		contentType(ContentTypes::ROM);
 		RomInspector header;
@@ -1976,6 +1978,7 @@ bool Project::open(const char* path_) {
 
 		const long long now = DateTime::now();
 		contentType(ContentTypes::BASIC);
+		kernel("default");
 		cartridgeType(PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION);
 		sramType("0");
 		hasRtc(false);
@@ -2444,6 +2447,7 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 
 		const long long now = DateTime::now();
 		contentType(ContentTypes::BASIC);
+		kernel("default");
 		cartridgeType(PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION);
 		sramType("0");
 		hasRtc(false);
@@ -2690,6 +2694,12 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 
 		report("The project has no <title /> section.", true);
 	}
+
+	kernel().clear();
+	if (!Jpath::get(doc, txt, "kernel")) {
+		txt = "default";
+	}
+	kernel(txt);
 
 	cartridgeType().clear();
 	if (!Jpath::get(doc, txt, "cartridge_type")) {
@@ -3055,6 +3065,8 @@ bool Project::saveInformation(std::string &content) {
 	std::string txt;
 
 	Jpath::set(doc, doc, title(), "title");
+
+	Jpath::set(doc, doc, kernel(), "kernel");
 
 	Jpath::set(doc, doc, cartridgeType(), "cartridge_type");
 

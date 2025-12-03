@@ -56,8 +56,6 @@ Settings &Settings::operator = (const Settings &other) {
 	applicationFirstRun = other.applicationFirstRun;
 	applicationLoadedExampleRevision = other.applicationLoadedExampleRevision;
 
-	kernelActiveIndex = other.kernelActiveIndex;
-
 	exporterSettings = other.exporterSettings;
 	exporterArgs = other.exporterArgs;
 
@@ -111,10 +109,6 @@ bool Settings::operator != (const Settings &other) const {
 		applicationFirstRun != other.applicationFirstRun ||
 		applicationLoadedExampleRevision != other.applicationLoadedExampleRevision
 	) {
-		return true;
-	}
-
-	if (kernelActiveIndex != other.kernelActiveIndex) {
 		return true;
 	}
 

@@ -647,9 +647,12 @@ public:
 	bool skipping(void);
 	void skipFrame(int n = 1);
 
+	int getKernelIndex(const std::string &id) const;
+	const std::string* getKernelId(int index) const;
 	GBBASIC::Kernel::Ptr activeKernel(void) const;
 	std::string serializeKernelBehaviour(int val) const;
 	int parseKernelBehaviour(const std::string &id) const;
+	void reloadKernels(void);
 
 	void addMapPageFrom(Window* wnd, Renderer* rnd, int index);
 	void addScenePageFrom(Window* wnd, Renderer* rnd, int index);
@@ -756,18 +759,19 @@ public:
 		const ImGui::InputPopupBox::ConfirmedHandler &confirm /* nullable */,
 		const ImGui::InputPopupBox::CanceledHandler &cancel /* nullable */
 	);
-	void starterKitsPopupBox(
+	void projectCreatingPopupBox(
 		const std::string &template_,
+		const std::string &kernel,
 		const std::string &content,
 		const std::string &default_, unsigned flags,
-		const ImGui::StarterKitsPopupBox::ConfirmedHandler &confirm /* nullable */,
-		const ImGui::StarterKitsPopupBox::CanceledHandler &cancel /* nullable */
+		const ImGui::ProjectCreatingPopupBox::ConfirmedHandler &confirm /* nullable */,
+		const ImGui::ProjectCreatingPopupBox::CanceledHandler &cancel /* nullable */
 	);
-	void sortAssetsPopupBox(
+	void assetsSortingPopupBox(
 		Renderer* rnd,
 		AssetsBundle::Categories category,
-		const ImGui::SortAssetsPopupBox::ConfirmedHandler &confirm /* nullable */,
-		const ImGui::SortAssetsPopupBox::CanceledHandler &cancel /* nullable */
+		const ImGui::AssetsSortingPopupBox::ConfirmedHandler &confirm /* nullable */,
+		const ImGui::AssetsSortingPopupBox::CanceledHandler &cancel /* nullable */
 	);
 	void searchPopupBox(
 		const std::string &content,
@@ -832,6 +836,7 @@ public:
 	);
 	void showExternalFileBrowser(
 		Renderer* rnd,
+		const std::string &title,
 		const std::string &content,
 		const Text::Array &filter,
 		bool requireExisting,
@@ -842,6 +847,7 @@ public:
 	);
 	void showExternalFileBrowser(
 		Renderer* rnd,
+		const std::string &title,
 		const std::string &content,
 		const Text::Array &filter,
 		bool requireExisting,
@@ -853,6 +859,7 @@ public:
 	);
 	void showExternalFileBrowser(
 		Renderer* rnd,
+		const std::string &title,
 		const std::string &content,
 		const Text::Array &filter,
 		bool requireExisting,
@@ -865,6 +872,7 @@ public:
 	);
 	void showExternalFileBrowser(
 		Renderer* rnd,
+		const std::string &title,
 		const std::string &content,
 		const Text::Array &filter,
 		bool requireExisting,
@@ -889,11 +897,12 @@ public:
 	void showProjectProperty(Window* wnd, Renderer* rnd, Project* prj);
 	void showSearchResult(const std::string &pattern, const Editing::Tools::SearchResult::Array &found);
 	void closeSearchResult(void);
+	void showInstalledKernels(Window* wnd, Renderer* rnd);
 	void showPreferences(Window* wnd, Renderer* rnd, const char* tab /* nullable */);
 	void showActivities(Renderer* rnd);
 	void showAbout(Renderer* rnd);
 	std::string getSourceCodePath(std::string* name /* nullable */) const;
-	void ejectSourceCode(Window* wnd, Renderer* rnd);
+	void ejectSourceCode(Window* wnd, Renderer* rnd, bool wait);
 	void toggleDocument(const char* path /* nullable */);
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
@@ -920,7 +929,7 @@ public:
 	bool analyzing(void) const;
 	bool analyze(bool force);
 	void clearAnalyzingResult(void);
-	void clearLanguageDefinition(void);
+	void clearLanguageDefinition(bool clearRevision);
 	unsigned getLanguageDefinitionRevision(void) const;
 	const GBBASIC::Macro::List* getMacroDefinitions(void);
 	const Text::Array* getDestinitions(void);

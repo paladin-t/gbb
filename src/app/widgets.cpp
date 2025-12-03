@@ -27,7 +27,7 @@
 */
 
 #ifndef WIDGETS_ABOUT_REVISION
-#	define WIDGETS_ABOUT_REVISION "r32"
+#	define WIDGETS_ABOUT_REVISION "r33"
 #endif /* WIDGETS_ABOUT_REVISION */
 
 /* ===========================================================================} */
@@ -613,16 +613,18 @@ void InputPopupBox::update(Workspace*) {
 	}
 }
 
-StarterKitsPopupBox::StarterKitsPopupBox(
+ProjectCreatingPopupBox::ProjectCreatingPopupBox(
 	Theme* theme,
 	const std::string &title,
 	const std::string &template_,
+	const std::string &kernel,
 	const std::string &content, const std::string &default_, unsigned flags,
 	const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 	const char* confirmTxt, const char* cancelTxt
 ) : _theme(theme),
 	_title(title),
 	_template(template_),
+	_kernel(kernel),
 	_content(content), _default(default_), _flags(flags),
 	_confirmedHandler(confirm), _canceledHandler(cancel)
 {
@@ -635,10 +637,10 @@ StarterKitsPopupBox::StarterKitsPopupBox(
 		_cancelText = cancelTxt;
 }
 
-StarterKitsPopupBox::~StarterKitsPopupBox() {
+ProjectCreatingPopupBox::~ProjectCreatingPopupBox() {
 }
 
-void StarterKitsPopupBox::update(Workspace* ws) {
+void ProjectCreatingPopupBox::update(Workspace* ws) {
 	struct Data {
 		Theme* theme = nullptr;
 		const EntryWithPath::Array* entries = nullptr;
@@ -711,6 +713,28 @@ void StarterKitsPopupBox::update(Workspace* ws) {
 		}
 		PopID();
 
+		PushID("#Krnl");
+		if (_templateCursor == 0) { // No starter kit selected, then choose a kernel.
+			TextUnformatted(_kernel);
+
+			const int n = (int)ws->kernels().size();
+			_kernelIndex = Math::clamp(_kernelIndex, 0, n - 1);
+			Combo(
+				"", &_kernelIndex,
+				[] (void* data, int idx, const char** outText) -> bool {
+					const GBBASIC::Kernel::Array* kernels = (const GBBASIC::Kernel::Array*)data;
+					const GBBASIC::Kernel::Ptr &krnl = (*kernels)[idx];
+					const Localization::Dictionary &name = krnl->title();
+					const char* title = Localization::get(name);
+					*outText = title;
+
+					return true;
+				},
+				&ws->kernels(), n
+			);
+		}
+		PopID();
+
 		PushID("#Name");
 		{
 			TextUnformatted(_content);
@@ -757,7 +781,7 @@ void StarterKitsPopupBox::update(Workspace* ws) {
 		_init.reset();
 
 		if (!_confirmedHandler.empty()) {
-			_confirmedHandler(_templateCursor - 1, _buffer);
+			_confirmedHandler(_templateCursor - 1, _kernelIndex, _buffer);
 
 			return;
 		}
@@ -773,7 +797,7 @@ void StarterKitsPopupBox::update(Workspace* ws) {
 	}
 }
 
-SortAssetsPopupBox::SortAssetsPopupBox(
+AssetsSortingPopupBox::AssetsSortingPopupBox(
 	Renderer* rnd,
 	Theme* theme,
 	const std::string &title,
@@ -812,10 +836,10 @@ SortAssetsPopupBox::SortAssetsPopupBox(
 		_cancelText = cancelTxt;
 }
 
-SortAssetsPopupBox::~SortAssetsPopupBox() {
+AssetsSortingPopupBox::~AssetsSortingPopupBox() {
 }
 
-void SortAssetsPopupBox::update(Workspace* ws) {
+void AssetsSortingPopupBox::update(Workspace* ws) {
 	ImGuiIO &io = GetIO();
 	ImGuiStyle &style = GetStyle();
 
@@ -3553,9 +3577,74 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				}
 				PopID();
 
+				PushID("#Krnl");
+				{
+					struct Context {
+						const GBBASIC::Kernel::Array* kernels = nullptr;
+						std::string missingKernelName;
+
+						Context() {
+						}
+						Context(const GBBASIC::Kernel::Array &kernels_, bool missing, const std::string &missingKernelId, const std::string &missingText) {
+							kernels = &kernels_;
+							if (missing) {
+								missingKernelName = missingKernelId;
+								missingKernelName += " (";
+								missingKernelName += missingText;
+								missingKernelName += ")";
+							}
+						}
+					};
+
+					const float x = GetCursorPosX();
+					const float w = GetWindowContentRegionMax().x - GetWindowContentRegionMin().x - x;
+
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Project_Kernel());
+
+					SameLine();
+
+					const int n = (int)ws->kernels().size();
+					int idx = ws->getKernelIndex(prj->kernel());
+					const bool missing = idx == -1;
+					if (missing)
+						idx = n;
+					else
+						idx = Math::clamp(idx, 0, n - 1);
+					const float u = GetCursorPosX() - x;
+					SetNextItemWidth(w * 0.5f - u);
+					Context data(ws->kernels(), missing, prj->kernel(), _theme->dialogPrompt_Missing());
+					if (
+						Combo(
+							"", &idx,
+							[] (void* data, int idx, const char** outText) -> bool {
+								Context* data_ = (Context*)data;
+								const GBBASIC::Kernel::Array* kernels = data_->kernels;
+								const std::string &missingKernelName = data_->missingKernelName;
+								if (idx < (int)kernels->size()) {
+									const GBBASIC::Kernel::Ptr &krnl = (*kernels)[idx];
+									const Localization::Dictionary &name = krnl->title();
+									const char* title = Localization::get(name);
+									*outText = title;
+								} else {
+									*outText = missingKernelName.c_str();
+								}
+
+								return true;
+							},
+							(void*)&data, missing ? n + 1 : n
+						)
+					) {
+						const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[idx];
+						const std::string &id = krnl->id();
+						prj->kernel(id);
+					}
+				}
+				PopID();
+
 				PushID("#CrtTyp");
 				{
-					AlignTextToFramePadding();
+					SameLine();
 					TextUnformatted(_theme->windowProjectProperty_Project_Cart());
 
 					SameLine();
@@ -4387,6 +4476,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 		const bool appliable =
 			prj->title()                   != _project->title()                ||
+			prj->kernel()                  != _project->kernel()               ||
 			prj->cartridgeType()           != _project->cartridgeType()        ||
 			prj->sramType()                != _project->sramType()             ||
 			prj->hasRtc()                  != _project->hasRtc()               ||
@@ -4477,6 +4567,201 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			_canceledHandler();
 
 			return;
+		}
+	}
+}
+
+InstalledKernelsPopupBox::InstalledKernelsPopupBox(
+	Renderer* rnd,
+	Theme* theme,
+	const std::string &title,
+	GBBASIC::Kernel::Array &kernels,
+	const ConfirmedHandler &confirm, const AddedHandler &add, const RemovedHandler &remove,
+	const char* confirmTxt, const char* addTxt, const char* removeTxt,
+	SourceCodeEjectingHandler ejectSourceCode
+) : _renderer(rnd),
+	_theme(theme),
+	_title(title),
+	_kernels(kernels),
+	_confirmedHandler(confirm), _addedHandler(add), _removedHandler(remove),
+	_ejectSourceCode(ejectSourceCode)
+{
+	if (confirmTxt)
+		_confirmText = confirmTxt;
+
+	if (addTxt)
+		_addText = addTxt;
+	if (removeTxt)
+		_removeText = removeTxt;
+}
+
+InstalledKernelsPopupBox::~InstalledKernelsPopupBox() {
+}
+
+void InstalledKernelsPopupBox::update(Workspace* ws) {
+	ImGuiIO &io = GetIO();
+	ImGuiStyle &style = GetStyle();
+
+	bool isOpen = true;
+	bool toConfirm = false;
+	bool toAdd = false;
+	int toRemove = -1;
+
+	if (_init.begin()) {
+		OpenPopup(_title);
+
+		const ImVec2 pos = io.DisplaySize/* * io.DisplayFramebufferScale*/ * 0.5f;
+		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	}
+
+	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 480.0f);
+	const float height = Math::min(width, _renderer->height() * 0.8f - 84.0f);
+	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
+	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
+		const char* remove = _removeText.empty() ? "Uninstall" : _removeText.c_str();
+
+		TextUnformatted(ws->theme()->windowInstalledKernels_Kernels());
+		{
+			VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(1, 1));
+
+			BeginChild("@Kr", ImVec2(width - style.WindowPadding.x * 1.7f, height), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
+			{
+				const GBBASIC::Kernel::Array &kernels = ws->kernels();
+				for (int i = 0; i < (int)kernels.size(); ++i) {
+					const GBBASIC::Kernel::Ptr &krnl = kernels[i];
+					const Localization::Dictionary &name = krnl->title();
+					const char* title = Localization::get(name);
+
+					PushID(krnl->id());
+					{
+						VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(0, 0));
+
+						const ImVec2 spos = GetCursorScreenPos();
+						const ImVec2 pos = GetCursorPos();
+						const ImVec2 size(width - style.ChildBorderSize - style.ScrollbarSize - style.WindowPadding.x, 19.0f);
+						Dummy(
+							size,
+							GetStyleColorVec4(IsMouseHoveringRect(spos, spos + size) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg)
+						);
+						SetCursorPos(pos);
+
+						if (krnl->readonly()) {
+							BeginDisabled();
+							{
+								ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE));
+							}
+							EndDisabled();
+						} else {
+							bool removed = false;
+							if (_tobeUninstalledKernelIndex == i) {
+								ImGui::PushStyleColor(ImGuiCol_Button, _theme->style()->dangerButtonColor);
+								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, _theme->style()->dangerButtonHoveredColor);
+								ImGui::PushStyleColor(ImGuiCol_ButtonActive, _theme->style()->dangerButtonActiveColor);
+								{
+									removed = ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, remove);
+								}
+								ImGui::PopStyleColor(3);
+							} else {
+								removed = ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, remove);
+							}
+							if (removed) {
+								if (/* _tobeUninstalledKernelIndex == -1 || */ _tobeUninstalledKernelIndex != i) {
+									_tobeUninstalledKernelIndex = i;
+								} else {
+									toRemove = _tobeUninstalledKernelIndex;
+									_tobeUninstalledKernelIndex = -1;
+								}
+							}
+						}
+						SameLine();
+
+						Dummy(ImVec2(4, 0));
+						SameLine();
+
+						AlignTextToFramePadding();
+						TextUnformatted(title);
+					}
+					PopID();
+				}
+			}
+			EndChild();
+
+			if (_tobeUninstalledKernelIndex >= 1) {
+				const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[_tobeUninstalledKernelIndex];
+				const Localization::Dictionary &name = krnl->title();
+				const char* title = Localization::get(name);
+
+				Text(_theme->dialogPrompt_ClickAgainToUninstall().c_str(), title);
+			}
+
+			NewLine(2);
+
+			if (_ejectSourceCode) {
+				if (Url(_theme->menu_EjectVm().c_str(), nullptr))
+					_ejectSourceCode();
+				SameLine();
+				Dummy(ImVec2(14, 0));
+				SameLine();
+			}
+			Url(_theme->menu_GitHub().c_str(), "https://github.com/paladin-t/gbb/tree/main/src/vm");
+			SameLine();
+			Dummy(ImVec2(14, 0));
+			SameLine();
+			Url(_theme->menu_Howto().c_str(), "https://paladin-t.github.io/kits/gbb/learn/creating-a-custom-kernel.html");
+
+			NewLine(3);
+		}
+
+		const char* confirm = _confirmText.c_str();
+		const char* add = _addText.empty() ? "Install" : _addText.c_str();
+
+		if (_confirmText.empty()) {
+			confirm = "Ok";
+		}
+
+		CentralizeButton(2);
+
+		if ((Button(confirm, ImVec2(WIDGETS_BUTTON_WIDTH, 0)) || IsKeyReleased(SDL_SCANCODE_RETURN) || IsKeyReleased(SDL_SCANCODE_ESCAPE)) && _init.end()) {
+			toConfirm = true;
+
+			CloseCurrentPopup();
+		}
+
+		SameLine();
+		if (Button(add, ImVec2(WIDGETS_BUTTON_WIDTH, 0)) && _init.end()) {
+			toAdd = true;
+		}
+
+		if (!_init.begin() && !_init.end())
+			CentralizeWindow();
+
+		EnsureWindowVisible();
+
+		EndPopup();
+	}
+
+	if (isOpen)
+		_init.update();
+
+	if (toConfirm) {
+		_init.reset();
+
+		if (!_confirmedHandler.empty()) {
+			_confirmedHandler();
+
+			return;
+		}
+	}
+	if (toAdd) {
+		_init.reset();
+
+		if (!_addedHandler.empty()) {
+			_addedHandler();
+		}
+	}
+	if (toRemove >= 1) {
+		if (!_removedHandler.empty()) {
+			_removedHandler(toRemove);
 		}
 	}
 }

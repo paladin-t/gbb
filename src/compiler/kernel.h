@@ -18,9 +18,12 @@
 ** Macros and constants
 */
 
-#ifndef KERNEL_BINARIES_DIR
-#	define KERNEL_BINARIES_DIR "../kernels/" /* Relative path. */
-#endif /* KERNEL_BINARIES_DIR */
+#ifndef KERNEL_SYSTEM_BINARIES_DIR
+#	define KERNEL_SYSTEM_BINARIES_DIR "../kernels/" /* Relative path. */
+#endif /* KERNEL_SYSTEM_BINARIES_DIR */
+#ifndef KERNEL_USER_BINARIES_DIR
+#	define KERNEL_USER_BINARIES_DIR "kernels" /* Relative path. */
+#endif /* KERNEL_USER_BINARIES_DIR */
 
 #ifndef KERNEL_SNIPPET_TYPE_SEPARATOR
 #	define KERNEL_SNIPPET_TYPE_SEPARATOR "separator"
@@ -87,6 +90,8 @@ public:
 
 public:
 	GBBASIC_PROPERTY(std::string, path)
+	GBBASIC_PROPERTY_READONLY(bool, readonly)
+	GBBASIC_PROPERTY(std::string, id)
 	GBBASIC_PROPERTY(Entry, entry)
 	GBBASIC_PROPERTY(Localization::Dictionary, title)
 	GBBASIC_PROPERTY(std::string, kernelRom)
@@ -117,7 +122,7 @@ public:
 	 */
 	virtual bool clone(Object** ptr) const override;
 
-	bool open(const char* path, const char* menu);
+	bool open(const char* path);
 	bool close(void);
 };
 

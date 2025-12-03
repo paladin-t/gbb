@@ -1165,6 +1165,7 @@ private:
 				);
 				ws->showExternalFileBrowser(
 					rnd,
+					ws->theme()->windowSfx(),
 					ws->theme()->generic_Path(),
 					GBBASIC_VGM_FILE_FILTER,
 					true,
@@ -1281,6 +1282,7 @@ private:
 				);
 				ws->showExternalFileBrowser(
 					rnd,
+					ws->theme()->windowSfx(),
 					ws->theme()->generic__Path(),
 					GBBASIC_FX_HAMMER_FILE_FILTER,
 					true,
@@ -1535,6 +1537,7 @@ private:
 				);
 				ws->showExternalFileBrowser(
 					rnd,
+					ws->theme()->windowSfx(),
 					ws->theme()->generic_Path(),
 					GBBASIC_VGM_FILE_FILTER,
 					true,
@@ -1650,6 +1653,7 @@ private:
 				);
 				ws->showExternalFileBrowser(
 					rnd,
+					ws->theme()->windowSfx(),
 					ws->theme()->generic__Path(),
 					GBBASIC_FX_HAMMER_FILE_FILTER,
 					true,

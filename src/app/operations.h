@@ -35,12 +35,12 @@ public:
 	static promise::Promise popupWait(Window* wnd, Renderer* rnd, Workspace* ws, const char* content);
 	static promise::Promise popupWait(Window* wnd, Renderer* rnd, Workspace* ws, bool dim, const char* content, bool instantly, bool exclusive = false);
 	static promise::Promise popupWait(Window* wnd, Renderer* rnd, Workspace* ws);
-	static promise::Promise popupStarterKits(Window* wnd, Renderer* rnd, Workspace* ws, const char* template_, const char* content, const char* default_ = nullptr, unsigned flags = 0);
-	static promise::Promise popupSortAssets(Window* wnd, Renderer* rnd, Workspace* ws, AssetsBundle::Categories category);
+	static promise::Promise popupProjectCreating(Window* wnd, Renderer* rnd, Workspace* ws, const char* template_, const char* kernel, const char* content, const char* default_ = nullptr, unsigned flags = 0);
+	static promise::Promise popupAssetsSorting(Window* wnd, Renderer* rnd, Workspace* ws, AssetsBundle::Categories category);
 	static promise::Promise popupExternalFontResolver(Window* wnd, Renderer* rnd, Workspace* ws, const char* content);
 	static promise::Promise popupExternalMapResolver(Window* wnd, Renderer* rnd, Workspace* ws, const char* content);
 	static promise::Promise popupExternalSceneResolver(Window* wnd, Renderer* rnd, Workspace* ws);
-	static promise::Promise popupExternalFileResolver(Window* wnd, Renderer* rnd, Workspace* ws, const char* content, const Text::Array &filter);
+	static promise::Promise popupExternalFileResolver(Window* wnd, Renderer* rnd, Workspace* ws, const char* title, const char* content, const Text::Array &filter);
 	static promise::Promise popupRomBuildSettings(Window* wnd, Renderer* rnd, Workspace* ws, Exporter::Ptr ex);
 	static promise::Promise popupEmulatorBuildSettings(Window* wnd, Renderer* rnd, Workspace* ws, Exporter::Ptr ex, const char* settings, const char* args, bool hasIcon);
 
@@ -86,6 +86,9 @@ public:
 	static promise::Promise actorRemovePage(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise sceneAddPage(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise sceneRemovePage(Window* wnd, Renderer* rnd, Workspace* ws);
+
+	static promise::Promise kernelInstall(Window* wnd, Renderer* rnd, Workspace* ws);
+	static promise::Promise kernelUninstall(Window* wnd, Renderer* rnd, Workspace* ws, int index);
 
 	static promise::Promise projectCompile(Window* wnd, Renderer* rnd, Workspace* ws, const char* cartType /* nullable */, const char* sramType /* nullable */, bool* hasRtc /* nullable */, const char* fontConfigPath, bool useInRam);
 	static promise::Promise projectDump(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, const char* path);

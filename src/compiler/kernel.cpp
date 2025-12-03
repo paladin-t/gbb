@@ -42,6 +42,7 @@ Kernel::Behaviour::Behaviour(const std::string &y, const std::string &id_, int v
 }
 
 Kernel::Kernel() {
+	readonly(false);
 	bootstrapBank(0);
 	objectsMaxActorCount(ASSETS_ACTOR_MAX_COUNT);
 	objectsMaxTriggerCount(ASSETS_TRIGGER_MAX_COUNT);
@@ -62,7 +63,7 @@ bool Kernel::clone(Object** ptr) const { // Non-clonable.
 	return false;
 }
 
-bool Kernel::open(const char* path_, const char* menu) {
+bool Kernel::open(const char* path_) {
 	// Read from file.
 	File::Ptr file(File::create());
 	if (!file->open(path_, Stream::READ))
@@ -81,6 +82,8 @@ bool Kernel::open(const char* path_, const char* menu) {
 		return false;
 
 	// Parse the properties.
+	bool readonly_ = false;
+	std::string id_;
 	Localization::Dictionary title_;
 	std::string kernelRom_;
 	std::string kernelSymbols_;
@@ -95,6 +98,15 @@ bool Kernel::open(const char* path_, const char* menu) {
 	Animations::Array animations_;
 	int projectileAnimationIndex_ = -1;
 	Behaviour::Array behaviours_;
+
+	const std::string writableDir = Path::writableDirectory();
+	const std::string userPath = Path::combine(writableDir.c_str(), KERNEL_USER_BINARIES_DIR);
+	const std::string absdir0 = Path::absoluteOf(userPath);
+	const std::string abspath0 = Path::absoluteOf(path_);
+	readonly_ = !Path::isParentOf(absdir0.c_str(), abspath0.c_str());
+
+	if (!Jpath::get(doc, id_, "id"))
+		return false;
 
 	rapidjson::Value* val = nullptr;
 	if (!Jpath::get(doc, val, "title") || !val)
@@ -268,6 +280,8 @@ bool Kernel::open(const char* path_, const char* menu) {
 	behaviours_.shrink_to_fit();
 
 	path(path_);
+	readonly(readonly_);
+	id(id_);
 	title(title_);
 	kernelRom(kernelRom_);
 	kernelSymbols(kernelSymbols_);
@@ -288,7 +302,6 @@ bool Kernel::open(const char* path_, const char* menu) {
 	const char* entrystr = Localization::get(title_);
 	if (entrystr)
 		entry_ = entrystr;
-	entry_ = menu + std::string("/") + entry_;
 	entry(Entry(entry_));
 
 	// Finish.
@@ -298,6 +311,7 @@ bool Kernel::open(const char* path_, const char* menu) {
 bool Kernel::close(void) {
 	// Clear the properties.
 	path().clear();
+	id().clear();
 	entry().clear();
 	title().clear();
 	kernelRom().clear();
