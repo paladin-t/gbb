@@ -4615,11 +4615,12 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 	}
 
 	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 480.0f);
-	const float height = Math::min(width, _renderer->height() * 0.8f - 66.0f);
+	const float height = Math::min(width, _renderer->height() * 0.8f - 84.0f);
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
 		const char* remove = _removeText.empty() ? "Uninstall" : _removeText.c_str();
 
+		TextUnformatted(ws->theme()->windowInstalledKernels_Kernels());
 		{
 			VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(1, 1));
 
@@ -4651,7 +4652,19 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 							}
 							EndDisabled();
 						} else {
-							if (ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, remove)) {
+							bool removed = false;
+							if (_tobeUninstalledKernelIndex == i) {
+								ImGui::PushStyleColor(ImGuiCol_Button, _theme->style()->dangerButtonColor);
+								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, _theme->style()->dangerButtonHoveredColor);
+								ImGui::PushStyleColor(ImGuiCol_ButtonActive, _theme->style()->dangerButtonActiveColor);
+								{
+									removed = ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, remove);
+								}
+								ImGui::PopStyleColor(3);
+							} else {
+								removed = ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, remove);
+							}
+							if (removed) {
 								if (/* _tobeUninstalledKernelIndex == -1 || */ _tobeUninstalledKernelIndex != i) {
 									_tobeUninstalledKernelIndex = i;
 								} else {

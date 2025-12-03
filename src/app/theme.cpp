@@ -271,6 +271,9 @@ bool Theme::open(class Renderer* rnd) {
 	styleDefault().selectedButtonColor                      = ImGui::GetColorU32(ImVec4(0.34f, 0.66f, 0.51f, 1.00f));
 	styleDefault().selectedButtonHoveredColor               = ImGui::GetColorU32(ImVec4(0.22f, 0.55f, 0.40f, 1.00f));
 	styleDefault().selectedButtonActiveColor                = ImGui::GetColorU32(ImVec4(0.18f, 0.51f, 0.36f, 1.00f));
+	styleDefault().dangerButtonColor                        = ImGui::GetColorU32(ImVec4(0.93f, 0.22f, 0.43f, 1.00f));
+	styleDefault().dangerButtonHoveredColor                 = ImGui::GetColorU32(ImVec4(0.93f, 0.34f, 0.60f, 1.00f));
+	styleDefault().dangerButtonActiveColor                  = ImGui::GetColorU32(ImVec4(0.93f, 0.12f, 0.39f, 1.00f));
 	styleDefault().tabTextColor                             = ImGui::GetColorU32(ImVec4(1.00f, 1.00f, 1.00f, 1.00f));
 	styleDefault().tabPendingColor                          = ImGui::GetColorU32(ImVec4(0.40f, 0.13f, 0.47f, 1.00f));
 	styleDefault().tabPendingHoveredColor                   = ImGui::GetColorU32(ImVec4(0.50f, 0.23f, 0.57f, 1.00f));
@@ -790,6 +793,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Input_WaitingForInput("Waiting for input...");
 
 	windowInstalledKernels("Installed Kernels");
+	windowInstalledKernels_Kernels("Kernels:");
 
 	windowCreateProject("Create Project");
 
@@ -1759,6 +1763,12 @@ void Theme::setColor(const std::string &idx, const ImColor &col) {
 		styleDefault().selectedButtonHoveredColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "selected_button_active")
 		styleDefault().selectedButtonActiveColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "danger_button")
+		styleDefault().dangerButtonColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "danger_button_hovered")
+		styleDefault().dangerButtonHoveredColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "danger_button_active")
+		styleDefault().dangerButtonActiveColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "tab_text")
 		styleDefault().tabTextColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "tab_pending")

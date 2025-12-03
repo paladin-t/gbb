@@ -59,6 +59,10 @@ public:
 		ImU32 selectedButtonHoveredColor;
 		ImU32 selectedButtonActiveColor;
 
+		ImU32 dangerButtonColor;
+		ImU32 dangerButtonHoveredColor;
+		ImU32 dangerButtonActiveColor;
+
 		ImU32 tabTextColor;
 		ImU32 tabPendingColor;
 		ImU32 tabPendingHoveredColor;
@@ -589,6 +593,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Input_WaitingForInput)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowInstalledKernels)
+	GBBASIC_PROPERTY_READONLY(std::string, windowInstalledKernels_Kernels)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowCreateProject)
 

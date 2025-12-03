@@ -3885,13 +3885,13 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 }
 
 promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, int index) {
-	typedef std::function<const std::string &(const GBBASIC::Kernel::Ptr &)> FileNameHandler;
+	typedef std::function<std::string(const GBBASIC::Kernel::Ptr &)> FileNameHandler;
 
 	auto refCount = [&] (const std::string &fullPath, FileNameHandler getFileName) -> int {
 		int result = 0;
 		for (int i = 0; i < (int)ws->kernels().size(); ++i) {
 			const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[i];
-			const std::string &fileName = getFileName(krnl);
+			const std::string fileName = getFileName(krnl);
 			if (fileName.empty())
 				continue;
 
@@ -3907,7 +3907,7 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 		return result;
 	};
 	auto uninstall = [refCount] (const GBBASIC::Kernel::Ptr &krnl, const std::string &dir, FileNameHandler getFileName) -> void {
-		const std::string &fileName = getFileName(krnl);
+		const std::string fileName = getFileName(krnl);
 		if (fileName.empty())
 			return;
 
@@ -3916,8 +3916,16 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 		if (refs > 1) // Is referenced by more than one kernels, ignore.
 			return;
 
-		if (Path::fileExists(fullPath.c_str()))
-			Path::removeFile(fullPath.c_str(), true);
+		if (Path::fileExists(fullPath.c_str())) {
+			Path::removeFile(fullPath.c_str(), true); // Remove the file.
+
+			std::string parentDir;
+			Path::split(fullPath, nullptr, nullptr, &parentDir);
+			DirectoryInfo::Ptr dirInfo = DirectoryInfo::make(parentDir.c_str());
+			FileInfos::Ptr fileInfos = dirInfo->getFiles("*;*.*", true);
+			if (fileInfos->count() == 0)
+				dirInfo->remove(true); // Remove the parent directory if it's empty.
+		}
 	};
 
 	return promise::newPromise(
@@ -3928,13 +3936,20 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 			std::string dir;
 			Path::split(path, nullptr, nullptr, &dir);
 
-			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> const std::string & { return krnl->kernelRom(); });
-			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> const std::string & { return krnl->kernelSymbols(); });
-			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> const std::string & { return krnl->kernelAliases(); });
-			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> const std::string & { return krnl->kernelSourceCode(); });
+			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> std::string { return krnl->kernelRom(); });
+			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> std::string { return krnl->kernelSymbols(); });
+			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> std::string { return krnl->kernelAliases(); });
+			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> std::string { return krnl->kernelSourceCode(); });
+			uninstall(
+				krnl, dir,
+				[&path] (const GBBASIC::Kernel::Ptr &) -> std::string {
+					std::string name;
+					std::string ext;
+					Path::split(path, &name, &ext, nullptr);
 
-			if (Path::fileExists(path.c_str()))
-				Path::removeFile(path.c_str(), true);
+					return name + "." + ext;
+				}
+			);
 
 			ws->kernels().erase(ws->kernels().begin() + index);
 
