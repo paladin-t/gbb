@@ -3886,6 +3886,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 		// Find the kernel manifest.
 		Text::Array entries;
 		if (!arc->all(entries)) {
+			arc->close();
+
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotReadKernelPackage()));
 
 			return;
@@ -3916,6 +3918,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 			}
 		);
 		if (it == entries.end() || doc.IsNull()) {
+			arc->close();
+
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotFindKernelManifest()));
 
 			return;
@@ -3933,6 +3937,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 			Jpath::get(doc, symbolsEntry, "kernel", "symbols") &&
 			Jpath::get(doc, aliasesEntry, "kernel", "aliases");
 		if (!readEntries) {
+			arc->close();
+
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotReadKernelManifest()));
 
 			return;
@@ -3941,6 +3947,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 		// Check whether the kernel has been already installed.
 		const int existingKernel = ws->getKernelIndex(kernelId);
 		if (existingKernel >= 0) {
+			arc->close();
+
 			df.reject(std::string(Text::format(ws->theme()->dialogPrompt_KernelError_AKernelWithIdAlreadyExists(), { kernelId })));
 
 			return;
@@ -3953,6 +3961,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 			(!symbolsEntry.empty() && arc->exists(symbolsEntry.c_str())) &&
 			(!aliasesEntry.empty() && arc->exists(aliasesEntry.c_str()));
 		if (!entriesExist) {
+			arc->close();
+
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_MissingKernelComponent()));
 
 			return;
@@ -3965,23 +3975,34 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 		const std::string kernelDir = Path::combine(userPath.c_str(), subDir.c_str());
 
 		if (!Path::touchDirectory(kernelDir.c_str())) {
+			arc->close();
+
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotCreateKernelDirectory()));
 
 			return;
 		}
 
 		if (!arc->toDirectory(kernelDir.c_str())) {
+			arc->close();
+
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotInstallKernelFiles()));
 
 			return;
 		}
 
+		arc->close(); // Nothing to do with the archive now.
+
 		// Load the installed kernel into workspace.
-		// TODO
+		ws->reloadKernels();
+
+		// Active the new installed kernel if the current project is using it.
+		const Project::Ptr &prj = ws->currentProject();
+		if (prj && prj->kernel() == kernelId) {
+			const int idx = ws->getKernelIndex(kernelId);
+			ws->activeKernelIndex(idx);
+		}
 
 		// Finish.
-		arc->close();
-
 		df.resolve(true);
 	};
 

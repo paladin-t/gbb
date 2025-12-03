@@ -652,6 +652,7 @@ public:
 	GBBASIC::Kernel::Ptr activeKernel(void) const;
 	std::string serializeKernelBehaviour(int val) const;
 	int parseKernelBehaviour(const std::string &id) const;
+	void reloadKernels(void);
 
 	void addMapPageFrom(Window* wnd, Renderer* rnd, int index);
 	void addScenePageFrom(Window* wnd, Renderer* rnd, int index);

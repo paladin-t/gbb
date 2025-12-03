@@ -858,6 +858,11 @@ int Workspace::parseKernelBehaviour(const std::string &id) const {
 	return 0;
 }
 
+void Workspace::reloadKernels(void) {
+	unloadKernels();
+	loadKernels();
+}
+
 void Workspace::addMapPageFrom(Window* wnd, Renderer* rnd, int index) {
 	Project::Ptr &prj = currentProject();
 	if (!prj)
