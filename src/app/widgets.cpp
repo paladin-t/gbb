@@ -5302,7 +5302,7 @@ AboutPopupBox::AboutPopupBox(
 #endif /* GBBASIC_OS_HTML */
 
 	_specs += "Kernel and Toolchain:\n";
-	_specs += "      GBBVM v1.4\n";
+	_specs += "      GBBVM v1.5\n";
 	_specs += "  GBDK-2020 v4.4\n";
 
 	if (licenses)

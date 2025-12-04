@@ -3995,9 +3995,9 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 		// Load the installed kernel into workspace.
 		ws->reloadKernels();
 
-		// Active the new installed kernel if the current project is using it.
+		// Refresh the active kernel a project is being opened.
 		const Project::Ptr &prj = ws->currentProject();
-		if (prj && prj->kernel() == kernelId) {
+		if (prj) {
 			const int idx = ws->getKernelIndex(kernelId);
 			ws->activeKernelIndex(idx);
 		}
