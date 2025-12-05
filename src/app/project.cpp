@@ -73,6 +73,7 @@ Project::Project(class Window* wnd, Renderer* rnd, class Workspace* ws) {
 	fileSync(FileSync::Ptr(FileSync::create()));
 	hasRtc(false);
 	version("1.0.0");
+	runOnOpen(false);
 	caseInsensitive(true);
 	strictOn(true);
 	superFeaturesEnabled(false);
@@ -157,6 +158,7 @@ Project &Project::operator = (const Project &other) {
 	version(other.version());
 	url(other.url());
 	iconCode(other.iconCode());
+	runOnOpen(other.runOnOpen());
 	caseInsensitive(other.caseInsensitive());
 	strictOn(other.strictOn());
 	superFeaturesEnabled(other.superFeaturesEnabled());
@@ -1918,6 +1920,7 @@ bool Project::open(const char* path_) {
 		genre("");
 		version("1.0.0");
 		url("");
+		runOnOpen(true); // Run-on-open for ROM typed project.
 		caseInsensitive(true);
 		strictOn(true);
 		superFeaturesEnabled(false);
@@ -1987,6 +1990,7 @@ bool Project::open(const char* path_) {
 		genre("");
 		version("1.0.0");
 		url("");
+		runOnOpen(false);
 		caseInsensitive(true);
 		strictOn(true);
 		superFeaturesEnabled(false);
@@ -2456,6 +2460,7 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		genre("");
 		version("1.0.0");
 		url("");
+		runOnOpen(false);
 		caseInsensitive(true);
 		strictOn(true);
 		superFeaturesEnabled(false);
@@ -2827,6 +2832,11 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 		iconCode(txt);
 	} while (false);
 
+	runOnOpen(false);
+	if (!Jpath::get(doc, runOnOpen(), "run_on_open")) {
+		runOnOpen(false);
+	}
+
 	caseInsensitive(true);
 	if (!Jpath::get(doc, caseInsensitive(), "case_insensitive")) {
 		caseInsensitive(true);
@@ -3085,6 +3095,8 @@ bool Project::saveInformation(std::string &content) {
 	Jpath::set(doc, doc, url(), "url");
 
 	Jpath::set(doc, doc, iconCode(), "icon");
+
+	Jpath::set(doc, doc, runOnOpen(), "run_on_open");
 
 	Jpath::set(doc, doc, caseInsensitive(), "case_insensitive");
 

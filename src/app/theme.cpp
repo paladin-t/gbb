@@ -812,8 +812,10 @@ bool Theme::open(class Renderer* rnd) {
 	windowProjectProperty_Project_Desc("   Desc");
 	windowProjectProperty_Project_Author(" Author");  windowProjectProperty_Project_Genre("Genre");
 	windowProjectProperty_Project_Version("Version");   windowProjectProperty_Project_Url("URL  ");
+	windowProjectProperty_Project_Running("Running");
 	windowProjectProperty_Project_Icon("   Icon");
 	windowProjectProperty_Project_Sram_None("0KB (None)");
+	windowProjectProperty_Project_Running_StartOnOpen("Start on open");
 	windowProjectProperty_Compiling_Compiler("Compiler:");
 	windowProjectProperty_Compiling_Compiler_StrictOn("Strict on");
 	windowProjectProperty_Compiling_Parser("Parser:");

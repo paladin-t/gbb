@@ -102,6 +102,7 @@ public:
 	GBBASIC_PROPERTY             (std::string,                   genre                                            ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   version                                          ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   url                                              ) // Serialized in project.
+	GBBASIC_PROPERTY             (bool,                          runOnOpen                                        ) // Serialized in project.
 	GBBASIC_FIELD_READONLY       (std::string,                   iconCode                                         ) // Serialized in project.
 	GBBASIC_PROPERTY             (bool,                          caseInsensitive                                  ) // Serialized in project.
 	GBBASIC_PROPERTY             (bool,                          strictOn                                         ) // Serialized in project.

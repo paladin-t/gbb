@@ -48,8 +48,8 @@ public:
 	static promise::Promise fileOpen(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj, bool allowBin, const char* fontConfigPath);
 	static promise::Promise fileClose(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise fileAskSave(Window* wnd, Renderer* rnd, Workspace* ws, bool deniable);
-	static promise::Promise fileSave(Window* wnd, Renderer* rnd, Workspace* ws, bool saveAs);                                              // Shows save file dialog if necessary.
-	static promise::Promise fileSaveForNotepad(Window* wnd, Renderer* rnd, Workspace* ws, bool saveAs);                                    // Shows save file dialog if necessary.
+	static promise::Promise fileSave(Window* wnd, Renderer* rnd, Workspace* ws, bool saveAs); // Shows save file dialog if necessary.
+	static promise::Promise fileSaveForNotepad(Window* wnd, Renderer* rnd, Workspace* ws, bool saveAs); // Shows save file dialog if necessary.
 	static promise::Promise fileRename(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj, const char* fontConfigPath);
 	static promise::Promise fileRemove(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj);
 	static promise::Promise fileRemoveReference(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj);
@@ -57,12 +57,12 @@ public:
 	static promise::Promise fileAdd(Window* wnd, Renderer* rnd, Workspace* ws, const char* path);
 	static promise::Promise fileDragAndDropFile(Window* wnd, Renderer* rnd, Workspace* ws, const char* path);
 	static promise::Promise fileDragAndDropFileForNotepad(Window* wnd, Renderer* rnd, Workspace* ws, const char* path);
-	static promise::Promise fileImport(Window* wnd, Renderer* rnd, Workspace* ws);                                                         // Shows open file dialog if necessary.
+	static promise::Promise fileImport(Window* wnd, Renderer* rnd, Workspace* ws); // Shows open file dialog if necessary.
 	static promise::Promise fileImportStringForNotepad(Window* wnd, Renderer* rnd, Workspace* ws, const Text::Ptr &content);
-	static promise::Promise fileImportForNotepad(Window* wnd, Renderer* rnd, Workspace* ws);                                               // Shows open file dialog if necessary.
-	static promise::Promise fileImportExamples(Window* wnd, Renderer* rnd, Workspace* ws, const char* path /* nullable */);                // Shows open file dialog if necessary.
-	static promise::Promise fileImportExampleForNotepad(Window* wnd, Renderer* rnd, Workspace* ws);                                        // Shows open file dialog if necessary.
-	static promise::Promise fileExportForNotepad(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj);                      // Shows save file dialog if necessary.
+	static promise::Promise fileImportForNotepad(Window* wnd, Renderer* rnd, Workspace* ws); // Shows open file dialog if necessary.
+	static promise::Promise fileImportExamples(Window* wnd, Renderer* rnd, Workspace* ws, const char* path /* nullable */); // Shows open file dialog if necessary.
+	static promise::Promise fileImportExampleForNotepad(Window* wnd, Renderer* rnd, Workspace* ws); // Shows open file dialog if necessary.
+	static promise::Promise fileExportForNotepad(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj); // Shows save file dialog if necessary.
 	static promise::Promise fileDuplicate(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj, const char* fontConfigPath); // Shows save file dialog if necessary.
 	static promise::Promise fileBrowseExamples(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise fileBrowse(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj);
@@ -92,7 +92,7 @@ public:
 
 	static promise::Promise projectCompile(Window* wnd, Renderer* rnd, Workspace* ws, const char* cartType /* nullable */, const char* sramType /* nullable */, bool* hasRtc /* nullable */, const char* fontConfigPath, bool useInRam);
 	static promise::Promise projectDump(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, const char* path);
-	static promise::Promise projectBuild(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, Exporter::Ptr ex);                     // Shows save file dialog if necessary.
+	static promise::Promise projectBuild(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, Exporter::Ptr ex); // Shows save file dialog if necessary.
 	static promise::Promise projectRun(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, Bytes::Ptr sram, bool traceless);
 	static promise::Promise projectStop(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise projectReload(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj, const char* fontConfigPath);

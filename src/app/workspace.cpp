@@ -1927,7 +1927,7 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 
 										validateProject(prj.get());
 
-										if (prj->contentType() != Project::ContentTypes::BASIC)
+										if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
 											launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 									}
 								)
@@ -3759,6 +3759,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 		prj->genre(prj_->genre());
 		prj->version(prj_->version());
 		prj->url(prj_->url());
+		prj->runOnOpen(prj_->runOnOpen());
 		prj->iconCode(prj_->iconCode());
 		prj->caseInsensitive(prj_->caseInsensitive());
 		prj->strictOn(prj_->strictOn());
@@ -6945,7 +6946,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 
 									validateProject(prj.get());
 
-									if (prj->contentType() != Project::ContentTypes::BASIC)
+									if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
 										launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 								}
 							)
@@ -7439,7 +7440,7 @@ void Workspace::navigate(Window* wnd, Renderer* rnd, int dx, int dy, int fully, 
 
 						validateProject(prj.get());
 
-						if (prj->contentType() != Project::ContentTypes::BASIC)
+						if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
 							launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 					}
 				);
@@ -7627,7 +7628,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 
 												validateProject(prj.get());
 
-												if (prj->contentType() != Project::ContentTypes::BASIC)
+												if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
 													launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 											}
 										)
@@ -7924,7 +7925,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 
 												validateProject(prj.get());
 
-												if (prj->contentType() != Project::ContentTypes::BASIC)
+												if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
 													launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 											}
 										)
@@ -7968,7 +7969,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 
 												validateProject(prj.get());
 
-												if (prj->contentType() != Project::ContentTypes::BASIC)
+												if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
 													launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 											}
 										)
@@ -8683,7 +8684,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 
 										validateProject(prj.get());
 
-										if (prj->contentType() != Project::ContentTypes::BASIC)
+										if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
 											launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 									}
 								)
@@ -10115,7 +10116,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 
 									validateProject(prj.get());
 
-									if (prj->contentType() != Project::ContentTypes::BASIC)
+									if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
 										launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 								}
 							);

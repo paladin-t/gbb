@@ -3821,6 +3821,19 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				secondColumnEndX = GetCursorPosX() - style.ItemSpacing.x;
 				NewLine();
 
+				PushID("#Run");
+				{
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Project_Running());
+
+					SameLine();
+
+					bool runOnOpen = prj->runOnOpen();
+					if (Checkbox(_theme->windowProjectProperty_Project_Running_StartOnOpen(), &runOnOpen))
+						prj->runOnOpen(runOnOpen);
+				}
+				PopID();
+
 				PushID("#Icon");
 				{
 					AlignTextToFramePadding();
@@ -4485,6 +4498,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			prj->genre()                   != _project->genre()                ||
 			prj->version()                 != _project->version()              ||
 			prj->url()                     != _project->url()                  ||
+			prj->runOnOpen()               != _project->runOnOpen()            ||
 			prj->iconCode()                != _project->iconCode()             ||
 			prj->caseInsensitive()         != _project->caseInsensitive()      ||
 			prj->strictOn()                != _project->strictOn()             ||
