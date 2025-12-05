@@ -4602,7 +4602,7 @@ promise::Promise Operations::projectStop(Window*, Renderer*, Workspace* ws) {
 
 promise::Promise Operations::projectReload(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj, const char* fontConfigPath) {
 	const std::string fontConfigPath_ = fontConfigPath;
-	const std::string path = prj->path();
+	const std::string &path = prj->path();
 	const Workspace::Categories cat = ws->category();
 	const int page = ws->currentAssetPage();
 

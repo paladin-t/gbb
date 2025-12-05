@@ -3737,8 +3737,100 @@ void Workspace::showExternalFileBrowser(
 	);
 }
 
-void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
-	auto set = [this, prj] (Project* prj_) -> void {
+void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bool isOpened) {
+	auto save = [wnd, rnd, this] (Project* prj_) -> void {
+		// Initialize the output methods.
+		PrintHandler onPrint = [] (const char* msg) -> void {
+			fprintf(stdout, "%s\n", msg);
+		};
+		WarningOrErrorHandler onError = [] (const char* msg, bool isWarning) -> void {
+			if (isWarning)
+				fprintf(stdout, "%s\n", msg);
+			else
+				fprintf(stderr, "%s\n", msg);
+		};
+
+		// Load the project.
+		onPrint("Begin saving project property.");
+		const long long start = DateTime::ticks();
+
+		const std::string &path = prj_->path();
+
+		Project::Ptr prj = nullptr;
+		do {
+			if (!rnd)
+				break;
+
+			prj = Project::Ptr(new Project(wnd, rnd, this));
+			if (!prj->open(path.c_str())) {
+				onError("Cannot open the project.", false);
+
+				break;
+			}
+
+			Texture::Ptr attribtex(theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+			Texture::Ptr propstex(theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+			Texture::Ptr actorstex(theme()->textureActors(), [] (Texture*) -> void { /* Do nothing. */ });
+			prj->attributesTexture(attribtex);
+			prj->propertiesTexture(propstex);
+			prj->actorsTexture(actorstex);
+
+			prj->behaviourSerializer(std::bind(&Workspace::serializeKernelBehaviour, this, std::placeholders::_1));
+			prj->behaviourParser(std::bind(&Workspace::parseKernelBehaviour, this, std::placeholders::_1));
+
+			const std::string fontConfigPath = fontConfig().empty() ? WORKSPACE_FONT_DEFAULT_CONFIG_FILE : fontConfig();
+			if (!prj->load(false, fontConfigPath.c_str(), nullptr)) {
+				prj->close(true);
+
+				onError("Cannot load the project.", false);
+
+				break;
+			}
+		} while (false);
+
+		// Save the project.
+		if (!prj_->title().empty())
+			prj->title(prj_->title());
+		prj->kernel(prj_->kernel());
+		prj->cartridgeType(prj_->cartridgeType());
+		prj->sramType(prj_->sramType());
+		prj->hasRtc(prj_->hasRtc());
+		prj->description(prj_->description());
+		prj->author(prj_->author());
+		prj->genre(prj_->genre());
+		prj->version(prj_->version());
+		prj->url(prj_->url());
+		prj->runOnOpen(prj_->runOnOpen());
+		prj->iconCode(prj_->iconCode());
+		prj->caseInsensitive(prj_->caseInsensitive());
+		prj->strictOn(prj_->strictOn());
+		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
+		prj->borderFrameType(prj_->borderFrameType());
+		prj->borderFrameCode(prj_->borderFrameCode());
+		prj->superPalettes(prj_->superPalettes());
+		prj->customizedSuperPalettes(prj_->customizedSuperPalettes());
+		prj->modified(prj_->modified());
+
+		prj->hasDirtyInformation(true);
+
+		prj->save(path.c_str(), false, onError);
+
+		// Dispose the project.
+		const long long end = DateTime::ticks();
+		const long long diff = end - start;
+		const double secs = DateTime::toSeconds(diff);
+		onPrint("End saving project property.");
+		const std::string msg = "Completed in " + Text::toString(secs) + "s.";
+		onPrint(msg.c_str());
+
+		if (prj) {
+			prj->unload();
+			prj->close(true);
+			prj = nullptr;
+		}
+	};
+	auto set = [this, prj, isOpened, save] (Project* prj_) -> void {
+		// Prepare.
 		const bool needReloadKernel =
 			prj->kernel()        != prj_->kernel();
 		const bool needReAnalyze =
@@ -3747,6 +3839,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 			prj->sramType()      != prj_->sramType()      ||
 			prj->hasRtc()        != prj_->hasRtc();
 
+		// Apply the changes.
 		const long long now = DateTime::now();
 		if (!prj_->title().empty())
 			prj->title(prj_->title());
@@ -3772,29 +3865,41 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 
 		prj->hasDirtyInformation(true);
 
-		if (needReloadKernel) {
-			const std::string &kernelId = prj->kernel();
-			int kernelIdx = getKernelIndex(kernelId);
-			if (kernelIdx >= 0) {
-				const int n = (int)kernels().size();
-				kernelIdx = Math::clamp(kernelIdx, 0, n - 1);
-			} else {
-				kernelIdx = 0;
-			}
-			activeKernelIndex(kernelIdx);
-
-			clearLanguageDefinition(true);
+		// Save if needed.
+		if (!isOpened) {
+			save(prj);
 		}
 
-		if (needReAnalyze)
-			analyze(true);
+		// Reload kernel if needed.
+		if (isOpened) {
+			if (needReloadKernel) {
+				const std::string &kernelId = prj->kernel();
+				int kernelIdx = getKernelIndex(kernelId);
+				if (kernelIdx >= 0) {
+					const int n = (int)kernels().size();
+					kernelIdx = Math::clamp(kernelIdx, 0, n - 1);
+				} else {
+					kernelIdx = 0;
+				}
+				activeKernelIndex(kernelIdx);
+
+				clearLanguageDefinition(true);
+			}
+		}
+
+		// Re-analyze if needed.
+		if (isOpened) {
+			if (needReAnalyze)
+				analyze(true);
+		}
 	};
 
 	ImGui::ProjectPropertyPopupBox::ConfirmedHandler confirm(
-		[wnd, this, set] (Project* prj_) -> void {
+		[wnd, this, set, isOpened] (Project* prj_) -> void {
 			set(prj_);
 
-			refreshWindowTitle(wnd);
+			if (isOpened)
+				refreshWindowTitle(wnd);
 
 			popupBox(nullptr);
 		},
@@ -3807,10 +3912,11 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj) {
 		nullptr
 	);
 	ImGui::ProjectPropertyPopupBox::AppliedHandler apply(
-		[wnd, this, set] (Project* prj_) -> void {
+		[wnd, this, set, isOpened] (Project* prj_) -> void {
 			set(prj_);
 
-			refreshWindowTitle(wnd);
+			if (isOpened)
+				refreshWindowTitle(wnd);
 		},
 		nullptr
 	);
@@ -5000,7 +5106,7 @@ void Workspace::upgrade(
 		prj->preferencesSceneUseGravity(false);
 
 		// Save.
-		const std::string path = prj->path();
+		const std::string &path = prj->path();
 		prj->hasDirtyInformation(true);
 		prj->save(path.c_str(), false, onError);
 	}
@@ -7723,6 +7829,18 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			}
 			if (opened) {
 				if (isEditable) {
+					ImGui::Separator();
+					if (ImGui::MenuItem(theme()->menu_Save(), GBBASIC_MODIFIER_KEY_NAME "+S", nullptr, canSave)) {
+						if (showRecentProjects()) {
+							Operations::fileSave(wnd, rnd, this, false);
+						} else {
+							Operations::fileSaveForNotepad(wnd, rnd, this, false);
+						}
+					}
+					if (ImGui::MenuItem(theme()->menu_RemoveSramState(), nullptr, nullptr, prj->sramExists(this))) {
+						Operations::projectRemoveSram(wnd, rnd, this, prj, false);
+					}
+					ImGui::Separator();
 					if (ImGui::MenuItem(theme()->menu_Palette(), GBBASIC_MODIFIER_KEY_NAME "+0")) {
 						showPaletteEditor(
 							rnd,
@@ -7734,18 +7852,8 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 							}
 						);
 					}
-					ImGui::Separator();
-					if (ImGui::MenuItem(theme()->menu_Save(), GBBASIC_MODIFIER_KEY_NAME "+S", nullptr, canSave)) {
-						if (showRecentProjects()) {
-							Operations::fileSave(wnd, rnd, this, false);
-						} else {
-							Operations::fileSaveForNotepad(wnd, rnd, this, false);
-						}
-					}
 				}
-				if (ImGui::MenuItem(theme()->menu_RemoveSramState(), nullptr, nullptr, prj->sramExists(this))) {
-					Operations::projectRemoveSram(wnd, rnd, this, prj, false);
-				}
+				ImGui::Separator();
 #if defined GBBASIC_OS_HTML
 				if (!showRecentProjects()) {
 					if (isEditable) {
@@ -7768,7 +7876,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 				}
 #endif /* GBBASIC_OS_HTML */
 				if (ImGui::MenuItem(theme()->menu_Property())) {
-					showProjectProperty(wnd, rnd, prj.get());
+					showProjectProperty(wnd, rnd, prj.get(), true);
 				}
 			} else if (recentProjectSelectedIndex() >= 0) {
 				if (showRecentProjects()) {
@@ -7815,6 +7923,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					if (isEditable_ && ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
 						Operations::fileDuplicate(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str());
 					}
+					ImGui::Separator();
 #if !defined GBBASIC_OS_HTML
 					if (ImGui::MenuItem(theme()->menu_Browse())) {
 						Operations::fileBrowse(wnd, rnd, this, prj);
@@ -7827,6 +7936,9 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 						}
 					}
 #endif /* GBBASIC_OS_HTML */
+					if (ImGui::MenuItem(theme()->menu_Property())) {
+						showProjectProperty(wnd, rnd, prj.get(), false);
+					}
 				}
 			}
 
@@ -10203,11 +10315,15 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 
 						polluted = true;
 					}
+					ImGui::Separator();
 #if !defined GBBASIC_OS_HTML
 					if (!polluted && ImGui::MenuItem(theme()->menu_Browse())) {
 						Operations::fileBrowse(wnd, rnd, this, prj);
 					}
 #endif /* GBBASIC_OS_HTML */
+					if (ImGui::MenuItem(theme()->menu_Property())) {
+						showProjectProperty(wnd, rnd, prj.get(), false);
+					}
 
 					ImGui::EndPopup();
 				} else {
@@ -11153,7 +11269,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 	ButtonEventHandler onCartridgeButtonClicked = nullptr;
 	if (prj && prj->contentType() == Project::ContentTypes::BASIC) {
 		onCartridgeButtonClicked = [&] (void) -> void {
-			showProjectProperty(wnd, rnd, prj.get());
+			showProjectProperty(wnd, rnd, prj.get(), true);
 		};
 	}
 

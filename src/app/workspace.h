@@ -894,7 +894,7 @@ public:
 		const ImGui::EmulatorBuildSettingsPopupBox::ConfirmedHandler &confirm /* nullable */,
 		const ImGui::EmulatorBuildSettingsPopupBox::CanceledHandler &cancel /* nullable */
 	);
-	void showProjectProperty(Window* wnd, Renderer* rnd, Project* prj);
+	void showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bool isOpened);
 	void showSearchResult(const std::string &pattern, const Editing::Tools::SearchResult::Array &found);
 	void closeSearchResult(void);
 	void showInstalledKernels(Window* wnd, Renderer* rnd);

@@ -1291,7 +1291,7 @@ private:
 			ImGui::SameLine();
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 			if (ImGui::ImageButton(ws->theme()->iconProperty()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipProjectProperty_ProjectProperty().c_str())) {
-				ws->showProjectProperty(wnd, rnd, _project);
+				ws->showProjectProperty(wnd, rnd, _project, true);
 			}
 			width_ += ImGui::GetItemRectSize().x;
 			width_ += style.FramePadding.x;
