@@ -3876,9 +3876,13 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 		Path::uniform(path);
 
 		// Open the package.
+		fprintf(stdout, "Begin installing kernel from package \"%s\".\n", path.c_str());
+
 		Archive::Ptr arc(Archive::create(Archive::ZIP));
 		if (!arc->open(path.c_str(), Stream::READ)) {
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotOpenKernelPackage()));
+
+			fprintf(stdout, "  Cannot open kernel package.\n");
 
 			return;
 		}
@@ -3889,6 +3893,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 			arc->close();
 
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotReadKernelPackage()));
+
+			fprintf(stdout, "  Cannot read kernel package.\n");
 
 			return;
 		}
@@ -3922,6 +3928,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotFindKernelManifest()));
 
+			fprintf(stdout, "  Cannot find kernel manifest.\n");
+
 			return;
 		}
 
@@ -3941,6 +3949,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotReadKernelManifest()));
 
+			fprintf(stdout, "  Cannot read kernel manifest.\n");
+
 			return;
 		}
 
@@ -3950,6 +3960,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 			arc->close();
 
 			df.reject(std::string(Text::format(ws->theme()->dialogPrompt_KernelError_AKernelWithIdAlreadyExists(), { kernelId })));
+
+			fprintf(stdout, "  A kernel with ID \"%s\" already exists.\n", kernelId.c_str());
 
 			return;
 		}
@@ -3965,6 +3977,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_MissingKernelComponent()));
 
+			fprintf(stdout, "  Missing kernel component.\n");
+
 			return;
 		}
 
@@ -3979,6 +3993,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotCreateKernelDirectory()));
 
+			fprintf(stdout, "  Cannot create kernel directory.\n");
+
 			return;
 		}
 
@@ -3986,6 +4002,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 			arc->close();
 
 			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotInstallKernelFiles()));
+
+			fprintf(stdout, "  Cannot install kernel files.\n");
 
 			return;
 		}
@@ -4003,6 +4021,8 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 		}
 
 		// Finish.
+		fprintf(stdout, "End installing kernel \"%s\".\n", kernelId.c_str());
+
 		df.resolve(true);
 	};
 
@@ -4047,18 +4067,26 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 
 		const std::string fullPath = Path::combine(dir.c_str(), fileName.c_str());
 		const int refs = refCount(fullPath, getFileName);
-		if (refs > 1) // Is referenced by more than one kernels, ignore.
+		if (refs > 1) { // Is referenced by more than one kernels, ignore.
+			fprintf(stdout, "  Ignore removing file \"%s\" due to it is referenced by other kernels.\n", fileName.c_str());
+
 			return;
+		}
 
 		if (Path::fileExists(fullPath.c_str())) {
 			Path::removeFile(fullPath.c_str(), true); // Remove the file.
+
+			fprintf(stdout, "  Removed file \"%s\".\n", fileName.c_str());
 
 			std::string parentDir;
 			Path::split(fullPath, nullptr, nullptr, &parentDir);
 			DirectoryInfo::Ptr dirInfo = DirectoryInfo::make(parentDir.c_str());
 			FileInfos::Ptr fileInfos = dirInfo->getFiles("*;*.*", true);
-			if (fileInfos->count() == 0)
+			if (fileInfos->count() == 0) {
 				dirInfo->remove(true); // Remove the parent directory if it's empty.
+
+				fprintf(stdout, "  Removed directory \"%s\" since it is empty.\n", fileName.c_str());
+			}
 		}
 	};
 
@@ -4069,6 +4097,8 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 			const std::string &path = krnl->path();
 			std::string dir;
 			Path::split(path, nullptr, nullptr, &dir);
+
+			fprintf(stdout, "Begin uninstalling kernel \"%s\".\n", krnl->id().c_str());
 
 			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> std::string { return krnl->kernelRom(); });
 			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> std::string { return krnl->kernelSymbols(); });
@@ -4089,6 +4119,8 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 
 			if (ws->activeKernelIndex() == index)
 				ws->activeKernelIndex(0);
+
+			fprintf(stdout, "End uninstalling kernel \"%s\".\n", krnl->id().c_str());
 
 			df.resolve(true);
 		}
