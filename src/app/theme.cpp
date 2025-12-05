@@ -414,6 +414,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Property("Property...");
 	menu_Properties("Properties");
 	menu_Quit("Quit");
+	menu_RecordGif("Record GIF");
 	menu_Redo("Redo");
 	menu_Reload("Reload");
 	menu_Remove("Remove");
@@ -423,12 +424,14 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Run("Run");
 	menu_Save("Save");
 	menu_Scene("Scene");
+	menu_Screenshot("Screenshot");
 	menu_SelectAll("Select All");
 	menu_SetAsFigure("Set as Figure");
 	menu_Sfx("SFX");
 	menu_Sort("Sort");
 	menu_SortAssets("Sort Assets...");
 	menu_SpriteSheet("Sprite Sheet...");
+	menu_StopRecording("Stop Recording");
 	menu_StopRunning("Stop Running");
 	menu_SwapOrder("Swap Order");
 	menu_Tiles("Tiles");

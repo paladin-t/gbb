@@ -7983,6 +7983,18 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 		VariableGuard<decltype(style.ChildBorderSize)> guardChildBorderSize(&style.ChildBorderSize, style.ChildBorderSize, 1);
 
 		if (ImGui::BeginMenu(theme()->menu_Application())) {
+#if defined GBBASIC_OS_WIN || defined GBBASIC_OS_MAC || defined GBBASIC_OS_LINUX
+			if (ImGui::MenuItem(theme()->menu_Screenshot(), "F6", nullptr, !recorder()->recording())) {
+				recorder()->start(false, nullptr, 1);
+			}
+			if (ImGui::MenuItem(theme()->menu_RecordGif(), "F7", nullptr, !recorder()->recording())) {
+				recorder()->start(true, theme()->imageCursor(), activeFrameRate() * 60); // 1 minute.
+			}
+			if (ImGui::MenuItem(theme()->menu_StopRecording(), "F8", nullptr, recorder()->recording())) {
+				recorder()->stop();
+			}
+#endif /* Platform macro. */
+			ImGui::Separator();
 			if (ImGui::MenuItem(theme()->menu_Kernels())) {
 				showInstalledKernels(wnd, rnd);
 			}
