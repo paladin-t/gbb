@@ -66,6 +66,20 @@ const char* get(const Dictionary &dict) {
 	return nullptr;
 }
 
+void transform(Dictionary &dict, Transformer trans) {
+	if (dict.empty())
+		return;
+
+	if (trans == nullptr)
+		return;
+
+	for (Dictionary::iterator it = dict.begin(); it != dict.end(); ++it) {
+		const Platform::Languages lang = it->first;
+		std::string &txt = it->second;
+		trans(lang, txt);
+	}
+}
+
 }
 
 /* ===========================================================================} */

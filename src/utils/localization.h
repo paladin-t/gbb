@@ -12,6 +12,7 @@
 #include "../gbbasic.h"
 #include "json.h"
 #include "platform.h"
+#include <functional>
 #include <map>
 
 /*
@@ -23,9 +24,13 @@ namespace Localization {
 
 typedef std::map<Platform::Languages, std::string> Dictionary;
 
+typedef std::function<void(Platform::Languages, std::string &)> Transformer;
+
 int parse(Dictionary &dict, const rapidjson::Value &val);
 
 const char* get(const Dictionary &dict);
+
+void transform(Dictionary &dict, Transformer trans /* nullable */);
 
 }
 

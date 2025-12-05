@@ -85,6 +85,7 @@ bool Kernel::open(const char* path_) {
 	bool readonly_ = false;
 	std::string id_;
 	Localization::Dictionary title_;
+	Localization::Dictionary description_;
 	std::string kernelRom_;
 	std::string kernelSymbols_;
 	std::string kernelAliases_;
@@ -113,6 +114,13 @@ bool Kernel::open(const char* path_) {
 		return false;
 	if (!Localization::parse(title_, *val))
 		return false;
+
+	val = nullptr;
+	if (!Jpath::get(doc, val, "description") || !val)
+		return false;
+	if (!Localization::parse(description_, *val))
+		return false;
+	Localization::transform(description_, [] (Platform::Languages, std::string &txt) -> void { Text::replace(txt, "\\n", "\n"); });
 
 	if (!Jpath::get(doc, kernelRom_, "kernel", "rom"))
 		return false;
@@ -283,6 +291,7 @@ bool Kernel::open(const char* path_) {
 	readonly(readonly_);
 	id(id_);
 	title(title_);
+	description(description_);
 	kernelRom(kernelRom_);
 	kernelSymbols(kernelSymbols_);
 	kernelAliases(kernelAliases_);
@@ -314,6 +323,7 @@ bool Kernel::close(void) {
 	id().clear();
 	entry().clear();
 	title().clear();
+	description().clear();
 	kernelRom().clear();
 	kernelSymbols().clear();
 	kernelAliases().clear();

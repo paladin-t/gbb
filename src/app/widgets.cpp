@@ -4645,6 +4645,8 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 					const GBBASIC::Kernel::Ptr &krnl = kernels[i];
 					const Localization::Dictionary &name = krnl->title();
 					const char* title = Localization::get(name);
+					const Localization::Dictionary &desc = krnl->description();
+					const char* tooltip = Localization::get(desc);
 
 					PushID(krnl->id());
 					{
@@ -4694,6 +4696,12 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 
 						AlignTextToFramePadding();
 						TextUnformatted(title);
+
+						if (tooltip && *tooltip && IsMouseHoveringRect(spos, spos + ImVec2(width - style.WindowPadding.x * 1.7f, 19.0f))) {
+							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+							SetTooltip(tooltip);
+						}
 					}
 					PopID();
 				}

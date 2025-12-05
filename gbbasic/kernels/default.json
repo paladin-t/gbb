@@ -1,7 +1,10 @@
 {
   "id": "default",
   "title": {
-    "english": "Default"
+    "english": "Default Kernel"
+  },
+  "description": {
+    "english": "The official default kernel.\nImplements Platformer, Top-down,\nand Point&Click controllers.\nSuitable for most game projects."
   },
   "kernel": {
     "rom": "gbbvm.gb",

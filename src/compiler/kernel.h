@@ -94,6 +94,7 @@ public:
 	GBBASIC_PROPERTY(std::string, id)
 	GBBASIC_PROPERTY(Entry, entry)
 	GBBASIC_PROPERTY(Localization::Dictionary, title)
+	GBBASIC_PROPERTY(Localization::Dictionary, description)
 	GBBASIC_PROPERTY(std::string, kernelRom)
 	GBBASIC_PROPERTY(std::string, kernelSymbols)
 	GBBASIC_PROPERTY(std::string, kernelAliases)
