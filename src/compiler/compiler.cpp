@@ -2252,14 +2252,14 @@ Op::Operators Op::OPERATORS = array(
 	Op( 6,    0,   -1,    4), // NE.
 	Op( 7,    0,   -1,    3), // AND.
 	Op( 8,    0,   -1,    3), // OR.
-	Op( 9,    0,   -1,    8), // NOT.
+	Op( 9,    0,    1,    8), // NOT.
 	Op('&',   0,   -1,    7), // BITWISE_AND.
 	Op('|',   0,   -1,    7), // BITWISE_OR.
 	Op('^',   0,   -1,    7), // BITWISE_XOR.
-	Op('~',   0,   -1,    7), // BITWISE_NOT.
+	Op('~',   0,    1,    7), // BITWISE_NOT.
 	Op('<',   0,   -1,    7), // BITWISE_LSHIFT.
 	Op('>',   0,   -1,    7), // BITWISE_RSHIFT.
-	Op('_',   0,   -1,    8), // NEG.
+	Op('_',   0,    1,    8), // NEG.
 	Op('s',   0,   -1,    1), // SGN.
 	Op('@',   0,   -1,    1), // ABS.
 	Op('q',   0,   -1,    1), // SQR.
@@ -8042,6 +8042,7 @@ private:
 					} else {
 						const bool allowUnaryNot = expectsOperand && expectsOperand->type() == Token::Types::OPERATOR &&
 							(
+								expectsOperand->data() == "(" ||
 								expectsOperand->data() == "+" ||
 								expectsOperand->data() == "-" ||
 								expectsOperand->data() == "*" ||
@@ -8067,6 +8068,8 @@ private:
 							(tk->data() == "not" || tk->data() == "bnot"); // Is a unary `NOT` or `BNOT`.
 						if (allowUnaryNot && isUnaryNot) {
 							expectsOperand = tk;
+
+							break;
 						} else {
 							THROW_UNEXPECTED_OPERATOR(onError, tk, false);
 						}
