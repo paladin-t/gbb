@@ -7849,6 +7849,8 @@ private:
 									isFalse = true;
 
 									break;
+								} else if (nxt->data() == "not" || nxt->data() == "bnot") {
+									// Do nothing.
 								} else {
 									THROW_INVALID_EXPRESSION(onError, tk);
 								}
@@ -7864,6 +7866,8 @@ private:
 									isTrue = true;
 
 									break;
+								} else if (nxt->data() == "not" || nxt->data() == "bnot") {
+									// Do nothing.
 								} else {
 									THROW_INVALID_EXPRESSION(onError, tk);
 								}
@@ -8036,7 +8040,36 @@ private:
 					if (tk->data() == "(") { // Is a left parenthesis.
 						expectsOperand = tk;
 					} else {
-						THROW_UNEXPECTED_OPERATOR(onError, tk, false);
+						const bool allowUnaryNot = expectsOperand && expectsOperand->type() == Token::Types::OPERATOR &&
+							(
+								expectsOperand->data() == "+" ||
+								expectsOperand->data() == "-" ||
+								expectsOperand->data() == "*" ||
+								expectsOperand->data() == "/" ||
+								expectsOperand->data() == "mod" ||
+								expectsOperand->data() == "=" ||
+								expectsOperand->data() == "<" ||
+								expectsOperand->data() == "<=" ||
+								expectsOperand->data() == ">" ||
+								expectsOperand->data() == ">=" ||
+								expectsOperand->data() == "<>" ||
+								expectsOperand->data() == "and" ||
+								expectsOperand->data() == "or" ||
+								expectsOperand->data() == "not" ||
+								expectsOperand->data() == "band" ||
+								expectsOperand->data() == "bor" ||
+								expectsOperand->data() == "bxor" ||
+								expectsOperand->data() == "bnot" ||
+								expectsOperand->data() == "lshift" ||
+								expectsOperand->data() == "rshift"
+							);
+						const bool isUnaryNot = tk->type() == Token::Types::OPERATOR &&
+							(tk->data() == "not" || tk->data() == "bnot"); // Is a unary `NOT` or `BNOT`.
+						if (allowUnaryNot && isUnaryNot) {
+							expectsOperand = tk;
+						} else {
+							THROW_UNEXPECTED_OPERATOR(onError, tk, false);
+						}
 					}
 				} else {
 					if (tk->data() == ")") {
