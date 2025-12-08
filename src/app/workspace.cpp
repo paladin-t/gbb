@@ -2434,18 +2434,39 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 	case ExternalEventTypes::INPUT_TEXT: {
 			fprintf(stdout, "SDL: INPUT_TEXT.\n");
 
-			const char* content = workspaceGetInputText();
-			if (!content)
-				break;
+			const int code = (int)evt->user.code;
+			const int keyDown = (int)(intptr_t)evt->user.data1;
+			const int keyUp = (int)(intptr_t)evt->user.data2;
 
-			const std::string content_ = content;
-			workspaceFree((void*)content); content = nullptr;
+			if (code) {
+				if (keyDown) {
+					SDL_Event evt;
+					memset(&evt, 0, sizeof(SDL_Event));
+					evt.type = SDL_KEYDOWN;
+					evt.key.keysym.scancode = (SDL_Scancode)keyDown;
+					SDL_PushEvent(&evt);
+				}
+				if (keyUp) {
+					SDL_Event evt;
+					memset(&evt, 0, sizeof(SDL_Event));
+					evt.type = SDL_KEYUP;
+					evt.key.keysym.scancode = (SDL_Scancode)keyUp;
+					SDL_PushEvent(&evt);
+				}
+			} else {
+				const char* content = workspaceGetInputText();
+				if (!content)
+					break;
 
-			ImGuiIO &io = ImGui::GetIO();
+				const std::string content_ = content;
+				workspaceFree((void*)content); content = nullptr;
 
-			io.AddInputCharactersUTF8(content_.c_str());
+				ImGuiIO &io = ImGui::GetIO();
 
-			textInput(wnd, rnd, content_.c_str());
+				io.AddInputCharactersUTF8(content_.c_str());
+
+				textInput(wnd, rnd, content_.c_str());
+			}
 		}
 
 		break;
