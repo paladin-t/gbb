@@ -107,6 +107,7 @@ EMSCRIPTEN_BINDINGS(ExternalEventTypes) {
 		.value("UNLOAD_WINDOW", Workspace::ExternalEventTypes::UNLOAD_WINDOW)
 		.value("LOAD_PROJECT",  Workspace::ExternalEventTypes::LOAD_PROJECT)
 		.value("PATCH_PROJECT", Workspace::ExternalEventTypes::PATCH_PROJECT)
+		.value("INPUT_TEXT",    Workspace::ExternalEventTypes::INPUT_TEXT)
 		.value("TO_CATEGORY",   Workspace::ExternalEventTypes::TO_CATEGORY)
 		.value("TO_PAGE",       Workspace::ExternalEventTypes::TO_PAGE)
 		.value("TO_LOCATION",   Workspace::ExternalEventTypes::TO_LOCATION)
@@ -135,11 +136,28 @@ EM_JS(
 		return stringOnWasmHeap;
 	}
 );
+EM_JS(
+	const char*, workspaceGetInputText, (), {
+		let ret = '';
+		if (typeof getInputText == 'function')
+			ret = getInputText();
+		if (ret == null)
+			ret = '';
+		const lengthBytes = lengthBytesUTF8(ret) + 1;
+		const stringOnWasmHeap = _malloc(lengthBytes);
+		stringToUTF8(ret, stringOnWasmHeap, lengthBytes);
+
+		return stringOnWasmHeap;
+	}
+);
 #else /* GBBASIC_OS_HTML */
 static void workspaceFree(void*) {
 	// Do nothing.
 }
 static const char* workspaceGetProjectData(void) {
+	return nullptr;
+}
+static const char* workspaceGetInputText(void) {
 	return nullptr;
 }
 #endif /* GBBASIC_OS_HTML */
@@ -2410,6 +2428,24 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 				editor->post(Editable::SELECT_ALL);
 				editor->post(Editable::SET_CONTENT, (void*)content_.c_str());
 			}
+		}
+
+		break;
+	case ExternalEventTypes::INPUT_TEXT: {
+			fprintf(stdout, "SDL: INPUT_TEXT.\n");
+
+			const char* content = workspaceGetInputText();
+			if (!content)
+				break;
+
+			const std::string content_ = content;
+			workspaceFree((void*)content); content = nullptr;
+
+			ImGuiIO &io = ImGui::GetIO();
+
+			io.AddInputCharactersUTF8(content_.c_str());
+
+			textInput(wnd, rnd, content_.c_str());
 		}
 
 		break;
