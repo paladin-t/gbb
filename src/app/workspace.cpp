@@ -4072,6 +4072,9 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd) {
 		},
 		nullptr
 	);
+	ImGui::InstalledKernelsPopupBox::SourceCodeEjectingHandler ejectSourceCode = nullptr;
+	if (hasKernelSourceCode())
+		ejectSourceCode = std::bind(&Workspace::ejectSourceCode, this, wnd, rnd, false);
 	popupBox(
 		ImGui::PopupBox::Ptr(
 			new ImGui::InstalledKernelsPopupBox(
@@ -4081,7 +4084,7 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd) {
 				kernels(),
 				confirm, add, remove,
 				theme()->generic_Ok().c_str(), theme()->generic_Install().c_str(), theme()->generic_Uninstall().c_str(),
-				std::bind(&Workspace::ejectSourceCode, this, wnd, rnd, false)
+				ejectSourceCode
 			)
 		)
 	);
