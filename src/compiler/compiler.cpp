@@ -8042,25 +8042,25 @@ private:
 					} else {
 						const bool allowUnaryNot = expectsOperand && expectsOperand->type() == Token::Types::OPERATOR &&
 							(
-								expectsOperand->data() == "(" ||
-								expectsOperand->data() == "+" ||
-								expectsOperand->data() == "-" ||
-								expectsOperand->data() == "*" ||
-								expectsOperand->data() == "/" ||
-								expectsOperand->data() == "mod" ||
-								expectsOperand->data() == "=" ||
-								expectsOperand->data() == "<" ||
-								expectsOperand->data() == "<=" ||
-								expectsOperand->data() == ">" ||
-								expectsOperand->data() == ">=" ||
-								expectsOperand->data() == "<>" ||
-								expectsOperand->data() == "and" ||
-								expectsOperand->data() == "or" ||
-								expectsOperand->data() == "not" ||
-								expectsOperand->data() == "band" ||
-								expectsOperand->data() == "bor" ||
-								expectsOperand->data() == "bxor" ||
-								expectsOperand->data() == "bnot" ||
+								expectsOperand->data() == "("      ||
+								expectsOperand->data() == "+"      ||
+								expectsOperand->data() == "-"      ||
+								expectsOperand->data() == "*"      ||
+								expectsOperand->data() == "/"      ||
+								expectsOperand->data() == "mod"    ||
+								expectsOperand->data() == "="      ||
+								expectsOperand->data() == "<"      ||
+								expectsOperand->data() == "<="     ||
+								expectsOperand->data() == ">"      ||
+								expectsOperand->data() == ">="     ||
+								expectsOperand->data() == "<>"     ||
+								expectsOperand->data() == "and"    ||
+								expectsOperand->data() == "or"     ||
+								expectsOperand->data() == "not"    ||
+								expectsOperand->data() == "band"   ||
+								expectsOperand->data() == "bor"    ||
+								expectsOperand->data() == "bxor"   ||
+								expectsOperand->data() == "bnot"   ||
 								expectsOperand->data() == "lshift" ||
 								expectsOperand->data() == "rshift"
 							);

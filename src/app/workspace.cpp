@@ -107,6 +107,7 @@ EMSCRIPTEN_BINDINGS(ExternalEventTypes) {
 		.value("UNLOAD_WINDOW", Workspace::ExternalEventTypes::UNLOAD_WINDOW)
 		.value("LOAD_PROJECT",  Workspace::ExternalEventTypes::LOAD_PROJECT)
 		.value("PATCH_PROJECT", Workspace::ExternalEventTypes::PATCH_PROJECT)
+		.value("INPUT_KEY",     Workspace::ExternalEventTypes::INPUT_KEY)
 		.value("INPUT_TEXT",    Workspace::ExternalEventTypes::INPUT_TEXT)
 		.value("TO_CATEGORY",   Workspace::ExternalEventTypes::TO_CATEGORY)
 		.value("TO_PAGE",       Workspace::ExternalEventTypes::TO_PAGE)
@@ -2431,42 +2432,44 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 		}
 
 		break;
-	case ExternalEventTypes::INPUT_TEXT: {
-			fprintf(stdout, "SDL: INPUT_TEXT.\n");
+	case ExternalEventTypes::INPUT_KEY: {
+			fprintf(stdout, "SDL: INPUT_KEY.\n");
 
-			const int code = (int)evt->user.code;
 			const int keyDown = (int)(intptr_t)evt->user.data1;
 			const int keyUp = (int)(intptr_t)evt->user.data2;
 
-			if (code) {
-				if (keyDown) {
-					SDL_Event evt;
-					memset(&evt, 0, sizeof(SDL_Event));
-					evt.type = SDL_KEYDOWN;
-					evt.key.keysym.scancode = (SDL_Scancode)keyDown;
-					SDL_PushEvent(&evt);
-				}
-				if (keyUp) {
-					SDL_Event evt;
-					memset(&evt, 0, sizeof(SDL_Event));
-					evt.type = SDL_KEYUP;
-					evt.key.keysym.scancode = (SDL_Scancode)keyUp;
-					SDL_PushEvent(&evt);
-				}
-			} else {
-				const char* content = workspaceGetInputText();
-				if (!content)
-					break;
-
-				const std::string content_ = content;
-				workspaceFree((void*)content); content = nullptr;
-
-				ImGuiIO &io = ImGui::GetIO();
-
-				io.AddInputCharactersUTF8(content_.c_str());
-
-				textInput(wnd, rnd, content_.c_str());
+			if (keyDown) {
+				SDL_Event evt;
+				memset(&evt, 0, sizeof(SDL_Event));
+				evt.type = SDL_KEYDOWN;
+				evt.key.keysym.scancode = (SDL_Scancode)keyDown;
+				SDL_PushEvent(&evt);
 			}
+			if (keyUp) {
+				SDL_Event evt;
+				memset(&evt, 0, sizeof(SDL_Event));
+				evt.type = SDL_KEYUP;
+				evt.key.keysym.scancode = (SDL_Scancode)keyUp;
+				SDL_PushEvent(&evt);
+			}
+		}
+
+		break;
+	case ExternalEventTypes::INPUT_TEXT: {
+			fprintf(stdout, "SDL: INPUT_TEXT.\n");
+
+			const char* content = workspaceGetInputText();
+			if (!content)
+				break;
+
+			const std::string content_ = content;
+			workspaceFree((void*)content); content = nullptr;
+
+			ImGuiIO &io = ImGui::GetIO();
+
+			io.AddInputCharactersUTF8(content_.c_str());
+
+			textInput(wnd, rnd, content_.c_str());
 		}
 
 		break;
