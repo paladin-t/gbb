@@ -14,7 +14,7 @@
 #include "../vm_scene.h"
 #include "../vm_trigger.h"
 
-#include "controlling.h"
+#include "navigation.h"
 #include "platformer.h"
 
 #define PLATFORMER_ACT_BUTTON    J_A
@@ -39,21 +39,21 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
         const UINT8 x_mid = DIV8(TO_SCREEN(actor->position.x) + actor->bounds.left + actor_half_width);
         SCENE_CLEAR_PLAYER_VELOCITY_Y;
         if (INPUT_IS_BTN_PRESSED(J_UP)) {
-            if (controller_get_ladder_up(actor, x_mid)) {
+            if (navigation_get_ladder_up(actor, x_mid)) {
                 SCENE_APPLY_PLAYER_VELOCITY_Y(-DIV2(scene.climb_velocity));
                 actor_play_animation(actor, DIRECTION_UP, TRUE);
                 moving = TRUE;
             }
         } else if (INPUT_IS_BTN_PRESSED(J_DOWN)) {
-            if (controller_get_ladder_down(actor, x_mid)) {
+            if (navigation_get_ladder_down(actor, x_mid)) {
                 SCENE_APPLY_PLAYER_VELOCITY_Y(scene.climb_velocity);
                 actor_play_animation(actor, DIRECTION_DOWN, TRUE);
                 moving = TRUE;
             }
         } else if (INPUT_IS_BTN_PRESSED(J_LEFT)) {
-            if (!controller_get_ladder_blocking_left(actor, x_mid)) {
+            if (!navigation_get_ladder_blocking_left(actor, x_mid)) {
                 scene.player_on_ladder = FALSE;
-                if (!controller_get_blocking_left(actor, DIV16(-actor->move_speed))) {
+                if (!navigation_get_blocking_left(actor, DIV16(-actor->move_speed))) {
                     actor_reserve_move_speed(actor, PLATFORMER_SPEED_UP);
                     actor_move_in_direction(actor, -1, actor->relative_movement.y);
                     actor_play_animation(actor, DIRECTION_LEFT, TRUE);
@@ -61,9 +61,9 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
                 }
             }
         } else if (INPUT_IS_BTN_PRESSED(J_RIGHT)) {
-            if (!controller_get_ladder_blocking_right(actor, x_mid)) {
+            if (!navigation_get_ladder_blocking_right(actor, x_mid)) {
                 scene.player_on_ladder = FALSE;
-                if (!controller_get_blocking_right(actor, DIV16(actor->move_speed))) {
+                if (!navigation_get_blocking_right(actor, DIV16(actor->move_speed))) {
                     actor_reserve_move_speed(actor, PLATFORMER_SPEED_UP);
                     actor_move_in_direction(actor, 1, actor->relative_movement.y);
                     actor_play_animation(actor, DIRECTION_RIGHT, TRUE);
@@ -77,7 +77,7 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
         // Move in the y-axis.
         if (scene.player_velocity_y < 0) {
             UINT16 y;
-            if (controller_get_ladder_blocking_up_pos(actor, x_mid, DIV16(scene.player_velocity_y), &y)) {
+            if (navigation_get_ladder_blocking_up_pos(actor, x_mid, DIV16(scene.player_velocity_y), &y)) {
                 SCENE_CLEAR_PLAYER_VELOCITY_Y;
             }
             y = FROM_SCREEN(y);
@@ -87,7 +87,7 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
             }
         } else if (scene.player_velocity_y > 0) {
             UINT16 y;
-            if (controller_get_ladder_blocking_down_pos(actor, x_mid, DIV16(scene.player_velocity_y), &y)) {
+            if (navigation_get_ladder_blocking_down_pos(actor, x_mid, DIV16(scene.player_velocity_y), &y)) {
                 SCENE_CLEAR_PLAYER_VELOCITY_Y;
             }
             y = FROM_SCREEN(y);
@@ -101,7 +101,7 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
         if (INPUT_IS_BTN_PRESSED(J_UP)) {
             const UINT8 actor_half_width = DIV2(actor->bounds.right - actor->bounds.left);
             UINT16 x;
-            if (controller_find_ladder_up(actor, actor_half_width, &x)) {
+            if (navigation_find_ladder_up(actor, actor_half_width, &x)) {
                 SCENE_RESET_PLAYER_JUMP_COUNT;
                 SCENE_RESET_PLAYER_JUMP_TICKS;
                 SCENE_CLEAR_PLAYER_VELOCITY_Y;
@@ -119,7 +119,7 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
         if (INPUT_IS_BTN_PRESSED(J_DOWN)) {
             const UINT8 actor_half_width = DIV2(actor->bounds.right - actor->bounds.left);
             UINT16 x;
-            if (controller_find_ladder_down(actor, actor_half_width, &x)) {
+            if (navigation_find_ladder_down(actor, actor_half_width, &x)) {
                 SCENE_RESET_PLAYER_JUMP_COUNT;
                 SCENE_RESET_PLAYER_JUMP_TICKS;
                 SCENE_CLEAR_PLAYER_VELOCITY_Y;
@@ -135,7 +135,7 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
 
         // Right.
         if (INPUT_IS_BTN_PRESSED(J_RIGHT) && !CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_RIGHT)) {
-            if (!controller_get_blocking_right(actor, DIV16(actor->move_speed))) {
+            if (!navigation_get_blocking_right(actor, DIV16(actor->move_speed))) {
                 actor_reserve_move_speed(actor, PLATFORMER_SPEED_UP);
                 actor_move_in_direction(actor, 1, actor->relative_movement.y);
                 moving = TRUE;
@@ -151,7 +151,7 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
             actor_play_animation(actor, DIRECTION_RIGHT, FALSE);
             moving = TRUE;
         } else if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_RIGHT)) {
-            if (controller_get_blocking_right(actor, DIV16(actor->move_speed))) {
+            if (navigation_get_blocking_right(actor, DIV16(actor->move_speed))) {
                 actor_restore_move_speed(actor);
                 actor_move_stop(actor);
             } else {
@@ -162,7 +162,7 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
 
         // Left.
         if (INPUT_IS_BTN_PRESSED(J_LEFT) && !CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_LEFT)) {
-            if (!controller_get_blocking_left(actor, DIV16(-actor->move_speed))) {
+            if (!navigation_get_blocking_left(actor, DIV16(-actor->move_speed))) {
                 actor_reserve_move_speed(actor, PLATFORMER_SPEED_UP);
                 actor_move_in_direction(actor, -1, actor->relative_movement.y);
                 moving = TRUE;
@@ -178,7 +178,7 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
             actor_play_animation(actor, DIRECTION_LEFT, FALSE);
             moving = TRUE;
         } else if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_LEFT)) {
-            if (controller_get_blocking_left(actor, DIV16(-actor->move_speed))) {
+            if (navigation_get_blocking_left(actor, DIV16(-actor->move_speed))) {
                 actor_restore_move_speed(actor);
                 actor_move_stop(actor);
             } else {
@@ -199,7 +199,7 @@ run:
         // Move in the y-axis.
         if (scene.player_velocity_y < 0) { // Jump.
             UINT16 y;
-            if (controller_get_blocking_up_pos(actor, DIV16(scene.player_velocity_y), &y)) {
+            if (navigation_get_blocking_up_pos(actor, DIV16(scene.player_velocity_y), &y)) {
                 // Hit something.
                 SCENE_CLEAR_PLAYER_JUMP_COUNT;
                 SCENE_CLEAR_PLAYER_JUMP_TICKS;
@@ -212,7 +212,7 @@ run:
             }
         } else if (scene.player_velocity_y > 0) { // Fall.
             UINT16 y;
-            if (controller_get_blocking_fall_pos(actor, DIV16(scene.player_velocity_y), &y)) {
+            if (navigation_get_blocking_fall_pos(actor, DIV16(scene.player_velocity_y), &y)) {
                 // On ground.
                 grounded = TRUE;
                 if (scene.player_can_jump != scene.jump_max_count) { // Jumped.
@@ -292,7 +292,7 @@ BOOLEAN controller_behave_platformer_move(actor_t * actor) BANKED {
 
     // Apply gravity.
     UINT16 y;
-    controller_get_blocking_down_pos(actor, MAX(DIV2(scene.gravity), 1), &y);
+    navigation_get_blocking_down_pos(actor, MAX(DIV2(scene.gravity), 1), &y);
     y = FROM_SCREEN(y);
     if (actor->position.y != y) {
         moving = TRUE;
@@ -302,7 +302,7 @@ BOOLEAN controller_behave_platformer_move(actor_t * actor) BANKED {
     // Move in the x-axis.
     switch (actor->direction) {
     case DIRECTION_LEFT:
-        if (controller_get_blocking_left(actor, DIV16(-actor->move_speed))) {
+        if (navigation_get_blocking_left(actor, DIV16(-actor->move_speed))) {
             if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_Y)) {
                 actor_move_in_direction(actor, 0, actor->relative_movement.y);
                 moving = TRUE;
@@ -317,7 +317,7 @@ BOOLEAN controller_behave_platformer_move(actor_t * actor) BANKED {
 
         break;
     case DIRECTION_RIGHT:
-        if (controller_get_blocking_right(actor, DIV16(actor->move_speed))) {
+        if (navigation_get_blocking_right(actor, DIV16(actor->move_speed))) {
             if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_Y)) {
                 actor_move_in_direction(actor, 0, actor->relative_movement.y);
                 moving = TRUE;
@@ -346,7 +346,7 @@ BOOLEAN controller_behave_platformer_idle(actor_t * actor) BANKED {
 
     // Apply gravity.
     UINT16 y;
-    controller_get_blocking_down_pos(actor, MAX(DIV2(scene.gravity), 1), &y);
+    navigation_get_blocking_down_pos(actor, MAX(DIV2(scene.gravity), 1), &y);
     y = FROM_SCREEN(y);
     if (actor->position.y != y) {
         moving = TRUE;

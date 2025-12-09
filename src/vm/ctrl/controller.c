@@ -8,7 +8,7 @@
 #include <stdlib.h>
 
 #include "controller.h"
-#include "controlling.h"
+#include "navigation.h"
 
 INLINE BOOLEAN controller_is_actor_movable_with_gravity(actor_t * actor, INT8 dx, UINT8 flags) {
     // Prepare.
@@ -17,7 +17,7 @@ INLINE BOOLEAN controller_is_actor_movable_with_gravity(actor_t * actor, INT8 dx
     // Apply gravity if the flag is enabled.
     if (flags == CONTROLLER_MOVABLE_FLAG_FULL) {
         UINT16 y;
-        controller_get_blocking_down_pos(actor, MAX(DIV2(scene.gravity), 1), &y);
+        navigation_get_blocking_down_pos(actor, MAX(DIV2(scene.gravity), 1), &y);
         y = FROM_SCREEN(y);
         if (actor->position.y != y) {
             movable = TRUE;
@@ -27,7 +27,7 @@ INLINE BOOLEAN controller_is_actor_movable_with_gravity(actor_t * actor, INT8 dx
 
     // Move in the x-axis.
     if (dx < 0) {
-        if (controller_get_blocking_left(actor, DIV16(-actor->move_speed))) {
+        if (navigation_get_blocking_left(actor, DIV16(-actor->move_speed))) {
             if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_Y)) {
                 movable = TRUE;
             } else {
@@ -38,7 +38,7 @@ INLINE BOOLEAN controller_is_actor_movable_with_gravity(actor_t * actor, INT8 dx
             movable = TRUE;
         }
     } else if (dx > 0) {
-        if (controller_get_blocking_right(actor, DIV16(actor->move_speed))) {
+        if (navigation_get_blocking_right(actor, DIV16(actor->move_speed))) {
             if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_Y)) {
                 movable = TRUE;
             } else {
@@ -60,18 +60,18 @@ INLINE BOOLEAN controller_is_actor_movable_without_gravity(actor_t * actor, INT8
 
     // Move in the y-axis.
     if (dy < 0) {
-        if (!controller_get_blocking_up(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor)))
+        if (!navigation_get_blocking_up(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor)))
             movable = TRUE;
     } else if (dy > 0) {
-        if (!controller_get_blocking_down(actor, CONTROLLER_POSITIVE_SPEED_OF(actor)))
+        if (!navigation_get_blocking_down(actor, CONTROLLER_POSITIVE_SPEED_OF(actor)))
             movable = TRUE;
     }
     // Move in the x-axis.
     else if (dx < 0) {
-        if (!controller_get_blocking_left(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor)))
+        if (!navigation_get_blocking_left(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor)))
             movable = TRUE;
     } else if (dx > 0) {
-        if (!controller_get_blocking_right(actor, CONTROLLER_POSITIVE_SPEED_OF(actor)))
+        if (!navigation_get_blocking_right(actor, CONTROLLER_POSITIVE_SPEED_OF(actor)))
             movable = TRUE;
     }
 

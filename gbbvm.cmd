@@ -83,7 +83,7 @@ if %rebuild%==1 (
 if %rebuild%==1 (
   call :COLOR 3F "2. Compile the controllers..."
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\controller.o" "src\vm\ctrl\controller.c"
-  call %gbdk%\lcc.exe %cflag% -c -o "output\vm\controlling.o" "src\vm\ctrl\controlling.c"
+  call %gbdk%\lcc.exe %cflag% -c -o "output\vm\navigation.o" "src\vm\ctrl\navigation.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\platformer.o" "src\vm\ctrl\platformer.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\pointnclick.o" "src\vm\ctrl\pointnclick.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\topdown.o" "src\vm\ctrl\topdown.c"
@@ -159,7 +159,7 @@ if %withcrashhandler%==1 (
 )
 set ctrlobj=^
   "output\vm\controller.o" ^
-  "output\vm\controlling.o" ^
+  "output\vm\navigation.o" ^
   "output\vm\platformer.o" ^
   "output\vm\pointnclick.o" ^
   "output\vm\topdown.o"

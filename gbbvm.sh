@@ -101,7 +101,7 @@ fi
 if [ $rebuild -eq 1 ]; then
   color_echo "3F" "2. Compile the controllers..."
   "$gbdk/lcc" $cflag -c -o "output/vm/controller.o" "src/vm/ctrl/controller.c"
-  "$gbdk/lcc" $cflag -c -o "output/vm/controlling.o" "src/vm/ctrl/controlling.c"
+  "$gbdk/lcc" $cflag -c -o "output/vm/navigation.o" "src/vm/ctrl/navigation.c"
   "$gbdk/lcc" $cflag -c -o "output/vm/platformer.o" "src/vm/ctrl/platformer.c"
   "$gbdk/lcc" $cflag -c -o "output/vm/pointnclick.o" "src/vm/ctrl/pointnclick.c"
   "$gbdk/lcc" $cflag -c -o "output/vm/topdown.o" "src/vm/ctrl/topdown.c"
@@ -180,7 +180,7 @@ fi
 
 ctrlobj=(
   "output/vm/controller.o"
-  "output/vm/controlling.o"
+  "output/vm/navigation.o"
   "output/vm/platformer.o"
   "output/vm/pointnclick.o"
   "output/vm/topdown.o"

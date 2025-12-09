@@ -13,7 +13,7 @@
 #include "../vm_trigger.h"
 
 #include "controller.h"
-#include "controlling.h"
+#include "navigation.h"
 #include "topdown.h"
 
 #define TOPDOWN_ACT_BUTTON   J_A
@@ -25,15 +25,15 @@
     do { \
         if (scene.is_16x16_grid && scene.is_16x16_player) { \
             (A)->position.C = FROM_SCREEN(TO_SCREEN((A)->position.C) & 0xFFF0); \
-            if ((ENDPOINT) == CONTROLLER_BLOCKING_ENDPOINT_START && (A)->position.C < OLD) \
+            if ((ENDPOINT) == NAVIGATION_BLOCKING_ENDPOINT_START && (A)->position.C < OLD) \
                 (A)->position.C += FROM_SCREEN(16); \
-            else if ((ENDPOINT) == CONTROLLER_BLOCKING_ENDPOINT_END && (A)->position.C > OLD) \
+            else if ((ENDPOINT) == NAVIGATION_BLOCKING_ENDPOINT_END && (A)->position.C > OLD) \
                 (A)->position.C -= FROM_SCREEN(16); \
         } else { \
             (A)->position.C = FROM_SCREEN(TO_SCREEN((A)->position.C) & 0xFFF8); \
-            if ((ENDPOINT) == CONTROLLER_BLOCKING_ENDPOINT_START && (A)->position.C < OLD) \
+            if ((ENDPOINT) == NAVIGATION_BLOCKING_ENDPOINT_START && (A)->position.C < OLD) \
                 (A)->position.C += FROM_SCREEN(8); \
-            else if ((ENDPOINT) == CONTROLLER_BLOCKING_ENDPOINT_END && (A)->position.C > OLD) \
+            else if ((ENDPOINT) == NAVIGATION_BLOCKING_ENDPOINT_END && (A)->position.C > OLD) \
                 (A)->position.C -= FROM_SCREEN(8); \
         } \
     } while (0)
@@ -51,12 +51,12 @@ STATIC BOOLEAN controller_behave_topdown_player_update(actor_t * actor) {
     UINT8 dir;
     if (INPUT_IS_BTN_PRESSED(J_LEFT)) {
         dir = DIRECTION_LEFT;
-        const UINT8 ep = controller_get_blocking_left_endpoint(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor));
+        const UINT8 ep = navigation_get_blocking_left_endpoint(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor));
         if (ep) {
 #if ACTOR_IMPLEMENT_AUTO_ALIGNING_ON_BLOCKED_ENABLED
             if (!TOPDOWN_ALIGNED_TO_TILE(actor)) {
                 TOPDOWN_ALIGN_TO_NEAREST_TILE(actor, y, old_y, ep);
-                if (controller_get_blocking_left(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor))) {
+                if (navigation_get_blocking_left(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor))) {
                     TOPDOWN_REVERT_ALIGNMENT(actor, y, old_y);
                 } else {
                     TOPDOWN_DIFF_ALIGNMENT(actor, y, old_y, dy);
@@ -76,12 +76,12 @@ STATIC BOOLEAN controller_behave_topdown_player_update(actor_t * actor) {
         actor_play_animation(actor, dir, moving);
     } else if (INPUT_IS_BTN_PRESSED(J_RIGHT)) {
         dir = DIRECTION_RIGHT;
-        const UINT8 ep = controller_get_blocking_right_endpoint(actor, CONTROLLER_POSITIVE_SPEED_OF(actor));
+        const UINT8 ep = navigation_get_blocking_right_endpoint(actor, CONTROLLER_POSITIVE_SPEED_OF(actor));
         if (ep) {
 #if ACTOR_IMPLEMENT_AUTO_ALIGNING_ON_BLOCKED_ENABLED
             if (!TOPDOWN_ALIGNED_TO_TILE(actor)) {
                 TOPDOWN_ALIGN_TO_NEAREST_TILE(actor, y, old_y, ep);
-                if (controller_get_blocking_right(actor, CONTROLLER_POSITIVE_SPEED_OF(actor))) {
+                if (navigation_get_blocking_right(actor, CONTROLLER_POSITIVE_SPEED_OF(actor))) {
                     TOPDOWN_REVERT_ALIGNMENT(actor, y, old_y);
                 } else {
                     TOPDOWN_DIFF_ALIGNMENT(actor, y, old_y, dy);
@@ -101,12 +101,12 @@ STATIC BOOLEAN controller_behave_topdown_player_update(actor_t * actor) {
         actor_play_animation(actor, dir, moving);
     } else if (INPUT_IS_BTN_PRESSED(J_UP)) {
         dir = DIRECTION_UP;
-        const UINT8 ep = controller_get_blocking_up_endpoint(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor));
+        const UINT8 ep = navigation_get_blocking_up_endpoint(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor));
         if (ep) {
 #if ACTOR_IMPLEMENT_AUTO_ALIGNING_ON_BLOCKED_ENABLED
             if (!TOPDOWN_ALIGNED_TO_TILE(actor)) {
                 TOPDOWN_ALIGN_TO_NEAREST_TILE(actor, x, old_x, ep);
-                if (controller_get_blocking_up(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor))) {
+                if (navigation_get_blocking_up(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor))) {
                     TOPDOWN_REVERT_ALIGNMENT(actor, x, old_x);
                 } else {
                     TOPDOWN_DIFF_ALIGNMENT(actor, x, old_x, dx);
@@ -126,12 +126,12 @@ STATIC BOOLEAN controller_behave_topdown_player_update(actor_t * actor) {
         actor_play_animation(actor, dir, moving);
     } else if (INPUT_IS_BTN_PRESSED(J_DOWN)) {
         dir = DIRECTION_DOWN;
-        const UINT8 ep = controller_get_blocking_down_endpoint(actor, CONTROLLER_POSITIVE_SPEED_OF(actor));
+        const UINT8 ep = navigation_get_blocking_down_endpoint(actor, CONTROLLER_POSITIVE_SPEED_OF(actor));
         if (ep) {
 #if ACTOR_IMPLEMENT_AUTO_ALIGNING_ON_BLOCKED_ENABLED
             if (!TOPDOWN_ALIGNED_TO_TILE(actor)) {
                 TOPDOWN_ALIGN_TO_NEAREST_TILE(actor, x, old_x, ep);
-                if (controller_get_blocking_down(actor, CONTROLLER_POSITIVE_SPEED_OF(actor))) {
+                if (navigation_get_blocking_down(actor, CONTROLLER_POSITIVE_SPEED_OF(actor))) {
                     TOPDOWN_REVERT_ALIGNMENT(actor, x, old_x);
                 } else {
                     TOPDOWN_DIFF_ALIGNMENT(actor, x, old_x, dx);
@@ -257,7 +257,7 @@ STATIC BOOLEAN controller_behave_topdown_move_update(actor_t * actor, UINT8 forw
     switch (actor->direction) {
     // Move in the y-axis.
     case DIRECTION_UP:
-        if (!controller_get_blocking_up(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor))) {
+        if (!navigation_get_blocking_up(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor))) {
             moving = TRUE;
             actor_move_in_direction(actor, 0, -1);
             actor_play_animation(actor, DIRECTION_UP, TRUE);
@@ -265,7 +265,7 @@ STATIC BOOLEAN controller_behave_topdown_move_update(actor_t * actor, UINT8 forw
 
         break;
     case DIRECTION_DOWN:
-        if (!controller_get_blocking_down(actor, CONTROLLER_POSITIVE_SPEED_OF(actor))) {
+        if (!navigation_get_blocking_down(actor, CONTROLLER_POSITIVE_SPEED_OF(actor))) {
             moving = TRUE;
             actor_move_in_direction(actor, 0, 1);
             actor_play_animation(actor, DIRECTION_DOWN, TRUE);
@@ -275,7 +275,7 @@ STATIC BOOLEAN controller_behave_topdown_move_update(actor_t * actor, UINT8 forw
 
     // Move in the x-axis.
     case DIRECTION_LEFT:
-        if (!controller_get_blocking_left(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor))) {
+        if (!navigation_get_blocking_left(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor))) {
             moving = TRUE;
             actor_move_in_direction(actor, -1, 0);
             actor_play_animation(actor, DIRECTION_LEFT, TRUE);
@@ -283,7 +283,7 @@ STATIC BOOLEAN controller_behave_topdown_move_update(actor_t * actor, UINT8 forw
 
         break;
     case DIRECTION_RIGHT:
-        if (!controller_get_blocking_right(actor, CONTROLLER_POSITIVE_SPEED_OF(actor))) {
+        if (!navigation_get_blocking_right(actor, CONTROLLER_POSITIVE_SPEED_OF(actor))) {
             moving = TRUE;
             actor_move_in_direction(actor, 1, 0);
             actor_play_animation(actor, DIRECTION_RIGHT, TRUE);
