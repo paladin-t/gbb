@@ -993,6 +993,7 @@ private:
 	std::string _title;
 	GBBASIC::Kernel::Array &_kernels; // Foreign.
 	int _tobeUninstalledKernelIndex = -1;
+	std::string _promptText;
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;
@@ -1008,7 +1009,7 @@ public:
 	InstalledKernelsPopupBox(
 		Renderer* rnd,
 		Theme* theme,
-		const std::string &title,
+		const std::string &title, const char* prompt /* nullable */,
 		GBBASIC::Kernel::Array &kernels,
 		const ConfirmedHandler &confirm, const AddedHandler &add, const RemovedHandler &remove,
 		const char* confirmTxt /* nullable */, const char* addTxt /* nullable */, const char* removeTxt /* nullable */,

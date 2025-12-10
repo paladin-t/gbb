@@ -4588,7 +4588,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 InstalledKernelsPopupBox::InstalledKernelsPopupBox(
 	Renderer* rnd,
 	Theme* theme,
-	const std::string &title,
+	const std::string &title, const char* prompt,
 	GBBASIC::Kernel::Array &kernels,
 	const ConfirmedHandler &confirm, const AddedHandler &add, const RemovedHandler &remove,
 	const char* confirmTxt, const char* addTxt, const char* removeTxt,
@@ -4600,6 +4600,9 @@ InstalledKernelsPopupBox::InstalledKernelsPopupBox(
 	_confirmedHandler(confirm), _addedHandler(add), _removedHandler(remove),
 	_ejectSourceCode(ejectSourceCode)
 {
+	if (prompt)
+		_promptText = prompt;
+
 	if (confirmTxt)
 		_confirmText = confirmTxt;
 
@@ -4714,6 +4717,13 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 				const char* title = Localization::get(name);
 
 				Text(_theme->dialogPrompt_ClickAgainToUninstall().c_str(), title);
+
+				if (!_promptText.empty())
+					_promptText.clear();
+			}
+
+			if (!_promptText.empty()) {
+				TextUnformatted(_promptText);
 			}
 
 			NewLine(2);

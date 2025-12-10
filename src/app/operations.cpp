@@ -1644,7 +1644,7 @@ promise::Promise Operations::fileRename(Window* wnd, Renderer* rnd, Workspace* w
 promise::Promise Operations::fileRemove(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
-			const std::string &path = prj->path();
+			const std::string path = prj->path();
 			if (!Path::fileExists(path.c_str())) {
 				for (int i = 0; i < (int)ws->projects().size(); ++i) {
 					const Project::Ptr &prj_ = ws->projects()[i];
@@ -2667,7 +2667,7 @@ promise::Promise Operations::fileExportForNotepad(Window* wnd, Renderer* rnd, Wo
 
 promise::Promise Operations::fileDuplicate(Window* wnd, Renderer* rnd, Workspace* ws, const Project::Ptr &prj, const char* fontConfigPath) {
 	auto next = [wnd, rnd, ws, prj, fontConfigPath] (promise::Defer df, std::string name, std::string path) -> void {
-		const std::string &src = prj->path();
+		const std::string src = prj->path();
 		if (!Path::copyFile(src.c_str(), path.c_str())) {
 			df.reject();
 
@@ -2834,7 +2834,7 @@ promise::Promise Operations::fileBrowse(Window*, Renderer*, Workspace*, const Pr
 				return;
 			}
 
-			const std::string &path = prj->path();
+			const std::string path = prj->path();
 			std::string path_;
 			Path::split(path, nullptr, nullptr, &path_);
 			path_ = Unicode::toOs(path_);
@@ -3971,7 +3971,7 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 		}
 
 		// The installers.
-		auto install = [ws, arc, kernelId] (promise::Defer df) -> void {
+		auto install = [ws, arc, kernelId] (promise::Defer df, std::string result) -> void {
 			// Install the kernel.
 			const std::string writableDir = Path::writableDirectory();
 			const std::string userPath = Path::combine(writableDir.c_str(), KERNEL_USER_BINARIES_DIR);
@@ -4013,7 +4013,7 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 			// Finish.
 			fprintf(stdout, "End installing kernel \"%s\".\n", kernelId.c_str());
 
-			df.resolve(true);
+			df.resolve(result);
 		};
 		auto ignore = [ws, arc, kernelId] (promise::Defer df) -> void {
 			arc->close();
@@ -4024,9 +4024,9 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 		};
 
 		// Check whether the kernel has been already installed.
-		const int existingKernel = ws->getKernelIndex(kernelId);
-		if (existingKernel >= 0) {
-			const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[existingKernel];
+		const int existingKernelIndex = ws->getKernelIndex(kernelId);
+		if (existingKernelIndex >= 0) {
+			const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[existingKernelIndex];
 
 			if (krnl->readonly()) {
 				ignore(df);
@@ -4035,22 +4035,17 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 
 				popupMessage(wnd, rnd, ws, q.c_str(), true, false)
 					.then(
-						[wnd, rnd, ws, df, install] (bool ok) -> void {
+						[wnd, rnd, ws, df, install, kernelId, existingKernelIndex] (bool ok) -> void {
 							WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
 							if (ok) {
-								install(df);
+								kernelUninstall(wnd, rnd, ws, existingKernelIndex);
+
+								const std::string r = (Text::format(ws->theme()->dialogPrompt_ReplacedKernel(), { kernelId }));
+
+								install(df, r);
 
 								fprintf(stdout, "Overwritten kernel.\n");
-
-								popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_Installed().c_str(), false, false)
-									.then(
-										[wnd, rnd, ws] (bool) -> void {
-											WORKSPACE_AUTO_CLOSE_POPUP(ws)
-
-											ws->showInstalledKernels(wnd, rnd);
-										}
-									);
 							} else {
 								df.reject();
 
@@ -4069,16 +4064,9 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 					);
 			}
 		} else {
-			install(df);
+			const std::string r = (Text::format(ws->theme()->dialogPrompt_InstalledKernel(), { kernelId }));
 
-			popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_Installed().c_str(), false, false)
-				.always(
-					[wnd, rnd, ws] (void) -> void {
-						WORKSPACE_AUTO_CLOSE_POPUP(ws)
-
-						ws->showInstalledKernels(wnd, rnd);
-					}
-				);
+			install(df, r);
 		}
 	};
 
@@ -4179,7 +4167,9 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 
 			fprintf(stdout, "End uninstalling kernel \"%s\".\n", id.c_str());
 
-			df.resolve(true);
+			const std::string r = (Text::format(ws->theme()->dialogPrompt_UninstalledKernel(), { id }));
+
+			df.resolve(r);
 		}
 	);
 }
@@ -4189,7 +4179,7 @@ promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspac
 		[&] (promise::Defer df) -> void {
 			// Prepare.
 			const Project::Ptr &prj = ws->currentProject();
-			const std::string &path = prj->path();
+			const std::string path = prj->path();
 			if (!useInRam) {
 				if (path.empty() || !Path::fileExists(path.c_str())) {
 					df.reject();
@@ -4691,7 +4681,7 @@ promise::Promise Operations::projectStop(Window*, Renderer*, Workspace* ws) {
 
 promise::Promise Operations::projectReload(Window* wnd, Renderer* rnd, Workspace* ws, Project::Ptr &prj, const char* fontConfigPath) {
 	const std::string fontConfigPath_ = fontConfigPath;
-	const std::string &path = prj->path();
+	const std::string path = prj->path();
 	const Workspace::Categories cat = ws->category();
 	const int page = ws->currentAssetPage();
 

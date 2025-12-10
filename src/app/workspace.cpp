@@ -4085,7 +4085,9 @@ void Workspace::closeSearchResult(void) {
 	}
 }
 
-void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd) {
+void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd, const char* prompt) {
+#define WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX 1
+
 	ImGui::InstalledKernelsPopupBox::ConfirmedHandler confirm(
 		[this] (void) -> void {
 			popupBox(nullptr);
@@ -4096,26 +4098,40 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd) {
 		[wnd, rnd, this] (void) -> void {
 			Operations::kernelInstall(wnd, rnd, this)
 				.then(
-					[wnd, rnd, this] (bool /* ok */) -> void { // Installed.
+					[wnd, rnd, this] (std::string result) -> void { // Installed.
 						clearLanguageDefinition(true);
 
-						showInstalledKernels(wnd, rnd);
+#if WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX
+						ImGui::MessagePopupBox::ConfirmedHandler confirm = ImGui::MessagePopupBox::ConfirmedHandler(
+							[wnd, rnd, this] (void) -> void {
+								showInstalledKernels(wnd, rnd, nullptr);
+							},
+							nullptr
+						);
+						messagePopupBox(result, confirm, nullptr, nullptr);
+#else /* WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX */
+						showInstalledKernels(wnd, rnd, result.c_str());
+#endif /* WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX */
 					}
 				)
 				.fail(
 					[wnd, rnd, this] (std::string reason) -> void { // Error occurred.
+#if WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX
 						ImGui::MessagePopupBox::ConfirmedHandler confirm = ImGui::MessagePopupBox::ConfirmedHandler(
 							[wnd, rnd, this] (void) -> void {
-								showInstalledKernels(wnd, rnd);
+								showInstalledKernels(wnd, rnd, nullptr);
 							},
 							nullptr
 						);
 						messagePopupBox(reason, confirm, nullptr, nullptr);
+#else /* WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX */
+						showInstalledKernels(wnd, rnd, reason.c_str());
+#endif /* WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX */
 					}
 				)
 				.fail(
 					[wnd, rnd, this] (void) -> void { // User canceled.
-						showInstalledKernels(wnd, rnd);
+						showInstalledKernels(wnd, rnd, nullptr);
 					}
 				);
 		},
@@ -4125,8 +4141,20 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd) {
 		[wnd, rnd, this] (int idx) -> void {
 			Operations::kernelUninstall(wnd, rnd, this, idx)
 				.then(
-					[this] (bool /* ok */) -> void {
+					[wnd, rnd, this] (std::string result) -> void {
 						clearLanguageDefinition(true);
+
+#if WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX
+						ImGui::MessagePopupBox::ConfirmedHandler confirm = ImGui::MessagePopupBox::ConfirmedHandler(
+							[wnd, rnd, this] (void) -> void {
+								showInstalledKernels(wnd, rnd, nullptr);
+							},
+							nullptr
+						);
+						messagePopupBox(result, confirm, nullptr, nullptr);
+#else /* WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX */
+						showInstalledKernels(wnd, rnd, result.c_str());
+#endif /* WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX */
 					}
 				);
 		},
@@ -4140,7 +4168,7 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd) {
 			new ImGui::InstalledKernelsPopupBox(
 				rnd,
 				theme(),
-				theme()->windowInstalledKernels(),
+				theme()->windowInstalledKernels(), prompt,
 				kernels(),
 				confirm, add, remove,
 				theme()->generic_Ok().c_str(), theme()->generic_Install().c_str(), theme()->generic_Uninstall().c_str(),
@@ -4148,6 +4176,8 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd) {
 			)
 		)
 	);
+
+#undef WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX
 }
 
 void Workspace::showPreferences(Window* wnd, Renderer* rnd, const char* tab) {
@@ -8059,7 +8089,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 #endif /* Platform macro. */
 			ImGui::Separator();
 			if (ImGui::MenuItem(theme()->menu_Kernels())) {
-				showInstalledKernels(wnd, rnd);
+				showInstalledKernels(wnd, rnd, nullptr);
 			}
 			if (ImGui::MenuItem(theme()->menu_Preferences())) {
 				showPreferences(wnd, rnd, nullptr);
@@ -9727,7 +9757,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 		if (showRecentProjects()) {
 			if (!docOpened) {
 				if (ImGui::MenuBarImageButton(theme()->iconKernels()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_InstalledKernels().c_str())) {
-					showInstalledKernels(wnd, rnd);
+					showInstalledKernels(wnd, rnd, nullptr);
 				}
 				width += ImGui::GetItemRectSize().x;
 				if (settings().recentIconView) {

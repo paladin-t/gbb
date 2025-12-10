@@ -899,7 +899,7 @@ public:
 	void showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bool isOpened);
 	void showSearchResult(const std::string &pattern, const Editing::Tools::SearchResult::Array &found);
 	void closeSearchResult(void);
-	void showInstalledKernels(Window* wnd, Renderer* rnd);
+	void showInstalledKernels(Window* wnd, Renderer* rnd, const char* prompt /* nullable */);
 	void showPreferences(Window* wnd, Renderer* rnd, const char* tab /* nullable */);
 	void showActivities(Renderer* rnd);
 	void showAbout(Renderer* rnd);

@@ -577,7 +577,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Index("Index");
 	dialogPrompt_InitialOffset("Initial offset");
 	dialogPrompt_InitialVolume("Initial volume");
-	dialogPrompt_Installed("Installed.");
+	dialogPrompt_InstalledKernel("Installed kernel \"{0}\".");
 	dialogPrompt_Installing("Installing...");
 	dialogPrompt_Interval("Interval");
 	dialogPrompt_InvalidBorderImageSize256x224pxRequired("Invalid border image size,\n256x224px required");
@@ -634,6 +634,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_RemovedUnreferencedActorRoutineOverriding("Removed unreferenced actor routine overriding");
 	dialogPrompt_RenamedProject("Renamed project");
 	dialogPrompt_Rendering("Rendering...");
+	dialogPrompt_ReplacedKernel("Replaced kernel \"{0}\".");
 	dialogPrompt_ResourceSizeIsNotAMultipleOf8x8("Resource size is not a multiple of 8x8");
 	dialogPrompt_ResourceSizeOutOfBounds("Resource size out of bounds");
 	dialogPrompt_Routines("Routines");
@@ -672,6 +673,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_TilesPage("Tiles page");
 	dialogPrompt_TooManyColors("Too many colors");
 	dialogPrompt_Trim("Trim");
+	dialogPrompt_UninstalledKernel("Uninstalled kernel \"{0}\".");
 	dialogPrompt_UnsupportedOperation("Unsupported operation.");
 	dialogPrompt_UseGravity("Use gravity");
 	dialogPrompt_UsePan("Use pan");
