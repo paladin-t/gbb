@@ -4096,7 +4096,7 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd) {
 		[wnd, rnd, this] (void) -> void {
 			Operations::kernelInstall(wnd, rnd, this)
 				.then(
-					[wnd, rnd, this] (bool /* ok */) -> void {
+					[wnd, rnd, this] (bool /* ok */) -> void { // Installed.
 						clearLanguageDefinition(true);
 
 						showInstalledKernels(wnd, rnd);

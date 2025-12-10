@@ -3954,18 +3954,6 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 			return;
 		}
 
-		// Check whether the kernel has been already installed.
-		const int existingKernel = ws->getKernelIndex(kernelId);
-		if (existingKernel >= 0) {
-			arc->close();
-
-			df.reject(std::string(Text::format(ws->theme()->dialogPrompt_KernelError_AKernelWithIdAlreadyExists(), { kernelId })));
-
-			fprintf(stdout, "  A kernel with ID \"%s\" already exists.\n", kernelId.c_str());
-
-			return;
-		}
-
 		// Validate the content.
 		const bool entriesExist =
 			!kernelId.empty() &&
@@ -3982,48 +3970,116 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 			return;
 		}
 
-		// Install the kernel.
-		const std::string writableDir = Path::writableDirectory();
-		const std::string userPath = Path::combine(writableDir.c_str(), KERNEL_USER_BINARIES_DIR);
-		const std::string subDir = Text::sanitizeFilename(kernelId);
-		const std::string kernelDir = Path::combine(userPath.c_str(), subDir.c_str());
+		// The installers.
+		auto install = [ws, arc, kernelId] (promise::Defer df) -> void {
+			// Install the kernel.
+			const std::string writableDir = Path::writableDirectory();
+			const std::string userPath = Path::combine(writableDir.c_str(), KERNEL_USER_BINARIES_DIR);
+			const std::string subDir = Text::sanitizeFilename(kernelId);
+			const std::string kernelDir = Path::combine(userPath.c_str(), subDir.c_str());
 
-		if (!Path::touchDirectory(kernelDir.c_str())) {
+			if (!Path::touchDirectory(kernelDir.c_str())) {
+				arc->close();
+
+				df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotCreateKernelDirectory()));
+
+				fprintf(stdout, "  Cannot create kernel directory.\n");
+
+				return;
+			}
+
+			if (!arc->toDirectory(kernelDir.c_str())) {
+				arc->close();
+
+				df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotInstallKernelFiles()));
+
+				fprintf(stdout, "  Cannot install kernel files.\n");
+
+				return;
+			}
+
+			arc->close(); // Nothing to do with the archive now.
+
+			// Load the installed kernel into workspace.
+			ws->reloadKernels();
+
+			// Refresh the active kernel if a project is being opened.
+			const Project::Ptr &prj = ws->currentProject();
+			if (prj) {
+				const int idx = ws->getKernelIndex(kernelId);
+				ws->activeKernelIndex(idx);
+			}
+
+			// Finish.
+			fprintf(stdout, "End installing kernel \"%s\".\n", kernelId.c_str());
+
+			df.resolve(true);
+		};
+		auto ignore = [ws, arc, kernelId] (promise::Defer df) -> void {
 			arc->close();
 
-			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotCreateKernelDirectory()));
+			df.reject(std::string(Text::format(ws->theme()->dialogPrompt_KernelError_AKernelWithIdAlreadyExists(), { kernelId })));
 
-			fprintf(stdout, "  Cannot create kernel directory.\n");
+			fprintf(stdout, "  A kernel with ID \"%s\" already exists.\n", kernelId.c_str());
+		};
 
-			return;
+		// Check whether the kernel has been already installed.
+		const int existingKernel = ws->getKernelIndex(kernelId);
+		if (existingKernel >= 0) {
+			const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[existingKernel];
+
+			if (krnl->readonly()) {
+				ignore(df);
+			} else {
+				const std::string q = (Text::format(ws->theme()->dialogAsk_KernelQuestion_AKernelWithIdAlreadyExistsOverwrite(), { kernelId }));
+
+				popupMessage(wnd, rnd, ws, q.c_str(), true, false)
+					.then(
+						[wnd, rnd, ws, df, install] (bool ok) -> void {
+							WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+							if (ok) {
+								install(df);
+
+								fprintf(stdout, "Overwritten kernel.\n");
+
+								popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_Installed().c_str(), false, false)
+									.then(
+										[wnd, rnd, ws] (bool) -> void {
+											WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+											ws->showInstalledKernels(wnd, rnd);
+										}
+									);
+							} else {
+								df.reject();
+
+								fprintf(stdout, "Canceled to overwrite kernel.\n");
+							}
+						}
+					)
+					.fail(
+						[ws, df] (void) -> void {
+							WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+							df.reject();
+
+							fprintf(stdout, "Canceled to overwrite kernel.\n");
+						}
+					);
+			}
+		} else {
+			install(df);
+
+			popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_Installed().c_str(), false, false)
+				.always(
+					[wnd, rnd, ws] (void) -> void {
+						WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+						ws->showInstalledKernels(wnd, rnd);
+					}
+				);
 		}
-
-		if (!arc->toDirectory(kernelDir.c_str())) {
-			arc->close();
-
-			df.reject(std::string(ws->theme()->dialogPrompt_KernelError_CannotInstallKernelFiles()));
-
-			fprintf(stdout, "  Cannot install kernel files.\n");
-
-			return;
-		}
-
-		arc->close(); // Nothing to do with the archive now.
-
-		// Load the installed kernel into workspace.
-		ws->reloadKernels();
-
-		// Refresh the active kernel a project is being opened.
-		const Project::Ptr &prj = ws->currentProject();
-		if (prj) {
-			const int idx = ws->getKernelIndex(kernelId);
-			ws->activeKernelIndex(idx);
-		}
-
-		// Finish.
-		fprintf(stdout, "End installing kernel \"%s\".\n", kernelId.c_str());
-
-		df.resolve(true);
 	};
 
 	return promise::newPromise(
@@ -4049,7 +4105,7 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 			if (fileName.empty())
 				continue;
 
-			const std::string &path = krnl->path();
+			const std::string path = krnl->path();
 			std::string dir;
 			Path::split(path, nullptr, nullptr, &dir);
 			const std::string fullPath_ = Path::combine(dir.c_str(), fileName.c_str());
@@ -4094,11 +4150,12 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 		[&] (promise::Defer df) -> void {
 			const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[index];
 
-			const std::string &path = krnl->path();
+			const std::string id = krnl->id();
+			const std::string path = krnl->path();
 			std::string dir;
 			Path::split(path, nullptr, nullptr, &dir);
 
-			fprintf(stdout, "Begin uninstalling kernel \"%s\".\n", krnl->id().c_str());
+			fprintf(stdout, "Begin uninstalling kernel \"%s\".\n", id.c_str());
 
 			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> std::string { return krnl->kernelRom(); });
 			uninstall(krnl, dir, [] (const GBBASIC::Kernel::Ptr &krnl) -> std::string { return krnl->kernelSymbols(); });
@@ -4120,7 +4177,7 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 			if (ws->activeKernelIndex() == index)
 				ws->activeKernelIndex(0);
 
-			fprintf(stdout, "End uninstalling kernel \"%s\".\n", krnl->id().c_str());
+			fprintf(stdout, "End uninstalling kernel \"%s\".\n", id.c_str());
 
 			df.resolve(true);
 		}

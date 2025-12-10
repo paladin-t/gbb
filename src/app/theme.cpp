@@ -577,6 +577,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Index("Index");
 	dialogPrompt_InitialOffset("Initial offset");
 	dialogPrompt_InitialVolume("Initial volume");
+	dialogPrompt_Installed("Installed.");
 	dialogPrompt_Installing("Installing...");
 	dialogPrompt_Interval("Interval");
 	dialogPrompt_InvalidBorderImageSize256x224pxRequired("Invalid border image size,\n256x224px required");
@@ -714,6 +715,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogAsk_RemoveTheCurrentAssetPage("Remove the current asset page?");
 	dialogAsk_RemoveTheCurrentProject("Remove the current project?");
 	dialogAsk_SaveTheCurrentProject("Save the current project?");
+	dialogAsk_KernelQuestion_AKernelWithIdAlreadyExistsOverwrite("A kernel with ID \"{0}\" already exists.\nOverwrite?");
 	dialogInput_Input("Input");
 	dialogInput_ProjectName("Project name:");
 	dialogProjectCreating_Kernel("Kernel:");
