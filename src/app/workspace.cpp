@@ -8148,11 +8148,13 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			if (ImGui::MenuItem(theme()->menu_StopRecording(), "F8", nullptr, recorder()->recording())) {
 				recorder()->stop();
 			}
-#endif /* Platform macro. */
 			ImGui::Separator();
+#endif /* Platform macro. */
+#if WORKSPACE_KERNEL_INSTALLER_ENABLED
 			if (ImGui::MenuItem(theme()->menu_Kernels())) {
 				showInstalledKernels(wnd, rnd, nullptr);
 			}
+#endif /* WORKSPACE_KERNEL_INSTALLER_ENABLED */
 			if (ImGui::MenuItem(theme()->menu_Preferences())) {
 				showPreferences(wnd, rnd, nullptr);
 			}
@@ -9818,10 +9820,12 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 	case Categories::HOME:
 		if (showRecentProjects()) {
 			if (!docOpened) {
+#if WORKSPACE_KERNEL_INSTALLER_ENABLED
 				if (ImGui::MenuBarImageButton(theme()->iconKernels()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_InstalledKernels().c_str())) {
 					showInstalledKernels(wnd, rnd, nullptr);
 				}
 				width += ImGui::GetItemRectSize().x;
+#endif /* WORKSPACE_KERNEL_INSTALLER_ENABLED */
 				if (settings().recentIconView) {
 					if (ImGui::MenuBarImageButton(theme()->iconListView()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_ListView().c_str())) {
 						settings().recentIconView = false;
@@ -9836,6 +9840,15 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					}
 				}
 				width += ImGui::GetItemRectSize().x;
+			}
+		} else {
+			if (!docOpened) {
+#if WORKSPACE_KERNEL_INSTALLER_ENABLED
+				if (ImGui::MenuBarImageButton(theme()->iconKernels()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_InstalledKernels().c_str())) {
+					showInstalledKernels(wnd, rnd, nullptr);
+				}
+				width += ImGui::GetItemRectSize().x;
+#endif /* WORKSPACE_KERNEL_INSTALLER_ENABLED */
 			}
 		}
 		if (docOpened) {
