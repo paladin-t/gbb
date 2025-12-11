@@ -4644,10 +4644,28 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 			BeginChild("@Kr", ImVec2(width - style.WindowPadding.x * 1.7f, height), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
 			{
 				const GBBASIC::Kernel::Array &kernels = ws->kernels();
+				if (_kernelTitles.size() != kernels.size()) {
+					_kernelTitles.clear();
+
+					for (int i = 0; i < (int)kernels.size(); ++i) {
+						const GBBASIC::Kernel::Ptr &krnl = kernels[i];
+						const Localization::Dictionary &name = krnl->title();
+						const char* title = Localization::get(name);
+						if (!title)
+							title = "Unnamed";
+						const int used = ws->getKernelUsedCountByProjects(i);
+						const std::string title_ = Text::format(
+							_theme->windowInstalledKernels_KernelTitleUsed(),
+							{
+								std::string(title), Text::toString(used)
+							}
+						);
+						_kernelTitles.push_back(title_);
+					}
+					_kernelTitles.shrink_to_fit();
+				}
 				for (int i = 0; i < (int)kernels.size(); ++i) {
 					const GBBASIC::Kernel::Ptr &krnl = kernels[i];
-					const Localization::Dictionary &name = krnl->title();
-					const char* title = Localization::get(name);
 					const Localization::Dictionary &desc = krnl->description();
 					const char* tooltip = Localization::get(desc);
 
@@ -4658,11 +4676,57 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 						const ImVec2 spos = GetCursorScreenPos();
 						const ImVec2 pos = GetCursorPos();
 						const ImVec2 size(width - style.ChildBorderSize - style.ScrollbarSize - style.WindowPadding.x, 19.0f);
+						const float buttonPos = width - style.WindowPadding.x * 1.7f - 13 * 6 - 3;
 						Dummy(
 							size,
 							GetStyleColorVec4(IsMouseHoveringRect(spos, spos + size) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg)
 						);
 						SetCursorPos(pos);
+
+						AlignTextToFramePadding();
+						TextUnformatted(_kernelTitles[i]);
+						SameLine();
+
+						if (tooltip && *tooltip && IsMouseHoveringRect(spos, spos + ImVec2(buttonPos, 19.0f))) {
+							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+							SetTooltip(tooltip);
+						}
+
+						SetCursorPosX(buttonPos);
+
+						Dummy(ImVec2(4, 0));
+						SameLine();
+
+						if (krnl->url().empty()) {
+							BeginDisabled();
+							{
+								ImageButton(_theme->iconExternal()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_Url().c_str());
+							}
+							EndDisabled();
+						} else {
+							if (ImageButton(_theme->iconExternal()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_Url().c_str())) {
+								const std::string osstr = Unicode::toOs(krnl->url());
+
+								Platform::surf(osstr.c_str());
+							}
+						}
+						SameLine();
+
+						if (_ejectSourceCode) {
+							if (krnl->kernelSourceCode().empty()) {
+								BeginDisabled();
+								{
+									ImageButton(_theme->iconCode()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_EjectSourceCodeVm().c_str());
+								}
+								EndDisabled();
+							} else {
+								if (ImageButton(_theme->iconCode()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_EjectSourceCodeVm().c_str())) {
+									_ejectSourceCode(i);
+								}
+							}
+							SameLine();
+						}
 
 						if (krnl->readonly()) {
 							BeginDisabled();
@@ -4692,19 +4756,6 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 								}
 							}
 						}
-						SameLine();
-
-						Dummy(ImVec2(4, 0));
-						SameLine();
-
-						AlignTextToFramePadding();
-						TextUnformatted(title);
-
-						if (tooltip && *tooltip && IsMouseHoveringRect(spos, spos + ImVec2(width - style.WindowPadding.x * 1.7f, 19.0f))) {
-							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
-
-							SetTooltip(tooltip);
-						}
 					}
 					PopID();
 				}
@@ -4716,7 +4767,7 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 				const Localization::Dictionary &name = krnl->title();
 				const char* title = Localization::get(name);
 
-				Text(_theme->dialogPrompt_ClickAgainToUninstall().c_str(), title);
+				Text(_theme->WindowInstalledKernels_ClickAgainToUninstall().c_str(), title);
 
 				if (!_promptText.empty())
 					_promptText.clear();
@@ -4728,18 +4779,11 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 
 			NewLine(2);
 
-			if (_ejectSourceCode) {
-				if (Url(_theme->menu_EjectVm().c_str(), nullptr))
-					_ejectSourceCode();
-				SameLine();
-				Dummy(ImVec2(14, 0));
-				SameLine();
-			}
-			Url(_theme->menu_GitHub().c_str(), "https://github.com/paladin-t/gbb/tree/main/src/vm");
+			Url(_theme->menu_Howto().c_str(), "https://paladin-t.github.io/kits/gbb/learn/creating-a-custom-kernel.html");
 			SameLine();
 			Dummy(ImVec2(14, 0));
 			SameLine();
-			Url(_theme->menu_Howto().c_str(), "https://paladin-t.github.io/kits/gbb/learn/creating-a-custom-kernel.html");
+			Url(_theme->menu_GitHub().c_str(), "https://github.com/paladin-t/gbb/tree/main/src/vm");
 
 			NewLine(3);
 		}
@@ -4787,11 +4831,19 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 	if (toAdd) {
 		_init.reset();
 
+		_kernelTitles.clear();
+		_promptText.clear();
+		_tobeUninstalledKernelIndex = -1;
+
 		if (!_addedHandler.empty()) {
 			_addedHandler();
 		}
 	}
 	if (toRemove >= 1) {
+		_kernelTitles.clear();
+		_promptText.clear();
+		_tobeUninstalledKernelIndex = -1;
+
 		if (!_removedHandler.empty()) {
 			_removedHandler(toRemove);
 		}

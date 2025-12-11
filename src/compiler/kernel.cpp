@@ -86,6 +86,7 @@ bool Kernel::open(const char* path_) {
 	std::string id_;
 	Localization::Dictionary title_;
 	Localization::Dictionary description_;
+	std::string url_;
 	std::string kernelRom_;
 	std::string kernelSymbols_;
 	std::string kernelAliases_;
@@ -106,42 +107,45 @@ bool Kernel::open(const char* path_) {
 	const std::string abspath0 = Path::absoluteOf(path_);
 	readonly_ = !Path::isParentOf(absdir0.c_str(), abspath0.c_str());
 
-	if (!Jpath::get(doc, id_, "id"))
+	if (!Jpath::get(doc, id_, "id")) // Required.
 		return false;
 
 	rapidjson::Value* val = nullptr;
-	if (!Jpath::get(doc, val, "title") || !val)
+	if (!Jpath::get(doc, val, "title") || !val) // Required.
 		return false;
 	if (!Localization::parse(title_, *val))
 		return false;
 
 	val = nullptr;
-	if (!Jpath::get(doc, val, "description") || !val)
+	if (!Jpath::get(doc, val, "description") || !val) // Required.
 		return false;
 	if (!Localization::parse(description_, *val))
 		return false;
 	Localization::transform(description_, [] (Platform::Languages, std::string &txt) -> void { Text::replace(txt, "\\n", "\n"); });
 
-	if (!Jpath::get(doc, kernelRom_, "kernel", "rom"))
+	if (!Jpath::get(doc, url_, "url"))
+		url_ = "";
+
+	if (!Jpath::get(doc, kernelRom_, "kernel", "rom")) // Required.
 		return false;
-	if (!Jpath::get(doc, kernelSymbols_, "kernel", "symbols"))
+	if (!Jpath::get(doc, kernelSymbols_, "kernel", "symbols")) // Required.
 		return false;
 	if (!Jpath::get(doc, kernelAliases_, "kernel", "aliases"))
-		return false;
+		kernelAliases_ = "";
 	if (!Jpath::get(doc, kernelSourceCode_, "kernel", "source_code"))
-		return false;
+		kernelSourceCode_ = "";
 
-	if (!Jpath::get(doc, bootstrapBank_, "bootstrap", "bank"))
+	if (!Jpath::get(doc, bootstrapBank_, "bootstrap", "bank")) // Required.
 		return false;
 
 	if (!Jpath::get(doc, memoryHeapSize_, "memory", "heap_size"))
-		return false;
+		memoryHeapSize_ = KERNEL_DEFAULT_HEAP_SIZE;
 	if (!Jpath::get(doc, memoryStackSize_, "memory", "stack_size"))
-		return false;
+		memoryStackSize_ = KERNEL_DEFAULT_STACK_SIZE;
 
-	if (!Jpath::get(doc, objectsMaxActorCount_, "objects", "mac_actor_count"))
+	if (!Jpath::get(doc, objectsMaxActorCount_, "objects", "max_actor_count"))
 		objectsMaxActorCount_ = ASSETS_ACTOR_MAX_COUNT;
-	if (!Jpath::get(doc, objectsMaxTriggerCount_, "objects", "mac_trigger_count"))
+	if (!Jpath::get(doc, objectsMaxTriggerCount_, "objects", "max_trigger_count"))
 		objectsMaxTriggerCount_ = ASSETS_TRIGGER_MAX_COUNT;
 
 	if (Jpath::has(doc, "snippets")) {
@@ -292,6 +296,7 @@ bool Kernel::open(const char* path_) {
 	id(id_);
 	title(title_);
 	description(description_);
+	url(url_);
 	kernelRom(kernelRom_);
 	kernelSymbols(kernelSymbols_);
 	kernelAliases(kernelAliases_);
@@ -324,6 +329,7 @@ bool Kernel::close(void) {
 	entry().clear();
 	title().clear();
 	description().clear();
+	url().clear();
 	kernelRom().clear();
 	kernelSymbols().clear();
 	kernelAliases().clear();

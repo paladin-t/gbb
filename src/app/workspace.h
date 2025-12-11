@@ -507,7 +507,7 @@ public:
 
 	GBBASIC_PROPERTY(GBBASIC::Kernel::Array, kernels)
 	GBBASIC_PROPERTY_READONLY(int, activeKernelIndex)
-	GBBASIC_PROPERTY_READONLY(bool, hasKernelSourceCode)
+	GBBASIC_PROPERTY_READONLY(bool, hasDefaultKernelSourceCode)
 
 	GBBASIC_PROPERTY(Exporter::Array, exporters)
 	GBBASIC_PROPERTY(std::string, exporterLicenses)
@@ -651,6 +651,7 @@ public:
 
 	int getKernelIndex(const std::string &id) const;
 	const std::string* getKernelId(int index) const;
+	int getKernelUsedCountByProjects(int index) const;
 	GBBASIC::Kernel::Ptr activeKernel(void) const;
 	std::string serializeKernelBehaviour(int val) const;
 	int parseKernelBehaviour(const std::string &id) const;
@@ -903,8 +904,8 @@ public:
 	void showPreferences(Window* wnd, Renderer* rnd, const char* tab /* nullable */);
 	void showActivities(Renderer* rnd);
 	void showAbout(Renderer* rnd);
-	std::string getSourceCodePath(std::string* name /* nullable */) const;
-	void ejectSourceCode(Window* wnd, Renderer* rnd, bool wait);
+	std::string getSourceCodePath(int index, std::string* name /* nullable */) const;
+	void ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait);
 	void toggleDocument(const char* path /* nullable */);
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED

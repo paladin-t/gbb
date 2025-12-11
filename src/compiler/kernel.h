@@ -36,6 +36,13 @@
 #	define KERNEL_BEHAVIOUR_TYPE_PLAYER "player"
 #endif /* KERNEL_BEHAVIOUR_TYPE_PLAYER */
 
+#ifndef KERNEL_DEFAULT_HEAP_SIZE
+#	define KERNEL_DEFAULT_HEAP_SIZE "1024" /* In words. */
+#endif /* KERNEL_DEFAULT_HEAP_SIZE */
+#ifndef KERNEL_DEFAULT_STACK_SIZE
+#	define KERNEL_DEFAULT_STACK_SIZE "64" /* In words. Per thread. */
+#endif /* KERNEL_DEFAULT_STACK_SIZE */
+
 /* ===========================================================================} */
 
 /*
@@ -95,6 +102,7 @@ public:
 	GBBASIC_PROPERTY(Entry, entry)
 	GBBASIC_PROPERTY(Localization::Dictionary, title)
 	GBBASIC_PROPERTY(Localization::Dictionary, description)
+	GBBASIC_PROPERTY(std::string, url)
 	GBBASIC_PROPERTY(std::string, kernelRom)
 	GBBASIC_PROPERTY(std::string, kernelSymbols)
 	GBBASIC_PROPERTY(std::string, kernelAliases)

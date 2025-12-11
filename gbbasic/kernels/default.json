@@ -6,6 +6,7 @@
   "description": {
     "english": "The official default kernel.\nImplements Platformer, Top-down,\nand Point&Click controllers.\nSuitable for most game projects."
   },
+  "url": "https://github.com/paladin-t/gbb/tree/main/src/vm",
   "kernel": {
     "rom": "gbbvm.gb",
     "symbols": "gbbvm.sym",
@@ -20,8 +21,8 @@
     "stack_size": "64"
   },
   "objects": {
-    "mac_actor_count": 21,
-    "mac_trigger_count": 31
+    "max_actor_count": 21,
+    "max_trigger_count": 31
   },
   "snippets": [
     {

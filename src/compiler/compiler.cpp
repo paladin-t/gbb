@@ -209,7 +209,7 @@ namespace GBBASIC {
 /**< Conventions. */
 
 #ifndef ROM_MAX_SIZE
-#	define ROM_MAX_SIZE (4 * 1024 * 1024) // DOC: CARTRIDGE SCHEMA.
+#	define ROM_MAX_SIZE (1024 * 1024 * 4) // DOC: CARTRIDGE SCHEMA.
 #endif /* ROM_MAX_SIZE */
 #ifndef BANK_SIZE
 #	define BANK_SIZE 0x4000 // DOC: CARTRIDGE SCHEMA.
@@ -794,7 +794,7 @@ typedef UInt16 UWord;
 static constexpr const int UWORD_SIZE = sizeof(UWord);
 static_assert(UWORD_SIZE == 2, "Wrong type.");
 
-static constexpr const int RAM_SIZE = 8 * 1024;
+static constexpr const int RAM_SIZE = 1024 * 8;
 
 }
 
@@ -3875,7 +3875,7 @@ public:
 		typedef RamLocation::Dictionary Dictionary;
 
 	private:
-		mutable Byte RAM[RAM_SIZE]; // Up to 8KB.
+		mutable Byte RAM[RAM_SIZE * 2]; // Up to 8KB, doubled so that it's sufficient for even overflow allocation attempts.
 
 		// Stores "ID" to "RAM address" mapping.
 		Dictionary _dictionary;
@@ -3937,12 +3937,18 @@ public:
 			return ret.second;
 		}
 		int allocate(int heapSize, int wordSize, int expSize) const {
-			memset(RAM, 0, heapSize);
+			if (heapSize > sizeof(RAM)) {
+				GBBASIC_ASSERT(false && "Wrong data.");
+
+				return -1;
+			}
+
+			memset(RAM, 0, heapSize); // Mark as not occupied.
 			for (const Dictionary::value_type &kv : _dictionary) {
 				const RamLocation &ramLocation = kv.second;
 				for (int i = 0; i < ramLocation.size; ++i) {
 					const int address = ramLocation.address * wordSize + i;
-					RAM[address] = COMPILER_INVALID_INSTRUCTION;
+					RAM[address] = COMPILER_INVALID_INSTRUCTION; // Mark as occupied.
 				}
 			}
 
@@ -3953,7 +3959,7 @@ public:
 
 				bool occupied = false;
 				for (int j = 0; j < expSize; ++j) {
-					if (RAM[i + j] != 0) {
+					if (RAM[i + j] != 0) { // Already occupied.
 						occupied = true;
 
 						break;

@@ -985,15 +985,16 @@ public:
 		using Handler::Handler;
 	};
 
-	typedef std::function<void(void)> SourceCodeEjectingHandler;
+	typedef std::function<void(int)> SourceCodeEjectingHandler;
 
 private:
 	Renderer* _renderer = nullptr; // Foreign.
 	Theme* _theme = nullptr; // Foreign.
 	std::string _title;
 	GBBASIC::Kernel::Array &_kernels; // Foreign.
-	int _tobeUninstalledKernelIndex = -1;
+	Text::Array _kernelTitles;
 	std::string _promptText;
+	int _tobeUninstalledKernelIndex = -1;
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;

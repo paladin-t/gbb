@@ -507,7 +507,7 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 	splashCustomized(false);
 
 	activeKernelIndex(-1);
-	hasKernelSourceCode(false);
+	hasDefaultKernelSourceCode(false);
 
 	exampleCount(0);
 
@@ -829,6 +829,23 @@ const std::string* Workspace::getKernelId(int index) const {
 	const GBBASIC::Kernel::Ptr &krnl = kernels()[index];
 
 	return &krnl->id();
+}
+
+int Workspace::getKernelUsedCountByProjects(int index) const {
+	if (index < 0 || index >= (int)kernels().size())
+		return 0;
+
+	const GBBASIC::Kernel::Ptr &krnl = kernels()[index];
+	const std::string &id = krnl->id();
+
+	int result = 0;
+	for (int i = 0; i < (int)projects().size(); ++i) {
+		const Project::Ptr &prj = projects()[i];
+		if (prj->kernel() == id)
+			++result;
+	}
+
+	return result;
 }
 
 GBBASIC::Kernel::Ptr Workspace::activeKernel(void) const {
@@ -4160,9 +4177,8 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd, const char* pro
 		},
 		nullptr
 	);
-	ImGui::InstalledKernelsPopupBox::SourceCodeEjectingHandler ejectSourceCode = nullptr;
-	if (hasKernelSourceCode())
-		ejectSourceCode = std::bind(&Workspace::ejectSourceCode, this, wnd, rnd, false);
+	ImGui::InstalledKernelsPopupBox::SourceCodeEjectingHandler ejectSourceCode =
+		std::bind(&Workspace::ejectSourceCode, this, wnd, rnd, std::placeholders::_1, false);
 	popupBox(
 		ImGui::PopupBox::Ptr(
 			new ImGui::InstalledKernelsPopupBox(
@@ -4332,14 +4348,17 @@ void Workspace::showAbout(Renderer* rnd) {
 	);
 }
 
-std::string Workspace::getSourceCodePath(std::string* name_) const {
+std::string Workspace::getSourceCodePath(int index, std::string* name_) const {
 	if (name_)
 		name_->clear();
 
 	if (kernels().empty())
 		return "";
 
-	const std::string &krnlPath = kernels().front()->kernelSourceCode();
+	if (index < 0 || index >= (int)kernels().size())
+		return "";
+
+	const std::string &krnlPath = kernels()[index]->kernelSourceCode();
 	std::string name;
 	Path::split(krnlPath, &name, nullptr, nullptr);
 
@@ -4351,7 +4370,7 @@ std::string Workspace::getSourceCodePath(std::string* name_) const {
 	return src;
 }
 
-void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, bool wait) {
+void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait) {
 	if (kernels().empty()) {
 		const std::string msg = "Cannot find valid kernel.";
 		error(msg.c_str());
@@ -4360,7 +4379,7 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, bool wait) {
 	}
 
 	std::string name;
-	const std::string src = getSourceCodePath(&name);
+	const std::string src = getSourceCodePath(index, &name);
 	if (!Path::fileExists(src.c_str())) {
 		const std::string msg = "Cannot find source code \"" + src + "\".";
 		error(msg.c_str());
@@ -6204,8 +6223,8 @@ void Workspace::loadKernels(void) {
 
 	activeKernelIndex(0);
 
-	const std::string src = getSourceCodePath(nullptr);
-	hasKernelSourceCode(Path::fileExists(src.c_str()));
+	const std::string src = getSourceCodePath(0, nullptr);
+	hasDefaultKernelSourceCode(Path::fileExists(src.c_str()));
 }
 
 void Workspace::unloadKernels(void) {
@@ -8274,10 +8293,10 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					}
 				}
 			}
-			if (hasKernelSourceCode()) {
+			if (hasDefaultKernelSourceCode()) {
 				ImGui::Separator();
 				if (ImGui::MenuItem(theme()->menu_EjectSourceCodeVm())) {
-					ejectSourceCode(wnd, rnd, true);
+					ejectSourceCode(wnd, rnd, 0, true);
 				}
 			}
 			ImGui::Separator();

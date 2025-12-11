@@ -163,7 +163,6 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Download)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Duplicate)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_EjectSourceCodeVm)
-	GBBASIC_PROPERTY_READONLY(std::string, menu_EjectVm)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Examples)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_ExportSelection)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Find)
@@ -317,7 +316,6 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotUseThisImage)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Checking)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ClearedProjects)
-	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ClickAgainToUninstall)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ClickToPut)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ClimbVelocity)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CollisionGroup)
@@ -609,6 +607,8 @@ public:
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowInstalledKernels)
 	GBBASIC_PROPERTY_READONLY(std::string, windowInstalledKernels_Kernels)
+	GBBASIC_PROPERTY_READONLY(std::string, windowInstalledKernels_KernelTitleUsed)
+	GBBASIC_PROPERTY_READONLY(std::string, WindowInstalledKernels_ClickAgainToUninstall)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowCreateProject)
 
@@ -726,6 +726,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_Compiling)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_Delete)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_DeleteFrame)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltip_EjectSourceCodeVm)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_Export)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ForAlignToTileMovementForControllers)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ForAutoAlignToTileMovementForControllers)
@@ -768,6 +769,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_Space)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_SplitEditor)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_Threaded)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltip_Url)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_UseByteMatrixViewOnTheToolbar)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ViaClipboard)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ViaClipboardForTheCurrentFrameOnly)
@@ -1041,6 +1043,7 @@ public:
 	GBBASIC_PROPERTY_PTR(class Texture, iconUndo)
 	GBBASIC_PROPERTY_PTR(class Texture, iconImport)
 	GBBASIC_PROPERTY_PTR(class Texture, iconExport)
+	GBBASIC_PROPERTY_PTR(class Texture, iconExternal)
 	GBBASIC_PROPERTY_PTR(class Texture, iconDownload)
 	GBBASIC_PROPERTY_PTR(class Texture, iconViews)
 

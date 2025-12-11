@@ -363,7 +363,6 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Download("Download");
 	menu_Duplicate("Duplicate");
 	menu_EjectSourceCodeVm("Eject Source Code (VM)...");
-	menu_EjectVm("Eject VM");
 	menu_Examples("Examples");
 	menu_ExportSelection("Export Selection");
 	menu_Find("Find");
@@ -517,7 +516,6 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_CannotUseThisImage("Cannot use this image");
 	dialogPrompt_Checking("Checking...");
 	dialogPrompt_ClearedProjects("Cleared projects");
-	dialogPrompt_ClickAgainToUninstall("Click again to uninstall \"%s\"");
 	dialogPrompt_ClickToPut("Click to put");
 	dialogPrompt_ClimbVelocity("Climb velocity");
 	dialogPrompt_CollisionGroup("Collision group");
@@ -809,6 +807,8 @@ bool Theme::open(class Renderer* rnd) {
 
 	windowInstalledKernels("Installed Kernels");
 	windowInstalledKernels_Kernels("Kernels:");
+	windowInstalledKernels_KernelTitleUsed("{0} (used: {1})");
+	WindowInstalledKernels_ClickAgainToUninstall("Click again to uninstall \"%s\"");
 
 	windowCreateProject("Create Project");
 
@@ -936,6 +936,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_Compiling("Compiling...");
 	tooltip_Delete("Delete");
 	tooltip_DeleteFrame("Delete frame");
+	tooltip_EjectSourceCodeVm("Eject Source Code (VM)");
 	tooltip_Export("Export");
 	tooltip_ForAlignToTileMovementForControllers("For align-to-tile movement for controllers\nEnable for 16x16px aligned, otherwise 8x8px aligned\n(Usually leave disabled)");
 	tooltip_ForAutoAlignToTileMovementForControllers("Determined automatically!\nFor auto-align-to-tile movement for controllers\nEnable for 16x16px-based auto aligning, otherwise 8x8px-based");
@@ -978,6 +979,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_Space("(Space)");
 	tooltip_SplitEditor("Split editor");
 	tooltip_Threaded("Threaded");
+	tooltip_Url("URL");
 	tooltip_UseByteMatrixViewOnTheToolbar("Use byte matrix view on the toolbar");
 	tooltip_ViaClipboard("Via clipboard");
 	tooltip_ViaClipboardForTheCurrentFrameOnly("Via clipboard\n(For the current frame only)");
@@ -1311,6 +1313,7 @@ bool Theme::open(class Renderer* rnd) {
 	iconUndo(createTexture(rnd, RES_ICON_UNDO, GBBASIC_COUNTOF(RES_ICON_UNDO), nullptr));
 	iconImport(createTexture(rnd, RES_ICON_IMPORT, GBBASIC_COUNTOF(RES_ICON_IMPORT), nullptr));
 	iconExport(createTexture(rnd, RES_ICON_EXPORT, GBBASIC_COUNTOF(RES_ICON_EXPORT), nullptr));
+	iconExternal(createTexture(rnd, RES_ICON_EXTERNAL, GBBASIC_COUNTOF(RES_ICON_EXTERNAL), nullptr));
 	iconDownload(createTexture(rnd, RES_ICON_DOWNLOAD, GBBASIC_COUNTOF(RES_ICON_DOWNLOAD), nullptr));
 	iconViews(createTexture(rnd, RES_ICON_VIEWS, GBBASIC_COUNTOF(RES_ICON_VIEWS), nullptr));
 
@@ -1478,6 +1481,7 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconUndo(), nullptr);
 	destroyTexture(rnd, iconImport(), nullptr);
 	destroyTexture(rnd, iconExport(), nullptr);
+	destroyTexture(rnd, iconExternal(), nullptr);
 	destroyTexture(rnd, iconDownload(), nullptr);
 	destroyTexture(rnd, iconViews(), nullptr);
 
