@@ -4182,7 +4182,10 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd, const char* pro
 		wnd, rnd,
 		std::placeholders::_1, true,
 		[wnd, rnd, this] (void) -> void {
-			showInstalledKernels(wnd, rnd, theme()->dialogPrompt_ExportedSourceCode().c_str());
+			showInstalledKernels(wnd, rnd, theme()->dialogPrompt_EjectedSourceCode().c_str());
+		},
+		[wnd, rnd, this] (void) -> void {
+			showInstalledKernels(wnd, rnd, nullptr);
 		}
 	);
 	popupBox(
@@ -4381,10 +4384,13 @@ std::string Workspace::getSourceCodePath(int index, std::string* name_) const {
 	return src;
 }
 
-void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait, KernelEjectedHandler ejected) {
+void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait, KernelEjectionHandler ejected, KernelEjectionHandler canceled) {
 	if (kernels().empty()) {
-		const std::string msg = "Cannot find valid kernel.";
+		const std::string msg = "No valid kernel.";
 		error(msg.c_str());
+
+		if (canceled)
+			canceled();
 
 		return;
 	}
@@ -4395,10 +4401,13 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait
 		const std::string msg = "Cannot find source code \"" + src + "\".";
 		error(msg.c_str());
 
+		if (canceled)
+			canceled();
+
 		return;
 	}
 
-	auto next = [wnd, rnd, this, ejected, name, src] (promise::Defer df) -> void {
+	auto next = [wnd, rnd, this, ejected, canceled, name, src] (promise::Defer df) -> void {
 		const char* loc = Platform::locale("");
 		(void)loc;
 
@@ -4410,8 +4419,12 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait
 		);
 		std::string path = save.result();
 		Path::uniform(path);
-		if (path.empty())
+		if (path.empty()) {
+			if (canceled)
+				canceled();
+
 			return;
+		}
 		std::string ext;
 		Path::split(path, nullptr, &ext, nullptr);
 		Text::toLowerCase(ext);
@@ -4422,6 +4435,9 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait
 			const std::string msg = "Cannot copy source code to \"" + path + "\".";
 			error(msg.c_str());
 
+			if (canceled)
+				canceled();
+
 			return;
 		}
 #else /* Platform macro. */
@@ -4430,8 +4446,12 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait
 		);
 		std::string path = dir.result();
 		Path::uniform(path);
-		if (path.empty())
+		if (path.empty()) {
+			if (canceled)
+				canceled();
+
 			return;
+		}
 
 		path = Path::combine(path.c_str(), name.c_str());
 		DirectoryInfo::Ptr dirInfo = DirectoryInfo::make(path.c_str());
@@ -4442,10 +4462,16 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait
 		if (!arc->open(src.c_str(), Stream::READ)) {
 			const std::string msg = "Cannot read the source code \"" + src + "\".";
 
+			if (canceled)
+				canceled();
+
 			return;
 		}
 		if (!arc->toDirectory(path.c_str())) {
 			const std::string msg = "Cannot extract source code to \"" + path + "\".";
+
+			if (canceled)
+				canceled();
 
 			return;
 		}
@@ -4456,7 +4482,7 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait
 		Platform::browse(path_.c_str());
 #endif /* Platform macro. */
 
-		bubble(theme()->dialogPrompt_ExportedSourceCode(), nullptr);
+		bubble(theme()->dialogPrompt_EjectedSourceCode(), nullptr);
 
 		if (ejected)
 			ejected();
@@ -8313,7 +8339,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			if (hasDefaultKernelSourceCode()) {
 				ImGui::Separator();
 				if (ImGui::MenuItem(theme()->menu_EjectSourceCodeVm())) {
-					ejectSourceCode(wnd, rnd, 0, true, nullptr);
+					ejectSourceCode(wnd, rnd, 0, true, nullptr, nullptr);
 				}
 			}
 			ImGui::Separator();

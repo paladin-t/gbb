@@ -553,11 +553,11 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Duty_75_0("75.0%");
 	dialogPrompt_EditProps("Edit props.");
 	dialogPrompt_Effect("Effect");
+	dialogPrompt_EjectedSourceCode("Ejected source code");
 	dialogPrompt_Ejecting("Ejecting");
 	dialogPrompt_ExportedAsset("Exported asset");
 	dialogPrompt_ExportedCode("Exported code");
 	dialogPrompt_ExportedProject("Exported project");
-	dialogPrompt_ExportedSourceCode("Exported source code");
 	dialogPrompt_FileNameHasNotBeenChanged("File name has not been changed.");
 	dialogPrompt_Find("Find ");
 	dialogPrompt_Following("Following");
