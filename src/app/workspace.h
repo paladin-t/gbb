@@ -401,6 +401,8 @@ public:
 
 	typedef std::vector<int> ProjectIndices;
 
+	typedef std::function<void(void)> KernelEjectedHandler;
+
 	/**< External events. */
 
 	enum class ExternalEventTypes : unsigned {
@@ -905,7 +907,7 @@ public:
 	void showActivities(Renderer* rnd);
 	void showAbout(Renderer* rnd);
 	std::string getSourceCodePath(int index, std::string* name /* nullable */) const;
-	void ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait);
+	void ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait, KernelEjectedHandler ejected /* nullable */);
 	void toggleDocument(const char* path /* nullable */);
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED

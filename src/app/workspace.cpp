@@ -4177,8 +4177,14 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd, const char* pro
 		},
 		nullptr
 	);
-	ImGui::InstalledKernelsPopupBox::SourceCodeEjectingHandler ejectSourceCode =
-		std::bind(&Workspace::ejectSourceCode, this, wnd, rnd, std::placeholders::_1, false);
+	ImGui::InstalledKernelsPopupBox::SourceCodeEjectingHandler ejectSourceCode = std::bind(
+		&Workspace::ejectSourceCode, this,
+		wnd, rnd,
+		std::placeholders::_1, true,
+		[wnd, rnd, this] (void) -> void {
+			showInstalledKernels(wnd, rnd, theme()->dialogPrompt_ExportedSourceCode().c_str());
+		}
+	);
 	popupBox(
 		ImGui::PopupBox::Ptr(
 			new ImGui::InstalledKernelsPopupBox(
@@ -4358,11 +4364,16 @@ std::string Workspace::getSourceCodePath(int index, std::string* name_) const {
 	if (index < 0 || index >= (int)kernels().size())
 		return "";
 
-	const std::string &krnlPath = kernels()[index]->kernelSourceCode();
+	const GBBASIC::Kernel::Ptr &krnl = kernels()[index];
+	const std::string &path = krnl->path();
+	std::string dir;
+	Path::split(path, nullptr, nullptr, &dir);
+	const std::string &srcPath = krnl->kernelSourceCode();
 	std::string name;
-	Path::split(krnlPath, &name, nullptr, nullptr);
+	Path::split(srcPath, &name, nullptr, nullptr);
 
-	const std::string src = Path::combine(KERNEL_SYSTEM_BINARIES_DIR, (name + ".zip").c_str());
+	std::string src = Path::combine(dir.c_str(), (name + ".zip").c_str());
+	src = Path::absoluteOf(src);
 
 	if (name_)
 		*name_ = name;
@@ -4370,7 +4381,7 @@ std::string Workspace::getSourceCodePath(int index, std::string* name_) const {
 	return src;
 }
 
-void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait) {
+void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait, KernelEjectedHandler ejected) {
 	if (kernels().empty()) {
 		const std::string msg = "Cannot find valid kernel.";
 		error(msg.c_str());
@@ -4387,7 +4398,10 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait
 		return;
 	}
 
-	auto next = [wnd, rnd, this, name, src] (promise::Defer df) -> void {
+	auto next = [wnd, rnd, this, ejected, name, src] (promise::Defer df) -> void {
+		const char* loc = Platform::locale("");
+		(void)loc;
+
 #if defined GBBASIC_OS_HTML
 		pfd::save_file save(
 			theme()->generic_SaveTo(),
@@ -4443,6 +4457,9 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait
 #endif /* Platform macro. */
 
 		bubble(theme()->dialogPrompt_ExportedSourceCode(), nullptr);
+
+		if (ejected)
+			ejected();
 	};
 
 	promise::Promise begin = wait ?
@@ -8296,7 +8313,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			if (hasDefaultKernelSourceCode()) {
 				ImGui::Separator();
 				if (ImGui::MenuItem(theme()->menu_EjectSourceCodeVm())) {
-					ejectSourceCode(wnd, rnd, 0, true);
+					ejectSourceCode(wnd, rnd, 0, true, nullptr);
 				}
 			}
 			ImGui::Separator();

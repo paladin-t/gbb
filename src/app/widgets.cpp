@@ -4623,6 +4623,7 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 	bool toConfirm = false;
 	bool toAdd = false;
 	int toRemove = -1;
+	int toEject = -1;
 
 	if (_init.begin()) {
 		OpenPopup(_title);
@@ -4722,7 +4723,7 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 								EndDisabled();
 							} else {
 								if (ImageButton(_theme->iconCode()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_EjectSourceCodeVm().c_str())) {
-									_ejectSourceCode(i);
+									toEject = i;
 								}
 							}
 							SameLine();
@@ -4846,6 +4847,13 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 
 		if (!_removedHandler.empty()) {
 			_removedHandler(toRemove);
+		}
+	}
+	if (toEject >= 0) {
+		if (_ejectSourceCode) {
+			_ejectSourceCode(toEject);
+
+			return;
 		}
 	}
 }
