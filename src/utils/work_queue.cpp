@@ -9,8 +9,8 @@
 #include "datetime.h"
 #include "platform.h"
 #include "plus.h"
+#include "text.h"
 #include "work_queue.h"
-#include <list>
 #if WORK_QUEUE_THREAD_ENABLED
 #	include <thread>
 #endif /* WORK_QUEUE_THREAD_ENABLED */
@@ -391,7 +391,7 @@ private:
 		snprintf(name, sizeof(name), "WORKER %s %d", usage, idx);
 		Platform::threadName(name);
 
-		Platform::locale("C");
+		Text::locale("C");
 
 		WorkQueueParams* par = (WorkQueueParams*)params;
 		WorkQueueImpl* que = par->workQueue();

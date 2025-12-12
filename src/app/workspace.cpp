@@ -4103,7 +4103,7 @@ void Workspace::closeSearchResult(void) {
 }
 
 void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd, const char* prompt) {
-#define WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX 1
+	#define WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX 1
 
 	ImGui::InstalledKernelsPopupBox::ConfirmedHandler confirm(
 		[this] (void) -> void {
@@ -4202,7 +4202,7 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd, const char* pro
 		)
 	);
 
-#undef WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX
+	#undef WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX
 }
 
 void Workspace::showPreferences(Window* wnd, Renderer* rnd, const char* tab) {
@@ -4408,9 +4408,6 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait
 	}
 
 	auto next = [wnd, rnd, this, ejected, canceled, name, src] (promise::Defer df) -> void {
-		const char* loc = Platform::locale("");
-		(void)loc;
-
 #if defined GBBASIC_OS_HTML
 		pfd::save_file save(
 			theme()->generic_SaveTo(),
@@ -5349,7 +5346,7 @@ void Workspace::compile(
 		if (params->threaded) {
 			Platform::threadName("COMPILE");
 
-			Platform::locale("C");
+			Text::locale("C");
 
 			Math::srand();
 		}
