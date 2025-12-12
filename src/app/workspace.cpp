@@ -3905,6 +3905,8 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 			prj->close(true);
 			prj = nullptr;
 		}
+
+		prj_->hasDirtyInformation(false);
 	};
 	auto set = [this, prj, isOpened, save] (Project* prj_) -> void {
 		// Prepare.
