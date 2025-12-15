@@ -742,11 +742,20 @@ bool Workspace::canWriteProjectTo(const char* path) const {
 		if (Path::isParentOf(absdir0.c_str(), abspath0.c_str()))
 			return false;
 #endif /* WORKSPACE_EXAMPLE_PROJECTS_WRITABLE */
+
 #if !WORKSPACE_STARTER_KITS_PROJECTS_WRITABLE
 		const std::string absdir1 = Path::absoluteOf(WORKSPACE_STARTER_KITS_PROJECTS_DIR);
 		const std::string abspath1 = Path::absoluteOf(path);
 		if (Path::isParentOf(absdir1.c_str(), abspath1.c_str()))
 			return false;
+
+#	if WORKSPACE_ALTERNATIVE_ROOT_PATH_ENABLED
+		const std::string altPath2 = Path::combine(WORKSPACE_ALTERNATIVE_ROOT_PATH, WORKSPACE_STARTER_KITS_PROJECTS_DIR);
+		const std::string absdir2 = Path::absoluteOf(altPath2);
+		const std::string abspath2 = Path::absoluteOf(path);
+		if (Path::isParentOf(absdir2.c_str(), abspath2.c_str()))
+			return false;
+#	endif /* WORKSPACE_ALTERNATIVE_ROOT_PATH_ENABLED */
 #endif /* WORKSPACE_STARTER_KITS_PROJECTS_WRITABLE */
 	}
 
@@ -773,10 +782,18 @@ bool Workspace::isUnderExamplesDirectory(const char* path) const {
 }
 
 bool Workspace::isUnderKitsDirectory(const char* path) const {
-	const std::string absdir = Path::absoluteOf(WORKSPACE_STARTER_KITS_PROJECTS_DIR);
-	const std::string abspath = Path::absoluteOf(path);
-	if (Path::isParentOf(absdir.c_str(), abspath.c_str()))
+	const std::string absdir1 = Path::absoluteOf(WORKSPACE_STARTER_KITS_PROJECTS_DIR);
+	const std::string abspath1 = Path::absoluteOf(path);
+	if (Path::isParentOf(absdir1.c_str(), abspath1.c_str()))
 		return true;
+
+#if WORKSPACE_ALTERNATIVE_ROOT_PATH_ENABLED
+	const std::string altPath2 = Path::combine(WORKSPACE_ALTERNATIVE_ROOT_PATH, WORKSPACE_STARTER_KITS_PROJECTS_DIR);
+	const std::string absdir2 = Path::absoluteOf(altPath2);
+	const std::string abspath2 = Path::absoluteOf(path);
+	if (Path::isParentOf(absdir2.c_str(), abspath2.c_str()))
+		return true;
+#endif /* WORKSPACE_ALTERNATIVE_ROOT_PATH_ENABLED */
 
 	return false;
 }
