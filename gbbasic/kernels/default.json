@@ -446,5 +446,30 @@
     }
   ],
   "properties": [ ],
-  "natives": [ ]
+  "natives": [
+    {
+      "syntax": "peek_banked"
+    },
+    {
+      "syntax": "clear_text"
+    },
+    {
+      "syntax": "wait_for"
+    },
+    {
+      "syntax": "wait_until_confirm"
+    },
+    {
+      "syntax": "send_sgb_packet"
+    },
+    {
+      "syntax": "set_sgb_border"
+    },
+    {
+      "syntax": "error"
+    },
+    {
+      "syntax": "camera_shake"
+    }
+  ]
 }

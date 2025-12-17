@@ -304,15 +304,7 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 		"shell",
 
 		// System.
-		"time",
-
-		// Invokables.
-		"peek_banked",
-		"clear_text",
-		"wait_for", "wait_until_confirm",
-		"set_sgb_border",
-		/* "error", */
-		"camera_shake"
+		"time"
 	};
 	for (const char* const k : IDENTIFIERS) {
 		const std::string key(k);
