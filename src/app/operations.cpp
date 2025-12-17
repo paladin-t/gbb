@@ -1139,6 +1139,17 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 				ws->print("");
 				ws->print("Ready.");
 
+				const int oldKrnlIdx = ws->activeKernelIndex();
+				const std::string &kernelId = prj->kernel();
+				int kernelIdx = ws->getKernelIndex(kernelId);
+				if (kernelIdx >= 0) {
+					const int n = (int)ws->kernels().size();
+					kernelIdx = Math::clamp(kernelIdx, 0, n - 1);
+				} else {
+					kernelIdx = 0;
+				}
+				ws->activeKernelIndex(kernelIdx);
+
 				if (!prj->loaded() && !prj->load(allowBin, fontConfigPath_.c_str(), std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
 					df.reject();
 
@@ -1151,20 +1162,13 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 					prj->behaviourSerializer(nullptr);
 					prj->behaviourParser(nullptr);
 
+					ws->activeKernelIndex(oldKrnlIdx);
+
 					ws->clear();
 
 					return;
 				}
 
-				const std::string &kernelId = prj->kernel();
-				int kernelIdx = ws->getKernelIndex(kernelId);
-				if (kernelIdx >= 0) {
-					const int n = (int)ws->kernels().size();
-					kernelIdx = Math::clamp(kernelIdx, 0, n - 1);
-				} else {
-					kernelIdx = 0;
-				}
-				ws->activeKernelIndex(kernelIdx);
 				ws->currentProject(prj);
 				if (prj->contentType() == Project::ContentTypes::BASIC) {
 					ws->category(Workspace::Categories::CODE);
@@ -4003,11 +4007,11 @@ promise::Promise Operations::kernelInstall(Window* wnd, Renderer* rnd, Workspace
 			// Load the installed kernel into workspace.
 			ws->reloadKernels();
 
-			// Refresh the active kernel if a project is being opened.
+			// Refresh the active kernel if a project is opened.
 			const Project::Ptr &prj = ws->currentProject();
-			if (prj) {
+			if (prj && prj->kernel() == kernelId) { // The opened project is using the installed kernel.
 				const int idx = ws->getKernelIndex(kernelId);
-				ws->activeKernelIndex(idx);
+				ws->activeKernelIndex(idx);         // Update the active kernel index.
 			}
 
 			// Finish.
@@ -4162,8 +4166,8 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 
 			ws->kernels().erase(ws->kernels().begin() + index);
 
-			if (ws->activeKernelIndex() == index)
-				ws->activeKernelIndex(0);
+			if (ws->activeKernelIndex() == index) // The active kernel has been just uninstalled.
+				ws->activeKernelIndex(0);         // Reset to use the default one.
 
 			fprintf(stdout, "End uninstalling kernel \"%s\".\n", id.c_str());
 
