@@ -1517,8 +1517,8 @@ public:
 				)
 			) {
 				const Math::Vec2i ps_(currentFrame()->width(), currentFrame()->height());
-				_anchor.x = Math::clamp(_anchor.x, 0, ps_.x);
-				_anchor.y = Math::clamp(_anchor.y, 0, ps_.y);
+				_anchor.x = Math::clamp(_anchor.x, (int)std::numeric_limits<Int8>::min(), (int)std::numeric_limits<Int8>::max());
+				_anchor.y = Math::clamp(_anchor.y, (int)std::numeric_limits<Int8>::min(), (int)std::numeric_limits<Int8>::max());
 				if (_anchor.x != anchorX || _anchor.y != anchorY) {
 					Command* cmd = nullptr;
 					if (ctrl.pressed(false)) {
@@ -1538,9 +1538,6 @@ public:
 					_selection.clear();
 
 					anchorChanged = true;
-
-					_anchor.x = Math::min(_anchor.x, currentFrame()->width() - 1);
-					_anchor.y = Math::min(_anchor.y, currentFrame()->height() - 1);
 
 					entry()->increaseRevision();
 				}
