@@ -991,7 +991,7 @@ bool anchorable(
 	float width = -1.0f,
 	bool* focused = nullptr,
 	const char* prompt = nullptr,
-	const char* tooltipApplyAll = nullptr,
+	const char* tooltipNoLimit = nullptr, const char* tooltipApplyAll = nullptr,
 	const char* txtOutOfBounds = nullptr,
 	WarningHandler warn = nullptr
 );

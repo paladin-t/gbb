@@ -1497,10 +1497,10 @@ public:
 			const Math::Vec2i ps(currentFrame()->width(), currentFrame()->height());
 			int minX = 0, minY = 0, maxX = ps.x - 1, maxY = ps.y - 1;
 			if (shift.pressed(false)) {
-				minX = -ps.x * 2;
-				minY = -ps.y * 2;
-				maxX = ps.x * 2 - 1;
-				maxY = ps.y * 2 - 1;
+				minX = std::numeric_limits<Int8>::min();
+				minY = std::numeric_limits<Int8>::min();
+				maxX = std::numeric_limits<Int8>::max();
+				maxY = std::numeric_limits<Int8>::max();
 			}
 			if (
 				Editing::Tools::anchorable(
@@ -1511,7 +1511,7 @@ public:
 					spwidth,
 					&inputFieldFocused_,
 					ws->theme()->dialogPrompt_Anchor().c_str(),
-					ctrl.pressed(false) ? nullptr : ws->theme()->tooltip_HoldCtrlToApplyToTheCurrentFrameOnly().c_str(),
+					shift.pressed(false) ? nullptr : ws->theme()->tooltip_HoldShiftToModifyWithLargerBounds().c_str(), ctrl.pressed(false) ? nullptr : ws->theme()->tooltip_HoldCtrlToApplyToTheCurrentFrameOnly().c_str(),
 					ws->theme()->warning_ActorAnchorOutOfBounds().c_str(),
 					std::bind(&EditorActorImpl::warn, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
 				)

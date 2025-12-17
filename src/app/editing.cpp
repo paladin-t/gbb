@@ -4823,7 +4823,7 @@ bool anchorable(
 	float width,
 	bool* focused,
 	const char* prompt,
-	const char* tooltipApplyAll,
+	const char* tooltipNoLimit, const char* tooltipApplyAll,
 	const char* txtOutOfBounds,
 	WarningHandler warn
 ) {
@@ -4856,6 +4856,14 @@ bool anchorable(
 	ImGui::AlignTextToFramePadding();
 	ImGui::TextUnformatted(prompt);
 
+	auto showTooltipForNoLimit = [&style] (const char* tooltipNoLimit) -> void {
+		if (ImGui::IsItemHovered() && tooltipNoLimit) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(tooltipNoLimit);
+		}
+	};
+
 	bool changed = false;
 	int xVal = *newX;
 	ImGui::PushID("@X");
@@ -4866,6 +4874,7 @@ bool anchorable(
 			*newX = Math::max(xVal - 1, minX);
 			changed = true;
 		}
+		showTooltipForNoLimit(tooltipNoLimit);
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(dragWidth);
 		if (ImGui::DragInt("", &xVal, 1.0f, minX, maxX, "X: %d")) {
@@ -4876,11 +4885,13 @@ bool anchorable(
 			if (focused)
 				*focused = true;
 		}
+		showTooltipForNoLimit(tooltipNoLimit);
 		ImGui::SameLine();
 		if (ImGui::ImageButton(theme->iconPlus()->pointer(rnd), ImVec2(13, 13), ImColor(IM_COL32_WHITE))) {
 			*newX = Math::min(xVal + 1, maxX);
 			changed = true;
 		}
+		showTooltipForNoLimit(tooltipNoLimit);
 	}
 	ImGui::PopID();
 
@@ -4893,6 +4904,7 @@ bool anchorable(
 			*newY = Math::max(yVal - 1, minY);
 			changed = true;
 		}
+		showTooltipForNoLimit(tooltipNoLimit);
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(dragWidth);
 		if (ImGui::DragInt("", &yVal, 1.0f, minY, maxY, "Y: %d")) {
@@ -4903,11 +4915,13 @@ bool anchorable(
 			if (focused)
 				*focused = true;
 		}
+		showTooltipForNoLimit(tooltipNoLimit);
 		ImGui::SameLine();
 		if (ImGui::ImageButton(theme->iconPlus()->pointer(rnd), ImVec2(13, 13), ImColor(IM_COL32_WHITE))) {
 			*newY = Math::min(yVal + 1, maxY);
 			changed = true;
 		}
+		showTooltipForNoLimit(tooltipNoLimit);
 	}
 	ImGui::PopID();
 

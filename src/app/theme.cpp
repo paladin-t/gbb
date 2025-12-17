@@ -944,6 +944,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_GlobalSearch("Global search");
 	tooltip_HighBits("High bits");
 	tooltip_HoldCtrlToApplyToTheCurrentFrameOnly("Hold Ctrl to apply to the current frame only");
+	tooltip_HoldShiftToModifyWithLargerBounds("Hold Shift to modify with larger bounds");
 	tooltip_IconView("Icon view");
 	tooltip_Import("Import");
 	tooltip_ImportAsNew("Import as new");

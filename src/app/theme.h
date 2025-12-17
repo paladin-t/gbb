@@ -734,6 +734,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_GlobalSearch)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_HighBits)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_HoldCtrlToApplyToTheCurrentFrameOnly)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltip_HoldShiftToModifyWithLargerBounds)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_IconView)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_Import)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ImportAsNew)
