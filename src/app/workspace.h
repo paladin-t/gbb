@@ -669,6 +669,7 @@ public:
 
 	int getKernelIndex(const std::string &id) const;
 	const std::string* getKernelId(int index) const;
+	int getValidKernelIndex(const Project* prj) const;
 	int getKernelUsedCountByProjects(int index) const;
 	GBBASIC::Kernel::Ptr activeKernel(void) const;
 	std::string serializeKernelBehaviour(int val) const;

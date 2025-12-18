@@ -1140,14 +1140,7 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 				ws->print("Ready.");
 
 				const int oldKrnlIdx = ws->activeKernelIndex();
-				const std::string &kernelId = prj->kernel();
-				int kernelIdx = ws->getKernelIndex(kernelId);
-				if (kernelIdx >= 0) {
-					const int n = (int)ws->kernels().size();
-					kernelIdx = Math::clamp(kernelIdx, 0, n - 1);
-				} else {
-					kernelIdx = 0;
-				}
+				const int kernelIdx = ws->getValidKernelIndex(prj.get());
 				ws->activeKernelIndex(kernelIdx);
 
 				if (!prj->loaded() && !prj->load(allowBin, fontConfigPath_.c_str(), std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {

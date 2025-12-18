@@ -848,6 +848,20 @@ const std::string* Workspace::getKernelId(int index) const {
 	return &krnl->id();
 }
 
+int Workspace::getValidKernelIndex(const Project* prj) const {
+	if (!prj)
+		return 0;
+
+	const std::string &kernelId = prj->kernel();
+	const int kernelIdx = getKernelIndex(kernelId);
+	if (kernelIdx < 0)
+		return 0;
+
+	const int n = (int)kernels().size();
+
+	return Math::clamp(kernelIdx, 0, n - 1);
+}
+
 int Workspace::getKernelUsedCountByProjects(int index) const {
 	if (index < 0 || index >= (int)kernels().size())
 		return 0;
@@ -3850,6 +3864,8 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 
 		const std::string &path = prj_->path();
 
+		const int oldKrnlIdx = activeKernelIndex();
+
 		Project::Ptr prj = nullptr;
 		do {
 			if (!rnd)
@@ -3872,9 +3888,14 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 			prj->behaviourSerializer(std::bind(&Workspace::serializeKernelBehaviour, this, std::placeholders::_1));
 			prj->behaviourParser(std::bind(&Workspace::parseKernelBehaviour, this, std::placeholders::_1));
 
+			const int kernelIdx = getValidKernelIndex(prj.get());
+			activeKernelIndex(kernelIdx);
+
 			const std::string fontConfigPath = fontConfig().empty() ? WORKSPACE_FONT_DEFAULT_CONFIG_FILE : fontConfig();
 			if (!prj->load(false, fontConfigPath.c_str(), nullptr)) {
 				prj->close(true);
+
+				activeKernelIndex(oldKrnlIdx);
 
 				onError("Cannot load the project.", false);
 
@@ -3923,6 +3944,8 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 			prj = nullptr;
 		}
 
+		activeKernelIndex(oldKrnlIdx);
+
 		prj_->hasDirtyInformation(false);
 	};
 	auto set = [this, prj, isOpened, save] (Project* prj_) -> void {
@@ -3969,14 +3992,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		// Reload kernel if needed.
 		if (isOpened) {
 			if (needReloadKernel) {
-				const std::string &kernelId = prj->kernel();
-				int kernelIdx = getKernelIndex(kernelId);
-				if (kernelIdx >= 0) {
-					const int n = (int)kernels().size();
-					kernelIdx = Math::clamp(kernelIdx, 0, n - 1);
-				} else {
-					kernelIdx = 0;
-				}
+				const int kernelIdx = getValidKernelIndex(prj);
 				activeKernelIndex(kernelIdx);
 
 				clearLanguageDefinition(true);
