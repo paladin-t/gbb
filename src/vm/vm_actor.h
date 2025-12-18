@@ -205,6 +205,30 @@ INLINE void actor_move_in_direction(actor_t * actor, INT8 dx, INT8 dy) {
         );
     }
 }
+INLINE void actor_move_in_x_direction(actor_t * actor, INT8 dx) {
+    actor->movement_interrupt = FALSE;
+    actor->motion = 0;
+
+    SET_FLAG(actor->motion, ACTOR_MOTION_RELATIVE | ACTOR_MOTION_NO_BLOCKING);
+    actor->relative_movement.x = dx;
+    SET_FLAG(
+        actor->motion,
+        dx < 0 ?
+            ACTOR_MOTION_MOVE_LEFT : ACTOR_MOTION_MOVE_RIGHT
+    );
+}
+INLINE void actor_move_in_y_direction(actor_t * actor, INT8 dy) {
+    actor->movement_interrupt = FALSE;
+    actor->motion = 0;
+
+    SET_FLAG(actor->motion, ACTOR_MOTION_RELATIVE | ACTOR_MOTION_NO_BLOCKING);
+    actor->relative_movement.y = dy;
+    SET_FLAG(
+        actor->motion,
+        dy < 0 ?
+            ACTOR_MOTION_MOVE_UP : ACTOR_MOTION_MOVE_DOWN
+    );
+}
 void actor_move_stop(actor_t * actor) BANKED;
 
 void actor_reserve_move_speed(actor_t * actor, UINT8 speed_up) BANKED;

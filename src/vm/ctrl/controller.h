@@ -46,7 +46,7 @@ INLINE BOOLEAN controller_behave_actor(actor_t * actor, UINT8 bhvr) {
     case CONTROLLER_BEHAVIOUR_PLATFORMER_IDLE:
         return controller_behave_platformer_idle(actor);
 
-    // Topdown.
+    // Top-down.
     case CONTROLLER_BEHAVIOUR_TOPDOWN_PLAYER:
         return controller_behave_topdown_player(actor);
     case CONTROLLER_BEHAVIOUR_TOPDOWN_PLAYER_ARBITRARY:
@@ -60,7 +60,7 @@ INLINE BOOLEAN controller_behave_actor(actor_t * actor, UINT8 bhvr) {
     case CONTROLLER_BEHAVIOUR_TOPDOWN_IDLE:
         return controller_behave_topdown_idle(actor);
 
-    // Point & click.
+    // Point & Click.
     case CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER:
         return controller_behave_pointnclick_player(actor, CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER);
     case CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER_WITH_MOUSE & ~CONTROLLER_BEHAVIOUR_OPTIONS:

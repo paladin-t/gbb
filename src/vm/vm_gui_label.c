@@ -103,7 +103,7 @@ void vm_label(SCRIPT_CTX * THIS, BOOLEAN new_line, UINT8 nargs, UINT8 font_bank,
             gui_clear(gui_base_tile, (UINT16)gui_width * (UINT16)gui_height);
         } else {
             // Continue waiting.
-            goto _wait;
+            goto wait;
         }
     }
 
@@ -117,7 +117,7 @@ _loop:
         if (gui_cursor_y + GUI_MARGIN_Y(gui_margin) + size > MUL8(gui_height)) { // Page is full.
             gui_ticks = GUI_WAIT_FOR_NEXT_PAGE; // Wait for input.
 
-            goto _wait;
+            goto wait;
         }
 
         glyph_t glyph;
@@ -184,7 +184,7 @@ _loop:
             gui_ticks = GUI_WAIT_FOR_NEXT_PAGE; // Wait for input.
             is_head = TRUE;
 
-            goto _wait;
+            goto wait;
         } else {
             // Process word wrap in advance.
             BOOLEAN ignore = FALSE;
@@ -233,7 +233,7 @@ _loop:
     }
 
     // Wait until timeout for next glyph.
-_wait:
+wait:
     THIS->PC -= INSTRUCTION_SIZE + sizeof(new_line) + sizeof(nargs) + sizeof(font_bank) + sizeof(font_ptr);
     THIS->waitable = TRUE;
 }

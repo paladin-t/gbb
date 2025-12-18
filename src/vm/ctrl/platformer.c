@@ -111,7 +111,7 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
                 actor_restore_move_speed(actor);
                 moving = TRUE;
 
-                goto _exit;
+                goto end;
             }
         }
 
@@ -129,7 +129,7 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
                 actor_restore_move_speed(actor);
                 moving = TRUE;
 
-                goto _exit;
+                goto end;
             }
         }
 
@@ -144,7 +144,7 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
         } else if (INPUT_IS_BTN_UP(J_RIGHT)) {
             actor_restore_move_speed(actor);
             if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_Y)) {
-                actor_move_in_direction(actor, 0, actor->relative_movement.y);
+                actor_move_in_y_direction(actor, actor->relative_movement.y);
             } else {
                 actor_move_stop(actor);
             }
@@ -171,7 +171,7 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
         } else if (INPUT_IS_BTN_UP(J_LEFT)) {
             actor_restore_move_speed(actor);
             if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_Y)) {
-                actor_move_in_direction(actor, 0, actor->relative_movement.y);
+                actor_move_in_y_direction(actor, actor->relative_movement.y);
             } else {
                 actor_move_stop(actor);
             }
@@ -279,7 +279,7 @@ run:
     }
 
     // Check whether the camera need to be moved.
-_exit:
+end:
     if (moving && actor == actor_following_target)
         return TRUE;
 
@@ -304,13 +304,13 @@ BOOLEAN controller_behave_platformer_move(actor_t * actor) BANKED {
     case DIRECTION_LEFT:
         if (navigation_get_blocking_left(actor, DIV16(-actor->move_speed))) {
             if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_Y)) {
-                actor_move_in_direction(actor, 0, actor->relative_movement.y);
+                actor_move_in_y_direction(actor, actor->relative_movement.y);
                 moving = TRUE;
             } else {
                 actor_move_stop(actor);
             }
         } else {
-            actor_move_in_direction(actor, -1, 0);
+            actor_move_in_x_direction(actor, -1);
             moving = TRUE;
         }
         actor_play_animation(actor, DIRECTION_LEFT, TRUE);
@@ -319,13 +319,13 @@ BOOLEAN controller_behave_platformer_move(actor_t * actor) BANKED {
     case DIRECTION_RIGHT:
         if (navigation_get_blocking_right(actor, DIV16(actor->move_speed))) {
             if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_Y)) {
-                actor_move_in_direction(actor, 0, actor->relative_movement.y);
+                actor_move_in_y_direction(actor, actor->relative_movement.y);
                 moving = TRUE;
             } else {
                 actor_move_stop(actor);
             }
         } else {
-            actor_move_in_direction(actor, 1, 0);
+            actor_move_in_x_direction(actor, 1);
             moving = TRUE;
         }
         actor_play_animation(actor, DIRECTION_RIGHT, TRUE);

@@ -65,13 +65,13 @@ STATIC BOOLEAN controller_behave_topdown_player_update(actor_t * actor) {
 #   if ACTOR_IMPLEMENT_AUTO_ALIGNING_WITH_TURN_ENABLED
                     dir = dy < 0 ? DIRECTION_UP : DIRECTION_DOWN;
 #   endif /* ACTOR_IMPLEMENT_AUTO_ALIGNING_WITH_TURN_ENABLED */
-                    actor_move_in_direction(actor, 0, dy);
+                    actor_move_in_y_direction(actor, dy);
                 }
             }
 #endif /* ACTOR_IMPLEMENT_AUTO_ALIGNING_ON_BLOCKED_ENABLED */
         } else {
             moving = TRUE;
-            actor_move_in_direction(actor, -1, 0);
+            actor_move_in_x_direction(actor, -1);
         }
         actor_play_animation(actor, dir, moving);
     } else if (INPUT_IS_BTN_PRESSED(J_RIGHT)) {
@@ -90,13 +90,13 @@ STATIC BOOLEAN controller_behave_topdown_player_update(actor_t * actor) {
 #   if ACTOR_IMPLEMENT_AUTO_ALIGNING_WITH_TURN_ENABLED
                     dir = dy < 0 ? DIRECTION_UP : DIRECTION_DOWN;
 #   endif /* ACTOR_IMPLEMENT_AUTO_ALIGNING_WITH_TURN_ENABLED */
-                    actor_move_in_direction(actor, 0, dy);
+                    actor_move_in_y_direction(actor, dy);
                 }
             }
 #endif /* ACTOR_IMPLEMENT_AUTO_ALIGNING_ON_BLOCKED_ENABLED */
         } else {
             moving = TRUE;
-            actor_move_in_direction(actor, 1, 0);
+            actor_move_in_x_direction(actor, 1);
         }
         actor_play_animation(actor, dir, moving);
     } else if (INPUT_IS_BTN_PRESSED(J_UP)) {
@@ -115,13 +115,13 @@ STATIC BOOLEAN controller_behave_topdown_player_update(actor_t * actor) {
 #   if ACTOR_IMPLEMENT_AUTO_ALIGNING_WITH_TURN_ENABLED
                     dir = dx < 0 ? DIRECTION_LEFT : DIRECTION_RIGHT;
 #   endif /* ACTOR_IMPLEMENT_AUTO_ALIGNING_WITH_TURN_ENABLED */
-                    actor_move_in_direction(actor, dx, 0);
+                    actor_move_in_x_direction(actor, dx);
                 }
             }
 #endif /* ACTOR_IMPLEMENT_AUTO_ALIGNING_ON_BLOCKED_ENABLED */
         } else {
             moving = TRUE;
-            actor_move_in_direction(actor, 0, -1);
+            actor_move_in_y_direction(actor, -1);
         }
         actor_play_animation(actor, dir, moving);
     } else if (INPUT_IS_BTN_PRESSED(J_DOWN)) {
@@ -140,13 +140,13 @@ STATIC BOOLEAN controller_behave_topdown_player_update(actor_t * actor) {
 #   if ACTOR_IMPLEMENT_AUTO_ALIGNING_WITH_TURN_ENABLED
                     dir = dx < 0 ? DIRECTION_LEFT : DIRECTION_RIGHT;
 #   endif /* ACTOR_IMPLEMENT_AUTO_ALIGNING_WITH_TURN_ENABLED */
-                    actor_move_in_direction(actor, dx, 0);
+                    actor_move_in_x_direction(actor, dx);
                 }
             }
 #endif /* ACTOR_IMPLEMENT_AUTO_ALIGNING_ON_BLOCKED_ENABLED */
         } else {
             moving = TRUE;
-            actor_move_in_direction(actor, 0, 1);
+            actor_move_in_y_direction(actor, 1);
         }
         actor_play_animation(actor, dir, moving);
     }
@@ -259,7 +259,7 @@ STATIC BOOLEAN controller_behave_topdown_move_update(actor_t * actor, UINT8 forw
     case DIRECTION_UP:
         if (!navigation_get_blocking_up(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor))) {
             moving = TRUE;
-            actor_move_in_direction(actor, 0, -1);
+            actor_move_in_y_direction(actor, -1);
             actor_play_animation(actor, DIRECTION_UP, TRUE);
         }
 
@@ -267,7 +267,7 @@ STATIC BOOLEAN controller_behave_topdown_move_update(actor_t * actor, UINT8 forw
     case DIRECTION_DOWN:
         if (!navigation_get_blocking_down(actor, CONTROLLER_POSITIVE_SPEED_OF(actor))) {
             moving = TRUE;
-            actor_move_in_direction(actor, 0, 1);
+            actor_move_in_y_direction(actor, 1);
             actor_play_animation(actor, DIRECTION_DOWN, TRUE);
         }
 
@@ -277,7 +277,7 @@ STATIC BOOLEAN controller_behave_topdown_move_update(actor_t * actor, UINT8 forw
     case DIRECTION_LEFT:
         if (!navigation_get_blocking_left(actor, CONTROLLER_NEGATIVE_SPEED_OF(actor))) {
             moving = TRUE;
-            actor_move_in_direction(actor, -1, 0);
+            actor_move_in_x_direction(actor, -1);
             actor_play_animation(actor, DIRECTION_LEFT, TRUE);
         }
 
@@ -285,7 +285,7 @@ STATIC BOOLEAN controller_behave_topdown_move_update(actor_t * actor, UINT8 forw
     case DIRECTION_RIGHT:
         if (!navigation_get_blocking_right(actor, CONTROLLER_POSITIVE_SPEED_OF(actor))) {
             moving = TRUE;
-            actor_move_in_direction(actor, 1, 0);
+            actor_move_in_x_direction(actor, 1);
             actor_play_animation(actor, DIRECTION_RIGHT, TRUE);
         }
 
