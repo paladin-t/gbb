@@ -294,6 +294,9 @@ namespace GBBASIC {
 #ifndef CLEAR_TEXT_FUNCTION_NAME
 #	define CLEAR_TEXT_FUNCTION_NAME "clear_text" // DOC: ROM SCHEMA.
 #endif /* CLEAR_TEXT_FUNCTION_NAME */
+#ifndef SEND_SGB_PACKET_FUNCTION_NAME
+#	define SEND_SGB_PACKET_FUNCTION_NAME "send_sgb_packet" // DOC: ROM SCHEMA.
+#endif /* SEND_SGB_PACKET_FUNCTION_NAME */
 #ifndef SET_SGB_BORDER_FUNCTION_NAME
 #	define SET_SGB_BORDER_FUNCTION_NAME "set_sgb_border" // DOC: ROM SCHEMA.
 #endif /* SET_SGB_BORDER_FUNCTION_NAME */
@@ -13495,7 +13498,7 @@ public:
 			// Emit the invoking.
 			if (generateSpecialized(bytes, context, INSTRUCTIONS, caseSensitiveFunctionName, bank, address, nullptr, onError)) // Specialized for this known function.
 				return;
-			if (generateGeneric(bytes, context, INSTRUCTIONS, bank, address, nullptr, onError))
+			if (generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, nullptr, onError))
 				return;
 		};
 
@@ -13517,6 +13520,7 @@ private:
 		Bytes::Ptr &bytes, Context::Stack &context,
 		const Asm::Instructions &INSTRUCTIONS,
 		int bank, int address,
+		bool invokerPopsArgs,
 		bool* ret /* nullable */,
 		Error::Handler onError
 	) {
@@ -13558,7 +13562,7 @@ private:
 				// Emit a `VM_INVOKE_FN` instruction.
 				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size());
 				args = fill(args, (Int16)(-(int)_children.size())); // Offset from `ARG0`.
-				args = fill(args, (UInt8)(_children.size()));
+				args = fill(args, (UInt8)(invokerPopsArgs ? _children.size() : 0));
 				args = fill(args, (UInt16)address);
 				args = fill(args, (UInt8)bank);
 
@@ -13631,11 +13635,16 @@ private:
 				}
 
 				ok = true;
+			} else if (caseSensitiveFunctionName == SEND_SGB_PACKET_FUNCTION_NAME) { // `send_sgb_packet`.
+				// Using "Super" features.
+				usingSuperFeature(ctx, SEND_SGB_PACKET_FUNCTION_NAME);
+
+				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, false, &ok, onError);
 			} else if (caseSensitiveFunctionName == SET_SGB_BORDER_FUNCTION_NAME) { // `set_sgb_border`.
 				// Using "Super" features.
 				usingSuperFeature(ctx, SET_SGB_BORDER_FUNCTION_NAME);
 
-				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, &ok, onError);
+				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, false, &ok, onError);
 			} else {
 				spaclialized = false;
 			}
