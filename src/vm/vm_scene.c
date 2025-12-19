@@ -33,12 +33,12 @@ BANKREF(VM_SCENE)
         } \
     } while (0)
 
-#define SCENE_LAYER_MAP        0x00 // Must have.
-#define SCENE_LAYER_ATTR       0x01
-#define SCENE_LAYER_PROP       0x02
-#define SCENE_LAYER_ACTOR      0x04
-#define SCENE_LAYER_TRIGGER    0x08
-#define SCENE_LAYER_DEF        0x10
+#define SCENE_LAYER_MAP        0x01 // Must have.
+#define SCENE_LAYER_ATTR       0x02
+#define SCENE_LAYER_PROP       0x04
+#define SCENE_LAYER_ACTOR      0x08
+#define SCENE_LAYER_TRIGGER    0x10
+#define SCENE_LAYER_DEF        0x20 // Must have.
 #define SCENE_LAYER_ALL        (SCENE_LAYER_MAP | SCENE_LAYER_ATTR | SCENE_LAYER_PROP | SCENE_LAYER_ACTOR | SCENE_LAYER_TRIGGER | SCENE_LAYER_DEF)
 
 #define SCENE_CAMERA_SHAKE_X   1

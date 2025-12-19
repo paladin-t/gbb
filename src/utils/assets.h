@@ -166,12 +166,13 @@ enum class Directions : UInt8 {
 };
 
 enum class Layers : UInt8 {
-	SCENE_LAYER_MAP       = 0x00, // Must have.
-	SCENE_LAYER_ATTR      = 0x01,
-	SCENE_LAYER_PROP      = 0x02,
-	SCENE_LAYER_ACTOR     = 0x04,
-	SCENE_LAYER_TRIGGER   = 0x08,
-	SCENE_LAYER_ALL       = 0x0f
+	SCENE_LAYER_MAP       = 0x01, // Must have.
+	SCENE_LAYER_ATTR      = 0x02,
+	SCENE_LAYER_PROP      = 0x04,
+	SCENE_LAYER_ACTOR     = 0x08,
+	SCENE_LAYER_TRIGGER   = 0x10,
+	SCENE_LAYER_DEF       = 0x20, // Must have.
+	SCENE_LAYER_ALL       = (SCENE_LAYER_MAP | SCENE_LAYER_ATTR | SCENE_LAYER_PROP | SCENE_LAYER_ACTOR | SCENE_LAYER_TRIGGER | SCENE_LAYER_DEF)
 };
 
 /* ===========================================================================} */

@@ -2014,6 +2014,7 @@ static bool post_toBytes(const SceneAssets::Entry* entry, Pipeline* pipeline, Ta
 
 		const bool useMapAttr = itMap->second.chunks.size() >= 2;
 		int n = 0;
+		layers |= (UInt8)Layers::SCENE_LAYER_MAP; // Must have.
 		const Destination::Chunk &chunkMap = itMap->second.chunks[0];
 		bankMap = chunkMap.bank;
 		addressMap = chunkMap.address;
@@ -2041,7 +2042,7 @@ static bool post_toBytes(const SceneAssets::Entry* entry, Pipeline* pipeline, Ta
 			bankTrigger = chunkTrigger.bank;
 			addressTrigger = chunkTrigger.address;
 		}
-
+		layers |= (UInt8)Layers::SCENE_LAYER_DEF; // Must have.
 		const Destination::Chunk &chunkDef = it->second.chunks[n++];
 		bankDef = chunkDef.bank;
 		addressDef = chunkDef.address;
