@@ -14,8 +14,9 @@
 
 BANKREF(VM_PROJECTILE)
 
-#define PROJECTILE_START_INDEPENDENTLY   0x01
-#define PROJECTILE_START_WITH_ACTOR      0x02
+#define PROJECTILE_START_INDEPENDENTLY   0x00
+#define PROJECTILE_START_WITH_ACTOR      0x01
+#define PROJECTILE_START_ON_ACTOR        0x02
 
 // Seealso: <gb/metasprites.h>.
 #define PROJECTILE_ALLOCATED             (actor_hardware_sprite_count)
@@ -376,6 +377,13 @@ void vm_start_projectile(SCRIPT_CTX * THIS, UINT8 op) OLDCALL BANKED {
             } else if (actor->direction == DIRECTION_LEFT) {
                 angle += 192;
             }
+        }
+
+        break;
+    case PROJECTILE_START_ON_ACTOR: {
+            actor_t * actor = (actor_t *)*(--THIS->stack_ptr);
+            x += TO_SCREEN(actor->position.x);
+            y += TO_SCREEN(actor->position.y);
         }
 
         break;
