@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 
+#include "utils/linked_list.h"
 #include "utils/sleep.h"
 #include "utils/text.h"
 #include "utils/utils.h"
@@ -69,9 +70,16 @@ void vm_dbginfo(SCRIPT_CTX * THIS) OLDCALL BANKED {
     if (full) {
         for (UINT8 i = 0; i != VM_MAX_CONTEXTS; ++i) {
             SCRIPT_CTX * ctx = &CTXS[i];
-            const INT16 diff = DIV2((UINT8 *)ctx->stack_ptr - (UINT8 *)ctx->base_addr);
+            SCRIPT_CTX * first = first_ctx;
+            BOOLEAN alive;
+            DL_CONTAINS(first, ctx, alive);
+            if (alive) {
+                const INT16 diff = DIV2((UINT8 *)ctx->stack_ptr - (UINT8 *)ctx->base_addr);
+                d += int16_to_str(diff, d);
+            } else {
+                *d++ = '-';
+            }
             ctx = ctx->next;
-            d += int16_to_str(diff, d);
             if (i != VM_MAX_CONTEXTS - 1)
                 *d++ = ',';
         }

@@ -64,10 +64,10 @@
     }
 #endif /* STRICT_LINKED_LIST */
 #define DL_CONTAINS(HEAD_MUT, ITEM, FOUND) \
-    (FOUND) = NULL; \
+    (FOUND) = FALSE; \
     while (HEAD_MUT) { \
         if ((HEAD_MUT) == (ITEM)) { \
-            (FOUND) = 1; \
+            (FOUND) = TRUE; \
             break; \
         } \
         (HEAD_MUT) = (HEAD_MUT)->next; \
