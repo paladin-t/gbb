@@ -626,8 +626,9 @@ namespace GBBASIC {
 
 #ifndef PROJECTILE_START_METHODS
 #	define PROJECTILE_START_METHODS
-#	define PROJECTILE_START_INDEPENDENTLY                           0x01
-#	define PROJECTILE_START_WITH_ACTOR                              0x02
+#	define PROJECTILE_START_INDEPENDENTLY                           0x00
+#	define PROJECTILE_START_WITH_ACTOR                              0x01
+#	define PROJECTILE_START_ON_ACTOR                                0x02
 #endif /* PROJECTILE_START_METHODS */
 
 #ifndef PROJECTILE_FLAGS
@@ -24924,6 +24925,12 @@ public:
 					if (consume(Token::Types::OPERATOR, "(")) {
 						if (!consume(Token::Types::OPERATOR, ")")) { THROW_INVALID_SYNTAX(onError); }
 					}
+				} else if (consume(Token::Types::KEYWORD, "on")) {
+					if (!consume(Token::Types::KEYWORD, "actor")) { THROW_INVALID_SYNTAX(onError); }
+					motion |= PROJECTILE_START_ON_ACTOR;
+					if (consume(Token::Types::OPERATOR, "(")) {
+						if (!consume(Token::Types::OPERATOR, ")")) { THROW_INVALID_SYNTAX(onError); }
+					}
 				} else if (arge == 0) {
 					motion |= PROJECTILE_START_INDEPENDENTLY;
 				} else {
@@ -25674,7 +25681,71 @@ public:
 								return 5;
 							}
 						};
-					} else /* if (motion == PROJECTILE_START_WITH_ACTOR) */ {
+					} else if (motion == PROJECTILE_START_WITH_ACTOR) {
+						if (_children.size() < 2) {
+							THROW_TOO_FEW_ARGUMENTS(onError);
+						} else if (_children.size() == 2) {
+							// Do nothing.
+						} else if (_children.size() == 3) {
+							// Do nothing.
+						} else if (_children.size() == 4) {
+							// Do nothing.
+						} else if (_children.size() == 5) {
+							// Do nothing.
+						} else if (_children.size() == 6) {
+							// Do nothing.
+						} else {
+							THROW_TOO_MANY_ARGUMENTS(onError);
+						}
+
+						argf = [&] (Counter &stk) -> int {
+							if (_children.size() == 2) {
+								writeChildren(bytes, context, Range(1), stk, onError); // Actor.
+								Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+								args = fill(args, (UInt16)0); // Flags.
+								args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+								args = fill(args, (UInt16)0); // DAngle.
+								args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+								args = fill(args, (UInt16)0); // Dy.
+								args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+								args = fill(args, (UInt16)0); // Dx.
+								writeChildren(bytes, context, Range(0), stk, onError); // Type.
+
+								return 6;
+							} else if (_children.size() == 3) {
+								writeChildren(bytes, context, Range(2), stk, onError); // Actor.
+								Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+								args = fill(args, (UInt16)0); // Flags.
+								args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+								args = fill(args, (UInt16)0); // DAngle.
+								args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+								args = fill(args, (UInt16)0); // Dy.
+								writeChildren(bytes, context, Range(1, 0), stk, onError); // Type, dx.
+
+								return 6;
+							} else if (_children.size() == 4) {
+								writeChildren(bytes, context, Range(3), stk, onError); // Actor.
+								Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+								args = fill(args, (UInt16)0); // Flags.
+								args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+								args = fill(args, (UInt16)0); // DAngle.
+								writeChildren(bytes, context, Range(2, 0), stk, onError); // Type, dx, dy.
+
+								return 6;
+							} else if (_children.size() == 5) {
+								writeChildren(bytes, context, Range(4), stk, onError); // Actor.
+								Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+								args = fill(args, (UInt16)0); // Flags.
+								writeChildren(bytes, context, Range(3, 0), stk, onError); // Type, dx, dy, dangle.
+
+								return 6;
+							} else /* if (_children.size() == 6) */ {
+								writeChildren(bytes, context, Range(5, 0), stk, onError); // Type, dx, dy, dangle, flags, actor.
+
+								return 6;
+							}
+						};
+					} else /* if (motion == PROJECTILE_START_ON_ACTOR) */ {
 						if (_children.size() < 2) {
 							THROW_TOO_FEW_ARGUMENTS(onError);
 						} else if (_children.size() == 2) {
@@ -37093,6 +37164,8 @@ private:
 				}
 				if (name == "start") {
 					if (must(Token::Types::KEYWORD, "with")(q)) {
+						if (!must(Token::Types::KEYWORD, "actor")(q)) return throwInvalidSyntax(q.index);
+					} else if (must(Token::Types::KEYWORD, "on")(q)) {
 						if (!must(Token::Types::KEYWORD, "actor")(q)) return throwInvalidSyntax(q.index);
 					}
 				} else {
