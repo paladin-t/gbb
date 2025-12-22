@@ -445,7 +445,8 @@
       "animation": "pointandclick"
     }
   ],
-  "properties": [ ],
+  "properties": [
+  ],
   "natives": [
     {
       "syntax": "peek_banked"

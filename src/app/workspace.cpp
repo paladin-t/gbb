@@ -4828,7 +4828,7 @@ bool Workspace::analyze(bool force) {
 		return true;
 	}
 
-	const GBBASIC::Kernel::Ptr &krnl = kernels().front();
+	const GBBASIC::Kernel::Ptr &krnl = activeKernel();
 
 	staticAnalyzer()->analyze(
 		krnl.get(),
