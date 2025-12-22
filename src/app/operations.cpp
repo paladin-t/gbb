@@ -4714,6 +4714,12 @@ promise::Promise Operations::projectReload(Window* wnd, Renderer* rnd, Workspace
 					[wnd, rnd, ws, next, df] (void) -> void {
 						ws->skipFrame(3);
 
+						ws->joinCompiling();
+
+						ws->join();
+
+						ws->clearAnalyzingResult();
+
 						fileClose(wnd, rnd, ws)
 							.then(
 								[next, df] (void) -> promise::Promise {
