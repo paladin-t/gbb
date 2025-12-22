@@ -5718,6 +5718,20 @@ void Workspace::compile(
 		options.onPrint(GBBASIC_TITLE " v" GBBASIC_VERSION_STRING);
 		options.onPrint("");
 
+		if (project && !project->kernel().empty() && project->kernel() != kernel->id()) {
+			options.onError(
+				Text::format(
+					"Kernel \"{0}\" not found, using \"{1}\" instead.",
+					{
+						project->kernel(),
+						kernel->id()
+					}
+				),
+				true,
+				-1, -1, -1
+			);
+		}
+
 		const long long start = DateTime::ticks();
 
 		const bool codeIsOk =
