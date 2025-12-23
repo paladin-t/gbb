@@ -2574,15 +2574,20 @@ public:
 
 					// Tooltip.
 					const Editing::ActorIndex &idx = _selection.hoveringActor;
-					const ActorAssets::Entry* entry = _project->getActor(idx.cel);
-					if (entry && !ImGui::IsPopupOpen("_", ImGuiPopupFlags_AnyPopup)) {
-						const active_t def = entry->definition;
+					const ActorAssets::Entry* entry_ = _project->getActor(idx.cel);
+					if (entry_ && !ImGui::IsPopupOpen("_", ImGuiPopupFlags_AnyPopup)) {
+						const active_t def = entry_->definition;
+						const Math::Vec2i &pos = cursor.position;
+						const char* updateCallback = getActorUpdateRoutine(entry_, pos);
+						const char* onHitsCallback = getActorOnHitsRoutine(entry_, pos);
 						_selection.hoveringActorTips = Text::format(
 							ws->theme()->tooltipScene_ActorDetails(),
 							{
 								Text::toString(idx.cel),
 								Text::toString(cursor.position.x), Text::toString(cursor.position.y),
-								Text::toString(def.bounds.left), Text::toString(def.bounds.top), Text::toString(def.bounds.right), Text::toString(def.bounds.bottom)
+								Text::toString(def.bounds.left), Text::toString(def.bounds.top), Text::toString(def.bounds.right), Text::toString(def.bounds.bottom),
+								std::string(updateCallback ? updateCallback : "-"),
+								std::string(onHitsCallback ? onHitsCallback : "-")
 							}
 						);
 						if (!idx.invalid()) {
@@ -5947,6 +5952,28 @@ private:
 			pos += _selection.selectedActor.offset;
 
 		return pos;
+	}
+	const char* getActorUpdateRoutine(const ActorAssets::Entry* entry_, const Math::Vec2i &pos) const {
+		const ActorRoutineOverriding::Array &actorRoutines = entry()->actorRoutineOverridings;
+		const ActorRoutineOverriding* overriding = Routine::search(actorRoutines, pos);
+		if (overriding && !overriding->routines.update.empty())
+			return overriding->routines.update.c_str();
+
+		if (entry_ && entry_->data && !entry_->data->updateRoutine().empty())
+			return entry_->data->updateRoutine().c_str();
+
+		return nullptr;
+	}
+	const char* getActorOnHitsRoutine(const ActorAssets::Entry* entry_, const Math::Vec2i &pos) const {
+		const ActorRoutineOverriding::Array &actorRoutines = entry()->actorRoutineOverridings;
+		const ActorRoutineOverriding* overriding = Routine::search(actorRoutines, pos);
+		if (overriding && !overriding->routines.onHits.empty())
+			return overriding->routines.onHits.c_str();
+
+		if (entry_ && entry_->data && !entry_->data->onHitsRoutine().empty())
+			return entry_->data->onHitsRoutine().c_str();
+
+		return nullptr;
 	}
 	void bindActorCallback(const Math::Vec2i &pos, int index, const std::initializer_list<Variant> &args) {
 		ActorRoutineOverriding::Array actorRoutines = entry()->actorRoutineOverridings;

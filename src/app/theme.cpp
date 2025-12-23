@@ -1203,7 +1203,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipProjectProperty_ResetIcon("Reset icon");
 	tooltipProjectProperty_WhetherToCompileInStrictModeTreatsSomeWarningsAsErrors("Whether to compile in strict mode\n(Treats some warnings as errors)");
 
-	tooltipScene_ActorDetails(" Index: {0}\n   Pos: {1},{2}\nBounds: {3},{4},{5},{6}");
+	tooltipScene_ActorDetails("  Index: {0}\n    Pos: {1},{2}\n Bounds: {3},{4},{5},{6}\n Update: {7}\nOn hits: {8}");
 	tooltipScene_Attributes("Attributes:");
 	tooltipScene_Bit0("Bit 0\n(blocking left)");
 	tooltipScene_Bit1("Bit 1\n(blocking right)");
