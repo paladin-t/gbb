@@ -54,6 +54,7 @@ protected:
 		long long _interval = 0;
 
 		long long _lastModificationTimestamp = 0;
+		bool _manuallyTriggered = false;
 
 	public:
 		Debounce();

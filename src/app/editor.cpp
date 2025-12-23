@@ -58,8 +58,7 @@ Editor::Debounce::~Debounce() {
 }
 
 void Editor::Debounce::trigger(void) {
-	const long long now = DateTime::ticks();
-	_lastModificationTimestamp = Math::max(now - _interval, 1ll);
+	_manuallyTriggered = true;
 }
 
 void Editor::Debounce::modified(void) {
@@ -67,6 +66,13 @@ void Editor::Debounce::modified(void) {
 }
 
 bool Editor::Debounce::fire(void) {
+	if (_manuallyTriggered) {
+		_lastModificationTimestamp = 0;
+		_manuallyTriggered = false;
+
+		return true;
+	}
+
 	if (_lastModificationTimestamp == 0)
 		return false;
 
