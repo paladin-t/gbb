@@ -1,7 +1,7 @@
 /*
 ** GB BASIC
 **
-** Copyright (C) 2023-2025 Tony Wang, all rights reserved
+** Copyright (C) 2023-2026 Tony Wang, all rights reserved
 **
 ** For the latest info, see https://paladin-t.github.io/kits/gbb/
 */
@@ -5437,7 +5437,7 @@ void AboutPopupBox::update(Workspace*) {
 			SameLine();
 			Url("Tony Wang", "https://paladin-t.github.io/");
 			SameLine();
-			TextUnformatted(", 2023-2025");
+			TextUnformatted(", 2023-2026");
 			NewLine();
 		}
 		Separator();
