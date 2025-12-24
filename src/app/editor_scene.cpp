@@ -92,6 +92,7 @@ private:
 
 		Editing::ActorIndex hoveringActor; // The hovering actor information according to the mouse.
 		std::string hoveringActorTips;
+		Math::Vec2i hoveringActorTipsPosition = Math::Vec2i(-1, -1);
 		Editing::ActorIndex editingActor; // The editing actor information during i.e. mouse down and mouse up.
 		Editing::ActorIndex selectedActor; // The selected actor information for routine overriding.
 		bool actorRoutineOverridingsFilled = false;
@@ -124,6 +125,7 @@ private:
 
 			hoveringActor.clear();
 			hoveringActorTips.clear();
+			hoveringActorTipsPosition = Math::Vec2i(-1, -1);
 			editingActor.clear();
 			selectedActor.clear();
 			actorRoutineOverridingsFilled = false;
@@ -2576,27 +2578,31 @@ public:
 					const Editing::ActorIndex &idx = _selection.hoveringActor;
 					const ActorAssets::Entry* entry_ = _project->getActor(idx.cel);
 					if (entry_ && !ImGui::IsPopupOpen("_", ImGuiPopupFlags_AnyPopup)) {
-						const active_t def = entry_->definition;
 						const Math::Vec2i &pos = cursor.position;
-						const char* updateCallback = getActorUpdateRoutine(entry_, pos);
-						const char* onHitsCallback = getActorOnHitsRoutine(entry_, pos);
-						_selection.hoveringActorTips = Text::format(
-							ws->theme()->tooltipScene_ActorDetails(),
-							{
-								Text::toString(idx.cel),
-								Text::toString(cursor.position.x), Text::toString(cursor.position.y),
-								Text::toString(def.bounds.left), Text::toString(def.bounds.top), Text::toString(def.bounds.right), Text::toString(def.bounds.bottom),
-								std::string(updateCallback ? updateCallback : "-"),
-								std::string(onHitsCallback ? onHitsCallback : "-")
-							}
-						);
-						if (!idx.invalid()) {
+						if (_selection.hoveringActorTipsPosition != pos) {
+							_selection.hoveringActorTipsPosition = pos;
+							const active_t def = entry_->definition;
+							const char* updateCallback = getActorUpdateRoutine(entry_, pos);
+							const char* onHitsCallback = getActorOnHitsRoutine(entry_, pos);
+							_selection.hoveringActorTips = Text::format(
+								ws->theme()->tooltipScene_ActorDetails(),
+								{
+									Text::toString(idx.cel),
+									Text::toString(cursor.position.x), Text::toString(cursor.position.y),
+									Text::toString(def.bounds.left), Text::toString(def.bounds.top), Text::toString(def.bounds.right), Text::toString(def.bounds.bottom),
+									std::string(updateCallback ? updateCallback : "-"),
+									std::string(onHitsCallback ? onHitsCallback : "-")
+								}
+							);
+						}
+						if (!idx.invalid() && !_selection.hoveringActorTips.empty()) {
 							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 							ImGui::SetTooltip(_selection.hoveringActorTips);
 						}
 					} else {
 						_selection.hoveringActorTips.clear();
+						_selection.hoveringActorTipsPosition = Math::Vec2i(-1, -1);
 					}
 				}
 
@@ -4889,6 +4895,7 @@ private:
 				_selection.selectedActor = Editing::ActorIndex((Byte)cel, Math::Vec2i());
 		}
 		if (refillObjects) {
+			_selection.hoveringActorTipsPosition = Math::Vec2i(-1, -1);
 			_objects.fill();
 		}
 		if (refillName) {

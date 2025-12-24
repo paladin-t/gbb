@@ -1215,6 +1215,10 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 				return;
 			}
 
+			ws->joinCompiling();
+
+			ws->join();
+
 			fileAskSave(wnd, rnd, ws, true)
 				.then(
 					[wnd, rnd, ws, df] (bool ok) -> void {
@@ -1224,6 +1228,8 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 
 							return;
 						}
+
+						ws->clearAnalyzingResult();
 
 						if (!prj->exists()) { // Not saved or doesn't exist on disk.
 							int tobeRemoved = -1;
@@ -1239,12 +1245,6 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 								ws->projects().erase(ws->projects().begin() + tobeRemoved); // Remove the temporary project.
 							}
 						}
-
-						ws->joinCompiling();
-
-						ws->join();
-
-						ws->clearAnalyzingResult();
 
 						prj->attributesTexture(nullptr);
 						prj->propertiesTexture(nullptr);
@@ -4713,12 +4713,6 @@ promise::Promise Operations::projectReload(Window* wnd, Renderer* rnd, Workspace
 				.then(
 					[wnd, rnd, ws, next, df] (void) -> void {
 						ws->skipFrame(3);
-
-						ws->joinCompiling();
-
-						ws->join();
-
-						ws->clearAnalyzingResult();
 
 						fileClose(wnd, rnd, ws)
 							.then(

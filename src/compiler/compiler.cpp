@@ -29543,7 +29543,7 @@ public:
 
 			// Debug.
 			ADD_STATEMENT("dbginfo",           node<NodeRoutine>("dbginfo", Defaults()),   Token::Types::KEYWORD,    false)
-				->parameters(0, { FALSE /* full */ });
+				->parameters(0, { TRUE /* full */ });
 			ADD_STATEMENT("filler",            node<NodeFiller>(),                         Token::Types::KEYWORD,    false);
 
 			/**< Memory functions. */
