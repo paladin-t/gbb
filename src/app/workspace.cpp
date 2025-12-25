@@ -863,6 +863,18 @@ int Workspace::getValidKernelIndex(const Project* prj) const {
 }
 
 int Workspace::getKernelUsedCountByProjects(int index) const {
+	Project::Array allProjects;
+	if (showRecentProjects()) {
+		allProjects = projects();
+	} else {
+		const Project::Ptr &prj = currentProject();
+		if (prj)
+			allProjects.push_back(prj);
+	}
+
+	if (allProjects.empty())
+		return 0;
+
 	if (index < 0 || index >= (int)kernels().size())
 		return 0;
 
@@ -870,8 +882,8 @@ int Workspace::getKernelUsedCountByProjects(int index) const {
 	const std::string &id = krnl->id();
 
 	int result = 0;
-	for (int i = 0; i < (int)projects().size(); ++i) {
-		const Project::Ptr &prj = projects()[i];
+	for (int i = 0; i < (int)allProjects.size(); ++i) {
+		const Project::Ptr &prj = allProjects[i];
 		if (prj->kernel() == id)
 			++result;
 	}

@@ -974,9 +974,15 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			templatePrj->behaviourSerializer(std::bind(&Workspace::serializeKernelBehaviour, ws, std::placeholders::_1));
 			templatePrj->behaviourParser(std::bind(&Workspace::parseKernelBehaviour, ws, std::placeholders::_1));
 
+			const int oldKrnlIdx = ws->activeKernelIndex();
+			const int kernelIdx = ws->getValidKernelIndex(templatePrj.get());
+			ws->activeKernelIndex(kernelIdx);
+
 			if (!templatePrj->load(false, fontConfigPath, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
 				templatePrj->close(true);
 				templatePrj = nullptr;
+
+				ws->activeKernelIndex(oldKrnlIdx);
 
 				break;
 			}
