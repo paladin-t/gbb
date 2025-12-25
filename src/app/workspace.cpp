@@ -448,7 +448,7 @@ Workspace::~Workspace() {
 	input(nullptr);
 }
 
-bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps, bool showRecent, bool hideSplashImage, bool forceWritable_, const char* toUpgrade, bool toCompile) {
+bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps, bool showRecent, bool hideSplashImage, bool forceWritable_, bool commandlineOnly, const char* toUpgrade, bool toCompile) {
 	// Prepare.
 	if (_opened)
 		return false;
@@ -460,6 +460,16 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 	if (toUpgrade)
 		_toUpgradeToVersion = toUpgrade;
 	_toCompile = toCompile;
+
+	// Get ready for command line only.
+	if (commandlineOnly) {
+		// Load kernels.
+		loadKernels();
+
+		fprintf(stdout, "Workspace opened.\n");
+
+		return true;
+	}
 
 	// Begin the splash.
 	beginSplash(wnd, rnd, hideSplashImage);
@@ -627,11 +637,21 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 	return true;
 }
 
-bool Workspace::close(Window*, Renderer* rnd) {
+bool Workspace::close(Window*, Renderer* rnd, bool commandlineOnly) {
 	// Prepare.
 	if (!_opened)
 		return false;
 	_opened = false;
+
+	// Finish for command line only.
+	if (commandlineOnly) {
+		// Unload kernels.
+		unloadKernels();
+
+		fprintf(stdout, "Workspace closed.\n");
+
+		return true;
+	}
 
 	// Dispose the recorder.
 #if defined GBBASIC_OS_WIN || defined GBBASIC_OS_MAC || defined GBBASIC_OS_LINUX
@@ -690,12 +710,11 @@ bool Workspace::close(Window*, Renderer* rnd) {
 			Project::Ptr &prj = projects()[i];
 			prj->close(true);
 		}
-	} else {
-		Project::Ptr &prj = currentProject();
-		if (prj) {
-			prj->close(true);
-			currentProject(nullptr);
-		}
+	}
+	Project::Ptr &prj = currentProject();
+	if (prj) {
+		prj->close(true);
+		currentProject(nullptr);
 	}
 
 	// Dispose the work queue module.
@@ -5745,7 +5764,7 @@ void Workspace::compile(
 		options.onPrint(GBBASIC_TITLE " v" GBBASIC_VERSION_STRING);
 		options.onPrint("");
 
-		if (project && !project->kernel().empty() && project->kernel() != kernel->id()) {
+		if (project && !project->kernel().empty() && kernel && project->kernel() != kernel->id()) {
 			options.onError(
 				Text::format(
 					"Kernel \"{0}\" not found, using \"{1}\" instead.",
@@ -5825,6 +5844,10 @@ void Workspace::compile(
 	Text::Dictionary::const_iterator cloOpt = arguments.find(WORKSPACE_OPTION_APPLICATION_COMMANDLINE_ONLY_KEY);
 	if (cloOpt != arguments.end())
 		commandlineOnly = true;
+	bool compileOnly = false;
+	Text::Dictionary::const_iterator cpoOpt = arguments.find(COMPILER_OUTPUT_OPTION_KEY);
+	if (cpoOpt != arguments.end())
+		compileOnly = true;
 	bool doNotQuit = false;
 	Text::Dictionary::const_iterator dnqOpt = arguments.find(WORKSPACE_OPTION_APPLICATION_DO_NOT_QUIT_KEY);
 	if (dnqOpt != arguments.end())
@@ -5837,13 +5860,10 @@ void Workspace::compile(
 	// Load the project temporarily if it has not been loaded yet.
 	Project::Ptr tmpPrj = nullptr;
 	do {
-		if (commandlineOnly)
+		if (!commandlineOnly && !compileOnly) // Only happens under command-line-only or compile-only modes.
 			break;
 
 		if (prj)
-			break;
-
-		if (!rnd)
 			break;
 
 		Text::Dictionary::const_iterator srcOpt = arguments.find(COMPILER_INPUT_OPTION_KEY);
@@ -5852,8 +5872,11 @@ void Workspace::compile(
 
 		const std::string &path = srcOpt->second;
 		tmpPrj = Project::Ptr(new Project(wnd, rnd, this));
-		if (!tmpPrj->open(path.c_str()))
+		if (!tmpPrj->open(path.c_str())) {
+			tmpPrj = nullptr;
+
 			break;
+		}
 
 		Texture::Ptr attribtex(theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
 		Texture::Ptr propstex(theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
@@ -5873,9 +5896,17 @@ void Workspace::compile(
 			fontConfigPath = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
 		if (!tmpPrj->load(false, fontConfigPath.c_str(), nullptr)) {
 			tmpPrj->close(true);
+			tmpPrj = nullptr;
 
 			break;
 		}
+
+		if (!tmpPrj->assets()) {
+			AssetsBundle::Ptr assets(new AssetsBundle());
+			tmpPrj->assets(assets);
+		}
+
+		currentProject(tmpPrj); // Retain as current project, which will be closed later.
 	} while (false);
 
 	// Initialize the compiling context.
@@ -5909,13 +5940,6 @@ void Workspace::compile(
 #else /* GBBASIC_MULTITHREAD_ENABLED */
 	proc(&_compilingParameters);
 #endif /* GBBASIC_MULTITHREAD_ENABLED */
-
-	// Dispose temporary project.
-	if (tmpPrj) {
-		tmpPrj->unload();
-		tmpPrj->close(true);
-		tmpPrj = nullptr;
-	}
 }
 
 Bytes::Ptr Workspace::compile(

@@ -503,22 +503,23 @@ public:
 		}
 
 		// Initialize the workspace.
+		bool hideSplash = false;
+		applicationGetArgValue(_options, WORKSPACE_OPTION_APPLICATION_HIDE_SPLASH_KEY, hideSplash, true);
+
+		bool forceWritable = false;
+		applicationGetArgValue(_options, WORKSPACE_OPTION_APPLICATION_FORCE_WRITABLE_KEY, forceWritable, true);
+
+		std::string font;
+		applicationGetArgValue(
+			_options, COMPILER_FONT_OPTION_KEY,
+			[&] (Text::Dictionary::const_iterator opt) -> void {
+				font = opt->second;
+			}
+		);
+
+		_workspace->open(_window, _renderer, font.empty() ? nullptr : font.c_str(), fps, showRecent, hideSplash, forceWritable, _commandlineOnly, _toUpgrade ? toUpgradeToVersion.c_str() : nullptr, _toCompile);
+
 		if (!_commandlineOnly) {
-			bool hideSplash = false;
-			applicationGetArgValue(_options, WORKSPACE_OPTION_APPLICATION_HIDE_SPLASH_KEY, hideSplash, true);
-
-			bool forceWritable = false;
-			applicationGetArgValue(_options, WORKSPACE_OPTION_APPLICATION_FORCE_WRITABLE_KEY, forceWritable, true);
-
-			std::string font;
-			applicationGetArgValue(
-				_options, COMPILER_FONT_OPTION_KEY,
-				[&] (Text::Dictionary::const_iterator opt) -> void {
-					font = opt->second;
-				}
-			);
-
-			_workspace->open(_window, _renderer, font.empty() ? nullptr : font.c_str(), fps, showRecent, hideSplash, forceWritable, _toUpgrade ? toUpgradeToVersion.c_str() : nullptr, _toCompile);
 			if (explicitWndSize)
 				_workspace->load(_window, _renderer, &wndWidth, &wndHeight);
 			else
@@ -542,8 +543,9 @@ public:
 		// Dispose the workspace.
 		if (!_commandlineOnly) {
 			_workspace->save(_window, _renderer);
-			_workspace->close(_window, _renderer);
 		}
+
+		_workspace->close(_window, _renderer, _commandlineOnly);
 
 		// Dispose the GUI system.
 		if (!_commandlineOnly) {

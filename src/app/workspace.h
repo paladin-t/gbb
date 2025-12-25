@@ -651,8 +651,8 @@ public:
 	Workspace();
 	~Workspace();
 
-	bool open(Window* wnd, Renderer* rnd, const char* font, unsigned fps, bool showRecent, bool hideSplashImage, bool forceWritable, const char* toUpgrade /* nullable */, bool toCompile);
-	bool close(Window* wnd, Renderer* rnd);
+	bool open(Window* wnd, Renderer* rnd, const char* font, unsigned fps, bool showRecent, bool hideSplashImage, bool forceWritable, bool commandlineOnly, const char* toUpgrade /* nullable */, bool toCompile);
+	bool close(Window* wnd, Renderer* rnd, bool commandlineOnly);
 
 	States state(void) const;
 	bool canUseShortcuts(void) const;
