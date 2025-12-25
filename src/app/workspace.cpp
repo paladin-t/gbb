@@ -4008,6 +4008,9 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 
 	ImGui::ProjectPropertyPopupBox::ConfirmedHandler confirm(
 		[wnd, this, set, isOpened] (Project* prj_) -> void {
+			if (!isOpened)
+				join();
+
 			set(prj_);
 
 			if (isOpened)
@@ -4018,7 +4021,10 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		nullptr
 	);
 	ImGui::ProjectPropertyPopupBox::CanceledHandler cancel(
-		[this] (void) -> void {
+		[this, isOpened] (void) -> void {
+			if (!isOpened)
+				join();
+
 			popupBox(nullptr);
 		},
 		nullptr
@@ -5210,6 +5216,8 @@ void Workspace::upgrade(
 	}
 
 	// Load the project.
+	const int oldKrnlIdx = activeKernelIndex();
+
 	onPrint(GBBASIC_TITLE " v" GBBASIC_VERSION_STRING);
 	onPrint("");
 
@@ -5246,6 +5254,9 @@ void Workspace::upgrade(
 		prj->behaviourSerializer(std::bind(&Workspace::serializeKernelBehaviour, this, std::placeholders::_1));
 		prj->behaviourParser(std::bind(&Workspace::parseKernelBehaviour, this, std::placeholders::_1));
 
+		const int kernelIdx = getValidKernelIndex(prj.get());
+		activeKernelIndex(kernelIdx);
+
 		std::string fontConfigPath;
 		Text::Dictionary::const_iterator fntOpt = arguments.find(COMPILER_FONT_OPTION_KEY);
 		if (fntOpt != arguments.end())
@@ -5254,6 +5265,8 @@ void Workspace::upgrade(
 			fontConfigPath = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
 		if (!prj->load(false, fontConfigPath.c_str(), nullptr)) {
 			prj->close(true);
+
+			activeKernelIndex(oldKrnlIdx);
 
 			onError("Cannot load the project.", false);
 
@@ -5311,6 +5324,8 @@ void Workspace::upgrade(
 		prj->close(true);
 		prj = nullptr;
 	}
+
+	activeKernelIndex(oldKrnlIdx);
 
 	// Finish.
 	if (!doNotQuit) {
@@ -6997,7 +7012,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 			if (!wnd->maximized() && !wnd->fullscreen())
 				wnd->centralize();
 		}
-	} else if (!modifier && !io.KeyShift && io.KeyAlt) {
+	} else if (modifier && !io.KeyShift && !io.KeyAlt) {
 		if (return_ && !popupBox())
 			toggleFullscreen(wnd);
 	} else if (!modifier && !io.KeyShift && !io.KeyAlt) {
@@ -7302,6 +7317,20 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 	}
 	if (!opened) {
 		if (showRecentProjects()) {
+			if (!modifier && !io.KeyShift && io.KeyAlt && return_) {
+				if (recentProjectSelectedIndex() >= 0 && recentProjectSelectedIndex() < (int)projects().size()) {
+					const Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
+					delay(
+						std::bind(
+							[wnd, rnd, this, prj] (void) -> void {
+								showProjectProperty(wnd, rnd, prj.get(), false);
+							}
+						),
+						"SHOW PROJECT PROPERTY"
+					);
+				}
+			}
+
 			if (!modifier && !io.KeyShift && !io.KeyAlt && !recentProjectsFilter().enabled) {
 				auto getLinesPerPage = [&] (void) -> int {
 					ImGuiStyle &style = ImGui::GetStyle();
@@ -10444,20 +10473,32 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 				const double now = DateTime::toSeconds(DateTime::ticks());
 				if (selected) {
 					if (now - recentProjectSelectedTimestamp() < 0.5) { // Double clicked.
+						ImGuiIO &io = ImGui::GetIO();
+
+#if GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CTRL
+						const bool modifier = io.KeyCtrl;
+#elif GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CMD
+						const bool modifier = io.KeySuper;
+#endif /* GBBASIC_MODIFIER_KEY */
+
 						closeFilter();
 
-						Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
-							.then(
-								[wnd, rnd, this, prj] (bool ok) -> void {
-									if (!ok)
-										return;
+						if (!modifier && !io.KeyShift && io.KeyAlt) {
+							showProjectProperty(wnd, rnd, prj.get(), false);
+						} else {
+							Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
+								.then(
+									[wnd, rnd, this, prj] (bool ok) -> void {
+										if (!ok)
+											return;
 
-									validateProject(prj.get());
+										validateProject(prj.get());
 
-									if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-										launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
-								}
-							);
+										if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+									}
+								);
+						}
 					} else { // The interval between two clicks is too short, perform single click.
 						recentProjectSelectedTimestamp(now);
 						recentProjectSelectedIndex(idx);
