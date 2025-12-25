@@ -5888,6 +5888,9 @@ void Workspace::compile(
 		tmpPrj->behaviourSerializer(std::bind(&Workspace::serializeKernelBehaviour, this, std::placeholders::_1));
 		tmpPrj->behaviourParser(std::bind(&Workspace::parseKernelBehaviour, this, std::placeholders::_1));
 
+		const int kernelIdx = getValidKernelIndex(tmpPrj.get());
+		activeKernelIndex(kernelIdx);
+
 		std::string fontConfigPath;
 		Text::Dictionary::const_iterator fntOpt = arguments.find(COMPILER_FONT_OPTION_KEY);
 		if (fntOpt != arguments.end())
