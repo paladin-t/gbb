@@ -6934,6 +6934,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 	const bool period     = ImGui::IsKeyPressed(SDL_SCANCODE_PERIOD);     /* . */
 	const bool slash      = ImGui::IsKeyPressed(SDL_SCANCODE_SLASH);      /* / */
 	const bool return_    = ImGui::IsKeyPressed(SDL_SCANCODE_RETURN);
+	const bool returnR    = ImGui::IsKeyReleased(SDL_SCANCODE_RETURN);
 	const bool tab        = ImGui::IsKeyPressed(SDL_SCANCODE_TAB);
 	const bool esc        = ImGui::IsKeyPressed(SDL_SCANCODE_ESCAPE);
 	const bool del        = ImGui::IsKeyPressed(SDL_SCANCODE_DELETE);
@@ -7317,7 +7318,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 	}
 	if (!opened) {
 		if (showRecentProjects()) {
-			if (!modifier && !io.KeyShift && io.KeyAlt && return_) {
+			if (!modifier && !io.KeyShift && io.KeyAlt && returnR) {
 				if (recentProjectSelectedIndex() >= 0 && recentProjectSelectedIndex() < (int)projects().size()) {
 					const Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
 					delay(
