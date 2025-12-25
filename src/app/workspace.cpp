@@ -4020,8 +4020,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 
 	ImGui::ProjectPropertyPopupBox::ConfirmedHandler confirm(
 		[wnd, this, set, isOpened] (Project* prj_) -> void {
-			if (!isOpened)
-				join();
+			join();
 
 			set(prj_);
 
@@ -4033,9 +4032,8 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		nullptr
 	);
 	ImGui::ProjectPropertyPopupBox::CanceledHandler cancel(
-		[this, isOpened] (void) -> void {
-			if (!isOpened)
-				join();
+		[this] (void) -> void {
+			join();
 
 			popupBox(nullptr);
 		},
@@ -4043,6 +4041,8 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 	);
 	ImGui::ProjectPropertyPopupBox::AppliedHandler apply(
 		[wnd, this, set, isOpened] (Project* prj_) -> void {
+			join();
+
 			set(prj_);
 
 			if (isOpened)
