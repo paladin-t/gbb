@@ -131,6 +131,8 @@ public:
 	 */
 	virtual bool clone(Object** ptr) const override;
 
+	std::string kernelSourceCodePath(std::string* name_ /* nullable */) const;
+
 	bool open(const char* path);
 	bool close(void);
 };

@@ -4440,18 +4440,7 @@ std::string Workspace::getSourceCodePath(int index, std::string* name_) const {
 		return "";
 
 	const GBBASIC::Kernel::Ptr &krnl = kernels()[index];
-	const std::string &path = krnl->path();
-	std::string dir;
-	Path::split(path, nullptr, nullptr, &dir);
-	const std::string &srcPath = krnl->kernelSourceCode();
-	std::string name;
-	Path::split(srcPath, &name, nullptr, nullptr);
-
-	std::string src = Path::combine(dir.c_str(), (name + ".zip").c_str());
-	src = Path::absoluteOf(src);
-
-	if (name_)
-		*name_ = name;
+	const std::string src = krnl->kernelSourceCodePath(name_);
 
 	return src;
 }

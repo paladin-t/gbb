@@ -4715,13 +4715,6 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 						SameLine();
 
 						if (_ejectSourceCode) {
-#if defined GBBASIC_OS_HTML
-							BeginDisabled();
-							{
-								ImageButton(_theme->iconCode()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_EjectSourceCodeVm().c_str());
-							}
-							EndDisabled();
-#else /* GBBASIC_OS_HTML */
 							if (krnl->kernelSourceCode().empty()) {
 								BeginDisabled();
 								{
@@ -4734,7 +4727,6 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 								}
 							}
 							SameLine();
-#endif /* GBBASIC_OS_HTML */
 						}
 
 						if (krnl->readonly()) {

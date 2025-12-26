@@ -2373,14 +2373,14 @@ public:
 		typedef std::vector<int> Defaults;
 		typedef std::initializer_list<int> Values;
 
-		int parameters = 0;
+		int parameterCountToMatch = 0;
 		Defaults defaults;
 
 		static constexpr const int PLACEHOLDER = -1;
 
 		Entry() {
 		}
-		Entry(int params, const Values &defaults_) : parameters(params) {
+		Entry(int paramsToMatch, const Values &defaults_) : parameterCountToMatch(paramsToMatch) {
 			for (int d : defaults_)
 				defaults.push_back(d);
 		}
@@ -2396,12 +2396,12 @@ public:
 	DefaultTable() {
 	}
 
-	void add(int params, const Entry::Values &defaults_) {
-		_array.push_back(Entry(params, defaults_));
+	void add(int paramsToMatch, const Entry::Values &defaults_) {
+		_array.push_back(Entry(paramsToMatch, defaults_));
 	}
-	const Entry* find(int params) const {
+	const Entry* find(int paramsToMatch) const {
 		for (const Entry &entry : _array) {
-			if (entry.parameters == params)
+			if (entry.parameterCountToMatch == paramsToMatch)
 				return &entry;
 		}
 
@@ -29539,7 +29539,7 @@ public:
 			ADD_STATEMENT("sread",             node<NodeFunction>("sread", Defaults()),    Token::Types::KEYWORD,     true)
 				->parameters(0, { TRUE /* sync */ });
 			ADD_STATEMENT("swrite",            node<NodeFunction>("swrite", Defaults()),   Token::Types::KEYWORD,     true)
-				->parameters(1, { DefaultTable::Entry::PLACEHOLDER, TRUE /* sync */ });
+				->parameters(1, { DefaultTable::Entry::PLACEHOLDER /* value */, TRUE /* sync */ });
 
 			// Debug.
 			ADD_STATEMENT("dbginfo",           node<NodeRoutine>("dbginfo", Defaults()),   Token::Types::KEYWORD,    false)

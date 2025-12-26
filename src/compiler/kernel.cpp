@@ -63,6 +63,29 @@ bool Kernel::clone(Object** ptr) const { // Non-clonable.
 	return false;
 }
 
+std::string Kernel::kernelSourceCodePath(std::string* name_) const {
+	if (name_)
+		name_->clear();
+
+	const std::string &path_ = path();
+	const std::string &srcPath = kernelSourceCode();
+	if (path_.empty() || srcPath.empty())
+		return "";
+
+	std::string dir;
+	Path::split(path_, nullptr, nullptr, &dir);
+	std::string name;
+	Path::split(srcPath, &name, nullptr, nullptr);
+
+	std::string src = Path::combine(dir.c_str(), (name + ".zip").c_str());
+	src = Path::absoluteOf(src);
+
+	if (name_)
+		*name_ = name;
+
+	return src;
+}
+
 bool Kernel::open(const char* path_) {
 	// Read from file.
 	File::Ptr file(File::create());
@@ -291,6 +314,7 @@ bool Kernel::open(const char* path_) {
 	animations_.shrink_to_fit();
 	behaviours_.shrink_to_fit();
 
+	// Assign the properties.
 	path(path_);
 	readonly(readonly_);
 	id(id_);
@@ -310,6 +334,13 @@ bool Kernel::open(const char* path_) {
 	animations(animations_);
 	projectileAnimationIndex(projectileAnimationIndex_);
 	behaviours(behaviours_);
+
+	// Reset the kernel source code if file doesn't exist.
+	if (!kernelSourceCode().empty()) {
+		const std::string krnlSrcCodePath = kernelSourceCodePath(nullptr);
+		if (krnlSrcCodePath.empty() || !Path::fileExists(krnlSrcCodePath.c_str()))
+			kernelSourceCode().clear();
+	}
 
 	// Setup the entry.
 	std::string entry_;
