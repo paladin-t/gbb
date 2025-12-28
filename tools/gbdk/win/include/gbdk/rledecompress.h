@@ -38,7 +38,7 @@ uint8_t rle_init(void * data);
     @see rle_init
  */
 uint8_t rle_decompress(void * dest, uint8_t len);
-#elif defined(__TARGET_sms) || defined(__TARGET_gg)
+#elif defined(__TARGET_sms) || defined(__TARGET_gg) || defined(__TARGET_msx)
 uint8_t rle_init(void * data) Z88DK_FASTCALL;
 uint8_t rle_decompress(void * dest, uint8_t len) Z88DK_CALLEE;
 #else

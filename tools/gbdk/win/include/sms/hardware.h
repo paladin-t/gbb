@@ -10,7 +10,7 @@
 #define __BYTES extern UBYTE
 #define __BYTE_REG extern volatile UBYTE
 
-static volatile SFR AT(0x00) GG_STATE;  /**< Game Gear status register for Start/Pause, Japan vs Overseas mode (NJAP), NTSC/PAL mode */
+static volatile SFR AT(0x00) GG_STATE;     /**< Game Gear status register for Start/Pause, Japan vs Overseas mode (NJAP), NTSC/PAL mode */
 
 #define GGSTATE_STT    0b10000000
 #define GGSTATE_NJAP   0b01000000
@@ -18,9 +18,9 @@ static volatile SFR AT(0x00) GG_STATE;  /**< Game Gear status register for Start
 
 static volatile SFR AT(0x01) GG_EXT_7BIT;  /**< Game Gear Serial port register used to read/write data when the EXT connector used as 7-bit input/output port */
 
-static volatile SFR AT(0x02) GG_EXT_CTL;  /**< Game Gear Serial port register for configuring external NMI */
+static volatile SFR AT(0x02) GG_EXT_CTL;   /**< Game Gear Serial port register for configuring external NMI */
 
-#define GGEXT_NINIT    0b10000000
+#define GGEXT_NINT     0b10000000
 
 static volatile SFR AT(0x03) GG_SIO_SEND;  /**< Game Gear Serial Data Send register */
 static volatile SFR AT(0x04) GG_SIO_RECV;  /**< Game Gear Serial Data Receive register */

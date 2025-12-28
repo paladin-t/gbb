@@ -5,21 +5,21 @@
 ## Table of Content
 
 - [About GB BASIC](#about-gb-basic)
-  - [About This Repository](#about-this-repository)
-  - [Why GB BASIC?](#why-gb-basic)
-  - [Programming Paradigms](#programming-paradigms)
-  - [Features](#features)
-  - [Specs](#specs)
+	- [About This Repository](#about-this-repository)
+	- [Why GB BASIC?](#why-gb-basic)
+	- [Programming Paradigms](#programming-paradigms)
+	- [Features](#features)
+	- [Specs](#specs)
 - [Glance](#glance)
 - [Installation](#installation)
-  - [Using Prebuilt](#using-prebuilt)
-  - [Compiling from Source](#compiling-from-source)
-    - [Windows](#windows)
-    - [Linux](#linux)
-    - [MacOS](#macos)
-    - [Other platforms](#other-platforms)
+	- [Using Prebuilt](#using-prebuilt)
+	- [Compiling from Source](#compiling-from-source)
+		- [Windows](#windows)
+		- [Linux](#linux)
+		- [MacOS](#macos)
+		- [Other platforms](#other-platforms)
 - [Learning](#learning)
-  - [Documentation](#documentation)
+	- [Documentation](#documentation)
 
 # About GB BASIC
 
@@ -112,6 +112,8 @@ GB BASIC is programmable in a brand new BASIC dialect. The integrated assets edi
 ![](docs/screenshots/screenshot18.png)
 
 ![](docs/screenshots/screenshot19.png)
+
+![](docs/screenshots/screenshot20.png)
 
 # Installation
 

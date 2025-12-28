@@ -7,9 +7,9 @@
 
 #include <asm/types.h>
 
-/** Good 'ol NULL.
- */
-#define	NULL 0
+#ifndef NULL
+  #define NULL (void *)0
+#endif
 
 /** A 'false' value.
  */

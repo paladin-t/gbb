@@ -3,7 +3,7 @@
 
 #if defined(__TARGET_gb) || defined(__TARGET_ap) || defined(__TARGET_duck)
   #include <gb/gbdecompress.h>
-#elif defined(__TARGET_sms) || defined(__TARGET_gg)
+#elif defined(__TARGET_sms) || defined(__TARGET_gg) || defined(__TARGET_msx)
   #include <sms/gbdecompress.h>
 #else
   #error Unrecognized port
