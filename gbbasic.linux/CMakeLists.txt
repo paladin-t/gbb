@@ -5,49 +5,71 @@ message(STATUS "Build GB BASIC for Linux...")
 project(gbbasic)
 
 # Architectures.
-set(GBBASIC_SPEC no)
-if ("${arch}" STREQUAL "x64")
-  set(GBBASIC_SPEC 64)
+if (NOT DEFINED GBBASIC_SPEC)
+  set(GBBASIC_SPEC ${CMAKE_SYSTEM_PROCESSOR})
 endif ()
-if ("${arch}" STREQUAL "x86")
-  set(GBBASIC_SPEC 86)
-endif ()
-if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-  message(STATUS "Host arch: x64")
-  set(GBBASIC_IS_X64 TRUE)
-  set(GBBASIC_ARCH 64)
+if (${GBBASIC_SPEC} MATCHES "x86_64|AMD64")
+  message(STATUS "Target arch: x64")
+  set(GBBASIC_ARCH "x64")
+  set(GBBASIC_BITS 64)
+elseif (${GBBASIC_SPEC} MATCHES "i[3456]86|X86")
+  message(STATUS "Target arch: x86")
+  set(GBBASIC_ARCH "x86")
+  set(GBBASIC_BITS 32)
+elseif (${GBBASIC_SPEC} MATCHES "^(aarch64|arm64|ARM64)$")
+  message(STATUS "Target arch: arm64")
+  set(GBBASIC_ARCH "arm64")
+  set(GBBASIC_BITS 64)
+elseif (${GBBASIC_SPEC} MATCHES "^(arm|ARM)")
+  message(STATUS "Target arch: arm32")
+  set(GBBASIC_ARCH "arm32")
+  set(GBBASIC_BITS 32)
+elseif (${GBBASIC_SPEC} MATCHES "mips64")
+  message(STATUS "Target arch: mips64")
+  set(GBBASIC_ARCH "mips64")
+  set(GBBASIC_BITS 64)
+elseif (${GBBASIC_SPEC} MATCHES "mips")
+  message(STATUS "Target arch: mips32")
+  set(GBBASIC_ARCH "mips32")
+  set(GBBASIC_BITS 32)
+elseif (${GBBASIC_SPEC} MATCHES "riscv64")
+  message(STATUS "Target arch: riscv64")
+  set(GBBASIC_ARCH "riscv64")
+  set(GBBASIC_BITS 64)
+elseif (${GBBASIC_SPEC} MATCHES "riscv32")
+  message(STATUS "Target arch: riscv32")
+  set(GBBASIC_ARCH "riscv32")
+  set(GBBASIC_BITS 32)
+elseif (${GBBASIC_SPEC} MATCHES "ppc64le|ppc64|powerpc64")
+  message(STATUS "Target arch: ppc64")
+  set(GBBASIC_ARCH "ppc64")
   set(GBBASIC_BITS 64)
 else ()
-  message(STATUS "Host arch: x86")
-  set(GBBASIC_IS_X64 FALSE)
-  set(GBBASIC_ARCH 86)
-  set(GBBASIC_BITS 32)
-endif ()
-if (${GBBASIC_SPEC} STREQUAL no)
-  message(STATUS "Specified arch: no")
-else ()
-  message(STATUS "Specified arch: " ${GBBASIC_SPEC})
-  if (${GBBASIC_SPEC} STREQUAL 64)
-    if (NOT ${GBBASIC_IS_X64})
-      set(GBBASIC_IS_X64 TRUE)
-      set(GBBASIC_ARCH 64)
-      set(GBBASIC_BITS 64)
-      set(CMAKE_C_FLAGS "-m64")
-      set(CMAKE_CXX_FLAGS "-m64")
-    endif ()
+  if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(STATUS "Target arch: unknown64")
+    set(GBBASIC_ARCH "unknown64")
+    set(GBBASIC_BITS 64)
+  elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
+    message(STATUS "Target arch: unknown32")
+    set(GBBASIC_ARCH "unknown32")
+    set(GBBASIC_BITS 32)
   else ()
-    if (${GBBASIC_IS_X64})
-      set(GBBASIC_IS_X64 FALSE)
-      set(GBBASIC_ARCH 86)
-      set(GBBASIC_BITS 32)
-      set(CMAKE_C_FLAGS "-m32")
-      set(CMAKE_CXX_FLAGS "-m32")
-    endif ()
+    message(FATAL_ERROR 
+      "Target arch: unknown\n"
+      "Unsupported architecture detected! "
+      "CMAKE_SIZEOF_VOID_P = ${CMAKE_SIZEOF_VOID_P}. "
+      "Only 32-bit and 64-bit architectures are supported."
+    )
   endif ()
 endif ()
-message(STATUS "Is x64: " ${GBBASIC_IS_X64})
+if (${GBBASIC_BITS} EQUAL 64)
+  set(CMAKE_C_FLAGS "-m64")
+  set(CMAKE_CXX_FLAGS "-m64")
+elseif (${GBBASIC_BITS} EQUAL 32)
+  set(CMAKE_C_FLAGS "-m32")
+  set(CMAKE_CXX_FLAGS "-m32")
+endif ()
 set(GBBASIC_TEMP ./)
-set(${arch} "")
 
 # Profiles.
 if (NOT CMAKE_BUILD_TYPE)
@@ -73,6 +95,21 @@ endif ()
 find_package(PkgConfig REQUIRED)
 find_package(OpenGL REQUIRED)
 pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+
+# Libs.
+if (NOT DEFINED GBBASIC_LIB_SDL_USE_LOCAL)
+  set(GBBASIC_LIB_SDL_USE_LOCAL "TRUE")
+endif ()
+if (${GBBASIC_LIB_SDL_USE_LOCAL} STREQUAL TRUE)
+  if (EXISTS "../lib/sdl/lib/${GBBASIC_ARCH}/libSDL2.a" AND EXISTS "../lib/sdl/lib/${GBBASIC_ARCH}/libSDL2-2.0.so.0")
+    message(STATUS "Use local SDL")
+  else ()
+    message(STATUS "Use global SDL")
+    set(GBBASIC_LIB_SDL_USE_LOCAL "FALSE")
+  endif ()
+else ()
+  message(STATUS "Use global SDL")
+endif ()
 
 # Sources.
 list(
@@ -299,7 +336,6 @@ list(
   "../lib/civetweb/src"
   "../lib/imgui"
   "../lib/rapidfuzz_cpp"
-  "../lib/sdl/include"
   "../lib/zlib"
 )
 target_include_directories(gbbasic PRIVATE ${GBBASIC_INC})
@@ -341,29 +377,59 @@ add_definitions(${GTK3_CFLAGS_OTHER})
 target_link_libraries(gbbasic ${GTK3_LIBRARIES})
 
 # SDL.
-include_directories("../lib/sdl/lib/x${GBBASIC_ARCH}")
-add_library(libsdl SHARED IMPORTED)
-set_target_properties(libsdl PROPERTIES IMPORTED_LOCATION "./libSDL2-2.0.so.0")
-target_link_libraries(gbbasic libsdl)
-add_library(libsndio SHARED IMPORTED)
-set_target_properties(libsndio PROPERTIES IMPORTED_LOCATION "./libsndio.so.6.1")
-target_link_libraries(gbbasic libsndio)
+if (${GBBASIC_LIB_SDL_USE_LOCAL} STREQUAL TRUE)
+  include_directories("../lib/sdl/include")
+  add_library(libsdl SHARED IMPORTED)
+  set_target_properties(libsdl PROPERTIES IMPORTED_LOCATION "./libSDL2-2.0.so.0")
+  target_link_libraries(gbbasic libsdl)
+  add_library(libsndio SHARED IMPORTED)
+  set_target_properties(libsndio PROPERTIES IMPORTED_LOCATION "./libsndio.so.6.1")
+  target_link_libraries(gbbasic libsndio)
+else ()
+  find_package(SDL2 REQUIRED)
+  find_library(SNDIO_LIBRARY NAMES sndio)
+  if (NOT SNDIO_LIBRARY)
+    message(WARNING "sndio library not found, audio may not work properly")
+  endif ()
+  if (TARGET SDL2::SDL2)
+    target_link_libraries(gbbasic SDL2::SDL2)
+  else ()
+    include_directories(${SDL2_INCLUDE_DIRS})
+    target_link_libraries(gbbasic ${SDL2_LIBRARIES})
+  endif ()
+  if (SNDIO_LIBRARY)
+    target_link_libraries(gbbasic ${SNDIO_LIBRARY})
+  endif ()
+endif ()
 
 # Prev event.
-add_custom_target(
-  gbbasic_prev_sdl
-  COMMAND cp "../lib/sdl/lib/x${GBBASIC_ARCH}/libSDL2.a" ${GBBASIC_TEMP}
-  COMMAND cp "../lib/sdl/lib/x${GBBASIC_ARCH}/libSDL2-2.0.so.0" ${GBBASIC_TEMP}
-  COMMAND cp "../lib/sdl/lib/x${GBBASIC_ARCH}/libsndio.so.6.1" ${GBBASIC_TEMP}
-)
-add_dependencies(gbbasic gbbasic_prev_sdl)
+if (${GBBASIC_LIB_SDL_USE_LOCAL} STREQUAL TRUE)
+  list(
+    APPEND GBBASIC_PREV_LIB
+    COMMAND cp "../lib/sdl/lib/${GBBASIC_ARCH}/libSDL2.a" ${GBBASIC_TEMP}
+    COMMAND cp "../lib/sdl/lib/${GBBASIC_ARCH}/libSDL2-2.0.so.0" ${GBBASIC_TEMP}
+    COMMAND cp "../lib/sdl/lib/${GBBASIC_ARCH}/libsndio.so.6.1" ${GBBASIC_TEMP}
+  )
+endif ()
+if (GBBASIC_PREV_LIB)
+  add_custom_target(
+    gbbasic_prev_lib
+    ${GBBASIC_PREV_LIB}
+  )
+  add_dependencies(gbbasic gbbasic_prev_lib)
+endif ()
 
 # Post event.
 add_custom_command(
   TARGET gbbasic POST_BUILD
   COMMAND file "${GBBASIC_TEMP}gbbasic"
-  COMMAND file "${GBBASIC_TEMP}libSDL2-2.0.so.0"
-  COMMAND cp "${GBBASIC_TEMP}gbbasic" "../gbbasic/x${GBBASIC_ARCH}_release/"
-  COMMAND cp "${GBBASIC_TEMP}libSDL2-2.0.so.0" "../gbbasic/x${GBBASIC_ARCH}_release/"
-  COMMAND cp "${GBBASIC_TEMP}libsndio.so.6.1" "../gbbasic/x${GBBASIC_ARCH}_release/"
+  COMMAND cp "${GBBASIC_TEMP}gbbasic" "../gbbasic/${GBBASIC_ARCH}_release/"
 )
+if (${GBBASIC_LIB_SDL_USE_LOCAL} STREQUAL TRUE)
+  add_custom_command(
+    TARGET gbbasic POST_BUILD
+    COMMAND file "${GBBASIC_TEMP}libSDL2-2.0.so.0"
+    COMMAND cp "${GBBASIC_TEMP}libSDL2-2.0.so.0" "../gbbasic/${GBBASIC_ARCH}_release/"
+    COMMAND cp "${GBBASIC_TEMP}libsndio.so.6.1" "../gbbasic/${GBBASIC_ARCH}_release/"
+  )
+endif ()

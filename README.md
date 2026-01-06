@@ -175,6 +175,14 @@ Dependencies: CMake, GCC.
 3. Build GBBVM
 	1. Execute `gbbvm.sh`
 
+Note: If you want to link to the system libraries instead of the local libraries in this repo, refer to the instructions below.
+
+```sh
+cd gbbasic.linux
+cmake . -DGBBASIC_LIB_SDL_USE_LOCAL=FALSE && make
+cd ..
+```
+
 </details>
 
 ### MacOS
