@@ -358,6 +358,9 @@ public:
 
 #if !defined GBBASIC_OS_HTML
 			const std::string pref = Path::writableDirectory();
+			if (pref.empty()) {
+				Platform::msgbox("Failed to get the path of a writable directory.\nMay not have permissions.", "Warning");
+			}
 			const std::string path = Path::combine(pref.c_str(), WORKSPACE_PREFERENCES_NAME ".json");
 			rapidjson::Document doc;
 			File::Ptr file(File::create());

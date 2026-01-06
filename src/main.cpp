@@ -372,11 +372,15 @@ int main(int argc, const char* argv[]) {
 			}
 			if (!cstr) {
 				cstr = SDL_GetPrefPath("gbbasic", "data");
-				dir = cstr;
-				SDL_free((void*)cstr);
+				if (cstr) {
+					dir = cstr;
+					SDL_free((void*)cstr);
+					cstr = nullptr;
+				}
 			}
-			if (cstr)
+			if (dir.empty() && cstr) {
 				dir = cstr;
+			}
 
 			return dir;
 		}
