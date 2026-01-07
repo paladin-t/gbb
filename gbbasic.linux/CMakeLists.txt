@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.3)
 message(STATUS "Build GB BASIC for Linux...")
 
 # Projects.
@@ -62,12 +62,19 @@ else ()
     )
   endif ()
 endif ()
-if (${GBBASIC_BITS} EQUAL 64)
-  set(CMAKE_C_FLAGS "-m64")
-  set(CMAKE_CXX_FLAGS "-m64")
-elseif (${GBBASIC_BITS} EQUAL 32)
-  set(CMAKE_C_FLAGS "-m32")
-  set(CMAKE_CXX_FLAGS "-m32")
+if (DEFINED GBBASIC_ARCH_FLAG)
+  set(CMAKE_C_FLAGS "${GBBASIC_ARCH_FLAG}")
+  set(CMAKE_CXX_FLAGS "${GBBASIC_ARCH_FLAG}")
+else ()
+  if (${GBBASIC_ARCH} MATCHES "^x86|x64$")
+    if (${GBBASIC_BITS} EQUAL 64)
+      set(CMAKE_C_FLAGS "-m64")
+      set(CMAKE_CXX_FLAGS "-m64")
+    elseif (${GBBASIC_BITS} EQUAL 32)
+      set(CMAKE_C_FLAGS "-m32")
+      set(CMAKE_CXX_FLAGS "-m32")
+    endif ()
+  endif ()
 endif ()
 set(GBBASIC_TEMP ./)
 
@@ -341,6 +348,18 @@ list(
 target_include_directories(gbbasic PRIVATE ${GBBASIC_INC})
 
 # Compiling.
+execute_process(
+  COMMAND grep -o "Raspberry Pi" /proc/cpuinfo
+  OUTPUT_VARIABLE RPI_DETECT
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+if (RPI_DETECT STREQUAL "Raspberry Pi")
+  message(STATUS "Raspberry Pi detected")
+  list(
+    APPEND GBBASIC_DEF
+    __RASPBERRYPI__
+  )
+endif ()
 list(
   APPEND GBBASIC_DEF
   NO_SSL
@@ -351,7 +370,6 @@ target_compile_definitions(gbbasic PRIVATE ${GBBASIC_DEF})
 # Flags.
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNDEBUG")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-security -Wno-unused-result")
 set_source_files_properties("../src/utils/file_sandbox.cpp" PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
@@ -422,6 +440,7 @@ endif ()
 # Post event.
 add_custom_command(
   TARGET gbbasic POST_BUILD
+  COMMAND mkdir -p "../gbbasic/${GBBASIC_ARCH}_release/"
   COMMAND file "${GBBASIC_TEMP}gbbasic"
   COMMAND cp "${GBBASIC_TEMP}gbbasic" "../gbbasic/${GBBASIC_ARCH}_release/"
 )

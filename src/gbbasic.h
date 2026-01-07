@@ -102,16 +102,36 @@
 #		define GBBASIC_OS "Android"
 #		define GBBASIC_OS_ANDROID
 #	elif defined __linux__
-#		if defined __x86_64__
-#			define GBBASIC_OS "Linux [x86_64]"
-#		elif defined __i386__
-#			define GBBASIC_OS "Linux [x86]"
-#		elif defined __aarch64__
-#			define GBBASIC_OS "Linux [ARM64]"
-#		elif defined __arm__
-#			define GBBASIC_OS "Linux [ARM32]"
-#		else
-#			define GBBASIC_OS "Linux"
+#		if defined __aarch64__ || defined __arm__
+#			if defined __RASPBERRYPI__
+#				if defined __aarch64__
+#					define GBBASIC_OS "Raspberry Pi [ARM64]"
+#				elif defined __arm__
+#					if __ARM_ARCH == 7
+#						define GBBASIC_OS "Raspberry Pi [ARMv7]"
+#					elif __ARM_ARCH == 6
+#						define GBBASIC_OS "Raspberry Pi [ARMv6]"
+#					else
+#						define GBBASIC_OS "Raspberry Pi [ARM]"
+#					endif
+#				endif
+#				define GBBASIC_OS_RASPBERRYPI
+#			else
+#				if defined __aarch64__
+#					define GBBASIC_OS "Linux [ARM64]"
+#				elif defined __arm__
+#					define GBBASIC_OS "Linux [ARM32]"
+#				endif
+#			endif
+#		endif
+#		ifndef GBBASIC_OS
+#			if defined __x86_64__
+#				define GBBASIC_OS "Linux [x86_64]"
+#			elif defined __i386__
+#				define GBBASIC_OS "Linux [x86]"
+#			else
+#				define GBBASIC_OS "Linux"
+#			endif
 #		endif
 #		define GBBASIC_OS_LINUX
 #	elif defined __unix__
