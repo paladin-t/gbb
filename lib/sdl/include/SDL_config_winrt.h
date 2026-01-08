@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2022 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -42,50 +42,6 @@
 
 /* This is a set of defines to configure the SDL features */
 
-#if !defined(_STDINT_H_) && (!defined(HAVE_STDINT_H) || !_HAVE_STDINT_H)
-#if defined(__GNUC__) || defined(__DMC__) || defined(__WATCOMC__)
-#define HAVE_STDINT_H   1
-#elif defined(_MSC_VER)
-typedef signed __int8 int8_t;
-typedef unsigned __int8 uint8_t;
-typedef signed __int16 int16_t;
-typedef unsigned __int16 uint16_t;
-typedef signed __int32 int32_t;
-typedef unsigned __int32 uint32_t;
-typedef signed __int64 int64_t;
-typedef unsigned __int64 uint64_t;
-#ifndef _UINTPTR_T_DEFINED
-#ifdef  _WIN64
-typedef unsigned __int64 uintptr_t;
-#else
-typedef unsigned int uintptr_t;
-#endif
-#define _UINTPTR_T_DEFINED
-#endif
-/* Older Visual C++ headers don't have the Win64-compatible typedefs... */
-#if ((_MSC_VER <= 1200) && (!defined(DWORD_PTR)))
-#define DWORD_PTR DWORD
-#endif
-#if ((_MSC_VER <= 1200) && (!defined(LONG_PTR)))
-#define LONG_PTR LONG
-#endif
-#else /* !__GNUC__ && !_MSC_VER */
-typedef signed char int8_t;
-typedef unsigned char uint8_t;
-typedef signed short int16_t;
-typedef unsigned short uint16_t;
-typedef signed int int32_t;
-typedef unsigned int uint32_t;
-typedef signed long long int64_t;
-typedef unsigned long long uint64_t;
-#ifndef _SIZE_T_DEFINED_
-#define _SIZE_T_DEFINED_
-typedef unsigned int size_t;
-#endif
-typedef unsigned int uintptr_t;
-#endif /* __GNUC__ || _MSC_VER */
-#endif /* !_STDINT_H_ && !HAVE_STDINT_H */
-
 #ifdef _WIN64
 # define SIZEOF_VOIDP 8
 #else
@@ -98,7 +54,7 @@ typedef unsigned int uintptr_t;
 
 /* Useful headers */
 #define HAVE_DXGI_H 1
-#if WINAPI_FAMILY != WINAPI_FAMILY_PHONE_APP
+#if !SDL_WINAPI_FAMILY_PHONE
 #define HAVE_XINPUT_H 1
 #endif
 
@@ -113,6 +69,7 @@ typedef unsigned int uintptr_t;
 #define HAVE_LIMITS_H 1
 #define HAVE_MATH_H 1
 #define HAVE_SIGNAL_H 1
+#define HAVE_STDINT_H 1
 #define HAVE_STDIO_H 1
 #define HAVE_STRING_H 1
 
@@ -204,7 +161,7 @@ typedef unsigned int uintptr_t;
 #define SDL_AUDIO_DRIVER_DUMMY  1
 
 /* Enable various input drivers */
-#if WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if SDL_WINAPI_FAMILY_PHONE
 #define SDL_JOYSTICK_DISABLED 1
 #define SDL_HAPTIC_DISABLED 1
 #else
@@ -251,9 +208,9 @@ typedef unsigned int uintptr_t;
 #define SDL_VIDEO_RENDER_D3D11  1
 
 /* Disable D3D12 as it's not implemented for WinRT */
-#define SDL_VIDEO_RENDER_D3D12  0
+/* #undef SDL_VIDEO_RENDER_D3D12 */
 
-#if SDL_VIDEO_OPENGL_ES2
+#ifdef SDL_VIDEO_OPENGL_ES2
 #define SDL_VIDEO_RENDER_OGL_ES2 1
 #endif
 

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2022 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -25,7 +25,7 @@
 
 #import <Cocoa/Cocoa.h>
 
-#if SDL_VIDEO_OPENGL_EGL
+#ifdef SDL_VIDEO_OPENGL_EGL
 #include "../SDL_egl_c.h"
 #endif
 
@@ -54,6 +54,7 @@ typedef enum
     NSInteger focusClickPending;
     int pendingWindowWarpX, pendingWindowWarpY;
     BOOL isDragAreaRunning;
+    NSTimer *liveResizeTimer;
 }
 
 -(BOOL) isTouchFromTrackpad:(NSEvent *)theEvent;
@@ -77,6 +78,9 @@ typedef enum
 /* Window delegate functionality */
 -(BOOL) windowShouldClose:(id) sender;
 -(void) windowDidExpose:(NSNotification *) aNotification;
+-(void) onLiveResizeTimerFire:(id) sender;
+-(void) windowWillStartLiveResize:(NSNotification *)aNotification;
+-(void) windowDidEndLiveResize:(NSNotification *)aNotification;
 -(void) windowDidMove:(NSNotification *) aNotification;
 -(void) windowDidResize:(NSNotification *) aNotification;
 -(void) windowDidMiniaturize:(NSNotification *) aNotification;
@@ -85,6 +89,7 @@ typedef enum
 -(void) windowDidResignKey:(NSNotification *) aNotification;
 -(void) windowDidChangeBackingProperties:(NSNotification *) aNotification;
 -(void) windowDidChangeScreenProfile:(NSNotification *) aNotification;
+-(void) windowDidChangeScreen:(NSNotification *) aNotification;
 -(void) windowWillEnterFullScreen:(NSNotification *) aNotification;
 -(void) windowDidEnterFullScreen:(NSNotification *) aNotification;
 -(void) windowWillExitFullScreen:(NSNotification *) aNotification;
@@ -131,7 +136,7 @@ typedef enum
     @property (nonatomic) NSInteger flash_request;
     @property (nonatomic) Cocoa_WindowListener *listener;
     @property (nonatomic) SDL_VideoData *videodata;
-#if SDL_VIDEO_OPENGL_EGL
+#ifdef SDL_VIDEO_OPENGL_EGL
     @property (nonatomic) EGLSurface egl_surface;
 #endif
 @end
@@ -145,6 +150,7 @@ extern void Cocoa_SetWindowPosition(_THIS, SDL_Window * window);
 extern void Cocoa_SetWindowSize(_THIS, SDL_Window * window);
 extern void Cocoa_SetWindowMinimumSize(_THIS, SDL_Window * window);
 extern void Cocoa_SetWindowMaximumSize(_THIS, SDL_Window * window);
+extern void Cocoa_GetWindowSizeInPixels(_THIS, SDL_Window * window, int *w, int *h);
 extern int Cocoa_SetWindowOpacity(_THIS, SDL_Window * window, float opacity);
 extern void Cocoa_ShowWindow(_THIS, SDL_Window * window);
 extern void Cocoa_HideWindow(_THIS, SDL_Window * window);

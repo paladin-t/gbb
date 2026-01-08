@@ -495,13 +495,13 @@
     <ClInclude Include="..\..\src\haptic\SDL_haptic_c.h">
       <Filter>haptic</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\hidapi\SDL_hidapi.h">
-      <Filter>hidapi</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\joystick\SDL_gamecontrollerdb.h">
       <Filter>joystick</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\joystick\SDL_joystick_c.h">
+      <Filter>joystick</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\joystick\SDL_steam_virtual_gamepad.h">
       <Filter>joystick</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\joystick\SDL_sysjoystick.h">
@@ -675,9 +675,6 @@
     <ClInclude Include="..\..\src\video\windows\SDL_windowsopengles.h">
       <Filter>video\windows</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\video\windows\SDL_windowstaskdialog.h">
-      <Filter>video\windows</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\timer\SDL_timer_c.h">
       <Filter>timer</Filter>
     </ClInclude>
@@ -783,9 +780,6 @@
     <ClInclude Include="..\..\src\video\khronos\vulkan\vulkan.h">
       <Filter>video\khronos\vulkan</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\video\khronos\vulkan\vulkan.hpp">
-      <Filter>video\khronos\vulkan</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\video\khronos\vulkan\vulkan_android.h">
       <Filter>video\khronos\vulkan</Filter>
     </ClInclude>
@@ -835,6 +829,7 @@
     <ClInclude Include="..\..\src\render\direct3d12\SDL_shaders_d3d12.h">
       <Filter>render\direct3d12</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\hidapi\SDL_hidapi_c.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\audio\wasapi\SDL_wasapi.c" />
@@ -937,6 +932,9 @@
       <Filter>joystick</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\joystick\SDL_joystick.c">
+      <Filter>joystick</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\joystick\SDL_steam_virtual_gamepad.c">
       <Filter>joystick</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\libm\e_atan2.c">
@@ -1056,6 +1054,9 @@
     <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_luna.c">
       <Filter>joystick\hidapi</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_ps3.c">
+      <Filter>joystick\hidapi</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_ps4.c">
       <Filter>joystick\hidapi</Filter>
     </ClCompile>
@@ -1071,7 +1072,16 @@
     <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_stadia.c">
       <Filter>joystick\hidapi</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_steam.c">
+      <Filter>joystick\hidapi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_steamdeck.c">
+      <Filter>joystick\hidapi</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_switch.c">
+      <Filter>joystick\hidapi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_wii.c">
       <Filter>joystick\hidapi</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_xbox360.c">
@@ -1351,6 +1361,7 @@
     <ClCompile Include="..\..\src\render\direct3d12\SDL_shaders_d3d12.c">
       <Filter>render\direct3d12</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\stdlib\SDL_mslibc.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\src\main\windows\version.rc" />

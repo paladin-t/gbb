@@ -81,6 +81,7 @@
 /lib/x64/*.so
 /lib/x64/*.0
 /lib/x64/*.1
+/lib/x64/*.10
 
 /lib/x86/*.lib
 /lib/x86/*.dll
@@ -91,6 +92,7 @@
 /lib/x86/*.so
 /lib/x86/*.0
 /lib/x86/*.1
+/lib/x86/*.10
 
 /Xcode-iOS/SDL/build/
 /lib/Release-iphoneos/*.a

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2022 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -20,55 +20,47 @@
 */
 #include "../../SDL_internal.h"
 
-#if SDL_VIDEO_DRIVER_WAYLAND
+#ifdef SDL_VIDEO_DRIVER_WAYLAND
 
 #include "../SDL_sysvideo.h"
 #include "SDL_waylandvideo.h"
 #include "SDL_waylandevents_c.h"
+#include "../../events/SDL_keyboard_c.h"
 #include "text-input-unstable-v3-client-protocol.h"
 
-int
-Wayland_InitKeyboard(_THIS)
+int Wayland_InitKeyboard(_THIS)
 {
 #ifdef SDL_USE_IME
     SDL_VideoData *driverdata = _this->driverdata;
-    if (driverdata->text_input_manager == NULL) {
+    if (!driverdata->text_input_manager) {
         SDL_IME_Init();
     }
 #endif
+    SDL_SetScancodeName(SDL_SCANCODE_APPLICATION, "Menu");
 
     return 0;
 }
 
-void
-Wayland_QuitKeyboard(_THIS)
+void Wayland_QuitKeyboard(_THIS)
 {
 #ifdef SDL_USE_IME
     SDL_VideoData *driverdata = _this->driverdata;
-    if (driverdata->text_input_manager == NULL) {
+    if (!driverdata->text_input_manager) {
         SDL_IME_Quit();
     }
 #endif
 }
 
-void
-Wayland_StartTextInput(_THIS)
+void Wayland_StartTextInput(_THIS)
 {
     SDL_VideoData *driverdata = _this->driverdata;
+    struct SDL_WaylandInput *input = driverdata->input;
 
     if (driverdata->text_input_manager) {
-        struct SDL_WaylandInput *input = driverdata->input;
-        if (input != NULL && input->text_input) {
+        if (input && input->text_input) {
             const SDL_Rect *rect = &input->text_input->cursor_rect;
 
-            /* For some reason this has to be done twice, it appears to be a
-             * bug in mutter? Maybe?
-             * -flibit
-             */
             zwp_text_input_v3_enable(input->text_input->text_input);
-            zwp_text_input_v3_commit(input->text_input->text_input);
-            zwp_text_input_v3_enable(input->text_input->text_input);
-            zwp_text_input_v3_commit(input->text_input->text_input);
 
             /* Now that it's enabled, set the input properties */
             zwp_text_input_v3_set_content_type(input->text_input->text_input,
@@ -85,30 +77,37 @@ Wayland_StartTextInput(_THIS)
             zwp_text_input_v3_commit(input->text_input->text_input);
         }
     }
+
+    if (input && input->xkb.compose_state) {
+        /* Reset compose state so composite and dead keys don't carry over */
+        WAYLAND_xkb_compose_state_reset(input->xkb.compose_state);
+    }
 }
 
-void
-Wayland_StopTextInput(_THIS)
+void Wayland_StopTextInput(_THIS)
 {
     SDL_VideoData *driverdata = _this->driverdata;
+    struct SDL_WaylandInput *input = driverdata->input;
 
     if (driverdata->text_input_manager) {
-        struct SDL_WaylandInput *input = driverdata->input;
-        if (input != NULL && input->text_input) {
+        if (input && input->text_input) {
             zwp_text_input_v3_disable(input->text_input->text_input);
             zwp_text_input_v3_commit(input->text_input->text_input);
         }
     }
-
 #ifdef SDL_USE_IME
     else {
         SDL_IME_Reset();
     }
 #endif
+
+    if (input && input->xkb.compose_state) {
+        /* Reset compose state so composite and dead keys don't carry over */
+        WAYLAND_xkb_compose_state_reset(input->xkb.compose_state);
+    }
 }
 
-void
-Wayland_SetTextInputRect(_THIS, const SDL_Rect *rect)
+void Wayland_SetTextInputRect(_THIS, const SDL_Rect *rect)
 {
     SDL_VideoData *driverdata = _this->driverdata;
 
@@ -119,14 +118,16 @@ Wayland_SetTextInputRect(_THIS, const SDL_Rect *rect)
 
     if (driverdata->text_input_manager) {
         struct SDL_WaylandInput *input = driverdata->input;
-        if (input != NULL && input->text_input) {
-            SDL_copyp(&input->text_input->cursor_rect, rect);
-            zwp_text_input_v3_set_cursor_rectangle(input->text_input->text_input,
-                                                   rect->x,
-                                                   rect->y,
-                                                   rect->w,
-                                                   rect->h);
-            zwp_text_input_v3_commit(input->text_input->text_input);
+        if (input && input->text_input) {
+            if (!SDL_RectEquals(rect, &input->text_input->cursor_rect)) {
+                SDL_copyp(&input->text_input->cursor_rect, rect);
+                zwp_text_input_v3_set_cursor_rectangle(input->text_input->text_input,
+                                                       rect->x,
+                                                       rect->y,
+                                                       rect->w,
+                                                       rect->h);
+                zwp_text_input_v3_commit(input->text_input->text_input);
+            }
         }
     }
 
@@ -137,16 +138,16 @@ Wayland_SetTextInputRect(_THIS, const SDL_Rect *rect)
 #endif
 }
 
-SDL_bool
-Wayland_HasScreenKeyboardSupport(_THIS)
+SDL_bool Wayland_HasScreenKeyboardSupport(_THIS)
 {
     /* In reality we just want to return true when the screen keyboard is the
      * _only_ way to get text input. So, in addition to checking for the text
      * input protocol, make sure we don't have any physical keyboards either.
      */
     SDL_VideoData *driverdata = _this->driverdata;
-    return (driverdata->input->keyboard == NULL &&
-            driverdata->text_input_manager != NULL);
+    SDL_bool haskeyboard = (driverdata->input != NULL) && (driverdata->input->keyboard != NULL);
+    SDL_bool hastextmanager = (driverdata->text_input_manager != NULL);
+    return !haskeyboard && hastextmanager;
 }
 
 #endif /* SDL_VIDEO_DRIVER_WAYLAND */

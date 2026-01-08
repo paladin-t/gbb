@@ -31,15 +31,22 @@ endmacro()
 
 set(SDL2_FOUND TRUE)
 
-string(REGEX REPLACE "SDL2\\.framework.*" "SDL2.framework" SDL2_FRAMEWORK_PATH "${CMAKE_CURRENT_LIST_DIR}")
-string(REGEX REPLACE "SDL2\\.framework.*" "" SDL2_FRAMEWORK_PARENT_PATH "${CMAKE_CURRENT_LIST_DIR}")
+# Compute the installation prefix relative to this file.
+set(SDL2_FRAMEWORK_PATH "${CMAKE_CURRENT_LIST_DIR}")                                # > /SDL2.framework/Resources/CMake/
+get_filename_component(SDL2_FRAMEWORK_PATH "${SDL2_FRAMEWORK_PATH}" REALPATH)       # > /SDL2.framework/Versions/Current/Resources/CMake
+get_filename_component(SDL2_FRAMEWORK_PATH "${SDL2_FRAMEWORK_PATH}" REALPATH)       # > /SDL2.framework/Versions/A/Resources/CMake/
+get_filename_component(SDL2_FRAMEWORK_PATH "${SDL2_FRAMEWORK_PATH}" PATH)           # > /SDL2.framework/Versions/A/Resources/
+get_filename_component(SDL2_FRAMEWORK_PATH "${SDL2_FRAMEWORK_PATH}" PATH)           # > /SDL2.framework/Versions/A/
+get_filename_component(SDL2_FRAMEWORK_PATH "${SDL2_FRAMEWORK_PATH}" PATH)           # > /SDL2.framework/Versions/
+get_filename_component(SDL2_FRAMEWORK_PATH "${SDL2_FRAMEWORK_PATH}" PATH)           # > /SDL2.framework/
+get_filename_component(SDL2_FRAMEWORK_PARENT_PATH "${SDL2_FRAMEWORK_PATH}" PATH)    # > /
 
 # For compatibility with autotools sdl2-config.cmake, provide SDL2_* variables.
 
 set_and_check(SDL2_PREFIX       "${SDL2_FRAMEWORK_PATH}")
 set_and_check(SDL2_EXEC_PREFIX  "${SDL2_FRAMEWORK_PATH}")
 set_and_check(SDL2_INCLUDE_DIR  "${SDL2_FRAMEWORK_PATH}/Headers")
-set(SDL2_INCLUDE_DIRS           "${SDL2_INCLUDE_DIR}")
+set(SDL2_INCLUDE_DIRS           "${SDL2_INCLUDE_DIR};${SDL2_FRAMEWORK_PATH}")
 set_and_check(SDL2_BINDIR       "${SDL2_FRAMEWORK_PATH}")
 set_and_check(SDL2_LIBDIR       "${SDL2_FRAMEWORK_PATH}")
 
@@ -49,16 +56,23 @@ set(SDL2_LIBRARIES "SDL2::SDL2")
 # This is done for compatibility with CMake generated SDL2-target.cmake files.
 
 if(NOT TARGET SDL2::SDL2)
-    add_library(SDL2::SDL2 INTERFACE IMPORTED)
+    add_library(SDL2::SDL2 SHARED IMPORTED)
     set_target_properties(SDL2::SDL2
         PROPERTIES
-            INTERFACE_COMPILE_OPTIONS "SHELL:-F \"${SDL2_FRAMEWORK_PARENT_PATH}\""
-            INTERFACE_INCLUDE_DIRECTORIES "${SDL2_INCLUDE_DIR}"
-            INTERFACE_LINK_OPTIONS "SHELL:-F \"${SDL2_FRAMEWORK_PARENT_PATH}\";SHELL:-framework SDL2"
+            FRAMEWORK "TRUE"
+            IMPORTED_LOCATION "${SDL2_FRAMEWORK_PATH}/Versions/A/SDL2"
+            INTERFACE_INCLUDE_DIRECTORIES "${SDL2_INCLUDE_DIRS}"
             COMPATIBLE_INTERFACE_BOOL "SDL2_SHARED"
             INTERFACE_SDL2_SHARED "ON"
+            COMPATIBLE_INTERFACE_STRING "SDL_VERSION"
+            INTERFACE_SDL_VERSION "SDL2"
     )
 endif()
-set(SDL2_SDL2_FOUND)
+set(SDL2_SDL2_FOUND TRUE)
+
+if(NOT TARGET SDL2::SDL2main)
+    add_library(SDL2::SDL2main INTERFACE IMPORTED)
+endif()
+set(SDL2_SDL2main_FOUND TRUE)
 
 check_required_components(SDL2)

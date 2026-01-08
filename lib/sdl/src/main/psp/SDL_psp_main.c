@@ -8,9 +8,10 @@
 #include "SDL_main.h"
 #include <pspkernel.h>
 #include <pspthreadman.h>
+#include "../../events/SDL_events_c.h"
 
 #ifdef main
-    #undef main
+#undef main
 #endif
 
 /* If application's main() is redefined as SDL_main, and libSDLmain is
@@ -28,7 +29,7 @@ PSP_MAIN_THREAD_ATTR(THREAD_ATTR_VFPU | THREAD_ATTR_USER);
 
 int sdl_psp_exit_callback(int arg1, int arg2, void *common)
 {
-    sceKernelExitGame();
+    SDL_SendQuit();
     return 0;
 }
 
@@ -36,7 +37,7 @@ int sdl_psp_callback_thread(SceSize args, void *argp)
 {
     int cbid;
     cbid = sceKernelCreateCallback("Exit Callback",
-                       sdl_psp_exit_callback, NULL);
+                                   sdl_psp_exit_callback, NULL);
     sceKernelRegisterExitCallback(cbid);
     sceKernelSleepThreadCB();
     return 0;
@@ -46,9 +47,10 @@ int sdl_psp_setup_callbacks(void)
 {
     int thid;
     thid = sceKernelCreateThread("update_thread",
-                     sdl_psp_callback_thread, 0x11, 0xFA0, 0, 0);
-    if(thid >= 0)
+                                 sdl_psp_callback_thread, 0x11, 0xFA0, 0, 0);
+    if (thid >= 0) {
         sceKernelStartThread(thid, 0, 0);
+    }
     return thid;
 }
 
