@@ -358,9 +358,6 @@ public:
 
 #if !defined GBBASIC_OS_HTML
 			const std::string pref = Path::writableDirectory();
-			if (pref.empty()) {
-				Platform::msgbox("Failed to get the path of a writable directory.\nMay not have permissions.", "Warning");
-			}
 			const std::string path = Path::combine(pref.c_str(), WORKSPACE_PREFERENCES_NAME ".json");
 			rapidjson::Document doc;
 			File::Ptr file(File::create());
@@ -532,6 +529,33 @@ public:
 				_window->fullscreen(true);
 			else if (maximized)
 				_window->maximize();
+		}
+
+		const std::string writableDir = Path::writableDirectory();
+		if (writableDir.empty()) {
+#if defined BITTY_OS_WIN
+			const std::string possiblePath = "\nDesired path: \"%USERPROFILE%\\AppData\\Roaming\\gbbasic\\data\".";
+#elif defined BITTY_OS_MAC
+			const std::string possiblePath = "\nDesired path: \"~/Library/Application Support/gbbasic/data\"."
+#elif defined BITTY_OS_LINUX
+			const std::string possiblePath = "\nDesired path: \"~/.local/share/gbbasic/data\"."
+#else /* Platform macro. */
+			const std::string possiblePath = "";
+#endif /* Platform macro. */
+			std::string errorMsg = SDL_GetError();
+			if (_commandlineOnly)
+				errorMsg = Unicode::toOs(errorMsg);
+			const std::string possibleError = "\nError:\n  " + errorMsg;
+			const std::string msg =
+				"Failed to get the path of a writable directory. May not have permissions." +
+				possiblePath +
+				possibleError;
+
+			if (_commandlineOnly) {
+				Platform::msgbox(msg.c_str(), "Warning");
+			} else {
+				_workspace->messagePopupBox(msg, nullptr, nullptr, nullptr);
+			}
 		}
 
 		// Finish.
