@@ -536,9 +536,9 @@ public:
 #if defined BITTY_OS_WIN
 			const std::string possiblePath = "\nDesired path: \"%USERPROFILE%\\AppData\\Roaming\\gbbasic\\data\".";
 #elif defined BITTY_OS_MAC
-			const std::string possiblePath = "\nDesired path: \"~/Library/Application Support/gbbasic/data\"."
+			const std::string possiblePath = "\nDesired path: \"~/Library/Application Support/gbbasic/data\".";
 #elif defined BITTY_OS_LINUX
-			const std::string possiblePath = "\nDesired path: \"~/.local/share/gbbasic/data\"."
+			const std::string possiblePath = "\nDesired path: \"~/.local/share/gbbasic/data\".";
 #else /* Platform macro. */
 			const std::string possiblePath = "";
 #endif /* Platform macro. */
