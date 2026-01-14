@@ -46,7 +46,7 @@ struct SDL_Texture;
 ** ImGuiSDL
 */
 
-namespace ImGuiSDL {
+namespace ImGuiSDLHack {
 
 /**
  * @brief Texture structure alias of the `Texture` struct in `ImGuiSDL`.
