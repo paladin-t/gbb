@@ -95,7 +95,8 @@ private:
 
 public:
 	EditorCodeBindingImpl(
-		Renderer* rnd, Workspace* ws,
+		Window* wnd, Renderer* rnd,
+		Workspace* ws,
 		Theme* theme,
 		ChangedHandler changed,
 		const std::string &title,
@@ -113,6 +114,13 @@ public:
 	{
 		const GBBASIC::Kernel::Ptr &krnl = ws->activeKernel();
 		SetLanguageDefinition(EditorCodeLanguageDefinition::languageDefinition(krnl ? krnl->path().c_str() : nullptr));
+
+		const int scale = rnd->scale() / wnd->scale();
+		SetImePositionUpdatedHandler(
+			[scale] (const ImVec2 &pos) -> ImVec2 {
+				return ImVec2(pos.x * scale, pos.y * scale);
+			}
+		);
 
 		if (confirmTxt)
 			_confirmText = confirmTxt;
@@ -657,7 +665,8 @@ private:
 };
 
 EditorCodeBinding* EditorCodeBinding::create(
-	Renderer* rnd, class Workspace* ws,
+	Window* wnd, Renderer* rnd,
+	class Workspace* ws,
 	class Theme* theme,
 	ChangedHandler changed,
 	const std::string &title,
@@ -667,7 +676,7 @@ EditorCodeBinding* EditorCodeBinding::create(
 	const char* confirmTxt, const char* cancelTxt, const char* gotoTxt
 ) {
 	EditorCodeBindingImpl* result = new EditorCodeBindingImpl(
-		rnd, ws,
+		wnd, rnd, ws,
 		theme,
 		changed,
 		title,

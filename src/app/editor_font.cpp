@@ -553,7 +553,7 @@ public:
 		return TYPE();
 	}
 
-	virtual void open(class Window*, class Renderer*, class Workspace* ws, class Project* project, int index, unsigned /* refCategory */, int /* refIndex */) override {
+	virtual void open(class Window* wnd, class Renderer* rnd, class Workspace* ws, class Project* project, int index, unsigned /* refCategory */, int /* refIndex */) override {
 		if (_opened)
 			return;
 		_opened = true;
@@ -609,6 +609,13 @@ public:
 		SetColorizedHandler(std::bind(&EditorFontImpl::colorized, this, std::placeholders::_1));
 
 		SetModifiedHandler(std::bind(&EditorFontImpl::modified, this, ws));
+
+		const int scale = rnd->scale() / wnd->scale();
+		SetImePositionUpdatedHandler(
+			[scale] (const ImVec2 &pos) -> ImVec2 {
+				return ImVec2(pos.x * scale, pos.y * scale);
+			}
+		);
 
 		fprintf(stdout, "Font editor opened: #%d.\n", _index);
 	}

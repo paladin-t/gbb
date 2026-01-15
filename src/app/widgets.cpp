@@ -5366,6 +5366,9 @@ AboutPopupBox::AboutPopupBox(
 	_title(title),
 	_confirmedHandler(confirm)
 {
+	SDL_version sdlVer = { SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL };
+	SDL_GetVersion(&sdlVer);
+
 	_desc = "v" GBBASIC_VERSION_STRING_WITH_SUFFIX;
 	_desc += " " WIDGETS_ABOUT_REVISION;
 
@@ -5383,7 +5386,7 @@ AboutPopupBox::AboutPopupBox(
 	_specs += "  https://paladin-t.github.io/kits/gbb/about.html\n";
 
 	_specs += "Libraries:\n";
-	_specs += "        SDL v" + Text::toString(SDL_MAJOR_VERSION) + "." + Text::toString(SDL_MINOR_VERSION) + "." + Text::toString(SDL_PATCHLEVEL) + "\n";
+	_specs += "        SDL v" + Text::toString(sdlVer.major) + "." + Text::toString(sdlVer.minor) + "." + Text::toString(sdlVer.patch) + "\n";
 	_specs += "      ImGui v" IMGUI_VERSION "\n";
 	_specs += "     binjgb v" "0.1.11" "\n";
 	_specs += "  RapidJSON v" RAPIDJSON_VERSION_STRING "\n";

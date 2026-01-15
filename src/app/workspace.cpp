@@ -3383,7 +3383,8 @@ void Workspace::showCodeBindingEditor(
 		popupBox(
 			ImGui::PopupBox::Ptr(
 				EditorCodeBinding::create(
-					rnd, this,
+					wnd, rnd,
+					this,
 					theme(),
 					changed,
 					theme()->windowScene_CodeBinding(),

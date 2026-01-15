@@ -50,7 +50,7 @@ public:
 		return TYPE();
 	}
 
-	virtual void open(class Window*, class Renderer*, class Workspace* ws, class Project* project, int /* index */, unsigned /* refCategory */, int /* refIndex */) override {
+	virtual void open(class Window* wnd, class Renderer* rnd, class Workspace* ws, class Project* project, int /* index */, unsigned /* refCategory */, int /* refIndex */) override {
 		if (_opened)
 			return;
 		_opened = true;
@@ -75,6 +75,13 @@ public:
 		SetTooltipEnabled(false);
 
 		SetLineClickedHandler(std::bind(&EditorSearchResultImpl::onLineClicked, this, std::placeholders::_1, std::placeholders::_2));
+
+		const int scale = rnd->scale() / wnd->scale();
+		SetImePositionUpdatedHandler(
+			[scale] (const ImVec2 &pos) -> ImVec2 {
+				return ImVec2(pos.x * scale, pos.y * scale);
+			}
+		);
 
 		fprintf(stdout, "Search result opened.\n");
 	}

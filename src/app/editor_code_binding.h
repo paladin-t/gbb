@@ -38,7 +38,8 @@ public:
 	virtual void fromString(const char* txt, size_t len = 0) = 0;
 
 	static EditorCodeBinding* create(
-		Renderer* rnd, class Workspace* ws,
+		Window* wnd, Renderer* rnd,
+		class Workspace* ws,
 		class Theme* theme,
 		ChangedHandler changed,
 		const std::string &title,
