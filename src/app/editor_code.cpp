@@ -251,13 +251,6 @@ public:
 
 		SetHeadClickedHandler(std::bind(&EditorCodeImpl::headClicked, this, ws, std::placeholders::_1, std::placeholders::_2));
 
-		const int scale = rnd->scale() / wnd->scale();
-		SetImePositionUpdatedHandler(
-			[scale] (const ImVec2 &pos) -> ImVec2 {
-				return ImVec2(pos.x * scale, pos.y * scale);
-			}
-		);
-
 		_tools.search = std::bind(&EditorCodeImpl::searchGlobally, this, wnd, rnd, ws);
 
 		fprintf(stdout, "Code editor opened: #%d.\n", _index);

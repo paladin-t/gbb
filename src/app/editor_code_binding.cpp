@@ -95,7 +95,7 @@ private:
 
 public:
 	EditorCodeBindingImpl(
-		Window* wnd, Renderer* rnd,
+		Window*, Renderer* rnd,
 		Workspace* ws,
 		Theme* theme,
 		ChangedHandler changed,
@@ -114,13 +114,6 @@ public:
 	{
 		const GBBASIC::Kernel::Ptr &krnl = ws->activeKernel();
 		SetLanguageDefinition(EditorCodeLanguageDefinition::languageDefinition(krnl ? krnl->path().c_str() : nullptr));
-
-		const int scale = rnd->scale() / wnd->scale();
-		SetImePositionUpdatedHandler(
-			[scale] (const ImVec2 &pos) -> ImVec2 {
-				return ImVec2(pos.x * scale, pos.y * scale);
-			}
-		);
 
 		if (confirmTxt)
 			_confirmText = confirmTxt;

@@ -47,7 +47,7 @@ public:
 		return TYPE();
 	}
 
-	virtual void open(class Window* wnd, class Renderer* rnd, class Workspace*, class Project* /* project */, int /* index */, unsigned /* refCategory */, int /* refIndex */) override {
+	virtual void open(class Window* /* wnd */, class Renderer* /* rnd */, class Workspace*, class Project* /* project */, int /* index */, unsigned /* refCategory */, int /* refIndex */) override {
 		if (_opened)
 			return;
 		_opened = true;
@@ -65,13 +65,6 @@ public:
 		SetShowWhiteSpaces(false);
 
 		SetTooltipEnabled(false);
-
-		const int scale = rnd->scale() / wnd->scale();
-		SetImePositionUpdatedHandler(
-			[scale] (const ImVec2 &pos) -> ImVec2 {
-				return ImVec2(pos.x * scale, pos.y * scale);
-			}
-		);
 
 		fprintf(stdout, "Console opened.\n");
 	}

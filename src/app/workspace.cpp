@@ -6900,6 +6900,11 @@ void Workspace::finish(Window* wnd, Renderer* rnd) {
 
 	// Process work queue.
 	workQueue()->update();
+
+	// Update the IME position.
+	ImGuiContext* context = ImGui::GetCurrentContext();
+	const int scale = rnd->scale() / wnd->scale();
+	context->PlatformImePos = ImVec2(context->PlatformImePos.x * scale, context->PlatformImePos.y * scale);
 }
 
 void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
