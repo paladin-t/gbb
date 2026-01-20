@@ -113,6 +113,28 @@ public:
 
 	virtual void stroke(int key) override;
 
+	virtual TileSourceTypes getTileSourceType(void) const override;
+	virtual MapSourceTypes getMapSourceType(LayerTypes layer) const override;
+	virtual PaletteGrayscale getPalette(PaletteTypes type) const override;
+	virtual PaletteRgba getPaletteRgba(PaletteTypes type) const override;
+	virtual PaletteRgba getCgbPaletteRgba(CgbPaletteTypes type, int index) const override;
+	virtual PaletteRgba getSgbPaletteRgba(int index) const override;
+	virtual void getTileBuffer(TileBuffer buf) const override;
+	virtual void getMapBuffer(MapSourceTypes type, MapBuffer buf) const override;
+	virtual void getMapAttrBuffer(MapSourceTypes type, MapBuffer buf) const override;
+	virtual void getSgbMapAttrBuffer(UInt8 map[90]) const override;
+	virtual void getBgScroll(UInt8* x, UInt8* y) const override;
+	virtual void getWindowScroll(UInt8* x, UInt8* y) const override;
+
+	virtual bool getDisplay(void) const override;
+	virtual bool getBgDisplay(void) const override;
+	virtual bool getWindowDisplay(void) const override;
+	virtual bool getObjDisplay(void) const override;
+
+	virtual bool is8x16Obj(void) const override;
+	virtual Obj getObj(int index) const override;
+	virtual bool isObjVisible(const Obj* obj) const override;
+
 	virtual bool open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, class Input* input, Bytes::Ptr sram, bool isEditor, bool useAudioDevice, bool traceless) override;
 	virtual bool close(Bytes::Ptr sram) override;
 

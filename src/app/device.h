@@ -43,6 +43,25 @@
 #	define DEVICE_KEY_BUFFER_LENGTH 1 // 1 slot in pending buffer plus 1 `KEYC` register.
 #endif /* DEVICE_KEY_BUFFER_LENGTH */
 
+#ifndef DEVICE_PALETTE_COLOR_COUNT
+#	define DEVICE_PALETTE_COLOR_COUNT 4
+#endif /* DEVICE_PALETTE_COLOR_COUNT */
+#ifndef DEVICE_TILE_BUFFER_WIDTH
+#	define DEVICE_TILE_BUFFER_WIDTH 256
+#endif /* DEVICE_TILE_BUFFER_WIDTH */
+#ifndef DEVICE_TILE_BUFFER_HEIGHT
+#	define DEVICE_TILE_BUFFER_HEIGHT 192
+#endif /* DEVICE_TILE_BUFFER_HEIGHT */
+#ifndef DEVICE_MAP_BUFFER_WIDTH
+#	define DEVICE_MAP_BUFFER_WIDTH 32
+#endif /* DEVICE_MAP_BUFFER_WIDTH */
+#ifndef DEVICE_MAP_BUFFER_HEIGHT
+#	define DEVICE_MAP_BUFFER_HEIGHT 32
+#endif /* DEVICE_MAP_BUFFER_HEIGHT */
+#ifndef DEVICE_MAP_BUFFER_SIZE
+#	define DEVICE_MAP_BUFFER_SIZE (DEVICE_MAP_BUFFER_WIDTH * DEVICE_MAP_BUFFER_HEIGHT)
+#endif /* DEVICE_MAP_BUFFER_SIZE */
+
 /* ===========================================================================} */
 
 /*
@@ -72,14 +91,14 @@ public:
 		SUPER_EXTENDED
 	};
 
+	/**< Input structures. */
+
 	enum class CursorTypes {
 		NONE,
 		POINTER,
 		HAND,
 		BUSY
 	};
-
-	/**< Input structures. */
 
 	struct KeyboardModifiers {
 		bool ctrl = false;
@@ -92,6 +111,67 @@ public:
 	};
 
 	typedef std::deque<int> KeyBuffer;
+
+	/**< Debugging structures. */
+
+	enum class Colors {
+		WHITE,
+		LIGHT_GRAY,
+		DARK_GRAY,
+		BLACK
+	};
+	enum class PaletteTypes {
+		BGP,
+		OBP0,
+		OBP1
+	};
+	enum class CgbPaletteTypes {
+		BGCP,
+		OBCP
+	};
+
+	enum class ObjPriorities {
+		ABOVE_BG,
+		BEHIND_BG
+	};
+
+	enum class LayerTypes {
+		BG,
+		WINDOW
+	};
+
+	enum class TileSourceTypes {
+		INVALID,
+		FROM_8800_TO_97FF,
+		FROM_8000_TO_8FFF
+	};
+	enum class MapSourceTypes {
+		INVALID,
+		FROM_9800_TO_9BFF,
+		FROM_9C00_TO_9FFF
+	};
+
+	struct PaletteGrayscale {
+		Colors color[DEVICE_PALETTE_COLOR_COUNT];
+	};
+	struct PaletteRgba {
+		UInt32 color[DEVICE_PALETTE_COLOR_COUNT];
+	};
+
+	typedef std::array<UInt8, DEVICE_TILE_BUFFER_WIDTH * DEVICE_TILE_BUFFER_HEIGHT> TileBuffer;
+	typedef std::array<UInt8, DEVICE_MAP_BUFFER_SIZE> MapBuffer;
+	struct Obj {
+		UInt8 y;
+		UInt8 x;
+		UInt8 tile;
+		UInt8 byte3;
+		ObjPriorities priority;
+		bool yflip;
+		bool xflip;
+		UInt8 palette;
+		UInt8 bank;
+		UInt8 cgbPalette;
+	};
 
 	/**< Protocols. */
 
@@ -165,6 +245,30 @@ public:
 	virtual void inputEnabled(bool val) = 0;
 
 	virtual void stroke(int key) = 0;
+
+	/**< Debugging operations. */
+
+	virtual TileSourceTypes getTileSourceType(void) const = 0;
+	virtual MapSourceTypes getMapSourceType(LayerTypes layer) const = 0;
+	virtual PaletteGrayscale getPalette(PaletteTypes type) const = 0;
+	virtual PaletteRgba getPaletteRgba(PaletteTypes type) const = 0;
+	virtual PaletteRgba getCgbPaletteRgba(CgbPaletteTypes type, int index) const = 0;
+	virtual PaletteRgba getSgbPaletteRgba(int index) const = 0;
+	virtual void getTileBuffer(TileBuffer buf) const = 0;
+	virtual void getMapBuffer(MapSourceTypes type, MapBuffer buf) const = 0;
+	virtual void getMapAttrBuffer(MapSourceTypes type, MapBuffer buf) const = 0;
+	virtual void getSgbMapAttrBuffer(UInt8 map[90]) const = 0;
+	virtual void getBgScroll(UInt8* x /* nullable */, UInt8* y /* nullable */) const = 0;
+	virtual void getWindowScroll(UInt8* x /* nullable */, UInt8* y /* nullable */) const = 0;
+
+	virtual bool getDisplay(void) const = 0;
+	virtual bool getBgDisplay(void) const = 0;
+	virtual bool getWindowDisplay(void) const = 0;
+	virtual bool getObjDisplay(void) const = 0;
+
+	virtual bool is8x16Obj(void) const = 0;
+	virtual Obj getObj(int index) const = 0;
+	virtual bool isObjVisible(const Obj* obj) const = 0;
 
 	/**< Opening and closing. */
 

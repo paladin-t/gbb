@@ -555,6 +555,214 @@ void DeviceBinjgb::stroke(int key) {
 	_keyBuffer.push_back(key);
 }
 
+Device::TileSourceTypes DeviceBinjgb::getTileSourceType(void) const {
+	if (!_emulator)
+		return TileSourceTypes::INVALID;
+
+	const TileDataSelect val = emulator_get_tile_data_select(_emulator);
+
+	return val == TILE_DATA_8800_97FF ?
+		TileSourceTypes::FROM_8800_TO_97FF :
+		TileSourceTypes::FROM_8000_TO_8FFF;
+}
+
+Device::MapSourceTypes DeviceBinjgb::getMapSourceType(LayerTypes layer) const {
+	if (!_emulator)
+		return MapSourceTypes::INVALID;
+
+	const TileMapSelect val = emulator_get_tile_map_select(_emulator, (LayerType)layer);
+
+	return val == TILE_MAP_9800_9BFF ?
+		MapSourceTypes::FROM_9800_TO_9BFF :
+		MapSourceTypes::FROM_9C00_TO_9FFF;
+}
+
+Device::PaletteGrayscale DeviceBinjgb::getPalette(PaletteTypes type) const {
+	if (!_emulator)
+		return PaletteGrayscale();
+
+	const Palette val = emulator_get_palette(_emulator, (PaletteType)type);
+	Device::PaletteGrayscale result;
+	for (int i = 0; i < DEVICE_PALETTE_COLOR_COUNT; ++i)
+		result.color[i] = (Colors)val.color[i];
+
+	return result;
+}
+
+Device::PaletteRgba DeviceBinjgb::getPaletteRgba(PaletteTypes type) const {
+	if (!_emulator)
+		return PaletteRgba();
+
+	const PaletteRGBA val = emulator_get_palette_rgba(_emulator, (PaletteType)type);
+	Device::PaletteRgba result;
+	for (int i = 0; i < DEVICE_PALETTE_COLOR_COUNT; ++i)
+		result.color[i] = (UInt32)val.color[i];
+
+	return result;
+}
+
+Device::PaletteRgba DeviceBinjgb::getCgbPaletteRgba(CgbPaletteTypes type, int index) const {
+	if (!_emulator)
+		return PaletteRgba();
+
+	const PaletteRGBA val = emulator_get_cgb_palette_rgba(_emulator, (CgbPaletteType)type, index);
+	Device::PaletteRgba result;
+	for (int i = 0; i < DEVICE_PALETTE_COLOR_COUNT; ++i)
+		result.color[i] = (UInt32)val.color[i];
+
+	return result;
+}
+
+Device::PaletteRgba DeviceBinjgb::getSgbPaletteRgba(int index) const {
+	if (!_emulator)
+		return PaletteRgba();
+
+	const PaletteRGBA val = emulator_get_sgb_palette_rgba(_emulator, index);
+	Device::PaletteRgba result;
+	for (int i = 0; i < DEVICE_PALETTE_COLOR_COUNT; ++i)
+		result.color[i] = (UInt32)val.color[i];
+
+	return result;
+}
+
+void DeviceBinjgb::getTileBuffer(TileBuffer buf) const {
+	if (!_emulator)
+		return;
+
+	TileData val;
+	emulator_get_tile_data(_emulator, val);
+	for (int i = 0; i < (int)buf.size(); ++i)
+		buf[i] = (UInt8)val[i];
+}
+
+void DeviceBinjgb::getMapBuffer(MapSourceTypes type, MapBuffer buf) const {
+	if (!_emulator)
+		return;
+
+	TileMap val;
+	emulator_get_tile_map(_emulator, type == MapSourceTypes::FROM_9800_TO_9BFF ? TILE_MAP_9800_9BFF : TILE_MAP_9C00_9FFF, val);
+	for (int i = 0; i < (int)buf.size(); ++i)
+		buf[i] = (UInt8)val[i];
+}
+
+void DeviceBinjgb::getMapAttrBuffer(MapSourceTypes type, MapBuffer buf) const {
+	if (!_emulator)
+		return;
+
+	TileMap val;
+	emulator_get_tile_map_attr(_emulator, type == MapSourceTypes::FROM_9800_TO_9BFF ? TILE_MAP_9800_9BFF : TILE_MAP_9C00_9FFF, val);
+	for (int i = 0; i < (int)buf.size(); ++i)
+		buf[i] = (UInt8)val[i];
+}
+
+void DeviceBinjgb::getSgbMapAttrBuffer(UInt8 map[90]) const {
+	if (!_emulator)
+		return;
+
+	u8 val[90];
+	emulator_get_sgb_attr_map(_emulator, val);
+	for (int i = 0; i < GBBASIC_COUNTOF(map); ++i)
+		map[i] = (UInt8)val[i];
+}
+
+void DeviceBinjgb::getBgScroll(UInt8* x, UInt8* y) const {
+	if (!_emulator)
+		return;
+
+	u8 x_ = 0, y_ = 0;
+	emulator_get_bg_scroll(_emulator, &x_, &y_);
+	if (x)
+		*x = x_;
+	if (y)
+		*y = y_;
+}
+
+void DeviceBinjgb::getWindowScroll(UInt8* x, UInt8* y) const {
+	if (!_emulator)
+		return;
+
+	u8 x_ = 0, y_ = 0;
+	emulator_get_window_scroll(_emulator, &x_, &y_);
+	if (x)
+		*x = x_;
+	if (y)
+		*y = y_;
+}
+
+bool DeviceBinjgb::getDisplay(void) const {
+	if (!_emulator)
+		return false;
+
+	return !!emulator_get_display(_emulator);
+}
+
+bool DeviceBinjgb::getBgDisplay(void) const {
+	if (!_emulator)
+		return false;
+
+	return !!emulator_get_bg_display(_emulator);
+}
+
+bool DeviceBinjgb::getWindowDisplay(void) const {
+	if (!_emulator)
+		return false;
+
+	return !!emulator_get_window_display(_emulator);
+}
+
+bool DeviceBinjgb::getObjDisplay(void) const {
+	if (!_emulator)
+		return false;
+
+	return !!emulator_get_obj_display(_emulator);
+}
+
+bool DeviceBinjgb::is8x16Obj(void) const {
+	if (!_emulator)
+		return false;
+
+	return emulator_get_obj_size(_emulator) == OBJ_SIZE_8X16;
+}
+
+Device::Obj DeviceBinjgb::getObj(int index) const {
+	if (!_emulator)
+		return Obj();
+
+	const ::Obj obj = emulator_get_obj(_emulator, index);
+	Obj result;
+	result.y = (UInt8)obj.y;
+	result.x = (UInt8)obj.x;
+	result.tile = (UInt8)obj.tile;
+	result.byte3 = (UInt8)obj.byte3;
+	result.priority = obj.priority == OBJ_PRIORITY_ABOVE_BG ? ObjPriorities::ABOVE_BG : ObjPriorities::BEHIND_BG;
+	result.yflip = !!obj.yflip;
+	result.xflip = !!obj.xflip;
+	result.palette = (UInt8)obj.palette;
+	result.bank = (UInt8)obj.bank;
+	result.cgbPalette = (UInt8)obj.cgb_palette;
+
+	return result;
+}
+
+bool DeviceBinjgb::isObjVisible(const Obj* obj) const {
+	if (!obj)
+		return false;
+
+	::Obj obj_;
+	obj_.y = (u8)obj->y;
+	obj_.x = (u8)obj->x;
+	obj_.tile = (u8)obj->tile;
+	obj_.byte3 = (u8)obj->byte3;
+	obj_.priority = obj->priority == ObjPriorities::ABOVE_BG ? OBJ_PRIORITY_ABOVE_BG : OBJ_PRIORITY_BEHIND_BG;
+	obj_.yflip = obj->yflip ? TRUE : FALSE;
+	obj_.xflip = obj->xflip ? TRUE : FALSE;
+	obj_.palette = (u8)obj->palette;
+	obj_.bank = (u8)obj->bank;
+	obj_.cgb_palette = (u8)obj->cgbPalette;
+
+	return !!obj_is_visible(&obj_);
+}
+
 bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, class Input* input, Bytes::Ptr sram, bool isEditor, bool useAudioDevice, bool traceless) {
 	// Prepare.
 	if (_opened)
