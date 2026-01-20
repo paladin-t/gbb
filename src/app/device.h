@@ -52,7 +52,11 @@
 
 class Device : public virtual Object {
 public:
+	/**< Common. */
+
 	typedef std::shared_ptr<Device> Ptr;
+
+	/**< Emulation structures. */
 
 	enum class CoreTypes {
 		BINJGB,
@@ -75,6 +79,8 @@ public:
 		BUSY
 	};
 
+	/**< Input structures. */
+
 	struct KeyboardModifiers {
 		bool ctrl = false;
 		bool shift = false;
@@ -86,6 +92,8 @@ public:
 	};
 
 	typedef std::deque<int> KeyBuffer;
+
+	/**< Protocols. */
 
 	class Protocol {
 	public:
@@ -102,12 +110,18 @@ public:
 		virtual void stop(class Window* wnd, class Renderer* rnd) = 0;
 	};
 
+	/**< Handlers. */
+
 	typedef std::function<bool /* whether has been handled */ (void* /* specification */, Bytes* /* buffer */, UInt32 /* length */)> AudioHandler;
 
 public:
+	/**< Common. */
+
 	GBBASIC_CLASS_TYPE('D', 'V', 'C', 'E')
 
 public:
+	/**< Cartridge properties. */
+
 	virtual bool cartridgeHasCgbSupport(void) const = 0;
 	virtual bool cartridgeHasExtSupport(void) const = 0;
 	virtual bool cartridgeHasSgbSupport(void) const = 0;
@@ -115,11 +129,15 @@ public:
 	virtual int cartridgeSramSize(int* banks /* nullable */) const = 0;
 	virtual bool cartridgeHasRtc(void) const = 0;
 
+	/**< Device properties. */
+
 	virtual DeviceTypes deviceType(void) const = 0;
 	virtual DeviceTypes enabledDeviceType(void) const = 0;
 	virtual bool deviceHasCgbSupport(void) const = 0;
 	virtual bool deviceHasExtSupport(void) const = 0;
 	virtual bool deviceHasSgbSupport(void) const = 0;
+
+	/**< Emulation properties. */
 
 	virtual Colour classicPalette(int index) const = 0;
 	virtual void classicPalette(int index, const Colour &col) = 0;
@@ -127,11 +145,6 @@ public:
 	virtual bool isVariableSpeedSupported(void) const = 0;
 	virtual bool isSgbBorderSupported(void) const = 0;
 	virtual void* audioSpecification(void) const = 0;
-
-	virtual bool inputEnabled(void) const = 0;
-	virtual void inputEnabled(bool val) = 0;
-
-	virtual void stroke(int key) = 0;
 
 	virtual unsigned speed(void) const = 0;
 	virtual bool speed(unsigned s) = 0;
@@ -146,8 +159,19 @@ public:
 
 	virtual bool traceless(void) const = 0;
 
+	/**< Input module. */
+
+	virtual bool inputEnabled(void) const = 0;
+	virtual void inputEnabled(bool val) = 0;
+
+	virtual void stroke(int key) = 0;
+
+	/**< Opening and closing. */
+
 	virtual bool open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, class Input* input /* nullable */, Bytes::Ptr sram /* nullable */, bool isEditor, bool useAudioDevice, bool traceless) = 0;
 	virtual bool close(Bytes::Ptr sram /* nullable */) = 0;
+
+	/**< Updating. */
 
 	virtual bool update(
 		class Window* wnd, class Renderer* rnd,
@@ -158,10 +182,14 @@ public:
 		AudioHandler handleAudio /* nullable */
 	) = 0;
 
+	/**< Emulation operations. */
+
 	virtual bool opened(void) const = 0;
 	virtual bool paused(void) const = 0;
 	virtual void pause(void) = 0;
 	virtual void resume(void) = 0;
+
+	/**< Memory bus operations. */
 
 	virtual bool readRam(UInt16 address, UInt8* data) = 0;
 	virtual bool readRam(UInt16 address, UInt16* data) = 0;
@@ -170,6 +198,8 @@ public:
 
 	virtual bool readSram(const Bytes* bytes) = 0;
 	virtual bool writeSram(Bytes* bytes) = 0;
+
+	/**< Creating and destroying. */
 
 	static Device* create(CoreTypes type, Protocol* dbgListener /* nullable */);
 	static void destroy(Device* ptr);

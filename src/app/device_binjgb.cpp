@@ -493,21 +493,6 @@ void* DeviceBinjgb::audioSpecification(void) const {
 	return (void*)&_audioSpec;
 }
 
-bool DeviceBinjgb::inputEnabled(void) const {
-	return _inputEnabled;
-}
-
-void DeviceBinjgb::inputEnabled(bool val) {
-	_inputEnabled = val;
-}
-
-void DeviceBinjgb::stroke(int key) {
-	if (_keyBuffer.size() >= DEVICE_KEY_BUFFER_LENGTH)
-		return;
-
-	_keyBuffer.push_back(key);
-}
-
 unsigned DeviceBinjgb::speed(void) const {
 	return _speed;
 }
@@ -553,6 +538,21 @@ void DeviceBinjgb::timeoutThreshold(long long val) {
 
 bool DeviceBinjgb::traceless(void) const {
 	return _traceless;
+}
+
+bool DeviceBinjgb::inputEnabled(void) const {
+	return _inputEnabled;
+}
+
+void DeviceBinjgb::inputEnabled(bool val) {
+	_inputEnabled = val;
+}
+
+void DeviceBinjgb::stroke(int key) {
+	if (_keyBuffer.size() >= DEVICE_KEY_BUFFER_LENGTH)
+		return;
+
+	_keyBuffer.push_back(key);
 }
 
 bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, class Input* input, Bytes::Ptr sram, bool isEditor, bool useAudioDevice, bool traceless) {

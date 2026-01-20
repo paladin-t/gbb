@@ -95,11 +95,6 @@ public:
 	virtual bool isSgbBorderSupported(void) const override;
 	virtual void* audioSpecification(void) const override;
 
-	virtual bool inputEnabled(void) const override;
-	virtual void inputEnabled(bool val) override;
-
-	virtual void stroke(int key) override;
-
 	virtual unsigned speed(void) const override;
 	virtual bool speed(unsigned s) override;
 
@@ -112,6 +107,11 @@ public:
 	virtual void timeoutThreshold(long long val) override;
 
 	virtual bool traceless(void) const override;
+
+	virtual bool inputEnabled(void) const override;
+	virtual void inputEnabled(bool val) override;
+
+	virtual void stroke(int key) override;
 
 	virtual bool open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, class Input* input, Bytes::Ptr sram, bool isEditor, bool useAudioDevice, bool traceless) override;
 	virtual bool close(Bytes::Ptr sram) override;
