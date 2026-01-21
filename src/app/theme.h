@@ -1161,6 +1161,8 @@ public:
 	GBBASIC_PROPERTY_PTR(struct ImFont, fontBlock_Italic)
 	GBBASIC_PROPERTY_PTR(struct ImFont, fontBlock_BoldItalic)
 
+	GBBASIC_PROPERTY(ImVector<ImWchar>, customFontRanges)
+
 public:
 	const char* const* generic_ByteHex(void) const;
 	const char* const* generic_ByteDec(void) const;

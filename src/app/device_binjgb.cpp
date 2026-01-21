@@ -555,6 +555,10 @@ void DeviceBinjgb::stroke(int key) {
 	_keyBuffer.push_back(key);
 }
 
+bool DeviceBinjgb::isVramDebuggingSupported(void) const {
+	return true;
+}
+
 Device::TileSourceTypes DeviceBinjgb::getTileSourceType(void) const {
 	if (!_emulator)
 		return TileSourceTypes::INVALID;

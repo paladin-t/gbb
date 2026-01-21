@@ -113,6 +113,8 @@ public:
 
 	virtual void stroke(int key) override;
 
+	virtual bool isVramDebuggingSupported(void) const override;
+
 	virtual TileSourceTypes getTileSourceType(void) const override;
 	virtual MapSourceTypes getMapSourceType(LayerTypes layer) const override;
 	virtual PaletteGrayscale getPalette(PaletteTypes type) const override;

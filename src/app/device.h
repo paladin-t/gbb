@@ -112,7 +112,7 @@ public:
 
 	typedef std::deque<int> KeyBuffer;
 
-	/**< Debugging structures. */
+	/**< VRAM debugging structures. */
 
 	enum class Colors {
 		WHITE,
@@ -246,7 +246,9 @@ public:
 
 	virtual void stroke(int key) = 0;
 
-	/**< Debugging operations. */
+	/**< VRAM debugging operations. */
+
+	virtual bool isVramDebuggingSupported(void) const = 0;
 
 	virtual TileSourceTypes getTileSourceType(void) const = 0;
 	virtual MapSourceTypes getMapSourceType(LayerTypes layer) const = 0;
