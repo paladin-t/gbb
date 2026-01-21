@@ -128,19 +128,36 @@ struct Context {
 		);
 
 		if (vramDbg) {
+			const ImGuiWindowFlags flags =
+				ImGuiWindowFlags_NoTitleBar |
+				ImGuiWindowFlags_NoResize |
+				ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_NoScrollbar |
+				ImGuiWindowFlags_NoCollapse |
+				ImGuiWindowFlags_NoSavedSettings |
+				ImGuiWindowFlags_NoBringToFrontOnFocus |
+				ImGuiWindowFlags_NoNav;
+
 			if (*vramDebuggerWidth <= 0) {
-				*vramDebuggerWidth = std::floor(Math::clamp(regSize.x * 0.4f, 200.0f, regSize.x * 0.75f));
+				*vramDebuggerWidth = calculateVramDebuggerWidth(regSize.x * 0.4f);
 			}
 			if (*vramDebuggerPreviousOuterWidth <= 0) {
 				*vramDebuggerPreviousOuterWidth = regSize.x;
 			}
 			if (*vramDebuggerPreviousOuterWidth != regSize.x) {
 				*vramDebuggerWidth = *vramDebuggerWidth / *vramDebuggerPreviousOuterWidth * regSize.x;
-				*vramDebuggerWidth = std::floor(Math::clamp(regSize.x * 0.4f, 200.0f, regSize.x * 0.75f));
+				*vramDebuggerWidth = calculateVramDebuggerWidth(regSize.x * 0.4f);
 				*vramDebuggerPreviousOuterWidth = regSize.x;
 			}
 
-			ImGui::BeginChild("#Cvs", ImVec2(regSize.x - *vramDebuggerWidth, 0), true);
+			const ImVec2 curPos = ImGui::GetCursorScreenPos();
+			const ImVec2 size(
+				regSize.x - *vramDebuggerWidth,
+				regSize.y - (showStatus ? (statusBarHeight - style.ChildBorderSize) : style.ChildBorderSize)
+			);
+			ImGui::PushClipRect(curPos, curPos + size, false);
+
+			ImGui::BeginChild("#Cvs", ImVec2(regSize.x - *vramDebuggerWidth, regSize.y), true, flags);
 		}
 
 		ImVec2 regSize_ = regSize;
@@ -255,6 +272,8 @@ struct Context {
 
 		if (vramDbg) {
 			ImGui::EndChild();
+
+			ImGui::PopClipRect();
 		}
 	}
 
@@ -270,13 +289,6 @@ struct Context {
 		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1);
 
 		const float borderSize = style.WindowBorderSize;
-
-		/*const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
-		const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
-		const ImVec2 regSize = ImVec2(
-			regMax.x - regMin.x - borderSize * 2,
-			regMax.y - regMin.y - borderSize * 2
-		);*/
 
 		ImGuiWindowFlags flags =
 			ImGuiWindowFlags_NoTitleBar |
@@ -323,7 +335,7 @@ struct Context {
 			*vramDebuggerWidth = 0;
 		} else if (*vramDebuggerResizing) {
 			const ImVec2 mousePos = ImGui::GetMousePos();
-			*vramDebuggerWidth = regSize.x - mousePos.x;
+			*vramDebuggerWidth = calculateVramDebuggerWidth(regSize.x - mousePos.x);
 		}
 
 		// Draw the VRAM debugger.
@@ -335,6 +347,11 @@ struct Context {
 
 		// Finish.
 		ImGui::PopStyleVar();
+	}
+
+private:
+	float calculateVramDebuggerWidth(float width) const {
+		return std::floor(Math::clamp(width, 200.0f, regSize.x * 0.75f));
 	}
 };
 
