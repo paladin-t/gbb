@@ -63,6 +63,7 @@ struct Settings {
 
 	bool debugShowAstEnabled = false;
 	bool debugOnscreenDebugEnabled = true;
+	bool debugVramDebugEnabled = true;
 
 	unsigned deviceType = 0;
 	bool devicePreferSgb = false;

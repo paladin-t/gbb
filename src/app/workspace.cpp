@@ -6153,6 +6153,7 @@ bool Workspace::loadConfig(Window*, Renderer*, const rapidjson::Document &doc) {
 
 	Jpath::get(doc, settings().debugShowAstEnabled, "debug", "show_ast_enabled");
 	Jpath::get(doc, settings().debugOnscreenDebugEnabled, "debug", "onscreen_debug_enabled");
+	Jpath::get(doc, settings().debugVramDebugEnabled, "debug", "vram_debug_enabled");
 
 	Jpath::get(doc, settings().deviceType, "device", "type");
 	Jpath::get(doc, settings().devicePreferSgb, "device", "prefer_sgb");
@@ -6243,6 +6244,7 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 
 	Jpath::set(doc, doc, settings().debugShowAstEnabled, "debug", "show_ast_enabled");
 	Jpath::set(doc, doc, settings().debugOnscreenDebugEnabled, "debug", "onscreen_debug_enabled");
+	Jpath::set(doc, doc, settings().debugVramDebugEnabled, "debug", "vram_debug_enabled");
 
 	Jpath::set(doc, doc, settings().deviceType, "device", "type");
 	Jpath::set(doc, doc, settings().devicePreferSgb, "device", "prefer_sgb");
@@ -11598,6 +11600,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
 			settings().debugOnscreenDebugEnabled,
+			settings().debugVramDebugEnabled,
 			canvasCursorMode(),
 			!!popupBox(),
 			fps,

@@ -58,6 +58,7 @@ struct Context {
 	float onscreenGamepadScale;
 	Math::Vec2<float> onscreenGamepadPadding;
 	bool* onscreenDebugEnabled = nullptr;
+	bool* vramDebugEnabled = nullptr;
 	Device::CursorTypes cursor = Device::CursorTypes::POINTER;
 	bool hasPopup;
 	unsigned deviceFps;
@@ -82,6 +83,7 @@ struct Context {
 		bool integerScale_, bool fixRatio_,
 		bool* onscreenGamepadEnabled_, bool onscreenGamepadSwapAB_, float onscreenGamepadScale_, const Math::Vec2<float> onscreenGamepadPadding_,
 		bool* onscreenDebugEnabled_,
+		bool* vramDebugEnabled_,
 		Device::CursorTypes cursor_,
 		bool hasPopup_,
 		unsigned deviceFps_, unsigned fps_,
@@ -96,6 +98,7 @@ struct Context {
 		integerScale(integerScale_), fixRatio(fixRatio_),
 		onscreenGamepadEnabled(onscreenGamepadEnabled_), onscreenGamepadSwapAB(onscreenGamepadSwapAB_), onscreenGamepadScale(onscreenGamepadScale_), onscreenGamepadPadding(onscreenGamepadPadding_),
 		onscreenDebugEnabled(onscreenDebugEnabled_),
+		vramDebugEnabled(vramDebugEnabled_),
 		cursor(cursor_),
 		hasPopup(hasPopup_),
 		deviceFps(deviceFps_), fps(fps_),
@@ -443,6 +446,10 @@ static void menu(const Context &context) {
 
 		ImGui::MenuItem(context.theme->menu_OnscreenDebug(), nullptr, context.onscreenDebugEnabled);
 
+		ImGui::Separator();
+
+		ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
+
 		ImGui::EndPopup();
 	}
 }
@@ -457,6 +464,7 @@ void emulator(
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,
+	bool &vramDebugEnabled,
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,
@@ -474,6 +482,7 @@ void emulator(
 		integerScale, fixRatio,
 		&onscreenGamepadEnabled, onscreenGamepadSwapAB, onscreenGamepadScale, onscreenGamepadPadding,
 		&onscreenDebugEnabled,
+		&vramDebugEnabled,
 		cursor,
 		hasPopup,
 		canvasDevice->fps(), fps,

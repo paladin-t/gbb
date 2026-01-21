@@ -1970,7 +1970,7 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 			if (BeginTabItem(_theme->tabPreferences_Debug(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
 				TextUnformatted(_theme->windowPreferences_Debug_Emulation());
 
-				Checkbox(_theme->windowPreferences_Debug_OnscreenDebugEnabled(), &_settings.debugOnscreenDebugEnabled);
+				Checkbox(_theme->windowPreferences_Debug_EnableOnscreenDebug(), &_settings.debugOnscreenDebugEnabled);
 
 				EndTabItem();
 			}
@@ -5002,7 +5002,11 @@ void PreferencesPopupBox::update(Workspace*) {
 
 				TextUnformatted(_theme->windowPreferences_Debug_Emulation());
 
-				Checkbox(_theme->windowPreferences_Debug_OnscreenDebugEnabled(), &_settingsShadow.debugOnscreenDebugEnabled);
+				Checkbox(_theme->windowPreferences_Debug_EnableOnscreenDebug(), &_settingsShadow.debugOnscreenDebugEnabled);
+
+				TextUnformatted(_theme->windowPreferences_Debug_Debugger());
+
+				Checkbox(_theme->windowPreferences_Debug_EnableVramDebugger(), &_settingsShadow.debugVramDebugEnabled);
 
 				EndTabItem();
 			}

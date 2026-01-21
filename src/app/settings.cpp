@@ -73,6 +73,7 @@ Settings &Settings::operator = (const Settings &other) {
 
 	debugShowAstEnabled = other.debugShowAstEnabled;
 	debugOnscreenDebugEnabled = other.debugOnscreenDebugEnabled;
+	debugVramDebugEnabled = other.debugVramDebugEnabled;
 
 	deviceType = other.deviceType;
 	devicePreferSgb = other.devicePreferSgb;
@@ -137,7 +138,9 @@ bool Settings::operator != (const Settings &other) const {
 	}
 
 	if (debugShowAstEnabled != other.debugShowAstEnabled ||
-		debugOnscreenDebugEnabled != other.debugOnscreenDebugEnabled) {
+		debugOnscreenDebugEnabled != other.debugOnscreenDebugEnabled ||
+		debugVramDebugEnabled != other.debugVramDebugEnabled
+	) {
 		return true;
 	}
 

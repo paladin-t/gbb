@@ -443,6 +443,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_UseByteMatrix("Use Byte Matrix");
 	menu_Vflip("V-flip");
 	menu_VgmFile("VGM File...");
+	menu_VramDebugger("VRAM Debugger");
 	menu_WavFile("WAV File...");
 	menu_X0_1("x0.1");
 	menu_X0_2("x0.2");
@@ -776,8 +777,10 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Emulator_ShowStatusBar("Show status bar");
 	windowPreferences_Emulator_ShowTitleBar("Show title bar");
 	windowPreferences_Debug_Compiler("Compiler:");
+	windowPreferences_Debug_Debugger("Debugger:");
 	windowPreferences_Debug_Emulation("Emulation:");
-	windowPreferences_Debug_OnscreenDebugEnabled("Onscreen debug enabled");
+	windowPreferences_Debug_EnableOnscreenDebug("Enable onscreen debug");
+	windowPreferences_Debug_EnableVramDebugger("Enable VRAM debugger");
 	windowPreferences_Debug_ShowAstEnabled("Show AST");
 	windowPreferences_Device_Classic("Classic");
 	windowPreferences_Device_ClassicWithExtension("Classic with extension");
