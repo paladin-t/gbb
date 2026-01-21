@@ -58,6 +58,7 @@ struct Context {
 	float onscreenGamepadScale;
 	Math::Vec2<float> onscreenGamepadPadding;
 	bool* onscreenDebugEnabled = nullptr;
+	bool vramOptionsEnabled = true;
 	bool* vramDebugEnabled = nullptr;
 	Device::CursorTypes cursor = Device::CursorTypes::POINTER;
 	bool hasPopup;
@@ -73,6 +74,11 @@ struct Context {
 	Math::Vec2f scale;      // `dstSize` / `srcSize`.
 	Math::Vec2i clientSize; // The size of the client area.
 
+	float prevRegWidth = 0.0f; // TODO
+	float vramDebuggerWidth = 0.0f; // TODO
+	bool vramDebuggerResizing = false;
+	bool vramDebuggerResetting = false;
+
 	Context(
 		Window* window_, Renderer* renderer_,
 		Theme* theme_,
@@ -83,6 +89,7 @@ struct Context {
 		bool integerScale_, bool fixRatio_,
 		bool* onscreenGamepadEnabled_, bool onscreenGamepadSwapAB_, float onscreenGamepadScale_, const Math::Vec2<float> onscreenGamepadPadding_,
 		bool* onscreenDebugEnabled_,
+		bool vramOptionsEnabled_,
 		bool* vramDebugEnabled_,
 		Device::CursorTypes cursor_,
 		bool hasPopup_,
@@ -98,7 +105,7 @@ struct Context {
 		integerScale(integerScale_), fixRatio(fixRatio_),
 		onscreenGamepadEnabled(onscreenGamepadEnabled_), onscreenGamepadSwapAB(onscreenGamepadSwapAB_), onscreenGamepadScale(onscreenGamepadScale_), onscreenGamepadPadding(onscreenGamepadPadding_),
 		onscreenDebugEnabled(onscreenDebugEnabled_),
-		vramDebugEnabled(vramDebugEnabled_),
+		vramOptionsEnabled(vramOptionsEnabled_), vramDebugEnabled(vramDebugEnabled_),
 		cursor(cursor_),
 		hasPopup(hasPopup_),
 		deviceFps(deviceFps_), fps(fps_),
@@ -107,9 +114,11 @@ struct Context {
 	}
 
 	// Begin rendering context.
-	void begin(bool showSgbBorder) {
+	bool begin(bool showSgbBorder) {
 		// Prepare.
 		ImGuiStyle &style = ImGui::GetStyle();
+
+		const bool vramDbg = vramOptionsEnabled && *vramDebugEnabled;
 
 		const float borderSize = style.WindowBorderSize;
 
@@ -120,6 +129,32 @@ struct Context {
 			regMax.y - regMin.y - borderSize * 2
 		);
 
+		if (vramDbg) {
+			if (vramDebuggerWidth <= 0) {
+				vramDebuggerWidth = std::floor(Math::clamp(regSize.x * 0.4f, 200.0f, regSize.x * 0.75f));
+			}
+			if (prevRegWidth <= 0) {
+				prevRegWidth = regSize.x;
+			}
+			if (prevRegWidth != regSize.x) {
+				vramDebuggerWidth = vramDebuggerWidth / prevRegWidth * regSize.x;
+				vramDebuggerWidth = std::floor(Math::clamp(regSize.x * 0.4f, 200.0f, regSize.x * 0.75f));
+				prevRegWidth = regSize.x;
+			}
+
+			ImGui::BeginChild("#Cvs", ImVec2(regSize.x - vramDebuggerWidth, 0), true);
+		}
+
+		ImVec2 regSize_ = regSize;
+		if (vramDbg) {
+			const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
+			const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
+			regSize_ = ImVec2(
+				regMax.x - regMin.x - borderSize * 2,
+				regMax.y - regMin.y - borderSize * 2
+			);
+		}
+
 		// Determine the source texture size.
 		clientSize = Math::Vec2i(Math::max(canvasTexture->width(), SCREEN_WIDTH), Math::max(canvasTexture->height(), SCREEN_HEIGHT));
 		srcSize = showSgbBorder ?
@@ -128,7 +163,7 @@ struct Context {
 
 		// Calculate the client area.
 		dstPos = ImGui::GetCursorPos();
-		dstSize = regSize;
+		dstSize = regSize_;
 		dstSize.y -= showStatus ? (statusBarHeight - style.ChildBorderSize) : style.ChildBorderSize;
 
 		if (integerScale) {
@@ -186,9 +221,12 @@ struct Context {
 			dstSize.x = (float)(dstSize.x - scale.x * (EMULATOR_SGB_PADDING_X * 2));
 			dstSize.y = (float)(dstSize.y - scale.y * (EMULATOR_SGB_PADDING_Y * 2));
 		}
+
+		// Finish.
+		return vramDbg;
 	}
 	// End rendering context.
-	void end(void) const {
+	void end(bool vramDbg) const {
 		// Render the onscreen gamepad.
 		int pressed = 0;
 		if (*onscreenGamepadEnabled) {
@@ -216,6 +254,89 @@ struct Context {
 
 			input->sync();
 		}
+
+		if (vramDbg) {
+			ImGui::EndChild();
+		}
+	}
+
+	void debugVram(bool vramDbg) {
+		// Prepare.
+		if (!vramDbg)
+			return;
+
+		ImGui::SameLine();
+
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1);
+
+		const float borderSize = style.WindowBorderSize;
+
+		/*const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
+		const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
+		const ImVec2 regSize = ImVec2(
+			regMax.x - regMin.x - borderSize * 2,
+			regMax.y - regMin.y - borderSize * 2
+		);*/
+
+		ImGuiWindowFlags flags =
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoCollapse |
+			ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_NoBringToFrontOnFocus |
+			ImGuiWindowFlags_NoNav;
+		const float x = (float)ImGui::GetCursorPosX();
+		const float width = vramDebuggerWidth;
+		const float height = regSize.y - statusBarHeight - borderSize * 2;
+
+		// Resize.
+		const float gripMarginX = ImGui::WindowResizingPadding().x;
+		const float gripPaddingY = 4.0f;
+		if (vramDebuggerResizing && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			vramDebuggerResizing = false;
+		}
+		if (vramDebuggerResetting && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			vramDebuggerResetting = false;
+		}
+		const bool isHoveringRect = ImGui::IsMouseHoveringRect(
+			ImVec2(x, gripPaddingY),
+			ImVec2(x + gripMarginX, height - gripPaddingY - style.ScrollbarSize),
+			false
+		);
+		if (isHoveringRect && !hasPopup) {
+			vramDebuggerResizing = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+
+			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+				vramDebuggerResetting = true;
+
+			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+		} else if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+			vramDebuggerResizing = false;
+		}
+		if (vramDebuggerResizing && !vramDebuggerResetting) {
+			flags &= ~ImGuiWindowFlags_NoResize;
+		}
+
+		if (vramDebuggerResetting) {
+			vramDebuggerWidth = 0;
+		} else if (vramDebuggerResizing) {
+			const ImVec2 mousePos = ImGui::GetMousePos();
+			vramDebuggerWidth = regSize.x - mousePos.x;
+		}
+
+		// Draw the VRAM debugger.
+		ImGui::BeginChild("#VDbg", ImVec2(width, height), true, flags);
+		{
+			// TODO
+		}
+		ImGui::EndChild();
+
+		// Finish.
+		ImGui::PopStyleVar();
 	}
 };
 
@@ -446,9 +567,11 @@ static void menu(const Context &context) {
 
 		ImGui::MenuItem(context.theme->menu_OnscreenDebug(), nullptr, context.onscreenDebugEnabled);
 
-		ImGui::Separator();
+		if (context.vramOptionsEnabled) {
+			ImGui::Separator();
 
-		ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
+			ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
+		}
 
 		ImGui::EndPopup();
 	}
@@ -464,7 +587,7 @@ void emulator(
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,
-	bool &vramDebugEnabled,
+	bool vramOptionsEnabled, bool &vramDebugEnabled,
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,
@@ -482,7 +605,7 @@ void emulator(
 		integerScale, fixRatio,
 		&onscreenGamepadEnabled, onscreenGamepadSwapAB, onscreenGamepadScale, onscreenGamepadPadding,
 		&onscreenDebugEnabled,
-		&vramDebugEnabled,
+		vramOptionsEnabled, &vramDebugEnabled,
 		cursor,
 		hasPopup,
 		canvasDevice->fps(), fps,
@@ -495,7 +618,7 @@ void emulator(
 		return;
 
 	// Render emulation.
-	context.begin(!!canvasTextureForBorderFrame);
+	const bool vramDbg = context.begin(!!canvasTextureForBorderFrame);
 	{
 		// Render the canvas.
 		if (canvasTextureForBorderFrame) {
@@ -547,11 +670,14 @@ void emulator(
 			if (debug)
 				debug();
 		}
-
-		// Render the status.
-		renderStatus(context);
 	}
-	context.end();
+	context.end(vramDbg);
+
+	// Render VRAM debugger.
+	context.debugVram(vramDbg);
+
+	// Render the status.
+	renderStatus(context);
 
 	// Check the shortcuts.
 	shortcuts(context);

@@ -11600,7 +11600,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
 			settings().debugOnscreenDebugEnabled,
-			settings().debugVramDebugEnabled,
+			true, settings().debugVramDebugEnabled,
 			canvasCursorMode(),
 			!!popupBox(),
 			fps,
