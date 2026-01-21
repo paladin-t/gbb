@@ -696,6 +696,7 @@
     <ClCompile Include="src\app\resource\inline_resource.cpp" />
     <ClCompile Include="src\app\settings.cpp" />
     <ClCompile Include="src\app\theme.cpp" />
+    <ClCompile Include="src\app\vram_debugger.cpp" />
     <ClCompile Include="src\app\widgets.cpp" />
     <ClCompile Include="src\app\workspace.cpp">
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='release|Win32'">/bigobj %(AdditionalOptions)</AdditionalOptions>
@@ -1056,6 +1057,7 @@
     <ClInclude Include="src\app\resource\inline_toast.h" />
     <ClInclude Include="src\app\settings.h" />
     <ClInclude Include="src\app\theme.h" />
+    <ClInclude Include="src\app\vram_debugger.h" />
     <ClInclude Include="src\app\widgets.h" />
     <ClInclude Include="src\app\win\resource.h" />
     <ClInclude Include="src\app\workspace.h" />

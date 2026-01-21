@@ -9,6 +9,7 @@
 #include "editor.h"
 #include "emulator.h"
 #include "theme.h"
+#include "vram_debugger.h"
 #include "widgets.h"
 #include "../../lib/binjgb/src/emulator.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
@@ -358,7 +359,7 @@ struct Context {
 		// Draw the VRAM debugger.
 		ImGui::BeginChild("#VDbg", ImVec2(width, height), true, flags);
 		{
-			// TODO
+			vramDebugger(window, renderer, theme);
 		}
 		ImGui::EndChild();
 

@@ -253,6 +253,7 @@ list(
   "../src/app/project.cpp"
   "../src/app/settings.cpp"
   "../src/app/theme.cpp"
+  "../src/app/vram_debugger.cpp"
   "../src/app/widgets.cpp"
   "../src/app/workspace.cpp"
 )
