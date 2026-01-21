@@ -625,6 +625,10 @@ public:
 
 	GBBASIC_PROPERTY(DebuggerMessages, debuggerMessages)
 	GBBASIC_FIELD(Mutex, debuggerLock)
+	GBBASIC_PROPERTY(float, vramDebuggerPreviousOuterWidth)
+	GBBASIC_PROPERTY(float, vramDebuggerWidth)
+	GBBASIC_PROPERTY(bool, vramDebuggerResizing)
+	GBBASIC_PROPERTY(bool, vramDebuggerResetting)
 
 private:
 	bool _opened = false;

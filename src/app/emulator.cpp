@@ -60,6 +60,10 @@ struct Context {
 	bool* onscreenDebugEnabled = nullptr;
 	bool vramOptionsEnabled = true;
 	bool* vramDebugEnabled = nullptr;
+	float* vramDebuggerPreviousOuterWidth = nullptr;
+	float* vramDebuggerWidth = nullptr;
+	bool* vramDebuggerResizing = nullptr;
+	bool* vramDebuggerResetting = nullptr;
 	Device::CursorTypes cursor = Device::CursorTypes::POINTER;
 	bool hasPopup;
 	unsigned deviceFps;
@@ -74,11 +78,6 @@ struct Context {
 	Math::Vec2f scale;      // `dstSize` / `srcSize`.
 	Math::Vec2i clientSize; // The size of the client area.
 
-	float prevRegWidth = 0.0f; // TODO
-	float vramDebuggerWidth = 0.0f; // TODO
-	bool vramDebuggerResizing = false;
-	bool vramDebuggerResetting = false;
-
 	Context(
 		Window* window_, Renderer* renderer_,
 		Theme* theme_,
@@ -89,8 +88,7 @@ struct Context {
 		bool integerScale_, bool fixRatio_,
 		bool* onscreenGamepadEnabled_, bool onscreenGamepadSwapAB_, float onscreenGamepadScale_, const Math::Vec2<float> onscreenGamepadPadding_,
 		bool* onscreenDebugEnabled_,
-		bool vramOptionsEnabled_,
-		bool* vramDebugEnabled_,
+		bool vramOptionsEnabled_, bool* vramDebugEnabled_, float* vramDebuggerPreviousOuterWidth_, float* vramDebuggerWidth_,  bool* vramDebuggerResizing_, bool* vramDebuggerResetting_,
 		Device::CursorTypes cursor_,
 		bool hasPopup_,
 		unsigned deviceFps_, unsigned fps_,
@@ -105,7 +103,7 @@ struct Context {
 		integerScale(integerScale_), fixRatio(fixRatio_),
 		onscreenGamepadEnabled(onscreenGamepadEnabled_), onscreenGamepadSwapAB(onscreenGamepadSwapAB_), onscreenGamepadScale(onscreenGamepadScale_), onscreenGamepadPadding(onscreenGamepadPadding_),
 		onscreenDebugEnabled(onscreenDebugEnabled_),
-		vramOptionsEnabled(vramOptionsEnabled_), vramDebugEnabled(vramDebugEnabled_),
+		vramOptionsEnabled(vramOptionsEnabled_), vramDebugEnabled(vramDebugEnabled_), vramDebuggerPreviousOuterWidth(vramDebuggerPreviousOuterWidth_), vramDebuggerWidth(vramDebuggerWidth_),  vramDebuggerResizing(vramDebuggerResizing_), vramDebuggerResetting(vramDebuggerResetting_),
 		cursor(cursor_),
 		hasPopup(hasPopup_),
 		deviceFps(deviceFps_), fps(fps_),
@@ -130,19 +128,19 @@ struct Context {
 		);
 
 		if (vramDbg) {
-			if (vramDebuggerWidth <= 0) {
-				vramDebuggerWidth = std::floor(Math::clamp(regSize.x * 0.4f, 200.0f, regSize.x * 0.75f));
+			if (*vramDebuggerWidth <= 0) {
+				*vramDebuggerWidth = std::floor(Math::clamp(regSize.x * 0.4f, 200.0f, regSize.x * 0.75f));
 			}
-			if (prevRegWidth <= 0) {
-				prevRegWidth = regSize.x;
+			if (*vramDebuggerPreviousOuterWidth <= 0) {
+				*vramDebuggerPreviousOuterWidth = regSize.x;
 			}
-			if (prevRegWidth != regSize.x) {
-				vramDebuggerWidth = vramDebuggerWidth / prevRegWidth * regSize.x;
-				vramDebuggerWidth = std::floor(Math::clamp(regSize.x * 0.4f, 200.0f, regSize.x * 0.75f));
-				prevRegWidth = regSize.x;
+			if (*vramDebuggerPreviousOuterWidth != regSize.x) {
+				*vramDebuggerWidth = *vramDebuggerWidth / *vramDebuggerPreviousOuterWidth * regSize.x;
+				*vramDebuggerWidth = std::floor(Math::clamp(regSize.x * 0.4f, 200.0f, regSize.x * 0.75f));
+				*vramDebuggerPreviousOuterWidth = regSize.x;
 			}
 
-			ImGui::BeginChild("#Cvs", ImVec2(regSize.x - vramDebuggerWidth, 0), true);
+			ImGui::BeginChild("#Cvs", ImVec2(regSize.x - *vramDebuggerWidth, 0), true);
 		}
 
 		ImVec2 regSize_ = regSize;
@@ -290,17 +288,17 @@ struct Context {
 			ImGuiWindowFlags_NoBringToFrontOnFocus |
 			ImGuiWindowFlags_NoNav;
 		const float x = (float)ImGui::GetCursorPosX();
-		const float width = vramDebuggerWidth;
+		const float width = *vramDebuggerWidth;
 		const float height = regSize.y - statusBarHeight - borderSize * 2;
 
 		// Resize.
 		const float gripMarginX = ImGui::WindowResizingPadding().x;
 		const float gripPaddingY = 4.0f;
-		if (vramDebuggerResizing && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-			vramDebuggerResizing = false;
+		if (*vramDebuggerResizing && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			*vramDebuggerResizing = false;
 		}
-		if (vramDebuggerResetting && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-			vramDebuggerResetting = false;
+		if (*vramDebuggerResetting && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			*vramDebuggerResetting = false;
 		}
 		const bool isHoveringRect = ImGui::IsMouseHoveringRect(
 			ImVec2(x, gripPaddingY),
@@ -308,24 +306,24 @@ struct Context {
 			false
 		);
 		if (isHoveringRect && !hasPopup) {
-			vramDebuggerResizing = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+			*vramDebuggerResizing = ImGui::IsMouseDown(ImGuiMouseButton_Left);
 
 			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-				vramDebuggerResetting = true;
+				*vramDebuggerResetting = true;
 
 			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
 		} else if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-			vramDebuggerResizing = false;
+			*vramDebuggerResizing = false;
 		}
-		if (vramDebuggerResizing && !vramDebuggerResetting) {
+		if (*vramDebuggerResizing && !*vramDebuggerResetting) {
 			flags &= ~ImGuiWindowFlags_NoResize;
 		}
 
-		if (vramDebuggerResetting) {
-			vramDebuggerWidth = 0;
-		} else if (vramDebuggerResizing) {
+		if (*vramDebuggerResetting) {
+			*vramDebuggerWidth = 0;
+		} else if (*vramDebuggerResizing) {
 			const ImVec2 mousePos = ImGui::GetMousePos();
-			vramDebuggerWidth = regSize.x - mousePos.x;
+			*vramDebuggerWidth = regSize.x - mousePos.x;
 		}
 
 		// Draw the VRAM debugger.
@@ -587,7 +585,7 @@ void emulator(
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,
-	bool vramOptionsEnabled, bool &vramDebugEnabled,
+	bool vramOptionsEnabled, bool &vramDebugEnabled, float &vramDebuggerPreviousOuterWidth, float &vramDebuggerWidth, bool &vramDebuggerResizing, bool &vramDebuggerResetting,
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,
@@ -605,7 +603,7 @@ void emulator(
 		integerScale, fixRatio,
 		&onscreenGamepadEnabled, onscreenGamepadSwapAB, onscreenGamepadScale, onscreenGamepadPadding,
 		&onscreenDebugEnabled,
-		vramOptionsEnabled, &vramDebugEnabled,
+		vramOptionsEnabled, &vramDebugEnabled, &vramDebuggerPreviousOuterWidth, &vramDebuggerWidth, &vramDebuggerResizing, &vramDebuggerResetting,
 		cursor,
 		hasPopup,
 		canvasDevice->fps(), fps,
