@@ -718,9 +718,13 @@ public:
 		bool swapAB,
 		float scale,
 		float paddingX_, float paddingY_,
-		bool alwaysOn
+		bool alwaysOn,
+		bool* shown
 	) override {
 		// Prepare.
+		if (shown)
+			*shown = false;
+
 		if (!alwaysOn) {
 			const Activities activity = active();
 			if ((activity & GAMEPAD_ACTIVE) == INACTIVE)
@@ -753,6 +757,10 @@ public:
 		const float right = (wndSize.x - (paddingX + btnRadius) - (dpadRadius - btnRadius) * 2.0f) - btnRadius;
 		if (top < wnd->TitleBarHeight() || left >= right)
 			return 0;
+
+		if (shown)
+			*shown = true;
+
 #if defined GBBASIC_DEBUG
 		drawList->AddLine(
 			ImVec2(wnd->Pos.x + wndSize.x * 0.2f, wnd->Pos.y + top),

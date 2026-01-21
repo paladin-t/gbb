@@ -27,6 +27,10 @@
 #	define EMULATOR_SGB_PADDING_Y SGB_SCREEN_TOP
 #endif /* EMULATOR_SGB_PADDING_Y */
 
+#ifndef EMULATOR_VRAM_DEBUGGER_MIN_WIDTH
+#	define EMULATOR_VRAM_DEBUGGER_MIN_WIDTH 200.0f
+#endif /* EMULATOR_VRAM_DEBUGGER_MIN_WIDTH */
+
 /* ===========================================================================} */
 
 /*
@@ -78,6 +82,9 @@ struct Context {
 	Math::Vec2f scale;      // `dstSize` / `srcSize`.
 	Math::Vec2i clientSize; // The size of the client area.
 
+	bool canShowOnscreenGamepad = false;
+	bool canShowVramDebugger = false;
+
 	Context(
 		Window* window_, Renderer* renderer_,
 		Theme* theme_,
@@ -116,8 +123,6 @@ struct Context {
 		// Prepare.
 		ImGuiStyle &style = ImGui::GetStyle();
 
-		const bool vramDbg = vramOptionsEnabled && *vramDebugEnabled;
-
 		const float borderSize = style.WindowBorderSize;
 
 		const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
@@ -127,6 +132,8 @@ struct Context {
 			regMax.y - regMin.y - borderSize * 2
 		);
 
+		canShowVramDebugger = regSize.x >= SCREEN_WIDTH + EMULATOR_VRAM_DEBUGGER_MIN_WIDTH + 2;
+		const bool vramDbg = canShowVramDebugger && (vramOptionsEnabled && *vramDebugEnabled);
 		if (vramDbg) {
 			const ImGuiWindowFlags flags =
 				ImGuiWindowFlags_NoTitleBar |
@@ -241,8 +248,10 @@ struct Context {
 		return vramDbg;
 	}
 	// End rendering context.
-	void end(bool vramDbg) const {
+	void end(bool vramDbg) {
 		// Render the onscreen gamepad.
+		canShowOnscreenGamepad = false;
+
 		int pressed = 0;
 		if (*onscreenGamepadEnabled) {
 			pressed = input->updateOnscreenGamepad(
@@ -251,7 +260,8 @@ struct Context {
 				onscreenGamepadSwapAB,
 				onscreenGamepadScale,
 				onscreenGamepadPadding.x, onscreenGamepadPadding.y,
-				true
+				true,
+				&canShowOnscreenGamepad
 			);
 		}
 
@@ -282,12 +292,19 @@ struct Context {
 		if (!vramDbg)
 			return;
 
+		const bool wasResizing = *vramDebuggerResizing;
+		bool isResizing = *vramDebuggerResizing;
+		bool isResetting = *vramDebuggerResetting;
+
 		ImGui::SameLine();
 
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1);
-
+		if (wasResizing) {
+			const ImVec4 &col = ImGui::GetStyleColorVec4(ImGuiCol_ResizeGripActive);
+			ImGui::PushStyleColor(ImGuiCol_Border, col);
+		}
 		const float borderSize = style.WindowBorderSize;
 
 		ImGuiWindowFlags flags =
@@ -306,11 +323,11 @@ struct Context {
 		// Resize.
 		const float gripMarginX = ImGui::WindowResizingPadding().x;
 		const float gripPaddingY = 4.0f;
-		if (*vramDebuggerResizing && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-			*vramDebuggerResizing = false;
+		if (isResizing && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			isResizing = false;
 		}
-		if (*vramDebuggerResetting && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-			*vramDebuggerResetting = false;
+		if (isResetting && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			isResetting = false;
 		}
 		const bool isHoveringRect = ImGui::IsMouseHoveringRect(
 			ImVec2(x, gripPaddingY),
@@ -318,22 +335,22 @@ struct Context {
 			false
 		);
 		if (isHoveringRect && !hasPopup) {
-			*vramDebuggerResizing = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+			isResizing = ImGui::IsMouseDown(ImGuiMouseButton_Left);
 
 			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-				*vramDebuggerResetting = true;
+				isResetting = true;
 
 			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
 		} else if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-			*vramDebuggerResizing = false;
+			isResizing = false;
 		}
-		if (*vramDebuggerResizing && !*vramDebuggerResetting) {
+		if (isResizing && !isResetting) {
 			flags &= ~ImGuiWindowFlags_NoResize;
 		}
 
-		if (*vramDebuggerResetting) {
+		if (isResetting) {
 			*vramDebuggerWidth = 0;
-		} else if (*vramDebuggerResizing) {
+		} else if (isResizing) {
 			const ImVec2 mousePos = ImGui::GetMousePos();
 			*vramDebuggerWidth = calculateVramDebuggerWidth(regSize.x - mousePos.x);
 		}
@@ -346,12 +363,21 @@ struct Context {
 		ImGui::EndChild();
 
 		// Finish.
+		if (wasResizing) {
+			ImGui::PopStyleColor();
+		}
 		ImGui::PopStyleVar();
+
+		*vramDebuggerResizing = isResizing;
+		*vramDebuggerResetting = isResetting;
 	}
 
 private:
 	float calculateVramDebuggerWidth(float width) const {
-		return std::floor(Math::clamp(width, 200.0f, regSize.x * 0.75f));
+		width = std::min(width, std::min(regSize.x - SCREEN_WIDTH, regSize.x * 0.75f));
+		width = std::max(width, EMULATOR_VRAM_DEBUGGER_MIN_WIDTH);
+
+		return std::floor(width);
 	}
 };
 
@@ -553,8 +579,10 @@ static void shortcuts(const Context &context) {
 
 	// Overlay operations.
 	if (modifier && !io.KeyShift && !io.KeyAlt) {
-		if (g)
-			*context.onscreenGamepadEnabled = !*context.onscreenGamepadEnabled;
+		if (context.canShowOnscreenGamepad) {
+			if (g)
+				*context.onscreenGamepadEnabled = !*context.onscreenGamepadEnabled;
+		}
 	}
 	if (modifier && !io.KeyShift && !io.KeyAlt) {
 		if (slash) {
@@ -578,14 +606,26 @@ static void menu(const Context &context) {
 	VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
 
 	if (ImGui::BeginPopup("@Views")) {
-		ImGui::MenuItem(context.theme->menu_OnscreenGamepad(), GBBASIC_MODIFIER_KEY_NAME "+G", context.onscreenGamepadEnabled);
+		if (context.canShowOnscreenGamepad) {
+			ImGui::MenuItem(context.theme->menu_OnscreenGamepad(), GBBASIC_MODIFIER_KEY_NAME "+G", context.onscreenGamepadEnabled);
+		} else {
+			ImGui::BeginDisabled();
+			ImGui::MenuItem(context.theme->menu_OnscreenGamepad(), GBBASIC_MODIFIER_KEY_NAME "+G", context.onscreenGamepadEnabled);
+			ImGui::EndDisabled();
+		}
 
 		ImGui::MenuItem(context.theme->menu_OnscreenDebug(), nullptr, context.onscreenDebugEnabled);
 
 		if (context.vramOptionsEnabled) {
 			ImGui::Separator();
 
-			ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
+			if (context.canShowVramDebugger) {
+				ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
+			} else {
+				ImGui::BeginDisabled();
+				ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
+				ImGui::EndDisabled();
+			}
 		}
 
 		ImGui::EndPopup();

@@ -233,6 +233,7 @@ public:
 	 * @param[in] scale The scale factor.
 	 * @param[in] paddingX The x padding factor.
 	 * @param[in] paddingY The y padding factor.
+	 * @param[out] shown Whether the gamepad is shown.
 	 */
 	virtual int updateOnscreenGamepad(
 		Window* wnd, Renderer* rnd,
@@ -240,7 +241,8 @@ public:
 		bool swapAB,
 		float scale,
 		float paddingX, float paddingY,
-		bool alwaysOn
+		bool alwaysOn,
+		bool* shown /* nullable */
 	) = 0;
 
 	/**
