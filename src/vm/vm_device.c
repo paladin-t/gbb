@@ -233,7 +233,7 @@ void vm_option(SCRIPT_CTX * THIS) OLDCALL BANKED {
             // Uninstall VBL and LCD ISRs if they were installed by the graphics mode.
             const UINT8 m = get_mode();
             if ((m & 0x07) == M_DRAWING) // Was graphics mode.
-                mode(M_TEXT_OUT);
+                mode(M_TEXT_OUT); // Turn to the text mode manually.
 
             // To the text mode.
             SHOW_BKG;
@@ -244,9 +244,8 @@ void vm_option(SCRIPT_CTX * THIS) OLDCALL BANKED {
             load_default_font();
         } else if (val == DEVICE_SCREEN_GRAPHICS) {
             // To the graphics mode.
+            mode(M_DRAWING); // Turn to the graphics mode.
             move_bkg(0, 0);
-            color(WHITE, WHITE, AND);
-            plot_point(0xFF, 0xFF); // Initialize the graphics mode.
         } else if (val == DEVICE_SCREEN_OBJECTS) {
             // Uninstall VBL and LCD ISRs if they were installed by the graphics mode.
             const UINT8 m = get_mode();
