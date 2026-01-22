@@ -31,6 +31,7 @@
 #ifndef VRAM_DEBUGGER_TILES_AREA_HEIGHT
 #	define VRAM_DEBUGGER_TILES_AREA_HEIGHT 24
 #endif /* VRAM_DEBUGGER_TILES_AREA_HEIGHT */
+
 #ifndef VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT
 #	define VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT 8
 #endif /* VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT */
@@ -206,6 +207,16 @@ private:
 				const int ty = tdiv.quot % VRAM_DEBUGGER_TILES_AREA_HEIGHT;
 				const int px = kdiv.rem % GBBASIC_TILE_SIZE;
 				const int py = kdiv.quot % GBBASIC_TILE_SIZE;
+				/*const bool isForBg = ty >= VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT;
+				const bool isForObj = ty < VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT * 2;
+				const UInt8 bgTile = isForBg ?
+					((ty < VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT * 2) ?
+						ty :
+						(ty - VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT * 2)) :
+					0;
+				const UInt8 objTile = isForObj ?
+					ty :
+					0;*/
 
 				const int x = (tx + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE + px;
 				const int y = ty * GBBASIC_TILE_SIZE + py;
@@ -224,8 +235,8 @@ private:
 				const int kx = kdiv.rem;
 				const int ky = kdiv.quot;
 
-				const int tx = kx * GBBASIC_TILE_SIZE;
-				const int ty = ky * GBBASIC_TILE_SIZE;
+				const int x = kx * GBBASIC_TILE_SIZE;
+				const int y = ky * GBBASIC_TILE_SIZE;
 
 				const UInt8 tile = mapBuf[k];
 				const int bank = 0; // TODO: bank.
@@ -233,15 +244,16 @@ private:
 				const bool yFlip = false; // TODO
 				const std::div_t sdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
 				const int sx = (sdiv.rem + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE;
-				const int sy = // (sdiv.quot + VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT) * GBBASIC_TILE_SIZE;
-					((sdiv.quot < 128) ?
+				const int sy = (
+					((sdiv.quot < VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT) ?
 						(sdiv.quot + VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT * 2) :
-						(sdiv.quot + VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT)) *
-					GBBASIC_TILE_SIZE;
+						sdiv.quot) *
+					GBBASIC_TILE_SIZE
+				);
 
 				_bufferTextureTiles.image->blit( // Blit to the BG map image from the tiles image.
 					_bufferTextureBgMap.image.get(),
-					tx, ty, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+					x, y, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
 					sx, sy,
 					xFlip, yFlip
 				);
