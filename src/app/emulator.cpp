@@ -28,8 +28,11 @@
 #	define EMULATOR_SGB_PADDING_Y SGB_SCREEN_TOP
 #endif /* EMULATOR_SGB_PADDING_Y */
 
+#ifndef EMULATOR_VRAM_DEBUGGER_MAX_WIDTH
+#	define EMULATOR_VRAM_DEBUGGER_MAX_WIDTH 256.0f
+#endif /* EMULATOR_VRAM_DEBUGGER_MAX_WIDTH */
 #ifndef EMULATOR_VRAM_DEBUGGER_MIN_WIDTH
-#	define EMULATOR_VRAM_DEBUGGER_MIN_WIDTH 200.0f
+#	define EMULATOR_VRAM_DEBUGGER_MIN_WIDTH 160.0f
 #endif /* EMULATOR_VRAM_DEBUGGER_MIN_WIDTH */
 
 /* ===========================================================================} */
@@ -147,14 +150,14 @@ struct Context {
 				ImGuiWindowFlags_NoNav;
 
 			if (*vramDebuggerWidth <= 0) {
-				*vramDebuggerWidth = calculateVramDebuggerWidth(regSize.x * 0.4f);
+				*vramDebuggerWidth = calculateVramDebuggerWidth(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
 			}
 			if (*vramDebuggerPreviousOuterWidth <= 0) {
 				*vramDebuggerPreviousOuterWidth = regSize.x;
 			}
 			if (*vramDebuggerPreviousOuterWidth != regSize.x) {
 				*vramDebuggerWidth = *vramDebuggerWidth / *vramDebuggerPreviousOuterWidth * regSize.x;
-				*vramDebuggerWidth = calculateVramDebuggerWidth(regSize.x * 0.4f);
+				*vramDebuggerWidth = calculateVramDebuggerWidth(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
 				*vramDebuggerPreviousOuterWidth = regSize.x;
 			}
 
@@ -375,7 +378,9 @@ struct Context {
 
 private:
 	float calculateVramDebuggerWidth(float width) const {
-		width = std::min(width, std::min(regSize.x - SCREEN_WIDTH, regSize.x * 0.75f));
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		width = std::min(width, std::min(regSize.x - SCREEN_WIDTH, EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2));
 		width = std::max(width, EMULATOR_VRAM_DEBUGGER_MIN_WIDTH);
 
 		return std::floor(width);

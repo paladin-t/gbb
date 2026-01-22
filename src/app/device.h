@@ -61,6 +61,9 @@
 #ifndef DEVICE_MAP_BUFFER_SIZE
 #	define DEVICE_MAP_BUFFER_SIZE (DEVICE_MAP_BUFFER_WIDTH * DEVICE_MAP_BUFFER_HEIGHT)
 #endif /* DEVICE_MAP_BUFFER_SIZE */
+#ifndef DEVICE_OBJ_COUNT
+#	define DEVICE_OBJ_COUNT 40
+#endif /* DEVICE_OBJ_COUNT */
 
 /* ===========================================================================} */
 
