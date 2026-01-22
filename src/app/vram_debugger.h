@@ -16,10 +16,16 @@
 ** VRAM debugger
 */
 
-void vramDebugger(
-	class Window* wnd, class Renderer* rnd,
-	class Theme* theme
-);
+class VramDebugger {
+public:
+	virtual bool open(class Window* wnd, class Renderer* rnd, class Theme* theme) = 0;
+	virtual bool close(void) = 0;
+
+	virtual void update(class Window* wnd, class Renderer* rnd, class Theme* theme, class Device* device) = 0;
+
+	static VramDebugger* create(void);
+	static void destroy(VramDebugger* ptr);
+};
 
 /* ===========================================================================} */
 

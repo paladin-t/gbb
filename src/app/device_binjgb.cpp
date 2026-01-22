@@ -587,8 +587,7 @@ Device::PaletteGrayscale DeviceBinjgb::getPalette(PaletteTypes type) const {
 
 	const Palette val = emulator_get_palette(_emulator, (PaletteType)type);
 	Device::PaletteGrayscale result;
-	for (int i = 0; i < DEVICE_PALETTE_COLOR_COUNT; ++i)
-		result.color[i] = (Colors)val.color[i];
+	memcpy(result.color, val.color, sizeof(Colors) * DEVICE_PALETTE_COLOR_COUNT);
 
 	return result;
 }
@@ -599,8 +598,7 @@ Device::PaletteRgba DeviceBinjgb::getPaletteRgba(PaletteTypes type) const {
 
 	const PaletteRGBA val = emulator_get_palette_rgba(_emulator, (PaletteType)type);
 	Device::PaletteRgba result;
-	for (int i = 0; i < DEVICE_PALETTE_COLOR_COUNT; ++i)
-		result.color[i] = (UInt32)val.color[i];
+	memcpy(result.color, val.color, sizeof(UInt32) * DEVICE_PALETTE_COLOR_COUNT);
 
 	return result;
 }
@@ -611,8 +609,7 @@ Device::PaletteRgba DeviceBinjgb::getCgbPaletteRgba(CgbPaletteTypes type, int in
 
 	const PaletteRGBA val = emulator_get_cgb_palette_rgba(_emulator, (CgbPaletteType)type, index);
 	Device::PaletteRgba result;
-	for (int i = 0; i < DEVICE_PALETTE_COLOR_COUNT; ++i)
-		result.color[i] = (UInt32)val.color[i];
+	memcpy(result.color, val.color, sizeof(UInt32) * DEVICE_PALETTE_COLOR_COUNT);
 
 	return result;
 }
@@ -623,40 +620,36 @@ Device::PaletteRgba DeviceBinjgb::getSgbPaletteRgba(int index) const {
 
 	const PaletteRGBA val = emulator_get_sgb_palette_rgba(_emulator, index);
 	Device::PaletteRgba result;
-	for (int i = 0; i < DEVICE_PALETTE_COLOR_COUNT; ++i)
-		result.color[i] = (UInt32)val.color[i];
+	memcpy(result.color, val.color, sizeof(UInt32) * DEVICE_PALETTE_COLOR_COUNT);
 
 	return result;
 }
 
-void DeviceBinjgb::getTileBuffer(TileBuffer buf) const {
+void DeviceBinjgb::getTileBuffer(TileBuffer &buf) const {
 	if (!_emulator)
 		return;
 
 	TileData val;
 	emulator_get_tile_data(_emulator, val);
-	for (int i = 0; i < (int)buf.size(); ++i)
-		buf[i] = (UInt8)val[i];
+	memcpy(buf.data(), val, sizeof(UInt8) * buf.size());
 }
 
-void DeviceBinjgb::getMapBuffer(MapSourceTypes type, MapBuffer buf) const {
+void DeviceBinjgb::getMapBuffer(MapSourceTypes type, MapBuffer &buf) const {
 	if (!_emulator)
 		return;
 
 	TileMap val;
 	emulator_get_tile_map(_emulator, type == MapSourceTypes::FROM_9800_TO_9BFF ? TILE_MAP_9800_9BFF : TILE_MAP_9C00_9FFF, val);
-	for (int i = 0; i < (int)buf.size(); ++i)
-		buf[i] = (UInt8)val[i];
+	memcpy(buf.data(), val, sizeof(UInt8) * buf.size());
 }
 
-void DeviceBinjgb::getMapAttrBuffer(MapSourceTypes type, MapBuffer buf) const {
+void DeviceBinjgb::getMapAttrBuffer(MapSourceTypes type, MapBuffer &buf) const {
 	if (!_emulator)
 		return;
 
 	TileMap val;
 	emulator_get_tile_map_attr(_emulator, type == MapSourceTypes::FROM_9800_TO_9BFF ? TILE_MAP_9800_9BFF : TILE_MAP_9C00_9FFF, val);
-	for (int i = 0; i < (int)buf.size(); ++i)
-		buf[i] = (UInt8)val[i];
+	memcpy(buf.data(), val, sizeof(UInt8) * buf.size());
 }
 
 void DeviceBinjgb::getSgbMapAttrBuffer(UInt8 map[90]) const {
@@ -665,8 +658,7 @@ void DeviceBinjgb::getSgbMapAttrBuffer(UInt8 map[90]) const {
 
 	u8 val[90];
 	emulator_get_sgb_attr_map(_emulator, val);
-	for (int i = 0; i < GBBASIC_COUNTOF(map); ++i)
-		map[i] = (UInt8)val[i];
+	memcpy(map, val, sizeof(map));
 }
 
 void DeviceBinjgb::getBgScroll(UInt8* x, UInt8* y) const {

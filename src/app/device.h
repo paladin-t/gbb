@@ -256,9 +256,9 @@ public:
 	virtual PaletteRgba getPaletteRgba(PaletteTypes type) const = 0;
 	virtual PaletteRgba getCgbPaletteRgba(CgbPaletteTypes type, int index) const = 0;
 	virtual PaletteRgba getSgbPaletteRgba(int index) const = 0;
-	virtual void getTileBuffer(TileBuffer buf) const = 0;
-	virtual void getMapBuffer(MapSourceTypes type, MapBuffer buf) const = 0;
-	virtual void getMapAttrBuffer(MapSourceTypes type, MapBuffer buf) const = 0;
+	virtual void getTileBuffer(TileBuffer &buf) const = 0;
+	virtual void getMapBuffer(MapSourceTypes type, MapBuffer &buf) const = 0;
+	virtual void getMapAttrBuffer(MapSourceTypes type, MapBuffer &buf) const = 0;
 	virtual void getSgbMapAttrBuffer(UInt8 map[90]) const = 0;
 	virtual void getBgScroll(UInt8* x /* nullable */, UInt8* y /* nullable */) const = 0;
 	virtual void getWindowScroll(UInt8* x /* nullable */, UInt8* y /* nullable */) const = 0;

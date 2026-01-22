@@ -25,6 +25,7 @@
 #include "emulator.h"
 #include "operations.h"
 #include "theme.h"
+#include "vram_debugger.h"
 #include "workspace.h"
 #include "resource/inline_resource.h"
 #include "../compiler/compiler.h"
@@ -574,6 +575,7 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 	searchResultResizing(false);
 
 	// Initialize the debugger states.
+	vramDebugger(nullptr);
 	vramDebuggerPreviousOuterWidth(0.0f);
 	vramDebuggerWidth(0.0f);
 	vramDebuggerResizing(false);
@@ -1859,17 +1861,17 @@ void Workspace::debug(const char* msg) {
 	fprintf(stdout, "%s\n", osstr.c_str());
 
 	do {
-		LockGuard<decltype(debuggerLock())> guard(debuggerLock());
+		LockGuard<decltype(onscreenDebuggerLock())> guard(onscreenDebuggerLock());
 
-		debuggerMessages().add(msg);
+		onscreenDebuggerMessages().add(msg);
 	} while (false);
 }
 
 void Workspace::debug(void) {
 	// Clear the debug messages.
-	LockGuard<decltype(debuggerLock())> guard(debuggerLock());
+	LockGuard<decltype(onscreenDebuggerLock())> guard(onscreenDebuggerLock());
 
-	debuggerMessages().clear();
+	onscreenDebuggerMessages().clear();
 }
 
 void Workspace::cursor(Device::CursorTypes mode) {
@@ -1904,6 +1906,25 @@ void Workspace::stop(class Window* wnd, class Renderer* rnd) {
 				}
 			}
 		);
+}
+
+class VramDebugger* Workspace::initializeVramDebugger(class Window* wnd, class Renderer* rnd) {
+	if (vramDebugger())
+		return vramDebugger();
+
+	vramDebugger(VramDebugger::create());
+	vramDebugger()->open(wnd, rnd, theme());
+
+	return vramDebugger();
+}
+
+void Workspace::disposeVramDebugger(void) {
+	if (!vramDebugger())
+		return;
+
+	vramDebugger()->close();
+	VramDebugger::destroy(vramDebugger());
+	vramDebugger(nullptr);
 }
 
 void Workspace::focusLost(Window* wnd, Renderer* rnd) {
@@ -11606,7 +11627,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
 			settings().debugOnscreenDebugEnabled,
-			true, settings().debugVramDebugEnabled, vramDebuggerPreviousOuterWidth(), vramDebuggerWidth(), vramDebuggerResizing(), vramDebuggerResetting(),
+			vramDebugger(), settings().debugVramDebugEnabled, vramDebuggerPreviousOuterWidth(), vramDebuggerWidth(), vramDebuggerResizing(), vramDebuggerResetting(),
 			canvasCursorMode(),
 			!!popupBox(),
 			fps,
@@ -11632,9 +11653,9 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 }
 
 void Workspace::debug(Window*, Renderer* rnd, float marginTop, float marginBottom) {
-	LockGuard<decltype(debuggerLock())> guard(debuggerLock());
+	LockGuard<decltype(onscreenDebuggerLock())> guard(onscreenDebuggerLock());
 
-	if (debuggerMessages().empty())
+	if (onscreenDebuggerMessages().empty())
 		return;
 
 	ImGuiStyle &style = ImGui::GetStyle();
@@ -11647,11 +11668,11 @@ void Workspace::debug(Window*, Renderer* rnd, float marginTop, float marginBotto
 	{
 		const ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.11f, 0.11f, 0.11f, 1.00f));
-		ImGui::TextUnformatted(debuggerMessages().text);
+		ImGui::TextUnformatted(onscreenDebuggerMessages().text);
 		ImGui::PopStyleColor();
 		ImGui::SetCursorPos(pos - ImVec2(0, 1));
 		ImGui::PushStyleColor(ImGuiCol_Text, theme()->style()->debugColor);
-		ImGui::TextUnformatted(debuggerMessages().text);
+		ImGui::TextUnformatted(onscreenDebuggerMessages().text);
 		ImGui::PopStyleColor();
 	}
 	ImGui::EndChild();

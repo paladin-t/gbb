@@ -32,7 +32,7 @@ void emulator(
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,
-	bool vramOptionsEnabled, bool &vramDebugEnabled, float &vramDebuggerPreviousOuterWidth, float &vramDebuggerWidth, bool &vramDebuggerResizing, bool &vramDebuggerResetting,
+	class VramDebugger* vramDebugger /* nullable */, bool &vramDebugEnabled, float &vramDebuggerPreviousOuterWidth, float &vramDebuggerWidth, bool &vramDebuggerResizing, bool &vramDebuggerResetting,
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,

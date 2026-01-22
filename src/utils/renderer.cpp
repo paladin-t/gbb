@@ -147,6 +147,16 @@ public:
 			SDL_SetRenderTarget(_renderer, nullptr);
 	}
 
+	virtual Colour drawColor(void) const override {
+		Uint8 r, g, b, a;
+		SDL_GetRenderDrawColor(_renderer, &r, &g, &b, &a);
+
+		return Colour(r, g, b, a);
+	}
+	virtual void drawColor(const Colour &col) override {
+		SDL_SetRenderDrawColor(_renderer, col.r, col.g, col.b, col.a);
+	}
+
 	virtual unsigned blend(void) const override {
 		return _blend;
 	}
@@ -187,6 +197,10 @@ public:
 			return;
 
 		SDL_RenderSetClipRect(_renderer, nullptr);
+	}
+
+	virtual bool drawPoint(int x, int y) override {
+		return !SDL_RenderDrawPoint(_renderer, x, y);
 	}
 
 	virtual void clear(const Colour* col) override {

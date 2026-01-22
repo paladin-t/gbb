@@ -4543,7 +4543,7 @@ promise::Promise Operations::projectBuild(Window* wnd, Renderer* rnd, Workspace*
 	);
 }
 
-promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes::Ptr rom, Bytes::Ptr sram, bool traceless) {
+promise::Promise Operations::projectRun(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, Bytes::Ptr sram, bool traceless) {
 	return promise::newPromise(
 		[&, rom, sram, traceless] (promise::Defer df) -> void {
 			if (!traceless)
@@ -4612,6 +4612,8 @@ promise::Promise Operations::projectRun(Window*, Renderer*, Workspace* ws, Bytes
 				)
 			);
 
+			ws->initializeVramDebugger(wnd, rnd);
+
 			const Project::Ptr &prj = ws->currentProject();
 
 			if (!traceless) {
@@ -4643,6 +4645,8 @@ promise::Promise Operations::projectStop(Window*, Renderer*, Workspace* ws) {
 			if (ws->categoryBeforeCompiling() != Workspace::Categories::EMULATOR)
 				ws->category(ws->categoryBeforeCompiling());
 			ws->tabsWidth(0.0f);
+
+			ws->disposeVramDebugger();
 
 			const bool traceless = ws->canvasDevice()->traceless();
 			sram = Bytes::Ptr(Bytes::create());

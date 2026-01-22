@@ -63,7 +63,7 @@ struct Context {
 	float onscreenGamepadScale;
 	Math::Vec2<float> onscreenGamepadPadding;
 	bool* onscreenDebugEnabled = nullptr;
-	bool vramOptionsEnabled = true;
+	VramDebugger* vramDebugger = nullptr;
 	bool* vramDebugEnabled = nullptr;
 	float* vramDebuggerPreviousOuterWidth = nullptr;
 	float* vramDebuggerWidth = nullptr;
@@ -96,7 +96,7 @@ struct Context {
 		bool integerScale_, bool fixRatio_,
 		bool* onscreenGamepadEnabled_, bool onscreenGamepadSwapAB_, float onscreenGamepadScale_, const Math::Vec2<float> onscreenGamepadPadding_,
 		bool* onscreenDebugEnabled_,
-		bool vramOptionsEnabled_, bool* vramDebugEnabled_, float* vramDebuggerPreviousOuterWidth_, float* vramDebuggerWidth_,  bool* vramDebuggerResizing_, bool* vramDebuggerResetting_,
+		VramDebugger* vramDebugger_, bool* vramDebugEnabled_, float* vramDebuggerPreviousOuterWidth_, float* vramDebuggerWidth_,  bool* vramDebuggerResizing_, bool* vramDebuggerResetting_,
 		Device::CursorTypes cursor_,
 		bool hasPopup_,
 		unsigned deviceFps_, unsigned fps_,
@@ -111,7 +111,7 @@ struct Context {
 		integerScale(integerScale_), fixRatio(fixRatio_),
 		onscreenGamepadEnabled(onscreenGamepadEnabled_), onscreenGamepadSwapAB(onscreenGamepadSwapAB_), onscreenGamepadScale(onscreenGamepadScale_), onscreenGamepadPadding(onscreenGamepadPadding_),
 		onscreenDebugEnabled(onscreenDebugEnabled_),
-		vramOptionsEnabled(vramOptionsEnabled_), vramDebugEnabled(vramDebugEnabled_), vramDebuggerPreviousOuterWidth(vramDebuggerPreviousOuterWidth_), vramDebuggerWidth(vramDebuggerWidth_),  vramDebuggerResizing(vramDebuggerResizing_), vramDebuggerResetting(vramDebuggerResetting_),
+		vramDebugger(vramDebugger_), vramDebugEnabled(vramDebugEnabled_), vramDebuggerPreviousOuterWidth(vramDebuggerPreviousOuterWidth_), vramDebuggerWidth(vramDebuggerWidth_),  vramDebuggerResizing(vramDebuggerResizing_), vramDebuggerResetting(vramDebuggerResetting_),
 		cursor(cursor_),
 		hasPopup(hasPopup_),
 		deviceFps(deviceFps_), fps(fps_),
@@ -134,7 +134,7 @@ struct Context {
 		);
 
 		canShowVramDebugger = regSize.x >= SCREEN_WIDTH + EMULATOR_VRAM_DEBUGGER_MIN_WIDTH + 2;
-		const bool vramDbg = canShowVramDebugger && (vramOptionsEnabled && *vramDebugEnabled);
+		const bool vramDbg = canShowVramDebugger && (!!vramDebugger && *vramDebugEnabled);
 		if (vramDbg) {
 			const ImGuiWindowFlags flags =
 				ImGuiWindowFlags_NoTitleBar |
@@ -312,10 +312,10 @@ struct Context {
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoScrollbar |
 			ImGuiWindowFlags_NoCollapse |
 			ImGuiWindowFlags_NoSavedSettings |
 			ImGuiWindowFlags_NoBringToFrontOnFocus |
+			ImGuiWindowFlags_AlwaysVerticalScrollbar |
 			ImGuiWindowFlags_NoNav;
 		const float x = (float)ImGui::GetCursorPosX();
 		const float width = *vramDebuggerWidth;
@@ -359,7 +359,7 @@ struct Context {
 		// Draw the VRAM debugger.
 		ImGui::BeginChild("#VDbg", ImVec2(width, height), true, flags);
 		{
-			vramDebugger(window, renderer, theme);
+			vramDebugger->update(window, renderer, theme, canvasDevice);
 		}
 		ImGui::EndChild();
 
@@ -617,7 +617,7 @@ static void menu(const Context &context) {
 
 		ImGui::MenuItem(context.theme->menu_OnscreenDebug(), nullptr, context.onscreenDebugEnabled);
 
-		if (context.vramOptionsEnabled) {
+		if (!!context.vramDebugger) {
 			ImGui::Separator();
 
 			if (context.canShowVramDebugger) {
@@ -643,7 +643,7 @@ void emulator(
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,
-	bool vramOptionsEnabled, bool &vramDebugEnabled, float &vramDebuggerPreviousOuterWidth, float &vramDebuggerWidth, bool &vramDebuggerResizing, bool &vramDebuggerResetting,
+	class VramDebugger* vramDebugger, bool &vramDebugEnabled, float &vramDebuggerPreviousOuterWidth, float &vramDebuggerWidth, bool &vramDebuggerResizing, bool &vramDebuggerResetting,
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,
@@ -661,7 +661,7 @@ void emulator(
 		integerScale, fixRatio,
 		&onscreenGamepadEnabled, onscreenGamepadSwapAB, onscreenGamepadScale, onscreenGamepadPadding,
 		&onscreenDebugEnabled,
-		vramOptionsEnabled, &vramDebugEnabled, &vramDebuggerPreviousOuterWidth, &vramDebuggerWidth, &vramDebuggerResizing, &vramDebuggerResetting,
+		vramDebugger, &vramDebugEnabled, &vramDebuggerPreviousOuterWidth, &vramDebuggerWidth, &vramDebuggerResizing, &vramDebuggerResetting,
 		cursor,
 		hasPopup,
 		canvasDevice->fps(), fps,

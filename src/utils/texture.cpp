@@ -470,6 +470,55 @@ public:
 		return true;
 	}
 
+	virtual bool lock(const Math::Recti* rect, void** pixels, int* pitch) override {
+		if (!_texture)
+			return false;
+		if (!pixels || !pitch)
+			return false;
+
+		if (rect) {
+			const SDL_Rect rect_{ rect->xMin(), rect->yMin(), rect->width(), rect->height() };
+
+			if (SDL_LockTexture(_texture, &rect_, pixels, pitch))
+				return false;
+		} else {
+			if (SDL_LockTexture(_texture, nullptr, pixels, pitch))
+				return false;
+		}
+
+		return true;
+	}
+	virtual void unlock(void) override {
+		if (!_texture)
+			return;
+
+		SDL_UnlockTexture(_texture);
+	}
+	virtual void setLocked(const Math::Recti &rect, void* pixels, int pitch, int x, int y, const Colour &col) override {
+		Colour* pixels_ = (Colour*)pixels;
+		const int x_ = x - rect.xMin();
+		const int y_ = y - rect.yMin();
+		pixels_[x_ + y_ * pitch] = col;
+
+		if (_palettedSurface) {
+			TEXTURE_LOCK_SURFACE(_palettedSurface)
+			Colour* buf = (Colour*)_palettedSurface->pixels;
+			buf[x + y * _width] = col;
+		}
+	}
+	virtual void setLocked(const Math::Recti &rect, void* pixels, int pitch, int x, int y, int index) override {
+		Byte* pixels_ = (Byte*)pixels;
+		const int x_ = x - rect.xMin();
+		const int y_ = y - rect.yMin();
+		pixels_[x_ + y_ * pitch] = (Byte)index;
+
+		if (_palettedSurface) {
+			TEXTURE_LOCK_SURFACE(_palettedSurface)
+			Byte* buf = (Byte*)_palettedSurface->pixels;
+			buf[x + y * _width] = (Byte)index;
+		}
+	}
+
 	virtual bool fromImage(class Renderer* rnd, Usages usg, class Image* img, ScaleModes scaleMode) override {
 		// Prepare.
 		if (_texture)

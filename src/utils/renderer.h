@@ -133,6 +133,15 @@ public:
 	virtual void target(class Texture* tex /* nullable */) = 0;
 
 	/**
+	 * @brief Gets the current draw color of the renderer.
+	 */
+	virtual Colour drawColor(void) const = 0;
+	/**
+	 * @brief Sets the current draw color of the renderer.
+	 */
+	virtual void drawColor(const Colour &col) = 0;
+
+	/**
 	 * @brief Gets the current blend mode of the renderer.
 	 */
 	virtual unsigned blend(void) const = 0;
@@ -149,6 +158,11 @@ public:
 	 * @brief Resets the current clip area of the renderer.
 	 */
 	virtual void clip(void) = 0;
+
+	/**
+	 * @brief Draws a point at the specific position to the current render target.
+	 */
+	virtual bool drawPoint(int x, int y) = 0;
 
 	/**
 	 * @brief Clears the renderer with the specific color.
