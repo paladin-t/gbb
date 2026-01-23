@@ -629,6 +629,8 @@ void DeviceBinjgb::getTileBuffer(TileBuffer &buf) const {
 	if (!_emulator)
 		return;
 
+	buf.fill(0);
+
 	TileData val;
 	emulator_get_tile_data(_emulator, val);
 	memcpy(buf.data(), val, sizeof(UInt8) * buf.size());
@@ -638,6 +640,8 @@ void DeviceBinjgb::getMapBuffer(MapSourceTypes type, MapBuffer &buf) const {
 	if (!_emulator)
 		return;
 
+	buf.fill(0);
+
 	TileMap val;
 	emulator_get_tile_map(_emulator, type == MapSourceTypes::FROM_9800_TO_9BFF ? TILE_MAP_9800_9BFF : TILE_MAP_9C00_9FFF, val);
 	memcpy(buf.data(), val, sizeof(UInt8) * buf.size());
@@ -646,6 +650,8 @@ void DeviceBinjgb::getMapBuffer(MapSourceTypes type, MapBuffer &buf) const {
 void DeviceBinjgb::getMapAttrBuffer(MapSourceTypes type, MapBuffer &buf) const {
 	if (!_emulator)
 		return;
+
+	buf.fill(0);
 
 	TileMap val;
 	emulator_get_tile_map_attr(_emulator, type == MapSourceTypes::FROM_9800_TO_9BFF ? TILE_MAP_9800_9BFF : TILE_MAP_9C00_9FFF, val);

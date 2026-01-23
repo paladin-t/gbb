@@ -1908,12 +1908,12 @@ void Workspace::stop(class Window* wnd, class Renderer* rnd) {
 		);
 }
 
-class VramDebugger* Workspace::initializeVramDebugger(class Window* wnd, class Renderer* rnd) {
+class VramDebugger* Workspace::initializeVramDebugger(class Window* /* wnd */, class Renderer* rnd) {
 	if (vramDebugger())
 		return vramDebugger();
 
 	vramDebugger(VramDebugger::create());
-	vramDebugger()->open(wnd, rnd, theme());
+	vramDebugger()->open(rnd, theme());
 
 	return vramDebugger();
 }

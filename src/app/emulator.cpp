@@ -362,7 +362,7 @@ struct Context {
 		// Draw the VRAM debugger.
 		ImGui::BeginChild("#VDbg", ImVec2(width, height), true, flags);
 		{
-			vramDebugger->update(window, renderer, theme, canvasDevice);
+			vramDebugger->update(renderer, theme, canvasDevice);
 		}
 		ImGui::EndChild();
 

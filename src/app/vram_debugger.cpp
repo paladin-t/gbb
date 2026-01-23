@@ -32,9 +32,15 @@
 #	define VRAM_DEBUGGER_TILES_AREA_HEIGHT 24
 #endif /* VRAM_DEBUGGER_TILES_AREA_HEIGHT */
 
-#ifndef VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT
-#	define VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT 8
-#endif /* VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT */
+#ifndef VRAM_DEBUGGER_TILES_SECTION_WIDTH
+#	define VRAM_DEBUGGER_TILES_SECTION_WIDTH 16
+#endif /* VRAM_DEBUGGER_TILES_SECTION_WIDTH */
+#ifndef VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT
+#	define VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT 8
+#endif /* VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT */
+#ifndef VRAM_DEBUGGER_TILES_SECTION_SIZE
+#	define VRAM_DEBUGGER_TILES_SECTION_SIZE (VRAM_DEBUGGER_TILES_SECTION_WIDTH * VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2)
+#endif /* VRAM_DEBUGGER_TILES_SECTION_SIZE */
 
 static_assert(
 	(DEVICE_TILE_BUFFER_WIDTH * DEVICE_TILE_BUFFER_HEIGHT) ==
@@ -63,6 +69,7 @@ private:
 		BufferTexture() {
 		}
 
+		// Creates a texture and image if they do not exist yet.
 		void touch(Renderer* rnd, int width_, int height_) {
 			width = width_;
 			height = height_;
@@ -80,7 +87,8 @@ private:
 			image->fromBlank(width, height, 0);
 		}
 
-		bool begin(Renderer* /* rnd */) {
+		// Begins rendering to the texture with locking it.
+		bool begin(void) {
 #if VRAM_DEBUGGER_FILLING_SKIP_FRAME_COUNT == 1
 			constexpr const bool result = true;
 #else /* VRAM_DEBUGGER_FILLING_SKIP_FRAME_COUNT */
@@ -94,14 +102,16 @@ private:
 
 			return result;
 		}
-		void end(Renderer* /* rnd */) {
+		// Ends rendering with unlocking the texture.
+		void end(void) {
 			GBBASIC_ASSERT(texture && "Wrong data.");
 
 			pixels = nullptr;
 			texture->unlock();
 		}
 
-		void set(Renderer* /* rnd */, int x, int y, const Colour &col) {
+		// Plots a pixel, copies to the texture, and write to the image.
+		void plot(int x, int y, const Colour &col) {
 			GBBASIC_ASSERT(texture && "Wrong data.");
 
 			Colour* ptr = (Colour*)pixels;
@@ -109,18 +119,80 @@ private:
 
 			image->set(x, y, col);
 		}
+
+		// Blits to the image from another image.
+		void blit(BufferTexture &other, int x, int y, int w, int h, int sx, int sy, bool hFlip, bool vFlip) const {
+			GBBASIC_ASSERT(image && other.image && "Wrong data.");
+
+			image->blit(other.image.get(), x, y, w, h, sx, sy, hFlip, vFlip);
+		}
+
+		// Commits to the texture from the image.
+		void commit(size_t size) {
+			GBBASIC_ASSERT(texture && image && pixels && "Wrong data.");
+
+			memcpy(pixels, image->pixels(), size);
+		}
 	};
 
-	typedef std::array<Device::Obj, DEVICE_OBJ_COUNT> Objs;
-	typedef std::array<bool, DEVICE_OBJ_COUNT> ObjVisibilities;
+	struct TileDetail {
+		typedef std::vector<TileDetail> Array;
+		typedef std::array<Array, VRAM_DEBUGGER_TILES_SECTION_SIZE> Section;
+		typedef std::array<Section, 2> Bank; // For BG map and obj respectively.
+		typedef std::array<Bank, 2> Banks; // For bank 0 and bank 1 respectively.
+
+		enum class Usages {
+			BG_MAP = 0,
+			OBJ = 1
+		};
+
+		Usages usage = Usages::BG_MAP;
+		Math::Vec2i position;
+		int palette = 0;
+
+		TileDetail() {
+		}
+		TileDetail(Usages use, const Math::Vec2i &pos, int pal) :
+			usage(use),
+			position(pos),
+			palette(pal)
+		{
+		}
+
+		static void clear(TileDetail::Banks &details) {
+			for (int b = 0; b < (int)details.size(); ++b) {
+				Bank &bank = details[b];
+				for (int s = 0; s < (int)bank.size(); ++s) {
+					Section &section = bank[s];
+					for (int i = 0; i < (int)section.size(); ++i) {
+						Array &array = section[i];
+						array.clear();
+					}
+				}
+			}
+		}
+	};
+
+	struct Obj {
+		typedef std::array<Obj, DEVICE_OBJ_COUNT> Array;
+
+		Device::Obj obj;
+		bool visible = false;
+	};
 
 private:
 	bool _opened = false;
 
-	BufferTexture _bufferTextureTiles;
-	BufferTexture _bufferTextureBgMap;
-	Objs _objs;
-	ObjVisibilities _objVisibilities;
+	TileDetail::Banks _tileDetails;
+	struct {
+		BufferTexture buffer;
+	} _tiles;
+	struct {
+		BufferTexture buffer;
+	} _bgMap;
+	struct {
+		Obj::Array buffer;
+	} _objs;
 
 public:
 	VramDebuggerImpl() {
@@ -129,12 +201,12 @@ public:
 		close();
 	}
 
-	virtual bool open(class Window* /* wnd */, class Renderer* rnd, class Theme* /* theme */) override {
+	virtual bool open(class Renderer* rnd, class Theme* /* theme */) override {
 		if (_opened)
 			return true;
 
-		_bufferTextureTiles.touch(rnd, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 * GBBASIC_TILE_SIZE, VRAM_DEBUGGER_TILES_AREA_HEIGHT * GBBASIC_TILE_SIZE);
-		_bufferTextureBgMap.touch(rnd, DEVICE_MAP_BUFFER_WIDTH * GBBASIC_TILE_SIZE, DEVICE_MAP_BUFFER_HEIGHT * GBBASIC_TILE_SIZE);
+		_tiles.buffer.touch(rnd, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 * GBBASIC_TILE_SIZE, VRAM_DEBUGGER_TILES_AREA_HEIGHT * GBBASIC_TILE_SIZE);
+		_bgMap.buffer.touch(rnd, DEVICE_MAP_BUFFER_WIDTH * GBBASIC_TILE_SIZE, DEVICE_MAP_BUFFER_HEIGHT * GBBASIC_TILE_SIZE);
 
 		_opened = true;
 
@@ -147,27 +219,29 @@ public:
 		return true;
 	}
 
-	virtual void update(class Window* wnd, class Renderer* rnd, class Theme* theme, class Device* device) override {
-		refresh(wnd, rnd, theme, device);
+	virtual void update(class Renderer* rnd, class Theme* theme, class Device* device) override {
+		refresh(rnd, theme, device);
 
-		tiles(wnd, rnd, theme, device);
+		tiles(rnd, theme, device);
 		ImGui::NewLine(1);
 		ImGui::Separator();
 
-		bgMap(wnd, rnd, theme, device);
+		bgMap(rnd, theme, device);
 		ImGui::NewLine(1);
 		ImGui::Separator();
 
-		oam(wnd, rnd, theme, device);
+		oam(rnd, theme, device);
 		ImGui::NewLine(1);
 		ImGui::Separator();
 
-		palettes(wnd, rnd, theme, device);
+		palettes(rnd, theme, device);
 	}
 
 private:
-	void refresh(Window* /* wnd */, Renderer* rnd, Theme* /* theme */, Device* device) {
+	void refresh(Renderer* /* rnd */, Theme* /* theme */, Device* device) {
 		// Retrieve data.
+		const bool isCgb = device->deviceHasCgbSupport();
+
 		Device::MapSourceTypes mapSrc = device->getMapSourceType(Device::LayerTypes::BG);
 
 		Device::TileBuffer tilesBuf;
@@ -176,7 +250,7 @@ private:
 		Device::MapBuffer mapBuf;
 		device->getMapBuffer(mapSrc, mapBuf);
 		Device::MapBuffer mapAttrBuf;
-		if (device->deviceHasCgbSupport())
+		if (isCgb)
 			device->getMapAttrBuffer(mapSrc, mapAttrBuf);
 
 		UInt8 bgX, bgY;
@@ -186,15 +260,31 @@ private:
 
 		const bool is8x16Obj = device->is8x16Obj();
 		for (int i = 0; i < DEVICE_OBJ_COUNT; ++i) {
-			_objs[i] = device->getObj(i);
-			_objVisibilities[i] = device->isObjVisible(&_objs[i]);
+			_objs.buffer[i].obj = device->getObj(i);
+			_objs.buffer[i].visible = device->isObjVisible(&_objs.buffer[i].obj);
 		}
 
-		// Bake the palette.
-		// TODO
+		// Collect the reference information, palettes, etc.
+		TileDetail::clear(_tileDetails);
+		for (int k = 0; k < (int)mapBuf.size(); ++k) {
+			const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
+			const int kx = kdiv.rem;
+			const int ky = kdiv.quot;
+
+			const int mx = kx;
+			const int my = ky;
+
+			const UInt8 tile = mapBuf[k];
+			const UInt8 attrs = mapAttrBuf[k];
+			const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
+			const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
+
+			const TileDetail detail(TileDetail::Usages::BG_MAP, Math::Vec2i(mx, my), plt);
+			_tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile].push_back(detail);
+		}
 
 		// Translate data.
-		if (_bufferTextureTiles.begin(rnd)) {
+		if (_tiles.buffer.begin()) {
 			for (int k = 0; k < (int)tilesBuf.size(); ++k) {
 				const std::div_t kdiv = std::div(k, DEVICE_TILE_BUFFER_WIDTH);
 				const int kx = kdiv.rem / GBBASIC_TILE_SIZE;
@@ -207,29 +297,60 @@ private:
 				const int ty = tdiv.quot % VRAM_DEBUGGER_TILES_AREA_HEIGHT;
 				const int px = kdiv.rem % GBBASIC_TILE_SIZE;
 				const int py = kdiv.quot % GBBASIC_TILE_SIZE;
-				/*const bool isForBg = ty >= VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT;
-				const bool isForObj = ty < VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT * 2;
+
+				const bool isForObj = ty < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2;
+				const bool isForBg = (ty >= VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ||
+					!isForObj; // Must be for BG if is not for obj.
 				const UInt8 bgTile = isForBg ?
-					((ty < VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT * 2) ?
+					(UInt8)((ty < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) ?
 						ty :
-						(ty - VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT * 2)) :
+						(ty - VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2)) :
 					0;
 				const UInt8 objTile = isForObj ?
-					ty :
-					0;*/
+					(UInt8)ty :
+					0;
+				const TileDetail::Array* details = nullptr;
+				if (isForBg) {
+					const UInt8 tile = (UInt8)(tx + bgTile * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+					details = &_tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile];
+				} else /* if (isForObj) */ {
+					const UInt8 tile = (UInt8)(tx + objTile * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+					details = &_tileDetails[bank][(int)TileDetail::Usages::OBJ][tile];
+				}
 
 				const int x = (tx + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE + px;
 				const int y = ty * GBBASIC_TILE_SIZE + py;
 
 				const UInt8 val = tilesBuf[k];
-				const Colour col = device->classicPalette(val);
-				_bufferTextureTiles.set(rnd, x, y, col); // Copy to the tiles texture, and write to the tiles image.
+				Colour col;
+				if (details && !details->empty()) {
+					if (isCgb) {
+						const TileDetail &detail = details->front();
+						const Device::PaletteRgba &pltRgba = device->getCgbPaletteRgba(
+							detail.usage == TileDetail::Usages::BG_MAP ? Device::CgbPaletteTypes::BGCP : Device::CgbPaletteTypes::OBCP,
+							detail.palette
+						);
+						const UInt32 rgba = pltRgba.color[val];
+						col.fromRGBA(rgba);
+					} else {
+						const Device::PaletteRgba &pltRgba = device->getPaletteRgba(
+							Device::PaletteTypes::BGP
+						);
+						const UInt32 rgba = pltRgba.color[val];
+						col.fromRGBA(rgba);
+					}
+				} else {
+					const Colour col_ = device->classicPalette(val);
+					const UInt8 gray = (UInt8)Math::clamp(col_.toGray(), 0, 255);
+					col = Colour(gray, gray, gray);
+				}
+				_tiles.buffer.plot(x, y, col); // Copy to the tiles texture, and write to the tiles image.
 			}
 
-			_bufferTextureTiles.end(rnd);
+			_tiles.buffer.end();
 		}
 
-		if (_bufferTextureBgMap.begin(rnd)) {
+		if (_bgMap.buffer.begin()) {
 			for (int k = 0; k < (int)mapBuf.size(); ++k) {
 				const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
 				const int kx = kdiv.rem;
@@ -239,36 +360,35 @@ private:
 				const int y = ky * GBBASIC_TILE_SIZE;
 
 				const UInt8 tile = mapBuf[k];
-				const int bank = 0; // TODO: bank.
-				const bool xFlip = false; // TODO
-				const bool yFlip = false; // TODO
+				const UInt8 attrs = mapAttrBuf[k];
+				const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
+				const bool hFlip = !!((attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001);
+				const bool vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
 				const std::div_t sdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
 				const int sx = (sdiv.rem + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE;
 				const int sy = (
-					((sdiv.quot < VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT) ?
-						(sdiv.quot + VRAM_DEBUGGER_TILES_AREA_SECTION_HEIGHT * 2) :
+					((sdiv.quot < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ?
+						(sdiv.quot + VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) :
 						sdiv.quot) *
 					GBBASIC_TILE_SIZE
 				);
 
-				_bufferTextureTiles.image->blit( // Blit to the BG map image from the tiles image.
-					_bufferTextureBgMap.image.get(),
+				_tiles.buffer.blit( // Blit to the BG map image from the tiles image.
+					_bgMap.buffer,
 					x, y, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
 					sx, sy,
-					xFlip, yFlip
+					hFlip, vFlip
 				);
 			}
-			memcpy( // Copy to the BG map texture from the BG map image.
-				_bufferTextureBgMap.pixels,
-				_bufferTextureBgMap.image->pixels(),
+			_bgMap.buffer.commit( // Commits to the BG map texture from the BG map image.
 				DEVICE_MAP_BUFFER_SIZE * (GBBASIC_TILE_SIZE * GBBASIC_TILE_SIZE) * sizeof(Colour)
 			);
 
-			_bufferTextureBgMap.end(rnd);
+			_bgMap.buffer.end();
 		}
 	}
 
-	void tiles(Window* /* wnd */, Renderer* rnd, Theme* theme, Device* /* device */) {
+	void tiles(Renderer* rnd, Theme* theme, Device* /* device */) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		const float borderSize = style.ChildBorderSize;
@@ -286,6 +406,8 @@ private:
 		if (regSize.x < VRAM_DEBUGGER_MAX_WIDTH) {
 			VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
+			// TODO: options.
+
 			const ImVec2 frameSize = ImVec2(regSize.x, dstSize.y + style.ScrollbarSize) + ImVec2(style.WindowBorderSize * 2, style.WindowBorderSize * 2 + 1);
 			ImGui::BeginChildFrame(
 				ImGui::GetID("@Tls"),
@@ -294,7 +416,7 @@ private:
 			);
 			{
 				ImGui::Image(
-					_bufferTextureTiles.texture->pointer(rnd),
+					_tiles.buffer.texture->pointer(rnd),
 					dstSize,
 					ImVec2(0, 0), ImVec2(1, 1),
 					ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
@@ -307,7 +429,7 @@ private:
 			ImGui::EndChildFrame();
 		} else {
 			ImGui::Image(
-				_bufferTextureTiles.texture->pointer(rnd),
+				_tiles.buffer.texture->pointer(rnd),
 				dstSize,
 				ImVec2(0, 0), ImVec2(1, 1),
 				ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
@@ -316,7 +438,7 @@ private:
 			// TODO: tooltips.
 		}
 	}
-	void bgMap(Window* /* wnd */, Renderer* rnd, Theme* theme, Device* /* device */) {
+	void bgMap(Renderer* rnd, Theme* theme, Device* /* device */) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		const float borderSize = style.ChildBorderSize;
@@ -334,6 +456,8 @@ private:
 		if (regSize.x < VRAM_DEBUGGER_MAX_WIDTH) {
 			VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
+			// TODO: options.
+
 			const ImVec2 frameSize = ImVec2(regSize.x, dstSize.y + style.ScrollbarSize) + ImVec2(style.WindowBorderSize * 2, style.WindowBorderSize * 2 + 1);
 			ImGui::BeginChildFrame(
 				ImGui::GetID("@Map"),
@@ -342,36 +466,38 @@ private:
 			);
 			{
 				ImGui::Image(
-					_bufferTextureBgMap.texture->pointer(rnd),
+					_bgMap.buffer.texture->pointer(rnd),
 					dstSize,
 					ImVec2(0, 0), ImVec2(1, 1),
 					ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 				);
 				// TODO: grids.
 				// TODO: tooltips.
+				// TODO: camera.
 				ImGui::SameLine();
 				ImGui::Dummy(ImVec2(1, 0));
 			}
 			ImGui::EndChildFrame();
 		} else {
 			ImGui::Image(
-				_bufferTextureBgMap.texture->pointer(rnd),
+				_bgMap.buffer.texture->pointer(rnd),
 				dstSize,
 				ImVec2(0, 0), ImVec2(1, 1),
 				ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 			);
 			// TODO: grids.
 			// TODO: tooltips.
+			// TODO: camera.
 		}
 	}
-	void oam(Window* /* wnd */, Renderer* /* rnd */, Theme* theme, Device* /* device */) {
+	void oam(Renderer* /* rnd */, Theme* theme, Device* /* device */) {
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_Oam());
 
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted("// TODO");
 	}
-	void palettes(Window* /* wnd */, Renderer* /* rnd */, Theme* theme, Device* /* device */) {
+	void palettes(Renderer* /* rnd */, Theme* theme, Device* /* device */) {
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_Palettes());
 
