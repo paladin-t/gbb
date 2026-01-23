@@ -290,13 +290,41 @@ unsigned Project::type(void) const {
 
 void Project::title(const std::string &val) {
 	_title = val;
-
 	std::wstring wstr = Unicode::toWide(_title);
-	if (wstr.length() < 20) {
+
+	int displayWidth = 0;
+	for (wchar_t wc : wstr) {
+		if (wc <= 255)
+			displayWidth += 1;
+		else
+			displayWidth += 2;
+	}
+
+	if (displayWidth < 20) {
 		shortTitle(_title);
 	} else {
-		const std::wstring begin = wstr.substr(0, 11);
-		const std::wstring end = wstr.substr(wstr.length() - 6);
+		int frontWidth = 0;
+		size_t frontEnd = 0;
+		for (; frontEnd < wstr.length(); ++frontEnd) {
+			const int charWidth = (wstr[frontEnd] <= 255) ? 1 : 2;
+			if (frontWidth + charWidth > 11)
+				break;
+
+			frontWidth += charWidth;
+		}
+
+		int backWidth = 0;
+		size_t backStart = wstr.length();
+		for (; backStart > frontEnd && backStart > 0; --backStart) {
+			const int charWidth = (wstr[backStart - 1] <= 255) ? 1 : 2;
+			if (backWidth + charWidth > 6)
+				break;
+
+			backWidth += charWidth;
+		}
+
+		const std::wstring begin = wstr.substr(0, frontEnd);
+		const std::wstring end = wstr.substr(backStart);
 		wstr = begin + L"..." + end;
 		shortTitle(Unicode::fromWide(wstr));
 	}

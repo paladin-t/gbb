@@ -6347,7 +6347,11 @@ void PopupHelpTooltip(const std::string &text) {
 }
 
 void SetTooltip(const std::string &text) {
-	SetTooltip(text.c_str());
+	BeginTooltipEx(0, ImGuiTooltipFlags_OverridePreviousTooltip);
+
+	TextEx(text.c_str(), text.c_str() + text.length(), ImGuiTextFlags_NoWidthForLargeClippedText);
+
+	EndTooltip();
 }
 
 void SetHelpTooltip(const std::string &text) {

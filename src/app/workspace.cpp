@@ -10670,7 +10670,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 			if (polluted)
 				break;
 
-			// Render the sticker.
+			// Render the icon.
 			auto getBuiltinIcon = [rnd, this] (Project::Ptr &prj) -> void* {
 				void* iconTex = nullptr;
 				if (prj->contentType() == Project::ContentTypes::BASIC) {
