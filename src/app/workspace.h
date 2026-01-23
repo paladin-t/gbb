@@ -626,6 +626,8 @@ public:
 	GBBASIC_PROPERTY(DebuggerMessages, onscreenDebuggerMessages)
 	GBBASIC_FIELD(Mutex, onscreenDebuggerLock)
 	GBBASIC_PROPERTY_READONLY_PTR(class VramDebugger, vramDebugger)
+	GBBASIC_PROPERTY(bool, vramDebuggerPreviewPaletteBits)
+	GBBASIC_PROPERTY(bool, vramDebuggerShowGrids)
 	GBBASIC_PROPERTY(float, vramDebuggerPreviousOuterWidth)
 	GBBASIC_PROPERTY(float, vramDebuggerWidth)
 	GBBASIC_PROPERTY(bool, vramDebuggerResizing)

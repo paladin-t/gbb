@@ -576,6 +576,8 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 
 	// Initialize the debugger states.
 	vramDebugger(nullptr);
+	vramDebuggerPreviewPaletteBits(true);
+	vramDebuggerShowGrids(true);
 	vramDebuggerPreviousOuterWidth(0.0f);
 	vramDebuggerWidth(0.0f);
 	vramDebuggerResizing(false);
@@ -11627,7 +11629,8 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
 			settings().debugOnscreenDebugEnabled,
-			vramDebugger(), settings().debugVramDebugEnabled, vramDebuggerPreviousOuterWidth(), vramDebuggerWidth(), vramDebuggerResizing(), vramDebuggerResetting(),
+			vramDebugger(), settings().debugVramDebugEnabled, vramDebuggerPreviewPaletteBits(), vramDebuggerShowGrids(),
+			vramDebuggerPreviousOuterWidth(), vramDebuggerWidth(), vramDebuggerResizing(), vramDebuggerResetting(),
 			canvasCursorMode(),
 			!!popupBox(),
 			fps,

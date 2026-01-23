@@ -219,14 +219,17 @@ public:
 		return true;
 	}
 
-	virtual void update(class Renderer* rnd, class Theme* theme, class Device* device) override {
-		refresh(rnd, theme, device);
+	virtual void update(
+		class Renderer* rnd, class Theme* theme, class Device* device,
+		bool previewPaletteBits, bool showGrids
+	) override {
+		refresh(rnd, theme, device, previewPaletteBits);
 
-		tiles(rnd, theme, device);
+		tiles(rnd, theme, device, showGrids);
 		ImGui::NewLine(1);
 		ImGui::Separator();
 
-		bgMap(rnd, theme, device);
+		bgMap(rnd, theme, device, showGrids);
 		ImGui::NewLine(1);
 		ImGui::Separator();
 
@@ -238,7 +241,7 @@ public:
 	}
 
 private:
-	void refresh(Renderer* /* rnd */, Theme* /* theme */, Device* device) {
+	void refresh(Renderer* /* rnd */, Theme* /* theme */, Device* device, bool previewPaletteBits) {
 		// Retrieve data.
 		const bool isCgb = device->deviceHasCgbSupport();
 
@@ -324,20 +327,24 @@ private:
 				const UInt8 val = tilesBuf[k];
 				Colour col;
 				if (details && !details->empty()) {
-					if (isCgb) {
-						const TileDetail &detail = details->front();
-						const Device::PaletteRgba &pltRgba = device->getCgbPaletteRgba(
-							detail.usage == TileDetail::Usages::BG_MAP ? Device::CgbPaletteTypes::BGCP : Device::CgbPaletteTypes::OBCP,
-							detail.palette
-						);
-						const UInt32 rgba = pltRgba.color[val];
-						col.fromRGBA(rgba);
+					if (previewPaletteBits) {
+						if (isCgb) {
+							const TileDetail &detail = details->front();
+							const Device::PaletteRgba &pltRgba = device->getCgbPaletteRgba(
+								detail.usage == TileDetail::Usages::BG_MAP ? Device::CgbPaletteTypes::BGCP : Device::CgbPaletteTypes::OBCP,
+								detail.palette
+							);
+							const UInt32 rgba = pltRgba.color[val];
+							col.fromRGBA(rgba);
+						} else {
+							const Device::PaletteRgba &pltRgba = device->getPaletteRgba(
+								Device::PaletteTypes::BGP
+							);
+							const UInt32 rgba = pltRgba.color[val];
+							col.fromRGBA(rgba);
+						}
 					} else {
-						const Device::PaletteRgba &pltRgba = device->getPaletteRgba(
-							Device::PaletteTypes::BGP
-						);
-						const UInt32 rgba = pltRgba.color[val];
-						col.fromRGBA(rgba);
+						col = device->classicPalette(val);
 					}
 				} else {
 					const Colour col_ = device->classicPalette(val);
@@ -388,7 +395,7 @@ private:
 		}
 	}
 
-	void tiles(Renderer* rnd, Theme* theme, Device* /* device */) {
+	void tiles(Renderer* rnd, Theme* theme, Device* /* device */, bool /* showGrids */) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		const float borderSize = style.ChildBorderSize;
@@ -438,7 +445,7 @@ private:
 			// TODO: tooltips.
 		}
 	}
-	void bgMap(Renderer* rnd, Theme* theme, Device* /* device */) {
+	void bgMap(Renderer* rnd, Theme* theme, Device* /* device */, bool /* showGrids */) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		const float borderSize = style.ChildBorderSize;
@@ -451,6 +458,8 @@ private:
 
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_BgMap());
+
+		// TODO: bg/window.
 
 		const ImVec2 dstSize(DEVICE_MAP_BUFFER_WIDTH * GBBASIC_TILE_SIZE, DEVICE_MAP_BUFFER_HEIGHT * GBBASIC_TILE_SIZE);
 		if (regSize.x < VRAM_DEBUGGER_MAX_WIDTH) {
