@@ -118,19 +118,21 @@ public:
 	/**< VRAM debugging structures. */
 
 	enum class Colors {
-		WHITE,
+		WHITE = 0,
 		LIGHT_GRAY,
 		DARK_GRAY,
 		BLACK
 	};
 	enum class PaletteTypes {
-		BGP,
+		BGP = 0,
 		OBP0,
-		OBP1
+		OBP1,
+		COUNT
 	};
 	enum class CgbPaletteTypes {
-		BGCP,
-		OBCP
+		BGCP = 0,
+		OBCP,
+		COUNT
 	};
 
 	enum class ObjPriorities {
@@ -144,13 +146,13 @@ public:
 	};
 
 	enum class TileSourceTypes {
-		INVALID,
-		FROM_8800_TO_97FF,
+		INVALID = ~0,
+		FROM_8800_TO_97FF = 0,
 		FROM_8000_TO_8FFF
 	};
 	enum class MapSourceTypes {
-		INVALID,
-		FROM_9800_TO_9BFF,
+		INVALID = ~0,
+		FROM_9800_TO_9BFF = 0,
 		FROM_9C00_TO_9FFF
 	};
 

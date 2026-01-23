@@ -9,6 +9,7 @@
 #include "theme.h"
 #include "vram_debugger.h"
 #include "widgets.h"
+#include "../utils/datetime.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "../../lib/imgui/imgui_internal.h"
 
@@ -138,12 +139,12 @@ private:
 	struct TileDetail {
 		typedef std::vector<TileDetail> Array;
 		typedef std::array<Array, VRAM_DEBUGGER_TILES_SECTION_SIZE> Section;
-		typedef std::array<Section, 2> Bank; // For BG map and obj respectively.
+		typedef std::array<Section, 2> Bank; // For BG map and OBJ respectively.
 		typedef std::array<Bank, 2> Banks; // For bank 0 and bank 1 respectively.
 
 		enum class Usages {
 			BG_MAP = 0,
-			OBJ = 1
+			OBJ
 		};
 
 		Usages usage = Usages::BG_MAP;
@@ -180,6 +181,18 @@ private:
 		bool visible = false;
 	};
 
+	struct Palette {
+		typedef std::array<Palette, 3> Collection; // For BG, OBJ0, and OBJ1 respectively.
+
+		Colour color[4];
+	};
+	struct CgbPalette {
+		typedef std::array<CgbPalette, 8> Group;
+		typedef std::array<Group, 2> Collection; // For BG and OBJ respectively.
+
+		Colour color[4];
+	};
+
 private:
 	bool _opened = false;
 
@@ -193,6 +206,8 @@ private:
 	struct {
 		Obj::Array buffer;
 	} _objs;
+	Palette::Collection _palettes;
+	CgbPalette::Collection _cgbPalettes;
 
 public:
 	VramDebuggerImpl() {
@@ -226,15 +241,15 @@ public:
 		refresh(rnd, theme, device, previewPaletteBits);
 
 		tiles(rnd, theme, device, showGrids);
-		ImGui::NewLine(1);
+		ImGui::NewLine(2);
 		ImGui::Separator();
 
 		bgMap(rnd, theme, device, showGrids);
-		ImGui::NewLine(1);
+		ImGui::NewLine(2);
 		ImGui::Separator();
 
 		oam(rnd, theme, device);
-		ImGui::NewLine(1);
+		ImGui::NewLine(2);
 		ImGui::Separator();
 
 		palettes(rnd, theme, device);
@@ -256,15 +271,29 @@ private:
 		if (isCgb)
 			device->getMapAttrBuffer(mapSrc, mapAttrBuf);
 
-		UInt8 bgX, bgY;
-		device->getBgScroll(&bgX, &bgY);
-		UInt8 wndX, wndY;
-		device->getWindowScroll(&wndX, &wndY);
-
 		const bool is8x16Obj = device->is8x16Obj();
 		for (int i = 0; i < DEVICE_OBJ_COUNT; ++i) {
 			_objs.buffer[i].obj = device->getObj(i);
 			_objs.buffer[i].visible = device->isObjVisible(&_objs.buffer[i].obj);
+		}
+
+		for (int i = 0; i < (int)Device::PaletteTypes::COUNT; ++i) {
+			const Device::PaletteRgba &pltRgba = device->getPaletteRgba((Device::PaletteTypes)i);
+			for (int k = 0; k < 4; ++k) {
+				const UInt32 rgba = pltRgba.color[k];
+				const Colour col = Colour::byRGBA8888(rgba);
+				_palettes[i].color[k] = col;
+			}
+		}
+		for (int i = 0; i < (int)Device::CgbPaletteTypes::COUNT; ++i) {
+			for (int j = 0; j < 8; ++j) {
+				const Device::PaletteRgba &pltRgba = device->getCgbPaletteRgba((Device::CgbPaletteTypes)i, j);
+				for (int k = 0; k < 4; ++k) {
+					const UInt32 rgba = pltRgba.color[k];
+					const Colour col = Colour::byRGBA8888(rgba);
+					_cgbPalettes[i][j].color[k] = col;
+				}
+			}
 		}
 
 		// Collect the reference information, palettes, etc.
@@ -330,18 +359,9 @@ private:
 					if (previewPaletteBits) {
 						if (isCgb) {
 							const TileDetail &detail = details->front();
-							const Device::PaletteRgba &pltRgba = device->getCgbPaletteRgba(
-								detail.usage == TileDetail::Usages::BG_MAP ? Device::CgbPaletteTypes::BGCP : Device::CgbPaletteTypes::OBCP,
-								detail.palette
-							);
-							const UInt32 rgba = pltRgba.color[val];
-							col.fromRGBA(rgba);
+							col = _cgbPalettes[(int)detail.usage][detail.palette].color[val];
 						} else {
-							const Device::PaletteRgba &pltRgba = device->getPaletteRgba(
-								Device::PaletteTypes::BGP
-							);
-							const UInt32 rgba = pltRgba.color[val];
-							col.fromRGBA(rgba);
+							col = _palettes[(int)Device::PaletteTypes::BGP].color[val];
 						}
 					} else {
 						col = device->classicPalette(val);
@@ -395,7 +415,7 @@ private:
 		}
 	}
 
-	void tiles(Renderer* rnd, Theme* theme, Device* /* device */, bool /* showGrids */) {
+	void tiles(Renderer* rnd, Theme* theme, Device* /* device */, bool showGrids) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		const float borderSize = style.ChildBorderSize;
@@ -408,6 +428,32 @@ private:
 
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_Tiles());
+
+		auto drawGrids = [] (const ImVec2 &curPos, const ImVec2 &dstSize) -> void {
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+			const float w = dstSize.x;
+			const float h = dstSize.y;
+			for (float i = GBBASIC_TILE_SIZE; i < w; i += GBBASIC_TILE_SIZE) {
+				drawList->AddLine(
+					curPos + ImVec2(i, 0),
+					curPos + ImVec2(i, h),
+					ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
+				);
+			}
+			for (float j = GBBASIC_TILE_SIZE; j < h; j += GBBASIC_TILE_SIZE) {
+				drawList->AddLine(
+					curPos + ImVec2(0, j),
+					curPos + ImVec2(w, j),
+					ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
+				);
+			}
+			drawList->AddRect(
+				curPos + ImVec2(-1, -1),
+				curPos + ImVec2(w, h) + ImVec2(1, 1),
+				ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
+			);
+		};
 
 		const ImVec2 dstSize(VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 * GBBASIC_TILE_SIZE, VRAM_DEBUGGER_TILES_AREA_HEIGHT * GBBASIC_TILE_SIZE);
 		if (regSize.x < VRAM_DEBUGGER_MAX_WIDTH) {
@@ -422,30 +468,39 @@ private:
 				ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_AlwaysHorizontalScrollbar
 			);
 			{
+				const ImVec2 curPos = ImGui::GetCursorScreenPos();
 				ImGui::Image(
 					_tiles.buffer.texture->pointer(rnd),
 					dstSize,
 					ImVec2(0, 0), ImVec2(1, 1),
 					ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 				);
-				// TODO: grids.
+				if (showGrids)
+					drawGrids(curPos, dstSize);
 				// TODO: tooltips.
 				ImGui::SameLine();
 				ImGui::Dummy(ImVec2(1, 0));
 			}
 			ImGui::EndChildFrame();
 		} else {
+			const ImVec2 curPos = ImGui::GetCursorScreenPos();
 			ImGui::Image(
 				_tiles.buffer.texture->pointer(rnd),
 				dstSize,
 				ImVec2(0, 0), ImVec2(1, 1),
 				ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 			);
-			// TODO: grids.
+			if (showGrids)
+				drawGrids(curPos, dstSize);
 			// TODO: tooltips.
 		}
 	}
-	void bgMap(Renderer* rnd, Theme* theme, Device* /* device */, bool /* showGrids */) {
+	void bgMap(Renderer* rnd, Theme* theme, Device* device, bool showGrids) {
+		UInt8 bgX, bgY;
+		device->getBgScroll(&bgX, &bgY);
+		UInt8 wndX, wndY;
+		device->getWindowScroll(&wndX, &wndY);
+
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		const float borderSize = style.ChildBorderSize;
@@ -459,7 +514,67 @@ private:
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_BgMap());
 
-		// TODO: bg/window.
+		// TODO: switch bg/window.
+
+		auto drawGrids = [] (const ImVec2 &curPos, const ImVec2 &dstSize) -> void {
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+			const float w = dstSize.x;
+			const float h = dstSize.y;
+			for (float i = GBBASIC_TILE_SIZE; i < w; i += GBBASIC_TILE_SIZE) {
+				drawList->AddLine(
+					curPos + ImVec2(i, 0),
+					curPos + ImVec2(i, h),
+					ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
+				);
+			}
+			for (float j = GBBASIC_TILE_SIZE; j < h; j += GBBASIC_TILE_SIZE) {
+				drawList->AddLine(
+					curPos + ImVec2(0, j),
+					curPos + ImVec2(w, j),
+					ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
+				);
+			}
+			drawList->AddRect(
+				curPos + ImVec2(-1, -1),
+				curPos + ImVec2(w, h) + ImVec2(1, 1),
+				ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
+			);
+		};
+		auto drawCamera = [] (const ImVec2 &curPos, const ImVec2 &dstSize, UInt8 camX, UInt8 camY) -> void {
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+			const bool tick = !!(((int)(DateTime::toSeconds(DateTime::ticks()) * 1)) % 2);
+			drawList->AddRect(
+				curPos + ImVec2(-1, -1) + ImVec2(camX, camY),
+				curPos + ImVec2(1, 1) + ImVec2((float)(camX + GBBASIC_SCREEN_WIDTH), (float)(camY + GBBASIC_SCREEN_HEIGHT)),
+				tick ? IM_COL32_WHITE : IM_COL32_BLACK
+			);
+			if (camX > dstSize.x - GBBASIC_SCREEN_WIDTH) {
+				const int camX_ = (int)(camX - dstSize.x);
+				drawList->AddRect(
+					curPos + ImVec2(-1, -1) + ImVec2((float)camX_, camY),
+					curPos + ImVec2(1, 1) + ImVec2((float)(camX_ + GBBASIC_SCREEN_WIDTH), (float)(camY + GBBASIC_SCREEN_HEIGHT)),
+					tick ? IM_COL32_WHITE : IM_COL32_BLACK
+				);
+			}
+			if (camY > dstSize.y - GBBASIC_SCREEN_HEIGHT) {
+				const int camY_ = (int)(camY - dstSize.y);
+				drawList->AddRect(
+					curPos + ImVec2(-1, -1) + ImVec2(camX, (float)camY_),
+					curPos + ImVec2(1, 1) + ImVec2((float)(camX + GBBASIC_SCREEN_WIDTH), (float)(camY_ + GBBASIC_SCREEN_HEIGHT)),
+					tick ? IM_COL32_WHITE : IM_COL32_BLACK
+				);
+				if (camX > dstSize.x - GBBASIC_SCREEN_WIDTH) {
+					const int camX_ = (int)(camX - dstSize.x);
+					drawList->AddRect(
+						curPos + ImVec2(-1, -1) + ImVec2((float)camX_, (float)camY_),
+						curPos + ImVec2(1, 1) + ImVec2((float)(camX_ + GBBASIC_SCREEN_WIDTH), (float)(camY_ + GBBASIC_SCREEN_HEIGHT)),
+						tick ? IM_COL32_WHITE : IM_COL32_BLACK
+					);
+				}
+			}
+		};
 
 		const ImVec2 dstSize(DEVICE_MAP_BUFFER_WIDTH * GBBASIC_TILE_SIZE, DEVICE_MAP_BUFFER_HEIGHT * GBBASIC_TILE_SIZE);
 		if (regSize.x < VRAM_DEBUGGER_MAX_WIDTH) {
@@ -474,29 +589,37 @@ private:
 				ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_AlwaysHorizontalScrollbar
 			);
 			{
+				const ImVec2 curPos = ImGui::GetCursorScreenPos();
 				ImGui::Image(
 					_bgMap.buffer.texture->pointer(rnd),
 					dstSize,
 					ImVec2(0, 0), ImVec2(1, 1),
 					ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 				);
-				// TODO: grids.
+				if (showGrids)
+					drawGrids(curPos, dstSize);
 				// TODO: tooltips.
-				// TODO: camera.
+				drawCamera(curPos, dstSize, bgX, bgY);
 				ImGui::SameLine();
 				ImGui::Dummy(ImVec2(1, 0));
 			}
 			ImGui::EndChildFrame();
 		} else {
+			const ImVec2 curPos = ImGui::GetCursorScreenPos();
 			ImGui::Image(
 				_bgMap.buffer.texture->pointer(rnd),
 				dstSize,
 				ImVec2(0, 0), ImVec2(1, 1),
 				ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 			);
-			// TODO: grids.
+			if (showGrids)
+				drawGrids(curPos, dstSize);
 			// TODO: tooltips.
-			// TODO: camera.
+			ImGui::PushClipRect(curPos, curPos + dstSize, true);
+			{
+				drawCamera(curPos, dstSize, bgX, bgY);
+			}
+			ImGui::PopClipRect();
 		}
 	}
 	void oam(Renderer* /* rnd */, Theme* theme, Device* /* device */) {
