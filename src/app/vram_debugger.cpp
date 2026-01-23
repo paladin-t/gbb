@@ -174,11 +174,22 @@ private:
 		}
 	};
 
+	struct TilesBuffer {
+		BufferTexture buffer;
+	};
+
+	struct MapBuffer {
+		BufferTexture buffer;
+	};
+
 	struct Obj {
 		typedef std::array<Obj, DEVICE_OBJ_COUNT> Array;
 
 		Device::Obj obj;
 		bool visible = false;
+	};
+	struct ObjBuffer {
+		Obj::Array buffer;
 	};
 
 	struct Palette {
@@ -195,17 +206,15 @@ private:
 
 private:
 	bool _opened = false;
+	struct {
+		bool isBgLayerActive = true;
+	} _options;
 
 	TileDetail::Banks _tileDetails;
-	struct {
-		BufferTexture buffer;
-	} _tiles;
-	struct {
-		BufferTexture buffer;
-	} _bgMap;
-	struct {
-		Obj::Array buffer;
-	} _objs;
+	TilesBuffer _tiles;
+	MapBuffer _bgMap;
+	MapBuffer _winMap;
+	ObjBuffer _objs;
 	Palette::Collection _palettes;
 	CgbPalette::Collection _cgbPalettes;
 
@@ -222,6 +231,7 @@ public:
 
 		_tiles.buffer.touch(rnd, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 * GBBASIC_TILE_SIZE, VRAM_DEBUGGER_TILES_AREA_HEIGHT * GBBASIC_TILE_SIZE);
 		_bgMap.buffer.touch(rnd, DEVICE_MAP_BUFFER_WIDTH * GBBASIC_TILE_SIZE, DEVICE_MAP_BUFFER_HEIGHT * GBBASIC_TILE_SIZE);
+		_winMap.buffer.touch(rnd, DEVICE_MAP_BUFFER_WIDTH * GBBASIC_TILE_SIZE, DEVICE_MAP_BUFFER_HEIGHT * GBBASIC_TILE_SIZE);
 
 		_opened = true;
 
@@ -260,16 +270,23 @@ private:
 		// Retrieve data.
 		const bool isCgb = device->deviceHasCgbSupport();
 
-		Device::MapSourceTypes mapSrc = device->getMapSourceType(Device::LayerTypes::BG);
+		const Device::MapSourceTypes bgMapSrc = device->getMapSourceType(Device::LayerTypes::BG);
+		const Device::MapSourceTypes winMapSrc = device->getMapSourceType(Device::LayerTypes::WINDOW);
 
 		Device::TileBuffer tilesBuf;
 		device->getTileBuffer(tilesBuf);
 
-		Device::MapBuffer mapBuf;
-		device->getMapBuffer(mapSrc, mapBuf);
-		Device::MapBuffer mapAttrBuf;
+		Device::MapBuffer bgMapBuf;
+		device->getMapBuffer(bgMapSrc, bgMapBuf);
+		Device::MapBuffer bgMapAttrBuf;
 		if (isCgb)
-			device->getMapAttrBuffer(mapSrc, mapAttrBuf);
+			device->getMapAttrBuffer(bgMapSrc, bgMapAttrBuf);
+
+		Device::MapBuffer winMapBuf;
+		device->getMapBuffer(winMapSrc, winMapBuf);
+		Device::MapBuffer winMapAttrBuf;
+		if (isCgb)
+			device->getMapAttrBuffer(winMapSrc, winMapAttrBuf);
 
 		const bool is8x16Obj = device->is8x16Obj();
 		for (int i = 0; i < DEVICE_OBJ_COUNT; ++i) {
@@ -298,7 +315,8 @@ private:
 
 		// Collect the reference information, palettes, etc.
 		TileDetail::clear(_tileDetails);
-		for (int k = 0; k < (int)mapBuf.size(); ++k) {
+
+		for (int k = 0; k < (int)bgMapBuf.size(); ++k) {
 			const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
 			const int kx = kdiv.rem;
 			const int ky = kdiv.quot;
@@ -306,8 +324,25 @@ private:
 			const int mx = kx;
 			const int my = ky;
 
-			const UInt8 tile = mapBuf[k];
-			const UInt8 attrs = mapAttrBuf[k];
+			const UInt8 tile = bgMapBuf[k];
+			const UInt8 attrs = bgMapAttrBuf[k];
+			const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
+			const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
+
+			const TileDetail detail(TileDetail::Usages::BG_MAP, Math::Vec2i(mx, my), plt);
+			_tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile].push_back(detail);
+		}
+
+		for (int k = 0; k < (int)winMapBuf.size(); ++k) {
+			const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
+			const int kx = kdiv.rem;
+			const int ky = kdiv.quot;
+
+			const int mx = kx;
+			const int my = ky;
+
+			const UInt8 tile = winMapBuf[k];
+			const UInt8 attrs = winMapAttrBuf[k];
 			const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
 			const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
 
@@ -377,8 +412,8 @@ private:
 			_tiles.buffer.end();
 		}
 
-		if (_bgMap.buffer.begin()) {
-			for (int k = 0; k < (int)mapBuf.size(); ++k) {
+		if (_options.isBgLayerActive && _bgMap.buffer.begin()) {
+			for (int k = 0; k < (int)bgMapBuf.size(); ++k) {
 				const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
 				const int kx = kdiv.rem;
 				const int ky = kdiv.quot;
@@ -386,8 +421,8 @@ private:
 				const int x = kx * GBBASIC_TILE_SIZE;
 				const int y = ky * GBBASIC_TILE_SIZE;
 
-				const UInt8 tile = mapBuf[k];
-				const UInt8 attrs = mapAttrBuf[k];
+				const UInt8 tile = bgMapBuf[k];
+				const UInt8 attrs = bgMapAttrBuf[k];
 				const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
 				const bool hFlip = !!((attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001);
 				const bool vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
@@ -413,6 +448,43 @@ private:
 
 			_bgMap.buffer.end();
 		}
+
+		if (!_options.isBgLayerActive && _winMap.buffer.begin()) {
+			for (int k = 0; k < (int)winMapBuf.size(); ++k) {
+				const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
+				const int kx = kdiv.rem;
+				const int ky = kdiv.quot;
+
+				const int x = kx * GBBASIC_TILE_SIZE;
+				const int y = ky * GBBASIC_TILE_SIZE;
+
+				const UInt8 tile = winMapBuf[k];
+				const UInt8 attrs = winMapAttrBuf[k];
+				const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
+				const bool hFlip = !!((attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001);
+				const bool vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
+				const std::div_t sdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+				const int sx = (sdiv.rem + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE;
+				const int sy = (
+					((sdiv.quot < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ?
+						(sdiv.quot + VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) :
+						sdiv.quot) *
+					GBBASIC_TILE_SIZE
+				);
+
+				_tiles.buffer.blit( // Blit to the WIN map image from the tiles image.
+					_winMap.buffer,
+					x, y, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+					sx, sy,
+					hFlip, vFlip
+				);
+			}
+			_winMap.buffer.commit( // Commits to the WIN map texture from the WIN map image.
+				DEVICE_MAP_BUFFER_SIZE * (GBBASIC_TILE_SIZE * GBBASIC_TILE_SIZE) * sizeof(Colour)
+			);
+
+			_winMap.buffer.end();
+		}
 	}
 
 	void tiles(Renderer* rnd, Theme* theme, Device* /* device */, bool showGrids) {
@@ -428,6 +500,8 @@ private:
 
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_Tiles());
+
+		// TODO: options.
 
 		auto drawGrids = [] (const ImVec2 &curPos, const ImVec2 &dstSize) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -459,8 +533,6 @@ private:
 		if (regSize.x < VRAM_DEBUGGER_MAX_WIDTH) {
 			VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
-			// TODO: options.
-
 			const ImVec2 frameSize = ImVec2(regSize.x, dstSize.y + style.ScrollbarSize) + ImVec2(style.WindowBorderSize * 2, style.WindowBorderSize * 2 + 1);
 			ImGui::BeginChildFrame(
 				ImGui::GetID("@Tls"),
@@ -478,6 +550,7 @@ private:
 				if (showGrids)
 					drawGrids(curPos, dstSize);
 				// TODO: tooltips.
+				// TODO: ref.
 				ImGui::SameLine();
 				ImGui::Dummy(ImVec2(1, 0));
 			}
@@ -493,6 +566,7 @@ private:
 			if (showGrids)
 				drawGrids(curPos, dstSize);
 			// TODO: tooltips.
+			// TODO: ref.
 		}
 	}
 	void bgMap(Renderer* rnd, Theme* theme, Device* device, bool showGrids) {
@@ -512,9 +586,34 @@ private:
 		);
 
 		ImGui::AlignTextToFramePadding();
-		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_BgMap());
+		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_BgWinMap());
 
-		// TODO: switch bg/window.
+		ImGui::Dummy(ImVec2(2, 0));
+		ImGui::SameLine();
+		const float posX = ImGui::GetCursorPosX();
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_Layer());
+		ImGui::SameLine();
+		const float diff = ImGui::GetCursorPosX() - posX;
+		const float remain = regSize.x * 0.3f - diff;
+		ImGui::Dummy(ImVec2(remain, 0));
+		ImGui::SameLine();
+		do {
+			const char* items[] = {
+				"BG", "WIN"
+			};
+
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+			VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+			int val = _options.isBgLayerActive ? 0 : 1;
+			ImGui::SetNextItemWidth(regSize.x * 0.7f);
+			if (ImGui::Combo("", &val, items, GBBASIC_COUNTOF(items))) {
+				_options.isBgLayerActive = val == 0;
+			}
+		} while (false);
+
+		// TODO: options.
 
 		auto drawGrids = [] (const ImVec2 &curPos, const ImVec2 &dstSize) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -576,11 +675,21 @@ private:
 			}
 		};
 
+		const MapBuffer* mapBuf = nullptr;
+		UInt8 camX;
+		UInt8 camY;
+		if (_options.isBgLayerActive) {
+			mapBuf = &_bgMap;
+			camX = bgX;
+			camY = bgY;
+		} else {
+			mapBuf = &_winMap;
+			camX = wndX;
+			camY = -wndY;
+		}
 		const ImVec2 dstSize(DEVICE_MAP_BUFFER_WIDTH * GBBASIC_TILE_SIZE, DEVICE_MAP_BUFFER_HEIGHT * GBBASIC_TILE_SIZE);
 		if (regSize.x < VRAM_DEBUGGER_MAX_WIDTH) {
 			VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
-
-			// TODO: options.
 
 			const ImVec2 frameSize = ImVec2(regSize.x, dstSize.y + style.ScrollbarSize) + ImVec2(style.WindowBorderSize * 2, style.WindowBorderSize * 2 + 1);
 			ImGui::BeginChildFrame(
@@ -591,7 +700,7 @@ private:
 			{
 				const ImVec2 curPos = ImGui::GetCursorScreenPos();
 				ImGui::Image(
-					_bgMap.buffer.texture->pointer(rnd),
+					mapBuf->buffer.texture->pointer(rnd),
 					dstSize,
 					ImVec2(0, 0), ImVec2(1, 1),
 					ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
@@ -599,7 +708,8 @@ private:
 				if (showGrids)
 					drawGrids(curPos, dstSize);
 				// TODO: tooltips.
-				drawCamera(curPos, dstSize, bgX, bgY);
+				// TODO: ref.
+				drawCamera(curPos, dstSize, camX, camY);
 				ImGui::SameLine();
 				ImGui::Dummy(ImVec2(1, 0));
 			}
@@ -607,7 +717,7 @@ private:
 		} else {
 			const ImVec2 curPos = ImGui::GetCursorScreenPos();
 			ImGui::Image(
-				_bgMap.buffer.texture->pointer(rnd),
+				mapBuf->buffer.texture->pointer(rnd),
 				dstSize,
 				ImVec2(0, 0), ImVec2(1, 1),
 				ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
@@ -615,9 +725,10 @@ private:
 			if (showGrids)
 				drawGrids(curPos, dstSize);
 			// TODO: tooltips.
+			// TODO: ref.
 			ImGui::PushClipRect(curPos, curPos + dstSize, true);
 			{
-				drawCamera(curPos, dstSize, bgX, bgY);
+				drawCamera(curPos, dstSize, camX, camY);
 			}
 			ImGui::PopClipRect();
 		}
