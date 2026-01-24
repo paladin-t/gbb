@@ -8148,8 +8148,8 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 							}
 						);
 					}
+					ImGui::Separator();
 				}
-				ImGui::Separator();
 #if defined GBBASIC_OS_HTML
 				if (!showRecentProjects()) {
 					if (isEditable) {

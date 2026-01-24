@@ -3542,6 +3542,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
 		Project* prj = _projectShadow;
+		const bool isEditable = !prj || prj->contentType() == Project::ContentTypes::BASIC;
 
 		if (BeginTabBar("@Prj")) {
 			if (BeginTabItem(_theme->tabProjectProperty_Project(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
@@ -4036,9 +4037,18 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 				PushID("#CsIns");
 				{
-					bool pref = prj->caseInsensitive();
-					if (Checkbox(_theme->windowProjectProperty_Compiling_Parser_CaseInsensitive(), &pref))
-						prj->caseInsensitive(pref);
+					if (isEditable) {
+						bool pref = prj->caseInsensitive();
+						if (Checkbox(_theme->windowProjectProperty_Compiling_Parser_CaseInsensitive(), &pref))
+							prj->caseInsensitive(pref);
+					} else {
+						BeginDisabled();
+						{
+							bool pref = true;
+							Checkbox(_theme->windowProjectProperty_Compiling_Parser_CaseInsensitive(), &pref);
+						}
+						EndDisabled();
+					}
 				}
 				PopID();
 
@@ -4048,9 +4058,18 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 				PushID("#StrOn");
 				{
-					bool pref = prj->strictOn();
-					if (Checkbox(_theme->windowProjectProperty_Compiling_Compiler_StrictOn(), &pref))
-						prj->strictOn(pref);
+					if (isEditable) {
+						bool pref = prj->strictOn();
+						if (Checkbox(_theme->windowProjectProperty_Compiling_Compiler_StrictOn(), &pref))
+							prj->strictOn(pref);
+					} else {
+						BeginDisabled();
+						{
+							bool pref = true;
+							Checkbox(_theme->windowProjectProperty_Compiling_Compiler_StrictOn(), &pref);
+						}
+						EndDisabled();
+					}
 
 					if (IsItemHovered()) {
 						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -4072,9 +4091,18 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 						SameLine();
 						const float posX = _superFeaturesEndX - _superFeaturesEnabledWidth;
 						SetCursorPosX(posX);
-						bool pref = prj->superFeaturesEnabled();
-						if (Checkbox(_theme->windowProjectProperty_Advanced_SgbFeatures_Enabled(), &pref))
-							prj->superFeaturesEnabled(pref);
+						if (isEditable) {
+							bool pref = prj->superFeaturesEnabled();
+							if (Checkbox(_theme->windowProjectProperty_Advanced_SgbFeatures_Enabled(), &pref))
+								prj->superFeaturesEnabled(pref);
+						} else {
+							BeginDisabled();
+							{
+								bool pref = false;
+								Checkbox(_theme->windowProjectProperty_Advanced_SgbFeatures_Enabled(), &pref);
+							}
+							EndDisabled();
+						}
 						SameLine();
 						_superFeaturesEnabledWidth = GetCursorPosX() - posX - style.ItemSpacing.x;
 						NewLine();
