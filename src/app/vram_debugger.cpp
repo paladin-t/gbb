@@ -111,12 +111,20 @@ private:
 			texture->unlock();
 		}
 
-		// Plots a pixel, copies to the texture, and write to the image.
+		// Plots a pixel to the texture, and write to the image.
 		void plot(int x, int y, const Colour &col) {
-			GBBASIC_ASSERT(texture && "Wrong data.");
+			GBBASIC_ASSERT(texture && image && "Wrong data.");
+			GBBASIC_ASSERT(pixels && "Locking required.");
 
 			Colour* ptr = (Colour*)pixels;
 			ptr[x + y * width] = col;
+
+			image->set(x, y, col);
+		}
+
+		// Draws a pixel to the image.
+		void draw(int x, int y, const Colour &col) {
+			GBBASIC_ASSERT(image && "Wrong data.");
 
 			image->set(x, y, col);
 		}
@@ -130,7 +138,8 @@ private:
 
 		// Commits to the texture from the image.
 		void commit(size_t size) {
-			GBBASIC_ASSERT(texture && image && pixels && "Wrong data.");
+			GBBASIC_ASSERT(texture && image && "Wrong data.");
+			GBBASIC_ASSERT(pixels && "Locking required.");
 
 			memcpy(pixels, image->pixels(), size);
 		}
@@ -176,10 +185,18 @@ private:
 
 	struct TilesBuffer {
 		BufferTexture buffer;
+
+		void touch(Renderer* rnd) {
+			buffer.touch(rnd, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 * GBBASIC_TILE_SIZE, VRAM_DEBUGGER_TILES_AREA_HEIGHT * GBBASIC_TILE_SIZE);
+		}
 	};
 
 	struct MapBuffer {
 		BufferTexture buffer;
+
+		void touch(Renderer* rnd) {
+			buffer.touch(rnd, DEVICE_MAP_BUFFER_WIDTH * GBBASIC_TILE_SIZE, DEVICE_MAP_BUFFER_HEIGHT * GBBASIC_TILE_SIZE);
+		}
 	};
 
 	struct Obj {
@@ -229,9 +246,9 @@ public:
 		if (_opened)
 			return true;
 
-		_tiles.buffer.touch(rnd, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 * GBBASIC_TILE_SIZE, VRAM_DEBUGGER_TILES_AREA_HEIGHT * GBBASIC_TILE_SIZE);
-		_bgMap.buffer.touch(rnd, DEVICE_MAP_BUFFER_WIDTH * GBBASIC_TILE_SIZE, DEVICE_MAP_BUFFER_HEIGHT * GBBASIC_TILE_SIZE);
-		_winMap.buffer.touch(rnd, DEVICE_MAP_BUFFER_WIDTH * GBBASIC_TILE_SIZE, DEVICE_MAP_BUFFER_HEIGHT * GBBASIC_TILE_SIZE);
+		_tiles.touch(rnd);
+		_bgMap.touch(rnd);
+		_winMap.touch(rnd);
 
 		_opened = true;
 
@@ -275,18 +292,27 @@ private:
 
 		Device::TileBuffer tilesBuf;
 		device->getTileBuffer(tilesBuf);
+		auto getTileBuf = [] (const Device::TileBuffer &tilesBuf, int x, int y) -> UInt8 {
+			const int p = x + y * DEVICE_TILE_BUFFER_WIDTH;
+
+			return tilesBuf[p];
+		};
 
 		Device::MapBuffer bgMapBuf;
 		device->getMapBuffer(bgMapSrc, bgMapBuf);
 		Device::MapBuffer bgMapAttrBuf;
 		if (isCgb)
 			device->getMapAttrBuffer(bgMapSrc, bgMapAttrBuf);
+		else
+			bgMapAttrBuf.fill(0);
 
 		Device::MapBuffer winMapBuf;
 		device->getMapBuffer(winMapSrc, winMapBuf);
 		Device::MapBuffer winMapAttrBuf;
 		if (isCgb)
 			device->getMapAttrBuffer(winMapSrc, winMapAttrBuf);
+		else
+			winMapAttrBuf.fill(0);
 
 		const bool is8x16Obj = device->is8x16Obj();
 		for (int i = 0; i < DEVICE_OBJ_COUNT; ++i) {
@@ -326,8 +352,8 @@ private:
 
 			const UInt8 tile = bgMapBuf[k];
 			const UInt8 attrs = bgMapAttrBuf[k];
-			const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
 			const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
+			const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
 
 			const TileDetail detail(TileDetail::Usages::BG_MAP, Math::Vec2i(mx, my), plt);
 			_tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile].push_back(detail);
@@ -343,8 +369,8 @@ private:
 
 			const UInt8 tile = winMapBuf[k];
 			const UInt8 attrs = winMapAttrBuf[k];
-			const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
 			const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
+			const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
 
 			const TileDetail detail(TileDetail::Usages::BG_MAP, Math::Vec2i(mx, my), plt);
 			_tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile].push_back(detail);
@@ -393,7 +419,7 @@ private:
 				if (details && !details->empty()) {
 					if (previewPaletteBits) {
 						if (isCgb) {
-							const TileDetail &detail = details->front();
+							const TileDetail &detail = details->front(); // Use the first for paletting.
 							col = _cgbPalettes[(int)detail.usage][detail.palette].color[val];
 						} else {
 							col = _palettes[(int)Device::PaletteTypes::BGP].color[val];
@@ -406,7 +432,7 @@ private:
 					const UInt8 gray = (UInt8)Math::clamp(col_.toGray(), 0, 255);
 					col = Colour(gray, gray, gray);
 				}
-				_tiles.buffer.plot(x, y, col); // Copy to the tiles texture, and write to the tiles image.
+				_tiles.buffer.plot(x, y, col); // Plot to the tiles texture, and write to the tiles image.
 			}
 
 			_tiles.buffer.end();
@@ -423,24 +449,70 @@ private:
 
 				const UInt8 tile = bgMapBuf[k];
 				const UInt8 attrs = bgMapAttrBuf[k];
+				const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
 				const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
 				const bool hFlip = !!((attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001);
 				const bool vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
-				const std::div_t sdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-				const int sx = (sdiv.rem + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE;
-				const int sy = (
-					((sdiv.quot < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ?
-						(sdiv.quot + VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) :
-						sdiv.quot) *
-					GBBASIC_TILE_SIZE
-				);
 
-				_tiles.buffer.blit( // Blit to the BG map image from the tiles image.
-					_bgMap.buffer,
-					x, y, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
-					sx, sy,
-					hFlip, vFlip
-				);
+				bool toBlit = true;
+				const TileDetail::Array &details = _tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile];
+				if (!details.empty()) {
+					if (details.front().palette != plt)
+						toBlit = false;
+				}
+				if (toBlit) {
+					const std::div_t sdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+					const int sx = (sdiv.rem + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE;
+					const int sy = (
+						((sdiv.quot < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ?
+							(sdiv.quot + VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) :
+							sdiv.quot) *
+						GBBASIC_TILE_SIZE
+					);
+
+					_tiles.buffer.blit( // Blit to the BG map image from the tiles image.
+						_bgMap.buffer,
+						x, y, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+						sx, sy,
+						hFlip, vFlip
+					);
+				} else {
+					constexpr const int RAW_TILES_SECTION_HALF_HEIGHT = ((DEVICE_TILE_BUFFER_HEIGHT / GBBASIC_TILE_SIZE) / 2 / 3);
+					const std::div_t sdiv = std::div(tile, DEVICE_TILE_BUFFER_WIDTH / 8);
+					const int sx = sdiv.rem * GBBASIC_TILE_SIZE;
+					const int sy = (
+						((sdiv.quot < RAW_TILES_SECTION_HALF_HEIGHT) ?
+							(sdiv.quot + RAW_TILES_SECTION_HALF_HEIGHT * 2):
+							sdiv.quot) *
+						GBBASIC_TILE_SIZE +
+						((DEVICE_TILE_BUFFER_HEIGHT / 2) * bank)
+					);
+
+					for (int j = 0; j < GBBASIC_TILE_SIZE; ++j) {
+						for (int i = 0; i < GBBASIC_TILE_SIZE; ++i) {
+							const int sx_ = sx + i;
+							const int sy_ = sy + i;
+							const UInt8 val = getTileBuf(tilesBuf, sx_, sy_);
+							Colour col;
+							if (previewPaletteBits) {
+								if (isCgb) {
+									col = _cgbPalettes[(int)Device::PaletteTypes::BGP][plt].color[val];
+								} else {
+									col = _palettes[(int)Device::PaletteTypes::BGP].color[val];
+								}
+							} else {
+								col = device->classicPalette(val);
+							}
+							const int dx = hFlip ?
+								x + (GBBASIC_TILE_SIZE - i - 1) :
+								x + i;
+							const int dy = vFlip ?
+								y + (GBBASIC_TILE_SIZE - j - 1) :
+								y + j;
+							_bgMap.buffer.draw(dx, dy, col); // Draw to the BG map image.
+						}
+					}
+				}
 			}
 			_bgMap.buffer.commit( // Commits to the BG map texture from the BG map image.
 				DEVICE_MAP_BUFFER_SIZE * (GBBASIC_TILE_SIZE * GBBASIC_TILE_SIZE) * sizeof(Colour)
@@ -460,24 +532,70 @@ private:
 
 				const UInt8 tile = winMapBuf[k];
 				const UInt8 attrs = winMapAttrBuf[k];
+				const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
 				const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
 				const bool hFlip = !!((attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001);
 				const bool vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
-				const std::div_t sdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-				const int sx = (sdiv.rem + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE;
-				const int sy = (
-					((sdiv.quot < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ?
-						(sdiv.quot + VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) :
-						sdiv.quot) *
-					GBBASIC_TILE_SIZE
-				);
 
-				_tiles.buffer.blit( // Blit to the WIN map image from the tiles image.
-					_winMap.buffer,
-					x, y, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
-					sx, sy,
-					hFlip, vFlip
-				);
+				bool toBlit = true;
+				const TileDetail::Array &details = _tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile];
+				if (!details.empty()) {
+					if (details.front().palette != plt)
+						toBlit = false;
+				}
+				if (toBlit) {
+					const std::div_t sdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+					const int sx = (sdiv.rem + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE;
+					const int sy = (
+						((sdiv.quot < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ?
+							(sdiv.quot + VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) :
+							sdiv.quot) *
+						GBBASIC_TILE_SIZE
+					);
+
+					_tiles.buffer.blit( // Blit to the WIN map image from the tiles image.
+						_winMap.buffer,
+						x, y, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+						sx, sy,
+						hFlip, vFlip
+					);
+				} else {
+					constexpr const int RAW_TILES_SECTION_HALF_HEIGHT = ((DEVICE_TILE_BUFFER_HEIGHT / GBBASIC_TILE_SIZE) / 2 / 3);
+					const std::div_t sdiv = std::div(tile, DEVICE_TILE_BUFFER_WIDTH / 8);
+					const int sx = sdiv.rem * GBBASIC_TILE_SIZE;
+					const int sy = (
+						((sdiv.quot < RAW_TILES_SECTION_HALF_HEIGHT) ?
+							(sdiv.quot + RAW_TILES_SECTION_HALF_HEIGHT * 2):
+							sdiv.quot) *
+						GBBASIC_TILE_SIZE +
+						((DEVICE_TILE_BUFFER_HEIGHT / 2) * bank)
+					);
+
+					for (int j = 0; j < GBBASIC_TILE_SIZE; ++j) {
+						for (int i = 0; i < GBBASIC_TILE_SIZE; ++i) {
+							const int sx_ = sx + i;
+							const int sy_ = sy + i;
+							const UInt8 val = getTileBuf(tilesBuf, sx_, sy_);
+							Colour col;
+							if (previewPaletteBits) {
+								if (isCgb) {
+									col = _cgbPalettes[(int)Device::PaletteTypes::BGP][plt].color[val];
+								} else {
+									col = _palettes[(int)Device::PaletteTypes::BGP].color[val];
+								}
+							} else {
+								col = device->classicPalette(val);
+							}
+							const int dx = hFlip ?
+								x + (GBBASIC_TILE_SIZE - i - 1) :
+								x + i;
+							const int dy = vFlip ?
+								y + (GBBASIC_TILE_SIZE - j - 1) :
+								y + j;
+							_winMap.buffer.draw(dx, dy, col); // Draw to the WIN map image.
+						}
+					}
+				}
 			}
 			_winMap.buffer.commit( // Commits to the WIN map texture from the WIN map image.
 				DEVICE_MAP_BUFFER_SIZE * (GBBASIC_TILE_SIZE * GBBASIC_TILE_SIZE) * sizeof(Colour)
