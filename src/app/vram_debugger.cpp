@@ -292,11 +292,6 @@ private:
 
 		Device::TileBuffer tilesBuf;
 		device->getTileBuffer(tilesBuf);
-		auto getTileBuf = [] (const Device::TileBuffer &tilesBuf, int x, int y) -> UInt8 {
-			const int p = x + y * DEVICE_TILE_BUFFER_WIDTH;
-
-			return tilesBuf[p];
-		};
 
 		Device::MapBuffer bgMapBuf;
 		device->getMapBuffer(bgMapSrc, bgMapBuf);
@@ -340,269 +335,222 @@ private:
 		}
 
 		// Collect the reference information, palettes, etc.
+		auto collectMapInfo = [] (
+			TileDetail::Banks &tileDetails,
+			const Device::MapBuffer &mapBuf, const Device::MapBuffer &mapAttrBuf
+		) -> void {
+			for (int k = 0; k < (int)mapBuf.size(); ++k) {
+				const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
+				const int kx = kdiv.rem;
+				const int ky = kdiv.quot;
+
+				const int mx = kx;
+				const int my = ky;
+
+				const UInt8 tile = mapBuf[k];
+				const UInt8 attrs = mapAttrBuf[k];
+				const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
+				const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
+
+				const TileDetail detail(TileDetail::Usages::BG_MAP, Math::Vec2i(mx, my), plt);
+				tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile].push_back(detail);
+			}
+		};
+
 		TileDetail::clear(_tileDetails);
-
-		for (int k = 0; k < (int)bgMapBuf.size(); ++k) {
-			const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
-			const int kx = kdiv.rem;
-			const int ky = kdiv.quot;
-
-			const int mx = kx;
-			const int my = ky;
-
-			const UInt8 tile = bgMapBuf[k];
-			const UInt8 attrs = bgMapAttrBuf[k];
-			const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
-			const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
-
-			const TileDetail detail(TileDetail::Usages::BG_MAP, Math::Vec2i(mx, my), plt);
-			_tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile].push_back(detail);
-		}
-
-		for (int k = 0; k < (int)winMapBuf.size(); ++k) {
-			const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
-			const int kx = kdiv.rem;
-			const int ky = kdiv.quot;
-
-			const int mx = kx;
-			const int my = ky;
-
-			const UInt8 tile = winMapBuf[k];
-			const UInt8 attrs = winMapAttrBuf[k];
-			const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
-			const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
-
-			const TileDetail detail(TileDetail::Usages::BG_MAP, Math::Vec2i(mx, my), plt);
-			_tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile].push_back(detail);
-		}
+		collectMapInfo(
+			_tileDetails,
+			bgMapBuf, bgMapAttrBuf
+		);
+		collectMapInfo(
+			_tileDetails,
+			winMapBuf, winMapAttrBuf
+		);
 
 		// Translate data.
-		if (_tiles.buffer.begin()) {
-			for (int k = 0; k < (int)tilesBuf.size(); ++k) {
-				const std::div_t kdiv = std::div(k, DEVICE_TILE_BUFFER_WIDTH);
-				const int kx = kdiv.rem / GBBASIC_TILE_SIZE;
-				const int ky = kdiv.quot / GBBASIC_TILE_SIZE;
-				const int kidx = kx + ky * (DEVICE_TILE_BUFFER_WIDTH / GBBASIC_TILE_SIZE);
+		auto translateTiles = [device, previewPaletteBits, isCgb] (
+			TilesBuffer &tiles,
+			const Device::TileBuffer &tilesBuf, const TileDetail::Banks &tileDetails,
+			const Palette::Collection &palettes, const CgbPalette::Collection &cgbPalettes
+		) -> void {
+			if (tiles.buffer.begin()) {
+				for (int k = 0; k < (int)tilesBuf.size(); ++k) {
+					const std::div_t kdiv = std::div(k, DEVICE_TILE_BUFFER_WIDTH);
+					const int kx = kdiv.rem / GBBASIC_TILE_SIZE;
+					const int ky = kdiv.quot / GBBASIC_TILE_SIZE;
+					const int kidx = kx + ky * (DEVICE_TILE_BUFFER_WIDTH / GBBASIC_TILE_SIZE);
 
-				const int bank = (k < (int)tilesBuf.size() / 2) ? 0 : 1;
-				const std::div_t tdiv = std::div(kidx, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-				const int tx = tdiv.rem;
-				const int ty = tdiv.quot % VRAM_DEBUGGER_TILES_AREA_HEIGHT;
-				const int px = kdiv.rem % GBBASIC_TILE_SIZE;
-				const int py = kdiv.quot % GBBASIC_TILE_SIZE;
+					const int bank = (k < (int)tilesBuf.size() / 2) ? 0 : 1;
+					const std::div_t tdiv = std::div(kidx, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+					const int tx = tdiv.rem;
+					const int ty = tdiv.quot % VRAM_DEBUGGER_TILES_AREA_HEIGHT;
+					const int px = kdiv.rem % GBBASIC_TILE_SIZE;
+					const int py = kdiv.quot % GBBASIC_TILE_SIZE;
 
-				const bool isForObj = ty < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2;
-				const bool isForBg = (ty >= VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ||
-					!isForObj; // Must be for BG if is not for obj.
-				const UInt8 bgTile = isForBg ?
-					(UInt8)((ty < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) ?
-						ty :
-						(ty - VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2)) :
-					0;
-				const UInt8 objTile = isForObj ?
-					(UInt8)ty :
-					0;
-				const TileDetail::Array* details = nullptr;
-				if (isForBg) {
-					const UInt8 tile = (UInt8)(tx + bgTile * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-					details = &_tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile];
-				} else /* if (isForObj) */ {
-					const UInt8 tile = (UInt8)(tx + objTile * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-					details = &_tileDetails[bank][(int)TileDetail::Usages::OBJ][tile];
-				}
+					const bool isForObj = ty < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2;
+					const bool isForBg = (ty >= VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ||
+						!isForObj; // Must be for BG if is not for obj.
+					const UInt8 bgTile = isForBg ?
+						(UInt8)((ty < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) ?
+							ty :
+							(ty - VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2)) :
+						0;
+					const UInt8 objTile = isForObj ?
+						(UInt8)ty :
+						0;
+					const TileDetail::Array* details = nullptr;
+					if (isForBg) {
+						const UInt8 tile = (UInt8)(tx + bgTile * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+						details = &tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile];
+					} else /* if (isForObj) */ {
+						const UInt8 tile = (UInt8)(tx + objTile * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+						details = &tileDetails[bank][(int)TileDetail::Usages::OBJ][tile];
+					}
 
-				const int x = (tx + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE + px;
-				const int y = ty * GBBASIC_TILE_SIZE + py;
+					const int x = (tx + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE + px;
+					const int y = ty * GBBASIC_TILE_SIZE + py;
 
-				const UInt8 val = tilesBuf[k];
-				Colour col;
-				if (details && !details->empty()) {
-					if (previewPaletteBits) {
-						if (isCgb) {
-							const TileDetail &detail = details->front(); // Use the first for paletting.
-							col = _cgbPalettes[(int)detail.usage][detail.palette].color[val];
+					const UInt8 val = tilesBuf[k];
+					Colour col;
+					if (details && !details->empty()) {
+						if (previewPaletteBits) {
+							if (isCgb) {
+								const TileDetail &detail = details->front(); // Use the first for paletting.
+								col = cgbPalettes[(int)detail.usage][detail.palette].color[val];
+							} else {
+								col = palettes[(int)Device::PaletteTypes::BGP].color[val];
+							}
 						} else {
-							col = _palettes[(int)Device::PaletteTypes::BGP].color[val];
+							col = device->classicPalette(val);
 						}
 					} else {
-						col = device->classicPalette(val);
+						const Colour col_ = device->classicPalette(val);
+						const UInt8 gray = (UInt8)Math::clamp(col_.toGray(), 0, 255);
+						col = Colour(gray, gray, gray);
 					}
-				} else {
-					const Colour col_ = device->classicPalette(val);
-					const UInt8 gray = (UInt8)Math::clamp(col_.toGray(), 0, 255);
-					col = Colour(gray, gray, gray);
+					tiles.buffer.plot(x, y, col); // Plot to the tiles texture, and write to the tiles image.
 				}
-				_tiles.buffer.plot(x, y, col); // Plot to the tiles texture, and write to the tiles image.
+
+				tiles.buffer.end();
 			}
+		};
 
-			_tiles.buffer.end();
-		}
+		translateTiles(
+			_tiles,
+			tilesBuf, _tileDetails,
+			_palettes, _cgbPalettes
+		);
 
-		if (_options.isBgLayerActive && _bgMap.buffer.begin()) {
-			for (int k = 0; k < (int)bgMapBuf.size(); ++k) {
-				const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
-				const int kx = kdiv.rem;
-				const int ky = kdiv.quot;
+		auto getTileBuf = [] (const Device::TileBuffer &tilesBuf, int x, int y) -> UInt8 {
+			const int p = x + y * DEVICE_TILE_BUFFER_WIDTH;
 
-				const int x = kx * GBBASIC_TILE_SIZE;
-				const int y = ky * GBBASIC_TILE_SIZE;
+			return tilesBuf[p];
+		};
+		auto translateMap = [device, previewPaletteBits, isCgb, getTileBuf] (
+			MapBuffer &map,
+			const Device::MapBuffer &mapBuf, const Device::MapBuffer &mapAttrBuf,
+			const Device::TileBuffer &tilesBuf, const TilesBuffer &tiles, const TileDetail::Banks &tileDetails,
+			const Palette::Collection &palettes, const CgbPalette::Collection &cgbPalettes,
+			bool isLayerActive
+		) -> void {
+			if (isLayerActive && map.buffer.begin()) {
+				for (int k = 0; k < (int)mapBuf.size(); ++k) {
+					const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
+					const int kx = kdiv.rem;
+					const int ky = kdiv.quot;
 
-				const UInt8 tile = bgMapBuf[k];
-				const UInt8 attrs = bgMapAttrBuf[k];
-				const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
-				const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
-				const bool hFlip = !!((attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001);
-				const bool vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
+					const int x = kx * GBBASIC_TILE_SIZE;
+					const int y = ky * GBBASIC_TILE_SIZE;
 
-				bool toBlit = true;
-				const TileDetail::Array &details = _tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile];
-				if (!details.empty()) {
-					if (details.front().palette != plt)
-						toBlit = false;
-				}
-				if (toBlit) {
-					const std::div_t sdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-					const int sx = (sdiv.rem + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE;
-					const int sy = (
-						((sdiv.quot < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ?
-							(sdiv.quot + VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) :
-							sdiv.quot) *
-						GBBASIC_TILE_SIZE
-					);
+					const UInt8 tile = mapBuf[k];
+					const UInt8 attrs = mapAttrBuf[k];
+					const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
+					const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
+					const bool hFlip = !!((attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001);
+					const bool vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
 
-					_tiles.buffer.blit( // Blit to the BG map image from the tiles image.
-						_bgMap.buffer,
-						x, y, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
-						sx, sy,
-						hFlip, vFlip
-					);
-				} else {
-					constexpr const int RAW_TILES_SECTION_HALF_HEIGHT = ((DEVICE_TILE_BUFFER_HEIGHT / GBBASIC_TILE_SIZE) / 2 / 3);
-					const std::div_t sdiv = std::div(tile, DEVICE_TILE_BUFFER_WIDTH / 8);
-					const int sx = sdiv.rem * GBBASIC_TILE_SIZE;
-					const int sy = (
-						((sdiv.quot < RAW_TILES_SECTION_HALF_HEIGHT) ?
-							(sdiv.quot + RAW_TILES_SECTION_HALF_HEIGHT * 2):
-							sdiv.quot) *
-						GBBASIC_TILE_SIZE +
-						((DEVICE_TILE_BUFFER_HEIGHT / 2) * bank)
-					);
+					bool toBlit = true;
+					const TileDetail::Array &details = tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile];
+					if (!details.empty()) {
+						if (details.front().palette != plt)
+							toBlit = false;
+					}
+					if (toBlit) {
+						const std::div_t sdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+						const int sx = (sdiv.rem + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE;
+						const int sy = (
+							((sdiv.quot < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ?
+								(sdiv.quot + VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) :
+								sdiv.quot) *
+							GBBASIC_TILE_SIZE
+						);
 
-					for (int j = 0; j < GBBASIC_TILE_SIZE; ++j) {
-						for (int i = 0; i < GBBASIC_TILE_SIZE; ++i) {
-							const int sx_ = sx + i;
-							const int sy_ = sy + i;
-							const UInt8 val = getTileBuf(tilesBuf, sx_, sy_);
-							Colour col;
-							if (previewPaletteBits) {
-								if (isCgb) {
-									col = _cgbPalettes[(int)Device::PaletteTypes::BGP][plt].color[val];
+						tiles.buffer.blit( // Blit to the BG/WIN map image from the tiles image.
+							map.buffer,
+							x, y, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+							sx, sy,
+							hFlip, vFlip
+						);
+					} else {
+						constexpr const int RAW_TILES_SECTION_HALF_HEIGHT = ((DEVICE_TILE_BUFFER_HEIGHT / GBBASIC_TILE_SIZE) / 2 / 3);
+						const std::div_t sdiv = std::div(tile, DEVICE_TILE_BUFFER_WIDTH / 8);
+						const int sx = sdiv.rem * GBBASIC_TILE_SIZE;
+						const int sy = (
+							((sdiv.quot < RAW_TILES_SECTION_HALF_HEIGHT) ?
+								(sdiv.quot + RAW_TILES_SECTION_HALF_HEIGHT * 2):
+								sdiv.quot) *
+							GBBASIC_TILE_SIZE +
+							((DEVICE_TILE_BUFFER_HEIGHT / 2) * bank)
+						);
+
+						for (int j = 0; j < GBBASIC_TILE_SIZE; ++j) {
+							for (int i = 0; i < GBBASIC_TILE_SIZE; ++i) {
+								const int sx_ = sx + i;
+								const int sy_ = sy + j;
+								const UInt8 val = getTileBuf(tilesBuf, sx_, sy_);
+								Colour col;
+								if (previewPaletteBits) {
+									if (isCgb) {
+										col = cgbPalettes[(int)Device::PaletteTypes::BGP][plt].color[val];
+									} else {
+										col = palettes[(int)Device::PaletteTypes::BGP].color[val];
+									}
 								} else {
-									col = _palettes[(int)Device::PaletteTypes::BGP].color[val];
+									col = device->classicPalette(val);
 								}
-							} else {
-								col = device->classicPalette(val);
+								const int dx = hFlip ?
+									x + (GBBASIC_TILE_SIZE - i - 1) :
+									x + i;
+								const int dy = vFlip ?
+									y + (GBBASIC_TILE_SIZE - j - 1) :
+									y + j;
+								map.buffer.draw(dx, dy, col); // Draw to the BG/WIN map image.
 							}
-							const int dx = hFlip ?
-								x + (GBBASIC_TILE_SIZE - i - 1) :
-								x + i;
-							const int dy = vFlip ?
-								y + (GBBASIC_TILE_SIZE - j - 1) :
-								y + j;
-							_bgMap.buffer.draw(dx, dy, col); // Draw to the BG map image.
 						}
 					}
 				}
+				map.buffer.commit( // Commits to the BG/WIN map texture from the BG/WIN map image.
+					DEVICE_MAP_BUFFER_SIZE * (GBBASIC_TILE_SIZE * GBBASIC_TILE_SIZE) * sizeof(Colour)
+				);
+
+				map.buffer.end();
 			}
-			_bgMap.buffer.commit( // Commits to the BG map texture from the BG map image.
-				DEVICE_MAP_BUFFER_SIZE * (GBBASIC_TILE_SIZE * GBBASIC_TILE_SIZE) * sizeof(Colour)
-			);
+		};
 
-			_bgMap.buffer.end();
-		}
-
-		if (!_options.isBgLayerActive && _winMap.buffer.begin()) {
-			for (int k = 0; k < (int)winMapBuf.size(); ++k) {
-				const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
-				const int kx = kdiv.rem;
-				const int ky = kdiv.quot;
-
-				const int x = kx * GBBASIC_TILE_SIZE;
-				const int y = ky * GBBASIC_TILE_SIZE;
-
-				const UInt8 tile = winMapBuf[k];
-				const UInt8 attrs = winMapAttrBuf[k];
-				const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
-				const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
-				const bool hFlip = !!((attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001);
-				const bool vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
-
-				bool toBlit = true;
-				const TileDetail::Array &details = _tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile];
-				if (!details.empty()) {
-					if (details.front().palette != plt)
-						toBlit = false;
-				}
-				if (toBlit) {
-					const std::div_t sdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-					const int sx = (sdiv.rem + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE;
-					const int sy = (
-						((sdiv.quot < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ?
-							(sdiv.quot + VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) :
-							sdiv.quot) *
-						GBBASIC_TILE_SIZE
-					);
-
-					_tiles.buffer.blit( // Blit to the WIN map image from the tiles image.
-						_winMap.buffer,
-						x, y, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
-						sx, sy,
-						hFlip, vFlip
-					);
-				} else {
-					constexpr const int RAW_TILES_SECTION_HALF_HEIGHT = ((DEVICE_TILE_BUFFER_HEIGHT / GBBASIC_TILE_SIZE) / 2 / 3);
-					const std::div_t sdiv = std::div(tile, DEVICE_TILE_BUFFER_WIDTH / 8);
-					const int sx = sdiv.rem * GBBASIC_TILE_SIZE;
-					const int sy = (
-						((sdiv.quot < RAW_TILES_SECTION_HALF_HEIGHT) ?
-							(sdiv.quot + RAW_TILES_SECTION_HALF_HEIGHT * 2):
-							sdiv.quot) *
-						GBBASIC_TILE_SIZE +
-						((DEVICE_TILE_BUFFER_HEIGHT / 2) * bank)
-					);
-
-					for (int j = 0; j < GBBASIC_TILE_SIZE; ++j) {
-						for (int i = 0; i < GBBASIC_TILE_SIZE; ++i) {
-							const int sx_ = sx + i;
-							const int sy_ = sy + i;
-							const UInt8 val = getTileBuf(tilesBuf, sx_, sy_);
-							Colour col;
-							if (previewPaletteBits) {
-								if (isCgb) {
-									col = _cgbPalettes[(int)Device::PaletteTypes::BGP][plt].color[val];
-								} else {
-									col = _palettes[(int)Device::PaletteTypes::BGP].color[val];
-								}
-							} else {
-								col = device->classicPalette(val);
-							}
-							const int dx = hFlip ?
-								x + (GBBASIC_TILE_SIZE - i - 1) :
-								x + i;
-							const int dy = vFlip ?
-								y + (GBBASIC_TILE_SIZE - j - 1) :
-								y + j;
-							_winMap.buffer.draw(dx, dy, col); // Draw to the WIN map image.
-						}
-					}
-				}
-			}
-			_winMap.buffer.commit( // Commits to the WIN map texture from the WIN map image.
-				DEVICE_MAP_BUFFER_SIZE * (GBBASIC_TILE_SIZE * GBBASIC_TILE_SIZE) * sizeof(Colour)
-			);
-
-			_winMap.buffer.end();
-		}
+		translateMap(
+			_bgMap,
+			bgMapBuf, bgMapAttrBuf,
+			tilesBuf, _tiles, _tileDetails,
+			_palettes, _cgbPalettes,
+			_options.isBgLayerActive
+		);
+		translateMap(
+			_winMap,
+			winMapBuf, winMapAttrBuf,
+			tilesBuf, _tiles, _tileDetails,
+			_palettes, _cgbPalettes,
+			!_options.isBgLayerActive
+		);
 	}
 
 	void tiles(Renderer* rnd, Theme* theme, Device* /* device */, bool showGrids) {
