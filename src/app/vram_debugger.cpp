@@ -363,14 +363,17 @@ private:
 		};
 
 		TileDetail::clear(_tileDetails);
-		collectMapInfo(
-			_tileDetails,
-			_bgMapBuf, _bgMapAttrBuf
-		);
-		collectMapInfo(
-			_tileDetails,
-			_winMapBuf, _winMapAttrBuf
-		);
+		if (_options.isBgLayerActive) {
+			collectMapInfo(
+				_tileDetails,
+				_bgMapBuf, _bgMapAttrBuf
+			);
+		} else {
+			collectMapInfo(
+				_tileDetails,
+				_winMapBuf, _winMapAttrBuf
+			);
+		}
 
 		// Translate data.
 		auto translateTiles = [device, previewPaletteBits, isCgb] (
