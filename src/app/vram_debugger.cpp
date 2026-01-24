@@ -185,6 +185,7 @@ private:
 
 	struct TilesBuffer {
 		BufferTexture buffer;
+		Math::Vec2i highlight = Math::Vec2i(-1, -1);
 
 		void touch(Renderer* rnd) {
 			buffer.touch(rnd, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 * GBBASIC_TILE_SIZE, VRAM_DEBUGGER_TILES_AREA_HEIGHT * GBBASIC_TILE_SIZE);
@@ -192,7 +193,10 @@ private:
 	};
 
 	struct MapBuffer {
+		typedef std::vector<Math::Vec2i> Points;
+
 		BufferTexture buffer;
+		Points highlights;
 
 		void touch(Renderer* rnd) {
 			buffer.touch(rnd, DEVICE_MAP_BUFFER_WIDTH * GBBASIC_TILE_SIZE, DEVICE_MAP_BUFFER_HEIGHT * GBBASIC_TILE_SIZE);
@@ -227,13 +231,18 @@ private:
 		bool isBgLayerActive = true;
 	} _options;
 
+	Palette::Collection _palettes;
+	CgbPalette::Collection _cgbPalettes;
+	Device::MapBuffer _bgMapBuf;
+	Device::MapBuffer _bgMapAttrBuf;
+	Device::MapBuffer _winMapBuf;
+	Device::MapBuffer _winMapAttrBuf;
+
 	TileDetail::Banks _tileDetails;
 	TilesBuffer _tiles;
 	MapBuffer _bgMap;
 	MapBuffer _winMap;
 	ObjBuffer _objs;
-	Palette::Collection _palettes;
-	CgbPalette::Collection _cgbPalettes;
 
 public:
 	VramDebuggerImpl() {
@@ -293,21 +302,17 @@ private:
 		Device::TileBuffer tilesBuf;
 		device->getTileBuffer(tilesBuf);
 
-		Device::MapBuffer bgMapBuf;
-		device->getMapBuffer(bgMapSrc, bgMapBuf);
-		Device::MapBuffer bgMapAttrBuf;
+		device->getMapBuffer(bgMapSrc, _bgMapBuf);
 		if (isCgb)
-			device->getMapAttrBuffer(bgMapSrc, bgMapAttrBuf);
+			device->getMapAttrBuffer(bgMapSrc, _bgMapAttrBuf);
 		else
-			bgMapAttrBuf.fill(0);
+			_bgMapAttrBuf.fill(0);
 
-		Device::MapBuffer winMapBuf;
-		device->getMapBuffer(winMapSrc, winMapBuf);
-		Device::MapBuffer winMapAttrBuf;
+		device->getMapBuffer(winMapSrc, _winMapBuf);
 		if (isCgb)
-			device->getMapAttrBuffer(winMapSrc, winMapAttrBuf);
+			device->getMapAttrBuffer(winMapSrc, _winMapAttrBuf);
 		else
-			winMapAttrBuf.fill(0);
+			_winMapAttrBuf.fill(0);
 
 		const bool is8x16Obj = device->is8x16Obj();
 		for (int i = 0; i < DEVICE_OBJ_COUNT; ++i) {
@@ -360,11 +365,11 @@ private:
 		TileDetail::clear(_tileDetails);
 		collectMapInfo(
 			_tileDetails,
-			bgMapBuf, bgMapAttrBuf
+			_bgMapBuf, _bgMapAttrBuf
 		);
 		collectMapInfo(
 			_tileDetails,
-			winMapBuf, winMapAttrBuf
+			_winMapBuf, _winMapAttrBuf
 		);
 
 		// Translate data.
@@ -539,14 +544,14 @@ private:
 
 		translateMap(
 			_bgMap,
-			bgMapBuf, bgMapAttrBuf,
+			_bgMapBuf, _bgMapAttrBuf,
 			tilesBuf, _tiles, _tileDetails,
 			_palettes, _cgbPalettes,
 			_options.isBgLayerActive
 		);
 		translateMap(
 			_winMap,
-			winMapBuf, winMapAttrBuf,
+			_winMapBuf, _winMapAttrBuf,
 			tilesBuf, _tiles, _tileDetails,
 			_palettes, _cgbPalettes,
 			!_options.isBgLayerActive
@@ -594,7 +599,24 @@ private:
 				ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
 			);
 		};
+		auto drawHighlight = [] (const ImVec2 &curPos, const Math::Vec2i &pos) -> void {
+			if (pos == Math::Vec2i(-1, -1))
+				return;
 
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+			const ImVec2 startPos((float)(pos.x * GBBASIC_TILE_SIZE), (float)(pos.y * GBBASIC_TILE_SIZE));
+			const ImVec2 endPos = startPos + ImVec2(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
+			drawList->AddRect(
+				curPos + startPos,
+				curPos + endPos + ImVec2(1, 1),
+				ImGui::GetColorU32(ImVec4(1, 0, 0, 0.75f))
+			);
+		};
+
+		bool hasInfo = false;
+		int infoBank = 0;
+		Math::Vec2i tilePos;
 		const ImVec2 dstSize(VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 * GBBASIC_TILE_SIZE, VRAM_DEBUGGER_TILES_AREA_HEIGHT * GBBASIC_TILE_SIZE);
 		if (regSize.x < VRAM_DEBUGGER_MAX_WIDTH) {
 			VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
@@ -613,10 +635,23 @@ private:
 					ImVec2(0, 0), ImVec2(1, 1),
 					ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 				);
+
 				if (showGrids)
 					drawGrids(curPos, dstSize);
-				// TODO: tooltips.
-				// TODO: ref.
+
+				drawHighlight(curPos, _tiles.highlight);
+
+				if (ImGui::IsItemHovered()) {
+					const ImVec2 mousePos = ImGui::GetMousePos();
+					const ImVec2 diff = mousePos - curPos;
+					const ImVec2 tilePos_ = diff / GBBASIC_TILE_SIZE;
+					if (tilePos_.x >= 0 && tilePos_.x < VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 && tilePos_.y >= 0 && tilePos_.y < VRAM_DEBUGGER_TILES_AREA_HEIGHT) {
+						hasInfo = true;
+						infoBank = tilePos_.x < VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK ? 0 : 1;
+						tilePos = Math::Vec2i((int)tilePos_.x - VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * infoBank, (int)tilePos_.y);
+					}
+				}
+
 				ImGui::SameLine();
 				ImGui::Dummy(ImVec2(1, 0));
 			}
@@ -629,10 +664,34 @@ private:
 				ImVec2(0, 0), ImVec2(1, 1),
 				ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 			);
+
 			if (showGrids)
 				drawGrids(curPos, dstSize);
+
+			drawHighlight(curPos, _tiles.highlight);
+
+			if (ImGui::IsItemHovered()) {
+				const ImVec2 mousePos = ImGui::GetMousePos();
+				const ImVec2 diff = mousePos - curPos;
+				const ImVec2 tilePos_ = diff / GBBASIC_TILE_SIZE;
+				if (tilePos_.x >= 0 && tilePos_.x < VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 && tilePos_.y >= 0 && tilePos_.y < VRAM_DEBUGGER_TILES_AREA_HEIGHT) {
+					hasInfo = true;
+					infoBank = tilePos_.x < VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK ? 0 : 1;
+					tilePos = Math::Vec2i((int)tilePos_.x - VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * infoBank, (int)tilePos_.y);
+				}
+			}
+		}
+
+		if (hasInfo) {
 			// TODO: tooltips.
-			// TODO: ref.
+
+			MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
+			highlights.clear();
+			const UInt8 tile = (UInt8)(tilePos.x + tilePos.y * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+			const TileDetail::Array &details = _tileDetails[infoBank][(int)TileDetail::Usages::BG_MAP][tile];
+			for (const TileDetail &detail : details) {
+				highlights.push_back(detail.position);
+			}
 		}
 	}
 	void bgMap(Renderer* rnd, Theme* theme, Device* device, bool showGrids) {
@@ -706,6 +765,22 @@ private:
 				ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
 			);
 		};
+		auto drawHighlights = [] (const ImVec2 &curPos, const MapBuffer::Points &pos) -> void {
+			if (pos.empty())
+				return;
+
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+			for (const Math::Vec2i &pos_ : pos) {
+				const ImVec2 startPos((float)(pos_.x * GBBASIC_TILE_SIZE), (float)(pos_.y * GBBASIC_TILE_SIZE));
+				const ImVec2 endPos = startPos + ImVec2(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
+				drawList->AddRect(
+					curPos + startPos,
+					curPos + endPos + ImVec2(1, 1),
+					ImGui::GetColorU32(ImVec4(1, 0, 0, 0.75f))
+				);
+			}
+		};
 		auto drawCamera = [] (const ImVec2 &curPos, const ImVec2 &dstSize, UInt8 camX, UInt8 camY) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
 
@@ -753,6 +828,8 @@ private:
 			camX = wndX;
 			camY = -wndY;
 		}
+		bool hasInfo = false;
+		Math::Vec2i mapPos;
 		const ImVec2 dstSize(DEVICE_MAP_BUFFER_WIDTH * GBBASIC_TILE_SIZE, DEVICE_MAP_BUFFER_HEIGHT * GBBASIC_TILE_SIZE);
 		if (regSize.x < VRAM_DEBUGGER_MAX_WIDTH) {
 			VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
@@ -771,11 +848,25 @@ private:
 					ImVec2(0, 0), ImVec2(1, 1),
 					ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 				);
+
 				if (showGrids)
 					drawGrids(curPos, dstSize);
-				// TODO: tooltips.
-				// TODO: ref.
+
+				const MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
+				drawHighlights(curPos, highlights);
+
 				drawCamera(curPos, dstSize, camX, camY);
+
+				if (ImGui::IsItemHovered()) {
+					const ImVec2 mousePos = ImGui::GetMousePos();
+					const ImVec2 diff = mousePos - curPos;
+					const ImVec2 mapPos_ = diff / GBBASIC_TILE_SIZE;
+					if (mapPos_.x >= 0 && mapPos_.x < DEVICE_MAP_BUFFER_WIDTH && mapPos_.y >= 0 && mapPos_.y < DEVICE_MAP_BUFFER_HEIGHT) {
+						hasInfo = true;
+						mapPos = Math::Vec2i((int)mapPos_.x, (int)mapPos_.y);
+					}
+				}
+
 				ImGui::SameLine();
 				ImGui::Dummy(ImVec2(1, 0));
 			}
@@ -788,15 +879,49 @@ private:
 				ImVec2(0, 0), ImVec2(1, 1),
 				ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 			);
+
 			if (showGrids)
 				drawGrids(curPos, dstSize);
-			// TODO: tooltips.
-			// TODO: ref.
+
 			ImGui::PushClipRect(curPos, curPos + dstSize, true);
 			{
+				const MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
+				drawHighlights(curPos, highlights);
+
 				drawCamera(curPos, dstSize, camX, camY);
 			}
 			ImGui::PopClipRect();
+
+			if (ImGui::IsItemHovered()) {
+				const ImVec2 mousePos = ImGui::GetMousePos();
+				const ImVec2 diff = mousePos - curPos;
+				const ImVec2 mapPos_ = diff / GBBASIC_TILE_SIZE;
+				if (mapPos_.x >= 0 && mapPos_.x < DEVICE_MAP_BUFFER_WIDTH && mapPos_.y >= 0 && mapPos_.y < DEVICE_MAP_BUFFER_HEIGHT) {
+					hasInfo = true;
+					mapPos = Math::Vec2i((int)mapPos_.x, (int)mapPos_.y);
+				}
+			}
+		}
+
+		_tiles.highlight = Math::Vec2i(-1, -1);
+		if (hasInfo) {
+			// TODO: tooltips.
+
+			const Device::MapBuffer &mapBuf = _options.isBgLayerActive ? _bgMapBuf : _winMapBuf;
+			const Device::MapBuffer &mapAttrBuf = _options.isBgLayerActive ? _bgMapAttrBuf : _winMapAttrBuf;
+			const int val = mapPos.x + mapPos.y * DEVICE_MAP_BUFFER_WIDTH;
+			const UInt8 tile = mapBuf[val];
+			const UInt8 attrs = mapAttrBuf[val];
+			const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
+			const std::div_t tdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+			const int tx = tdiv.rem;
+			const int ty = tdiv.quot % VRAM_DEBUGGER_TILES_AREA_HEIGHT;
+			const int ty_ = (
+				((ty < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ?
+					(ty + VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) :
+					ty)
+			);
+			_tiles.highlight = Math::Vec2i(tx + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank, ty_);
 		}
 	}
 	void oam(Renderer* /* rnd */, Theme* theme, Device* /* device */) {
