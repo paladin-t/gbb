@@ -682,11 +682,11 @@ private:
 			}
 		}
 
+		MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
+		highlights.clear();
 		if (hasInfo) {
 			// TODO: tooltips.
 
-			MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
-			highlights.clear();
 			const UInt8 tile = (UInt8)(tilePos.x + tilePos.y * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
 			const TileDetail::Array &details = _tileDetails[infoBank][(int)TileDetail::Usages::BG_MAP][tile];
 			for (const TileDetail &detail : details) {
