@@ -147,7 +147,11 @@ private:
 
 	struct TileDetail {
 		typedef std::vector<TileDetail> Array;
-		typedef std::array<Array, VRAM_DEBUGGER_TILES_SECTION_SIZE> Section;
+		struct Ref {
+			Array details;
+			int refCount = 0;
+		};
+		typedef std::array<Ref, VRAM_DEBUGGER_TILES_SECTION_SIZE> Section;
 		typedef std::array<Section, 2> Bank; // For BG map and OBJ respectively.
 		typedef std::array<Bank, 2> Banks; // For bank 0 and bank 1 respectively.
 
@@ -175,8 +179,8 @@ private:
 				for (int s = 0; s < (int)bank.size(); ++s) {
 					Section &section = bank[s];
 					for (int i = 0; i < (int)section.size(); ++i) {
-						Array &array = section[i];
-						array.clear();
+						Ref &ref = section[i];
+						ref.details.clear();
 					}
 				}
 			}
@@ -342,7 +346,8 @@ private:
 		// Collect the reference information, palettes, etc.
 		auto collectMapInfo = [] (
 			TileDetail::Banks &tileDetails,
-			const Device::MapBuffer &mapBuf, const Device::MapBuffer &mapAttrBuf
+			const Device::MapBuffer &mapBuf, const Device::MapBuffer &mapAttrBuf,
+			bool refOnly
 		) -> void {
 			for (int k = 0; k < (int)mapBuf.size(); ++k) {
 				const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
@@ -357,23 +362,26 @@ private:
 				const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
 				const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
 
-				const TileDetail detail(TileDetail::Usages::BG_MAP, Math::Vec2i(mx, my), plt);
-				tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile].push_back(detail);
+				TileDetail::Ref &ref = tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile];
+				++ref.refCount;
+				if (!refOnly) {
+					const TileDetail detail(TileDetail::Usages::BG_MAP, Math::Vec2i(mx, my), plt);
+					ref.details.push_back(detail);
+				}
 			}
 		};
 
 		TileDetail::clear(_tileDetails);
-		if (_options.isBgLayerActive) {
-			collectMapInfo(
-				_tileDetails,
-				_bgMapBuf, _bgMapAttrBuf
-			);
-		} else {
-			collectMapInfo(
-				_tileDetails,
-				_winMapBuf, _winMapAttrBuf
-			);
-		}
+		collectMapInfo(
+			_tileDetails,
+			_bgMapBuf, _bgMapAttrBuf,
+			!_options.isBgLayerActive
+		);
+		collectMapInfo(
+			_tileDetails,
+			_winMapBuf, _winMapAttrBuf,
+			_options.isBgLayerActive
+		);
 
 		// Translate data.
 		auto translateTiles = [device, previewPaletteBits, isCgb] (
@@ -407,12 +415,17 @@ private:
 						(UInt8)ty :
 						0;
 					const TileDetail::Array* details = nullptr;
+					int refCount = 0;
 					if (isForBg) {
 						const UInt8 tile = (UInt8)(tx + bgTile * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-						details = &tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile];
+						const TileDetail::Ref &ref = tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile];
+						details = &ref.details;
+						refCount = ref.refCount;
 					} else /* if (isForObj) */ {
 						const UInt8 tile = (UInt8)(tx + objTile * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-						details = &tileDetails[bank][(int)TileDetail::Usages::OBJ][tile];
+						const TileDetail::Ref &ref = tileDetails[bank][(int)TileDetail::Usages::OBJ][tile];
+						details = &ref.details;
+						refCount = ref.refCount;
 					}
 
 					const int x = (tx + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE + px;
@@ -420,9 +433,9 @@ private:
 
 					const UInt8 val = tilesBuf[k];
 					Colour col;
-					if (details && !details->empty()) {
+					if (details && refCount) {
 						if (previewPaletteBits) {
-							if (isCgb) {
+							if (isCgb && !details->empty()) {
 								const TileDetail &detail = details->front(); // Use the first for paletting.
 								col = cgbPalettes[(int)detail.usage][detail.palette].color[val];
 							} else {
@@ -458,10 +471,9 @@ private:
 			MapBuffer &map,
 			const Device::MapBuffer &mapBuf, const Device::MapBuffer &mapAttrBuf,
 			const Device::TileBuffer &tilesBuf, const TilesBuffer &tiles, const TileDetail::Banks &tileDetails,
-			const Palette::Collection &palettes, const CgbPalette::Collection &cgbPalettes,
-			bool isLayerActive
+			const Palette::Collection &palettes, const CgbPalette::Collection &cgbPalettes
 		) -> void {
-			if (isLayerActive && map.buffer.begin()) {
+			if (map.buffer.begin()) {
 				for (int k = 0; k < (int)mapBuf.size(); ++k) {
 					const std::div_t kdiv = std::div(k, DEVICE_MAP_BUFFER_WIDTH);
 					const int kx = kdiv.rem;
@@ -478,7 +490,7 @@ private:
 					const bool vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
 
 					bool toBlit = true;
-					const TileDetail::Array &details = tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile];
+					const TileDetail::Array &details = tileDetails[bank][(int)TileDetail::Usages::BG_MAP][tile].details;
 					if (!details.empty()) {
 						if (details.front().palette != plt)
 							toBlit = false;
@@ -545,20 +557,21 @@ private:
 			}
 		};
 
-		translateMap(
-			_bgMap,
-			_bgMapBuf, _bgMapAttrBuf,
-			tilesBuf, _tiles, _tileDetails,
-			_palettes, _cgbPalettes,
-			_options.isBgLayerActive
-		);
-		translateMap(
-			_winMap,
-			_winMapBuf, _winMapAttrBuf,
-			tilesBuf, _tiles, _tileDetails,
-			_palettes, _cgbPalettes,
-			!_options.isBgLayerActive
-		);
+		if (_options.isBgLayerActive) {
+			translateMap(
+				_bgMap,
+				_bgMapBuf, _bgMapAttrBuf,
+				tilesBuf, _tiles, _tileDetails,
+				_palettes, _cgbPalettes
+			);
+		} else {
+			translateMap(
+				_winMap,
+				_winMapBuf, _winMapAttrBuf,
+				tilesBuf, _tiles, _tileDetails,
+				_palettes, _cgbPalettes
+			);
+		}
 	}
 
 	void tiles(Renderer* rnd, Theme* theme, Device* /* device */, bool showGrids) {
@@ -691,7 +704,7 @@ private:
 			// TODO: tooltips.
 
 			const UInt8 tile = (UInt8)(tilePos.x + tilePos.y * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-			const TileDetail::Array &details = _tileDetails[infoBank][(int)TileDetail::Usages::BG_MAP][tile];
+			const TileDetail::Array &details = _tileDetails[infoBank][(int)TileDetail::Usages::BG_MAP][tile].details;
 			for (const TileDetail &detail : details) {
 				highlights.push_back(detail.position);
 			}
