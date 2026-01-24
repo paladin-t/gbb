@@ -39,8 +39,11 @@
 #ifndef VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT
 #	define VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT 8
 #endif /* VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT */
+#ifndef VRAM_DEBUGGER_TILES_SECTION_HALF_SIZE
+#	define VRAM_DEBUGGER_TILES_SECTION_HALF_SIZE (VRAM_DEBUGGER_TILES_SECTION_WIDTH * VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT)
+#endif /* VRAM_DEBUGGER_TILES_SECTION_HALF_SIZE */
 #ifndef VRAM_DEBUGGER_TILES_SECTION_SIZE
-#	define VRAM_DEBUGGER_TILES_SECTION_SIZE (VRAM_DEBUGGER_TILES_SECTION_WIDTH * VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2)
+#	define VRAM_DEBUGGER_TILES_SECTION_SIZE (VRAM_DEBUGGER_TILES_SECTION_HALF_SIZE * 2)
 #endif /* VRAM_DEBUGGER_TILES_SECTION_SIZE */
 
 static_assert(
@@ -247,6 +250,106 @@ private:
 	MapBuffer _bgMap;
 	MapBuffer _winMap;
 	ObjBuffer _objs;
+
+	struct {
+		int tile = -1;
+		UInt8 bank = 0;
+		UInt16 address = 0;
+		int palette = -1;
+		std::string text;
+
+		void refresh(
+			Theme* theme,
+			UInt8 tile_,
+			UInt8 bank_, UInt16 addr,
+			int plt
+		) {
+			if (
+				tile == tile_ &&
+				bank == bank_ && address == addr &&
+				palette == plt
+			) {
+				return;
+			}
+
+			tile = tile_;
+			bank = bank_;
+			address = addr;
+			palette = plt;
+
+			text = Text::format(
+				theme->tooltipEmulator_VramDebugger_Tile(),
+				{
+					Text::toHex(tile, 2, '0', true), Text::toString(tile),
+					Text::toString(bank), Text::toHex(address, 4, '0', true),
+					palette == -1 ? "-" : Text::toString(palette)
+				}
+			);
+		}
+	} _tileTips;
+	struct {
+		Math::Vec2i position;
+		int tile = -1;
+		UInt8 attribute = 0;
+		UInt16 mapAddress = 0;
+		UInt8 tileBank = 0;
+		UInt16 tileAddress = 0;
+		bool hFlip = false;
+		bool vFlip = false;
+		int palette = -1;
+		int priority = 0;
+		std::string text;
+
+		void refresh(
+			Theme* theme,
+			const Math::Vec2i &pos,
+			UInt8 tile_,
+			UInt8 attr,
+			UInt16 mapAddr_,
+			UInt8 tileBank_, UInt16 tileAddr,
+			bool hFlip_, bool vFlip_,
+			int plt,
+			int pri
+		) {
+			if (
+				position == pos &&
+				tile == tile_ &&
+				attribute == attr &&
+				mapAddress == mapAddr_ &&
+				tileBank == tileBank_ && tileAddress == tileAddr &&
+				hFlip == hFlip_ && vFlip == vFlip_ &&
+				palette == plt &&
+				priority == pri
+			) {
+				return;
+			}
+
+			position = pos;
+			tile = tile_;
+			attribute = attr;
+			mapAddress = mapAddr_;
+			tileBank = tileBank_;
+			tileAddress = tileAddr;
+			hFlip = hFlip_;
+			vFlip = vFlip_;
+			palette = plt;
+			priority = pri;
+
+			text = Text::format(
+				theme->tooltipEmulator_VramDebugger_Map(),
+				{
+					Text::toHex(position.x, 2, '0', true), Text::toHex(position.y, 2, '0', true),
+					Text::toHex(tile, 2, '0', true), Text::toString(tile),
+					Text::toHex(attribute, 2, '0', true),
+					Text::toHex(mapAddress, 4, '0', true),
+					Text::toString(tileBank), Text::toHex(tileAddress, 4, '0', true),
+					hFlip ? "YES" : "NO", vFlip ? "YES" : "NO",
+					palette == -1 ? "-" : Text::toString(palette),
+					Text::toString(priority)
+				}
+			);
+		}
+	} _mapTips;
 
 public:
 	VramDebuggerImpl() {
@@ -588,8 +691,6 @@ private:
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_Tiles());
 
-		// TODO: options.
-
 		auto drawGrids = [] (const ImVec2 &curPos, const ImVec2 &dstSize) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
 
@@ -701,10 +802,25 @@ private:
 		MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
 		highlights.clear();
 		if (hasInfo) {
-			// TODO: tooltips.
-
 			const UInt8 tile = (UInt8)(tilePos.x + tilePos.y * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
 			const TileDetail::Array &details = _tileDetails[infoBank][(int)TileDetail::Usages::BG_MAP][tile].details;
+
+			const UInt16 addr = (UInt16)(
+				(0x8000 + (tilePos.x + tilePos.y * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK) * 16)
+			);
+			const int plt = details.empty() ? -1 : details.front().palette;
+			_tileTips.refresh(
+				theme,
+				tile,
+				(UInt8)infoBank, addr,
+				plt
+			);
+			if (!_tileTips.text.empty()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip(_tileTips.text);
+			}
+
 			for (const TileDetail &detail : details) {
 				highlights.push_back(detail.position);
 			}
@@ -754,8 +870,6 @@ private:
 			}
 		} while (false);
 
-		// TODO: options.
-
 		auto drawGrids = [] (const ImVec2 &curPos, const ImVec2 &dstSize) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
 
@@ -780,22 +894,6 @@ private:
 				curPos + ImVec2(w, h) + ImVec2(1, 1),
 				ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
 			);
-		};
-		auto drawHighlights = [] (const ImVec2 &curPos, const MapBuffer::Points &pos) -> void {
-			if (pos.empty())
-				return;
-
-			ImDrawList* drawList = ImGui::GetWindowDrawList();
-
-			for (const Math::Vec2i &pos_ : pos) {
-				const ImVec2 startPos((float)(pos_.x * GBBASIC_TILE_SIZE), (float)(pos_.y * GBBASIC_TILE_SIZE));
-				const ImVec2 endPos = startPos + ImVec2(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
-				drawList->AddRect(
-					curPos + startPos,
-					curPos + endPos + ImVec2(1, 1),
-					ImGui::GetColorU32(ImVec4(1, 0, 0, 0.75f))
-				);
-			}
 		};
 		auto drawCamera = [] (const ImVec2 &curPos, const ImVec2 &dstSize, UInt8 camX, UInt8 camY) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -829,6 +927,22 @@ private:
 						tick ? IM_COL32_WHITE : IM_COL32_BLACK
 					);
 				}
+			}
+		};
+		auto drawHighlights = [] (const ImVec2 &curPos, const MapBuffer::Points &pos) -> void {
+			if (pos.empty())
+				return;
+
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+			for (const Math::Vec2i &pos_ : pos) {
+				const ImVec2 startPos((float)(pos_.x * GBBASIC_TILE_SIZE), (float)(pos_.y * GBBASIC_TILE_SIZE));
+				const ImVec2 endPos = startPos + ImVec2(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
+				drawList->AddRect(
+					curPos + startPos,
+					curPos + endPos + ImVec2(1, 1),
+					ImGui::GetColorU32(ImVec4(1, 0, 0, 0.75f))
+				);
 			}
 		};
 
@@ -868,10 +982,10 @@ private:
 				if (showGrids)
 					drawGrids(curPos, dstSize);
 
+				drawCamera(curPos, dstSize, camX, camY);
+
 				const MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
 				drawHighlights(curPos, highlights);
-
-				drawCamera(curPos, dstSize, camX, camY);
 
 				if (ImGui::IsItemHovered()) {
 					const ImVec2 mousePos = ImGui::GetMousePos();
@@ -901,10 +1015,10 @@ private:
 
 			ImGui::PushClipRect(curPos, curPos + dstSize, true);
 			{
+				drawCamera(curPos, dstSize, camX, camY);
+
 				const MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
 				drawHighlights(curPos, highlights);
-
-				drawCamera(curPos, dstSize, camX, camY);
 			}
 			ImGui::PopClipRect();
 
@@ -921,14 +1035,43 @@ private:
 
 		_tiles.highlight = Math::Vec2i(-1, -1);
 		if (hasInfo) {
-			// TODO: tooltips.
-
 			const Device::MapBuffer &mapBuf = _options.isBgLayerActive ? _bgMapBuf : _winMapBuf;
 			const Device::MapBuffer &mapAttrBuf = _options.isBgLayerActive ? _bgMapAttrBuf : _winMapAttrBuf;
 			const int val = mapPos.x + mapPos.y * DEVICE_MAP_BUFFER_WIDTH;
 			const UInt8 tile = mapBuf[val];
 			const UInt8 attrs = mapAttrBuf[val];
+			const int plt = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
 			const int bank = !!((attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001) ? 1 : 0;
+			const bool hFlip = !!((attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001);
+			const bool vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
+			const int pri = (attrs >> GBBASIC_MAP_PRIORITY_BIT) & 0x00000001;
+
+			const Device::MapSourceTypes mapSrc = _options.isBgLayerActive ? device->getMapSourceType(Device::LayerTypes::BG) : device->getMapSourceType(Device::LayerTypes::WINDOW);
+			const UInt16 base = mapSrc == Device::MapSourceTypes::FROM_9800_TO_9BFF ? 0x9800 : 0x9c00;
+			const UInt16 addr = (UInt16)(
+				(0x8000 + (
+					tile < VRAM_DEBUGGER_TILES_SECTION_HALF_SIZE ?
+						tile + VRAM_DEBUGGER_TILES_SECTION_SIZE :
+						tile
+				) * 16)
+			);
+			_mapTips.refresh(
+				theme,
+				mapPos,
+				tile,
+				attrs,
+				(UInt16)(base + (mapPos.x + mapPos.y * DEVICE_MAP_BUFFER_WIDTH)),
+				(UInt8)bank, addr,
+				hFlip, vFlip,
+				plt,
+				pri
+			);
+			if (!_mapTips.text.empty()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip(_mapTips.text);
+			}
+
 			const std::div_t tdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
 			const int tx = tdiv.rem;
 			const int ty = tdiv.quot % VRAM_DEBUGGER_TILES_AREA_HEIGHT;
@@ -946,6 +1089,8 @@ private:
 
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted("// TODO");
+
+		// TODO
 	}
 	void palettes(Renderer* /* rnd */, Theme* theme, Device* /* device */) {
 		ImGui::AlignTextToFramePadding();
@@ -953,6 +1098,8 @@ private:
 
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted("// TODO");
+
+		// TODO
 	}
 };
 
