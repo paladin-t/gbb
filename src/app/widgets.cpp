@@ -3542,7 +3542,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
 		Project* prj = _projectShadow;
-		const bool isEditable = !prj || prj->contentType() == Project::ContentTypes::BASIC;
+		const bool isEditable = prj && prj->editable();
 
 		if (BeginTabBar("@Prj")) {
 			if (BeginTabItem(_theme->tabProjectProperty_Project(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
@@ -6392,6 +6392,39 @@ void SetHelpTooltip(const std::string &text) {
 
 		SetTooltip(text);
 	}
+}
+
+void ColorTooltip(const char* text, const Colour &col, ImGuiColorEditFlags flags) {
+	ImGuiContext &g = *GImGui;
+
+	const int rgb555 = col.toRGB555();
+	const ImVec4 col4v(col.r / 255.0f, col.g / 255.0f, col.b / 255.0f, col.a / 255.0f);
+	const float* colp = &col4v.x;
+
+	BeginTooltipEx(0, ImGuiTooltipFlags_OverridePreviousTooltip);
+	const char* text_end = text ? FindRenderedTextEnd(text, NULL) : text;
+	if (text_end > text) {
+		TextEx(text, text_end);
+		Separator();
+	}
+
+	ImVec2 sz(g.FontSize * 3 + g.Style.FramePadding.y * 2, g.FontSize * 3 + g.Style.FramePadding.y * 2);
+	ImVec4 cf(colp[0], colp[1], colp[2], (flags & ImGuiColorEditFlags_NoAlpha) ? 1.0f : colp[3]);
+	int cr = IM_F32_TO_INT8_SAT(colp[0]), cg = IM_F32_TO_INT8_SAT(colp[1]), cb = IM_F32_TO_INT8_SAT(colp[2]), ca = (flags & ImGuiColorEditFlags_NoAlpha) ? 255 : IM_F32_TO_INT8_SAT(colp[3]);
+	ColorButton("##prv", cf, (flags & (ImGuiColorEditFlags_InputMask_ | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaPreview | ImGuiColorEditFlags_AlphaPreviewHalf)) | ImGuiColorEditFlags_NoTooltip, sz);
+	SameLine();
+	if ((flags & ImGuiColorEditFlags_InputRGB) || !(flags & ImGuiColorEditFlags_InputMask_)) {
+		if (flags & ImGuiColorEditFlags_NoAlpha)
+			Text("#%02X%02X%02X, RGB555: ~%04X\nR: %d, G: %d, B: %d\n%.3f, %.3f, %.3f", cr, cg, cb, rgb555, cr, cg, cb, colp[0], colp[1], colp[2]);
+		else
+			Text("#%02X%02X%02X%02X, RGB555: ~%04X\nR:%d, G:%d, B:%d, A:%d\n%.3f, %.3f, %.3f, %.3f", cr, cg, cb, ca, rgb555, cr, cg, cb, ca, colp[0], colp[1], colp[2], colp[3]);
+	} else if (flags & ImGuiColorEditFlags_InputHSV) {
+		if (flags & ImGuiColorEditFlags_NoAlpha)
+			Text("H: %.3f, S: %.3f, V: %.3f", colp[0], colp[1], colp[2]);
+		else
+			Text("H: %.3f, S: %.3f, V: %.3f, A: %.3f", colp[0], colp[1], colp[2], colp[3]);
+	}
+	EndTooltip();
 }
 
 bool Checkbox(const std::string &label, bool* v) {

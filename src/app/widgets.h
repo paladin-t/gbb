@@ -1190,6 +1190,7 @@ bool PopupTooltip(const char* id, const std::string &text, const char* clear_txt
 void PopupHelpTooltip(const std::string &text);
 void SetTooltip(const std::string &text);
 void SetHelpTooltip(const std::string &text);
+void ColorTooltip(const char* text, const Colour &col, ImGuiColorEditFlags flags);
 
 bool Checkbox(const std::string &label, bool* v);
 

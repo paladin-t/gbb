@@ -1737,6 +1737,10 @@ std::string Project::sramPath(class Workspace* ws) const {
 	return path_;
 }
 
+bool Project::editable(void) const {
+	return contentType() == Project::ContentTypes::BASIC;
+}
+
 bool Project::dirty(void) {
 	if (!assets())
 		return false;

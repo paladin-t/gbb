@@ -7515,7 +7515,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 		} else if (f4 && !modifier && !io.KeyShift && !io.KeyAlt) {
 			if (!canvasDevice()) {
 				const Project::Ptr &prj = currentProject();
-				const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+				const bool isEditable = prj->editable();
 
 				if (isEditable)
 					launchProject(wnd, rnd, nullptr, nullptr, nullptr, false, -1);
@@ -7904,7 +7904,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 		typedef std::function<void(void)> Launcher;
 
 		const Project::Ptr &prj = currentProject();
-		const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+		const bool isEditable = prj->editable();
 		Launcher launches = nullptr;
 		if (isEditable) {
 			launches = [this, wnd, rnd, editing] (void) -> void {
@@ -7969,83 +7969,81 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 		if (ImGui::BeginMenu(theme()->menu_Project())) {
 			Project::Ptr &prj = currentProject();
 			const bool sel = recentProjectSelectedIndex() >= 0 && recentProjectSelectedIndex() < (int)projects().size();
-			const bool isEditable = !prj || prj->contentType() == Project::ContentTypes::BASIC;
+			const bool noOpenedOrIsEditable = !prj || prj->editable();
 
 			if (showRecentProjects()) {
-				if (isEditable) {
-					if (ImGui::MenuItem(theme()->menu_New(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+N" : GBBASIC_MODIFIER_KEY_NAME "+N")) {
-						closeFilter();
+				if (ImGui::MenuItem(theme()->menu_New(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+N" : GBBASIC_MODIFIER_KEY_NAME "+N")) {
+					closeFilter();
 
-						stopProject(wnd, rnd);
+					stopProject(wnd, rnd);
 
-						Operations::fileNew(wnd, rnd, this, fontConfig().empty() ? nullptr : fontConfig().c_str())
-							.then(
-								[wnd, rnd, this] (Project::Ptr prj) -> void {
-									ImGuiIO &io = ImGui::GetIO();
+					Operations::fileNew(wnd, rnd, this, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						.then(
+							[wnd, rnd, this] (Project::Ptr prj) -> void {
+								ImGuiIO &io = ImGui::GetIO();
 
-									if (io.KeyCtrl)
-										return;
+								if (io.KeyCtrl)
+									return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
-										.then(
-											[this, prj] (bool ok) -> void {
-												if (!ok)
-													return;
+								Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									.then(
+										[this, prj] (bool ok) -> void {
+											if (!ok)
+												return;
 
-												validateProject(prj.get());
-											}
-										);
-								}
-							);
+											validateProject(prj.get());
+										}
+									);
+							}
+						);
 
-						projectIndices().clear(); projectIndices().shrink_to_fit();
+					projectIndices().clear(); projectIndices().shrink_to_fit();
 
-						recentProjectSelectedIndex(-1);
+					recentProjectSelectedIndex(-1);
 
-						ImGui::EndMenu();
+					ImGui::EndMenu();
 
-						return true;
-					}
-					if (ImGui::MenuItem(theme()->menu_Import(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+O" : GBBASIC_MODIFIER_KEY_NAME "+O")) {
-						closeFilter();
+					return true;
+				}
+				if (ImGui::MenuItem(theme()->menu_Import(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+O" : GBBASIC_MODIFIER_KEY_NAME "+O")) {
+					closeFilter();
 
-						stopProject(wnd, rnd);
+					stopProject(wnd, rnd);
 
-						Operations::fileImport(wnd, rnd, this)
-							.then(
-								[wnd, rnd, this] (Project::Ptr prj) -> void {
-									if (!prj)
-										return;
+					Operations::fileImport(wnd, rnd, this)
+						.then(
+							[wnd, rnd, this] (Project::Ptr prj) -> void {
+								if (!prj)
+									return;
 
-									ImGuiIO &io = ImGui::GetIO();
+								ImGuiIO &io = ImGui::GetIO();
 
-									if (io.KeyCtrl)
-										return;
+								if (io.KeyCtrl)
+									return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
-										.then(
-											[wnd, rnd, this, prj] (bool ok) -> void {
-												if (!ok)
-													return;
+								Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									.then(
+										[wnd, rnd, this, prj] (bool ok) -> void {
+											if (!ok)
+												return;
 
-												validateProject(prj.get());
+											validateProject(prj.get());
 
-												if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-													launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
-											}
-										)
-										.fail(
-											[wnd, rnd, this, prj] (void) -> void {
-												Operations::fileRemoveReference(wnd, rnd, this, prj);
-											}
-										);
-								}
-							);
+											if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
+												launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+										}
+									)
+									.fail(
+										[wnd, rnd, this, prj] (void) -> void {
+											Operations::fileRemoveReference(wnd, rnd, this, prj);
+										}
+									);
+							}
+						);
 
-						ImGui::EndMenu();
+					ImGui::EndMenu();
 
-						return true;
-					}
+					return true;
 				}
 				if (!opened) {
 					if (ImGui::MenuItem(theme()->menu_ClearRecent(), nullptr, nullptr, !projects().empty())) {
@@ -8124,7 +8122,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 				}
 			}
 			if (opened) {
-				if (isEditable) {
+				if (noOpenedOrIsEditable) {
 					ImGui::Separator();
 					if (ImGui::MenuItem(theme()->menu_Save(), GBBASIC_MODIFIER_KEY_NAME "+S", nullptr, canSave)) {
 						if (showRecentProjects()) {
@@ -8152,7 +8150,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 				}
 #if defined GBBASIC_OS_HTML
 				if (!showRecentProjects()) {
-					if (isEditable) {
+					if (noOpenedOrIsEditable) {
 						if (ImGui::MenuItem(theme()->menu_Download())) {
 							Operations::fileExportForNotepad(wnd, rnd, this, prj);
 						}
@@ -8177,7 +8175,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			} else if (recentProjectSelectedIndex() >= 0) {
 				if (showRecentProjects()) {
 					Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
-					const bool isEditable_ = !prj || prj->contentType() == Project::ContentTypes::BASIC;
+					const bool noOpenedOrIsEditable_ = !prj || prj->editable();
 					ImGui::Separator();
 					if (ImGui::MenuItem(theme()->menu_Run(), nullptr, nullptr, sel)) {
 						closeFilter();
@@ -8194,7 +8192,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 								}
 							);
 					}
-					if (isEditable_ && ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
+					if (noOpenedOrIsEditable_ && ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
 						closeFilter();
 
 						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
@@ -8216,7 +8214,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuItem(theme()->menu_RemoveSramState(), nullptr, nullptr, prj->sramExists(this))) {
 						Operations::projectRemoveSram(wnd, rnd, this, prj, false);
 					}
-					if (isEditable_ && ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
+					if (noOpenedOrIsEditable_ && ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
 						Operations::fileDuplicate(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str());
 					}
 					ImGui::Separator();
@@ -10019,7 +10017,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 	case Categories::EMULATOR: {
 			const bool busy = _state == States::COMPILING || analyzing();
 			const Project::Ptr &prj = currentProject();
-			const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+			const bool isEditable = prj->editable();
 
 			if (category() == Categories::EMULATOR) {
 				if (docOpened) {
@@ -10600,7 +10598,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 					const bool sel = recentProjectSelectedIndex() >= 0 && recentProjectSelectedIndex() < (int)projects().size();
 
 					Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
-					const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+					const bool isEditable = prj->editable();
 
 					if (ImGui::MenuItem(theme()->menu_Run(), nullptr, nullptr, sel)) {
 						closeFilter();
@@ -12761,7 +12759,7 @@ void Workspace::exportProject(Window* wnd, Renderer* rnd, int toExport_) {
 	Exporter::Ptr ex = exporters()[toExport_];
 
 	const Project::Ptr &prj = currentProject();
-	const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+	const bool isEditable = prj->editable();
 	if (!isEditable) {
 		if (ex->packageArchived() || ex->buildEnabled()) {
 			bubble(theme()->dialogPrompt_NoNeedToBuildRom(), nullptr);

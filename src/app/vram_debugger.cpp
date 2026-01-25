@@ -236,6 +236,7 @@ private:
 	bool _opened = false;
 	struct {
 		bool isBgLayerActive = true;
+		float paletteTextWidthPerLine = 0;
 	} _options;
 
 	Palette::Collection _palettes;
@@ -384,15 +385,15 @@ public:
 		refresh(rnd, theme, device, previewPaletteBits);
 
 		tiles(rnd, theme, device, showGrids);
-		ImGui::NewLine(2);
+		ImGui::NewLine(1);
 		ImGui::Separator();
 
-		bgMap(rnd, theme, device, showGrids);
-		ImGui::NewLine(2);
+		map(rnd, theme, device, showGrids);
+		ImGui::NewLine(1);
 		ImGui::Separator();
 
 		oam(rnd, theme, device);
-		ImGui::NewLine(2);
+		ImGui::NewLine(1);
 		ImGui::Separator();
 
 		palettes(rnd, theme, device);
@@ -435,13 +436,15 @@ private:
 				_palettes[i].color[k] = col;
 			}
 		}
-		for (int i = 0; i < (int)Device::CgbPaletteTypes::COUNT; ++i) {
-			for (int j = 0; j < 8; ++j) {
-				const Device::PaletteRgba &pltRgba = device->getCgbPaletteRgba((Device::CgbPaletteTypes)i, j);
-				for (int k = 0; k < 4; ++k) {
-					const UInt32 rgba = pltRgba.color[k];
-					const Colour col = Colour::byRGBA8888(rgba);
-					_cgbPalettes[i][j].color[k] = col;
+		if (isCgb) {
+			for (int i = 0; i < (int)Device::CgbPaletteTypes::COUNT; ++i) {
+				for (int j = 0; j < 8; ++j) {
+					const Device::PaletteRgba &pltRgba = device->getCgbPaletteRgba((Device::CgbPaletteTypes)i, j);
+					for (int k = 0; k < 4; ++k) {
+						const UInt32 rgba = pltRgba.color[k];
+						const Colour col = Colour::byRGBA8888(rgba);
+						_cgbPalettes[i][j].color[k] = col;
+					}
 				}
 			}
 		}
@@ -688,8 +691,10 @@ private:
 			regMax.y - regMin.y - borderSize * 2
 		);
 
-		ImGui::AlignTextToFramePadding();
-		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_Tiles());
+		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_Tiles().c_str(), regSize.x, flags))
+			return;
+		ImGui::NewLine(1);
 
 		auto drawGrids = [] (const ImVec2 &curPos, const ImVec2 &dstSize) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -826,7 +831,7 @@ private:
 			}
 		}
 	}
-	void bgMap(Renderer* rnd, Theme* theme, Device* device, bool showGrids) {
+	void map(Renderer* rnd, Theme* theme, Device* device, bool showGrids) {
 		UInt8 bgX, bgY;
 		device->getBgScroll(&bgX, &bgY);
 		UInt8 wndX, wndY;
@@ -842,8 +847,10 @@ private:
 			regMax.y - regMin.y - borderSize * 2
 		);
 
-		ImGui::AlignTextToFramePadding();
-		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_BgWinMap());
+		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_BgWinMap().c_str(), regSize.x, flags))
+			return;
+		ImGui::NewLine(1);
 
 		ImGui::Dummy(ImVec2(2, 0));
 		ImGui::SameLine();
@@ -856,7 +863,7 @@ private:
 		ImGui::Dummy(ImVec2(remain, 0));
 		ImGui::SameLine();
 		do {
-			const char* items[] = {
+			constexpr const char* ITEMS[] = {
 				"BG", "WIN"
 			};
 
@@ -865,10 +872,13 @@ private:
 
 			int val = _options.isBgLayerActive ? 0 : 1;
 			ImGui::SetNextItemWidth(regSize.x * 0.7f);
-			if (ImGui::Combo("", &val, items, GBBASIC_COUNTOF(items))) {
+			if (ImGui::Combo("", &val, ITEMS, GBBASIC_COUNTOF(ITEMS))) {
 				_options.isBgLayerActive = val == 0;
 			}
 		} while (false);
+		ImGui::SameLine();
+		ImGui::NewLine();
+		ImGui::NewLine(2);
 
 		auto drawGrids = [] (const ImVec2 &curPos, const ImVec2 &dstSize) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -1084,22 +1094,182 @@ private:
 		}
 	}
 	void oam(Renderer* /* rnd */, Theme* theme, Device* /* device */) {
-		ImGui::AlignTextToFramePadding();
-		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_Oam());
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		const float borderSize = style.ChildBorderSize;
+		const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
+		const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
+		const ImVec2 regSize(
+			regMax.x - regMin.x - borderSize * 2,
+			regMax.y - regMin.y - borderSize * 2
+		);
+
+		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_Oam().c_str(), regSize.x, flags))
+			return;
+		ImGui::NewLine(1);
 
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted("// TODO");
 
 		// TODO
 	}
-	void palettes(Renderer* /* rnd */, Theme* theme, Device* /* device */) {
-		ImGui::AlignTextToFramePadding();
-		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_Palettes());
+	void palettes(Renderer* /* rnd */, Theme* theme, Device* device) {
+		const bool isCgb = device->deviceHasCgbSupport();
 
-		ImGui::AlignTextToFramePadding();
-		ImGui::TextUnformatted("// TODO");
+		ImGuiStyle &style = ImGui::GetStyle();
 
-		// TODO
+		const float borderSize = style.ChildBorderSize;
+		const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
+		const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
+		const ImVec2 regSize(
+			regMax.x - regMin.x - borderSize * 2,
+			regMax.y - regMin.y - borderSize * 2
+		);
+
+		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_Palettes().c_str(), regSize.x, flags))
+			return;
+		ImGui::NewLine(1);
+
+		if (isCgb) {
+			constexpr const char* const GRP[] = {
+				"BG0",  "BG1",  "BG2",  "BG3",  "BG4",  "BG5",  "BG6",  "BG7",
+				"OBJ0", "OBJ1", "OBJ2", "OBJ3", "OBJ4", "OBJ5", "OBJ6", "OBJ7"
+			};
+
+			VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2());
+
+			const bool recalcTxtWidth = _options.paletteTextWidthPerLine <= 0;
+			const float colWidth = std::ceil((regSize.x - _options.paletteTextWidthPerLine) / 8);
+
+			float posX = -1;
+			const float posY = ImGui::GetCursorPosY();
+			int k = 0;
+			for (int i = 0; i < (int)_cgbPalettes.size(); ++i) {
+				const CgbPalette::Group &group = _cgbPalettes[i];
+
+				if (i == 1)
+					ImGui::SetCursorPosY(posY);
+
+				for (int j = 0; j < (int)group.size(); ++j, ++k) {
+					const CgbPalette &palette = group[j];
+
+					if (i == 1)
+						ImGui::SetCursorPosX(posX);
+
+					ImGui::AlignTextToFramePadding();
+					if (recalcTxtWidth && j == 0) {
+						const float x = ImGui::GetCursorPosX();
+						if (i == 1) {
+							ImGui::Dummy(ImVec2(1, 0));
+							ImGui::SameLine();
+						}
+						ImGui::TextUnformatted(GRP[k]);
+						ImGui::SameLine();
+						_options.paletteTextWidthPerLine += ImGui::GetCursorPosX() - x;
+					} else {
+						if (i == 1) {
+							ImGui::Dummy(ImVec2(1, 0));
+							ImGui::SameLine();
+						}
+						ImGui::TextUnformatted(GRP[k]);
+						ImGui::SameLine();
+					}
+
+					for (int l = 0; l < GBBASIC_COUNTOF(palette.color); ++l) {
+						const Colour &col = palette.color[l];
+						const ImVec4 col4v(col.r / 255.0f, col.g / 255.0f, col.b / 255.0f, col.a / 255.0f);
+
+						ImGui::PushID(l);
+						const float size = 19.0f;
+						if (ImGui::ColorButton("", col4v, ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_AlphaPreview, ImVec2(colWidth, size))) {
+							// Do nothing.
+						}
+						if (ImGui::IsItemHovered()) {
+							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+							ImGui::ColorTooltip("", col, (ImGuiColorEditFlags_NoAlpha));
+						}
+						ImGui::SameLine();
+						ImGui::PopID();
+					}
+
+					if (posX <= 0)
+						posX = ImGui::GetCursorPosX();
+
+					ImGui::NewLine();
+					ImGui::NewLine(1);
+				}
+			}
+		} else {
+			constexpr const char* const GRP[] = {
+				"BGP ",
+				"OBP0", "OBP1"
+			};
+
+			VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2());
+
+			const bool recalcTxtWidth = _options.paletteTextWidthPerLine <= 0;
+			const float colWidth = std::ceil((regSize.x - _options.paletteTextWidthPerLine) / 8);
+
+			float posX = -1;
+			float posY = -1;
+			int k = 0;
+			for (int i = 0; i < (int)_palettes.size(); ++i, ++k) {
+				const Palette &palette = _palettes[i];
+
+				if (i == 1) {
+					posY = ImGui::GetCursorPosY();
+				} else if (i == 2) {
+					ImGui::SetCursorPosY(posY);
+					ImGui::SetCursorPosX(posX);
+				}
+
+				ImGui::AlignTextToFramePadding();
+				if (recalcTxtWidth && i > 0) {
+					const float x = ImGui::GetCursorPosX();
+					if (i == 2) {
+						ImGui::Dummy(ImVec2(1, 0));
+						ImGui::SameLine();
+					}
+					ImGui::TextUnformatted(GRP[k]);
+					ImGui::SameLine();
+					_options.paletteTextWidthPerLine += ImGui::GetCursorPosX() - x;
+				} else {
+					if (i == 2) {
+						ImGui::Dummy(ImVec2(1, 0));
+						ImGui::SameLine();
+					}
+					ImGui::TextUnformatted(GRP[k]);
+					ImGui::SameLine();
+				}
+
+				for (int l = 0; l < GBBASIC_COUNTOF(palette.color); ++l) {
+					const Colour &col = palette.color[l];
+					const ImVec4 col4v(col.r / 255.0f, col.g / 255.0f, col.b / 255.0f, col.a / 255.0f);
+
+					ImGui::PushID(l);
+					const float size = 19.0f;
+					if (ImGui::ColorButton("", col4v, ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_AlphaPreview, ImVec2(colWidth, size))) {
+						// Do nothing.
+					}
+					if (ImGui::IsItemHovered()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						ImGui::ColorTooltip("", col, (ImGuiColorEditFlags_NoAlpha));
+					}
+					ImGui::SameLine();
+					ImGui::PopID();
+				}
+
+				if (posX <= 0)
+					posX = ImGui::GetCursorPosX();
+
+				ImGui::NewLine();
+				ImGui::NewLine(1);
+			}
+		}
 	}
 };
 
