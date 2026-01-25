@@ -302,6 +302,7 @@ public:
 	bool sramExists(class Workspace* ws) const;
 	std::string sramPath(class Workspace* ws) const;
 
+	bool editable(void) const;
 	bool dirty(void);
 
 	bool open(const char* path);

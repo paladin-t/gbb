@@ -156,6 +156,7 @@
 		689DD5F92E2F3F18001D2B86 /* workspace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD5CA2E2F3F18001D2B86 /* workspace.cpp */; settings = {COMPILER_FLAGS = "-Wno-unused-function"; }; };
 		689DD5FC2E2F3F8E001D2B86 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 689DD5FB2E2F3F8E001D2B86 /* AppDelegate.m */; };
 		689DD6042E2F3FA2001D2B86 /* inline_resource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD5FF2E2F3FA1001D2B86 /* inline_resource.cpp */; };
+		68F4AD552F20DA52008EF32D /* vram_debugger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68F4AD542F20DA51008EF32D /* vram_debugger.cpp */; };
 		68F810F72E2F496500A859D1 /* image_.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68F810F62E2F494700A859D1 /* image_.cpp */; };
 		68F810FA2E2F4BF700A859D1 /* libSDL2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 68F810F92E2F4BF700A859D1 /* libSDL2.dylib */; };
 		68F810FB2E2F4C1000A859D1 /* libSDL2.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 68F810F92E2F4BF700A859D1 /* libSDL2.dylib */; };
@@ -640,6 +641,8 @@
 		689DD6022E2F3FA1001D2B86 /* inline_font.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inline_font.h; path = src/app/resource/inline_font.h; sourceTree = "<group>"; };
 		689DD6032E2F3FA2001D2B86 /* inline_text.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inline_text.h; path = src/app/resource/inline_text.h; sourceTree = "<group>"; };
 		68C4B4312E93ACA300AC1D3F /* inline_code.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = inline_code.h; path = src/app/resource/inline_code.h; sourceTree = "<group>"; };
+		68F4AD532F20DA51008EF32D /* vram_debugger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = vram_debugger.h; path = src/app/vram_debugger.h; sourceTree = "<group>"; };
+		68F4AD542F20DA51008EF32D /* vram_debugger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vram_debugger.cpp; path = src/app/vram_debugger.cpp; sourceTree = "<group>"; };
 		68F810F62E2F494700A859D1 /* image_.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = image_.cpp; path = lib/clip/image_.cpp; sourceTree = "<group>"; };
 		68F810F92E2F4BF700A859D1 /* libSDL2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libSDL2.dylib; path = lib/sdl/lib/mac/libSDL2.dylib; sourceTree = "<group>"; };
 		68F810FD2E2F70C600A859D1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = src/app/mac/Assets.xcassets; sourceTree = "<group>"; };
@@ -1073,6 +1076,8 @@
 				689DD5B12E2F3F15001D2B86 /* settings.h */,
 				689DD5832E2F3F10001D2B86 /* theme.cpp */,
 				689DD5B22E2F3F15001D2B86 /* theme.h */,
+				68F4AD542F20DA51008EF32D /* vram_debugger.cpp */,
+				68F4AD532F20DA51008EF32D /* vram_debugger.h */,
 				689DD5AC2E2F3F15001D2B86 /* widgets.cpp */,
 				689DD5A12E2F3F14001D2B86 /* widgets.h */,
 				689DD5CA2E2F3F18001D2B86 /* workspace.cpp */,
@@ -1726,6 +1731,7 @@
 				689DD5EE2E2F3F18001D2B86 /* editor_code_binding.cpp in Sources */,
 				689DD5362E2F3DE9001D2B86 /* colour.cpp in Sources */,
 				689DD5422E2F3DE9001D2B86 /* archive.cpp in Sources */,
+				68F4AD552F20DA52008EF32D /* vram_debugger.cpp in Sources */,
 				689DD5552E2F3DE9001D2B86 /* image.cpp in Sources */,
 				031B4EAC25833CB2002EF476 /* zip.c in Sources */,
 				689DD5312E2F3DE9001D2B86 /* archive_zip.cpp in Sources */,

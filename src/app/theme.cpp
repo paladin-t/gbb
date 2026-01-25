@@ -848,6 +848,12 @@ bool Theme::open(class Renderer* rnd) {
 
 	windowCode_SearchFor("Search for");
 
+	windowEmulator_VramDebugger_BgWinMap("BG/WIN map");
+	windowEmulator_VramDebugger_Layer("Layer");
+	windowEmulator_VramDebugger_Oam("OAM");
+	windowEmulator_VramDebugger_Palettes("Palettes");
+	windowEmulator_VramDebugger_Tiles("Tiles");
+
 	windowTiles_CreateMap("Create map");
 
 	windowMap("Map");
@@ -1153,6 +1159,33 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_StatusNote(tooltipEmulator_StatusNote() + "Cartridge SRAM: {3}\n");
 	tooltipEmulator_StatusNote(tooltipEmulator_StatusNote() + "Cartridge RTC : {4}");
 	tooltipEmulator_ToggleOnscreenGamepad("Toggle onscreen gamepad");
+	tooltipEmulator_VramDebugger_Map(
+		" Position: {0}, {1}\n"
+		"  Tile No. {2} ({3})\n"
+		"Attribute: {4}\n"
+		" Map addr: {5}\n"
+		"Tile addr: {6}:{7}\n"
+		"   H-flip: {8}\n"
+		"   V-flip: {9}\n"
+		"  Palette: {10}\n"
+		" Priority: {11}"
+	);
+	tooltipEmulator_VramDebugger_Oam(
+		" Position: {0}, {1}\n"
+		"  Tile No. {2} ({3})\n"
+		"Attribute: {4}\n"
+		" OAM addr: {5}\n"
+		"Tile addr: {6}:{7}\n"
+		"   H-flip: {8}\n"
+		"   V-flip: {9}\n"
+		"  Palette: {10}\n"
+		" Priority: {11}"
+	);
+	tooltipEmulator_VramDebugger_Tile(
+		"    Tile No. {0} ({1})\n"
+		"  Tile addr: {2}:{3}\n"
+		"Guessed plt. {4}"
+	);
 
 	tooltipFont_Info("{0} glyphs");
 	tooltipFont_Trim("Whether to trim glyph height.\nIt is recommended to keep this option checked.");

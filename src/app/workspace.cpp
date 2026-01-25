@@ -25,6 +25,7 @@
 #include "emulator.h"
 #include "operations.h"
 #include "theme.h"
+#include "vram_debugger.h"
 #include "workspace.h"
 #include "resource/inline_resource.h"
 #include "../compiler/compiler.h"
@@ -572,6 +573,15 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 	searchResultVisible(false);
 	searchResultHeight(0.0f);
 	searchResultResizing(false);
+
+	// Initialize the debugger states.
+	vramDebugger(nullptr);
+	vramDebuggerPreviewPaletteBits(true);
+	vramDebuggerShowGrids(true);
+	vramDebuggerPreviousOuterWidth(0.0f);
+	vramDebuggerWidth(0.0f);
+	vramDebuggerResizing(false);
+	vramDebuggerResetting(false);
 
 	// Config the recorder.
 #if defined GBBASIC_OS_WIN || defined GBBASIC_OS_MAC || defined GBBASIC_OS_LINUX
@@ -1853,17 +1863,17 @@ void Workspace::debug(const char* msg) {
 	fprintf(stdout, "%s\n", osstr.c_str());
 
 	do {
-		LockGuard<decltype(debuggerLock())> guard(debuggerLock());
+		LockGuard<decltype(onscreenDebuggerLock())> guard(onscreenDebuggerLock());
 
-		debuggerMessages().add(msg);
+		onscreenDebuggerMessages().add(msg);
 	} while (false);
 }
 
 void Workspace::debug(void) {
 	// Clear the debug messages.
-	LockGuard<decltype(debuggerLock())> guard(debuggerLock());
+	LockGuard<decltype(onscreenDebuggerLock())> guard(onscreenDebuggerLock());
 
-	debuggerMessages().clear();
+	onscreenDebuggerMessages().clear();
 }
 
 void Workspace::cursor(Device::CursorTypes mode) {
@@ -1898,6 +1908,25 @@ void Workspace::stop(class Window* wnd, class Renderer* rnd) {
 				}
 			}
 		);
+}
+
+class VramDebugger* Workspace::initializeVramDebugger(class Window* /* wnd */, class Renderer* rnd) {
+	if (vramDebugger())
+		return vramDebugger();
+
+	vramDebugger(VramDebugger::create());
+	vramDebugger()->open(rnd, theme());
+
+	return vramDebugger();
+}
+
+void Workspace::disposeVramDebugger(void) {
+	if (!vramDebugger())
+		return;
+
+	vramDebugger()->close();
+	VramDebugger::destroy(vramDebugger());
+	vramDebugger(nullptr);
 }
 
 void Workspace::focusLost(Window* wnd, Renderer* rnd) {
@@ -7486,7 +7515,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 		} else if (f4 && !modifier && !io.KeyShift && !io.KeyAlt) {
 			if (!canvasDevice()) {
 				const Project::Ptr &prj = currentProject();
-				const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+				const bool isEditable = prj->editable();
 
 				if (isEditable)
 					launchProject(wnd, rnd, nullptr, nullptr, nullptr, false, -1);
@@ -7875,7 +7904,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 		typedef std::function<void(void)> Launcher;
 
 		const Project::Ptr &prj = currentProject();
-		const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+		const bool isEditable = prj->editable();
 		Launcher launches = nullptr;
 		if (isEditable) {
 			launches = [this, wnd, rnd, editing] (void) -> void {
@@ -7940,83 +7969,81 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 		if (ImGui::BeginMenu(theme()->menu_Project())) {
 			Project::Ptr &prj = currentProject();
 			const bool sel = recentProjectSelectedIndex() >= 0 && recentProjectSelectedIndex() < (int)projects().size();
-			const bool isEditable = !prj || prj->contentType() == Project::ContentTypes::BASIC;
+			const bool noOpenedOrIsEditable = !prj || prj->editable();
 
 			if (showRecentProjects()) {
-				if (isEditable) {
-					if (ImGui::MenuItem(theme()->menu_New(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+N" : GBBASIC_MODIFIER_KEY_NAME "+N")) {
-						closeFilter();
+				if (ImGui::MenuItem(theme()->menu_New(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+N" : GBBASIC_MODIFIER_KEY_NAME "+N")) {
+					closeFilter();
 
-						stopProject(wnd, rnd);
+					stopProject(wnd, rnd);
 
-						Operations::fileNew(wnd, rnd, this, fontConfig().empty() ? nullptr : fontConfig().c_str())
-							.then(
-								[wnd, rnd, this] (Project::Ptr prj) -> void {
-									ImGuiIO &io = ImGui::GetIO();
+					Operations::fileNew(wnd, rnd, this, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						.then(
+							[wnd, rnd, this] (Project::Ptr prj) -> void {
+								ImGuiIO &io = ImGui::GetIO();
 
-									if (io.KeyCtrl)
-										return;
+								if (io.KeyCtrl)
+									return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
-										.then(
-											[this, prj] (bool ok) -> void {
-												if (!ok)
-													return;
+								Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									.then(
+										[this, prj] (bool ok) -> void {
+											if (!ok)
+												return;
 
-												validateProject(prj.get());
-											}
-										);
-								}
-							);
+											validateProject(prj.get());
+										}
+									);
+							}
+						);
 
-						projectIndices().clear(); projectIndices().shrink_to_fit();
+					projectIndices().clear(); projectIndices().shrink_to_fit();
 
-						recentProjectSelectedIndex(-1);
+					recentProjectSelectedIndex(-1);
 
-						ImGui::EndMenu();
+					ImGui::EndMenu();
 
-						return true;
-					}
-					if (ImGui::MenuItem(theme()->menu_Import(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+O" : GBBASIC_MODIFIER_KEY_NAME "+O")) {
-						closeFilter();
+					return true;
+				}
+				if (ImGui::MenuItem(theme()->menu_Import(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+O" : GBBASIC_MODIFIER_KEY_NAME "+O")) {
+					closeFilter();
 
-						stopProject(wnd, rnd);
+					stopProject(wnd, rnd);
 
-						Operations::fileImport(wnd, rnd, this)
-							.then(
-								[wnd, rnd, this] (Project::Ptr prj) -> void {
-									if (!prj)
-										return;
+					Operations::fileImport(wnd, rnd, this)
+						.then(
+							[wnd, rnd, this] (Project::Ptr prj) -> void {
+								if (!prj)
+									return;
 
-									ImGuiIO &io = ImGui::GetIO();
+								ImGuiIO &io = ImGui::GetIO();
 
-									if (io.KeyCtrl)
-										return;
+								if (io.KeyCtrl)
+									return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
-										.then(
-											[wnd, rnd, this, prj] (bool ok) -> void {
-												if (!ok)
-													return;
+								Operations::fileOpen(wnd, rnd, this, prj, true, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									.then(
+										[wnd, rnd, this, prj] (bool ok) -> void {
+											if (!ok)
+												return;
 
-												validateProject(prj.get());
+											validateProject(prj.get());
 
-												if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-													launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
-											}
-										)
-										.fail(
-											[wnd, rnd, this, prj] (void) -> void {
-												Operations::fileRemoveReference(wnd, rnd, this, prj);
-											}
-										);
-								}
-							);
+											if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
+												launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
+										}
+									)
+									.fail(
+										[wnd, rnd, this, prj] (void) -> void {
+											Operations::fileRemoveReference(wnd, rnd, this, prj);
+										}
+									);
+							}
+						);
 
-						ImGui::EndMenu();
+					ImGui::EndMenu();
 
-						return true;
-					}
+					return true;
 				}
 				if (!opened) {
 					if (ImGui::MenuItem(theme()->menu_ClearRecent(), nullptr, nullptr, !projects().empty())) {
@@ -8095,7 +8122,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 				}
 			}
 			if (opened) {
-				if (isEditable) {
+				if (noOpenedOrIsEditable) {
 					ImGui::Separator();
 					if (ImGui::MenuItem(theme()->menu_Save(), GBBASIC_MODIFIER_KEY_NAME "+S", nullptr, canSave)) {
 						if (showRecentProjects()) {
@@ -8119,11 +8146,11 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 							}
 						);
 					}
+					ImGui::Separator();
 				}
-				ImGui::Separator();
 #if defined GBBASIC_OS_HTML
 				if (!showRecentProjects()) {
-					if (isEditable) {
+					if (noOpenedOrIsEditable) {
 						if (ImGui::MenuItem(theme()->menu_Download())) {
 							Operations::fileExportForNotepad(wnd, rnd, this, prj);
 						}
@@ -8148,7 +8175,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			} else if (recentProjectSelectedIndex() >= 0) {
 				if (showRecentProjects()) {
 					Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
-					const bool isEditable_ = !prj || prj->contentType() == Project::ContentTypes::BASIC;
+					const bool noOpenedOrIsEditable_ = !prj || prj->editable();
 					ImGui::Separator();
 					if (ImGui::MenuItem(theme()->menu_Run(), nullptr, nullptr, sel)) {
 						closeFilter();
@@ -8165,7 +8192,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 								}
 							);
 					}
-					if (isEditable_ && ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
+					if (noOpenedOrIsEditable_ && ImGui::MenuItem(theme()->menu_Open(), nullptr, nullptr, sel)) {
 						closeFilter();
 
 						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
@@ -8187,7 +8214,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuItem(theme()->menu_RemoveSramState(), nullptr, nullptr, prj->sramExists(this))) {
 						Operations::projectRemoveSram(wnd, rnd, this, prj, false);
 					}
-					if (isEditable_ && ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
+					if (noOpenedOrIsEditable_ && ImGui::MenuItem(theme()->menu_Duplicate(), nullptr, nullptr, prj->exists())) {
 						Operations::fileDuplicate(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str());
 					}
 					ImGui::Separator();
@@ -9990,7 +10017,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 	case Categories::EMULATOR: {
 			const bool busy = _state == States::COMPILING || analyzing();
 			const Project::Ptr &prj = currentProject();
-			const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+			const bool isEditable = prj->editable();
 
 			if (category() == Categories::EMULATOR) {
 				if (docOpened) {
@@ -10571,7 +10598,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 					const bool sel = recentProjectSelectedIndex() >= 0 && recentProjectSelectedIndex() < (int)projects().size();
 
 					Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
-					const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+					const bool isEditable = prj->editable();
 
 					if (ImGui::MenuItem(theme()->menu_Run(), nullptr, nullptr, sel)) {
 						closeFilter();
@@ -10643,7 +10670,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 			if (polluted)
 				break;
 
-			// Render the sticker.
+			// Render the icon.
 			auto getBuiltinIcon = [rnd, this] (Project::Ptr &prj) -> void* {
 				void* iconTex = nullptr;
 				if (prj->contentType() == Project::ContentTypes::BASIC) {
@@ -11600,7 +11627,8 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
 			settings().debugOnscreenDebugEnabled,
-			settings().debugVramDebugEnabled,
+			vramDebugger(), settings().debugVramDebugEnabled, vramDebuggerPreviewPaletteBits(), vramDebuggerShowGrids(),
+			vramDebuggerPreviousOuterWidth(), vramDebuggerWidth(), vramDebuggerResizing(), vramDebuggerResetting(),
 			canvasCursorMode(),
 			!!popupBox(),
 			fps,
@@ -11626,9 +11654,9 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 }
 
 void Workspace::debug(Window*, Renderer* rnd, float marginTop, float marginBottom) {
-	LockGuard<decltype(debuggerLock())> guard(debuggerLock());
+	LockGuard<decltype(onscreenDebuggerLock())> guard(onscreenDebuggerLock());
 
-	if (debuggerMessages().empty())
+	if (onscreenDebuggerMessages().empty())
 		return;
 
 	ImGuiStyle &style = ImGui::GetStyle();
@@ -11641,11 +11669,11 @@ void Workspace::debug(Window*, Renderer* rnd, float marginTop, float marginBotto
 	{
 		const ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.11f, 0.11f, 0.11f, 1.00f));
-		ImGui::TextUnformatted(debuggerMessages().text);
+		ImGui::TextUnformatted(onscreenDebuggerMessages().text);
 		ImGui::PopStyleColor();
 		ImGui::SetCursorPos(pos - ImVec2(0, 1));
 		ImGui::PushStyleColor(ImGuiCol_Text, theme()->style()->debugColor);
-		ImGui::TextUnformatted(debuggerMessages().text);
+		ImGui::TextUnformatted(onscreenDebuggerMessages().text);
 		ImGui::PopStyleColor();
 	}
 	ImGui::EndChild();
@@ -12731,7 +12759,7 @@ void Workspace::exportProject(Window* wnd, Renderer* rnd, int toExport_) {
 	Exporter::Ptr ex = exporters()[toExport_];
 
 	const Project::Ptr &prj = currentProject();
-	const bool isEditable = prj->contentType() == Project::ContentTypes::BASIC;
+	const bool isEditable = prj->editable();
 	if (!isEditable) {
 		if (ex->packageArchived() || ex->buildEnabled()) {
 			bubble(theme()->dialogPrompt_NoNeedToBuildRom(), nullptr);

@@ -121,9 +121,9 @@ public:
 	virtual PaletteRgba getPaletteRgba(PaletteTypes type) const override;
 	virtual PaletteRgba getCgbPaletteRgba(CgbPaletteTypes type, int index) const override;
 	virtual PaletteRgba getSgbPaletteRgba(int index) const override;
-	virtual void getTileBuffer(TileBuffer buf) const override;
-	virtual void getMapBuffer(MapSourceTypes type, MapBuffer buf) const override;
-	virtual void getMapAttrBuffer(MapSourceTypes type, MapBuffer buf) const override;
+	virtual void getTileBuffer(TileBuffer &buf) const override;
+	virtual void getMapBuffer(MapSourceTypes type, MapBuffer &buf) const override;
+	virtual void getMapAttrBuffer(MapSourceTypes type, MapBuffer &buf) const override;
 	virtual void getSgbMapAttrBuffer(UInt8 map[90]) const override;
 	virtual void getBgScroll(UInt8* x, UInt8* y) const override;
 	virtual void getWindowScroll(UInt8* x, UInt8* y) const override;

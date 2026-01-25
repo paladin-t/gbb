@@ -542,6 +542,9 @@
     <ClCompile Include="src\app\activities.cpp">
       <Filter>app</Filter>
     </ClCompile>
+    <ClCompile Include="src\app\vram_debugger.cpp">
+      <Filter>app</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="utils">
@@ -1593,6 +1596,9 @@
     </ClInclude>
     <ClInclude Include="src\app\resource\inline_code.h">
       <Filter>app\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\vram_debugger.h">
+      <Filter>app</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

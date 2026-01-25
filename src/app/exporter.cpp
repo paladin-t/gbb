@@ -91,7 +91,7 @@ bool Exporter::Settings::operator != (const Settings &other) const {
 	if (emulatorShowTitleBar != other.emulatorShowTitleBar ||
 		emulatorShowStatusBar != other.emulatorShowStatusBar ||
 		emulatorShowPreferenceDialogOnEscPress != other.emulatorShowPreferenceDialogOnEscPress
-		) {
+	) {
 		return true;
 	}
 

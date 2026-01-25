@@ -61,6 +61,9 @@
 #ifndef DEVICE_MAP_BUFFER_SIZE
 #	define DEVICE_MAP_BUFFER_SIZE (DEVICE_MAP_BUFFER_WIDTH * DEVICE_MAP_BUFFER_HEIGHT)
 #endif /* DEVICE_MAP_BUFFER_SIZE */
+#ifndef DEVICE_OBJ_COUNT
+#	define DEVICE_OBJ_COUNT 40
+#endif /* DEVICE_OBJ_COUNT */
 
 /* ===========================================================================} */
 
@@ -115,19 +118,21 @@ public:
 	/**< VRAM debugging structures. */
 
 	enum class Colors {
-		WHITE,
+		WHITE = 0,
 		LIGHT_GRAY,
 		DARK_GRAY,
 		BLACK
 	};
 	enum class PaletteTypes {
-		BGP,
+		BGP = 0,
 		OBP0,
-		OBP1
+		OBP1,
+		COUNT
 	};
 	enum class CgbPaletteTypes {
-		BGCP,
-		OBCP
+		BGCP = 0,
+		OBCP,
+		COUNT
 	};
 
 	enum class ObjPriorities {
@@ -141,13 +146,13 @@ public:
 	};
 
 	enum class TileSourceTypes {
-		INVALID,
-		FROM_8800_TO_97FF,
+		INVALID = ~0,
+		FROM_8800_TO_97FF = 0,
 		FROM_8000_TO_8FFF
 	};
 	enum class MapSourceTypes {
-		INVALID,
-		FROM_9800_TO_9BFF,
+		INVALID = ~0,
+		FROM_9800_TO_9BFF = 0,
 		FROM_9C00_TO_9FFF
 	};
 
@@ -161,16 +166,16 @@ public:
 	typedef std::array<UInt8, DEVICE_TILE_BUFFER_WIDTH * DEVICE_TILE_BUFFER_HEIGHT> TileBuffer;
 	typedef std::array<UInt8, DEVICE_MAP_BUFFER_SIZE> MapBuffer;
 	struct Obj {
-		UInt8 y;
-		UInt8 x;
-		UInt8 tile;
-		UInt8 byte3;
-		ObjPriorities priority;
-		bool yflip;
-		bool xflip;
-		UInt8 palette;
-		UInt8 bank;
-		UInt8 cgbPalette;
+		UInt8 y = 0;
+		UInt8 x = 0;
+		UInt8 tile = 0;
+		UInt8 byte3 = 0;
+		ObjPriorities priority = ObjPriorities::ABOVE_BG;
+		bool yFlip = false;
+		bool xFlip = false;
+		UInt8 palette = 0;
+		UInt8 bank = 0;
+		UInt8 cgbPalette = 0;
 	};
 
 	/**< Protocols. */
@@ -256,9 +261,9 @@ public:
 	virtual PaletteRgba getPaletteRgba(PaletteTypes type) const = 0;
 	virtual PaletteRgba getCgbPaletteRgba(CgbPaletteTypes type, int index) const = 0;
 	virtual PaletteRgba getSgbPaletteRgba(int index) const = 0;
-	virtual void getTileBuffer(TileBuffer buf) const = 0;
-	virtual void getMapBuffer(MapSourceTypes type, MapBuffer buf) const = 0;
-	virtual void getMapAttrBuffer(MapSourceTypes type, MapBuffer buf) const = 0;
+	virtual void getTileBuffer(TileBuffer &buf) const = 0;
+	virtual void getMapBuffer(MapSourceTypes type, MapBuffer &buf) const = 0;
+	virtual void getMapAttrBuffer(MapSourceTypes type, MapBuffer &buf) const = 0;
 	virtual void getSgbMapAttrBuffer(UInt8 map[90]) const = 0;
 	virtual void getBgScroll(UInt8* x /* nullable */, UInt8* y /* nullable */) const = 0;
 	virtual void getWindowScroll(UInt8* x /* nullable */, UInt8* y /* nullable */) const = 0;

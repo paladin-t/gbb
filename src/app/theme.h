@@ -653,6 +653,12 @@ public:
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowCode_SearchFor)
 
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_BgWinMap)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_Layer)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_Oam)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_Palettes)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_Tiles)
+
 	GBBASIC_PROPERTY_READONLY(std::string, windowTiles_CreateMap)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap)
@@ -891,6 +897,9 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_NormalSpeed)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_StatusNote)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_ToggleOnscreenGamepad)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_VramDebugger_Map)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_VramDebugger_Oam)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_VramDebugger_Tile)
 
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipFont_Info)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipFont_Trim)

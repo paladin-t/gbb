@@ -623,8 +623,15 @@ public:
 	GBBASIC_PROPERTY(float, searchResultHeight)
 	GBBASIC_PROPERTY(bool, searchResultResizing)
 
-	GBBASIC_PROPERTY(DebuggerMessages, debuggerMessages)
-	GBBASIC_FIELD(Mutex, debuggerLock)
+	GBBASIC_PROPERTY(DebuggerMessages, onscreenDebuggerMessages)
+	GBBASIC_FIELD(Mutex, onscreenDebuggerLock)
+	GBBASIC_PROPERTY_READONLY_PTR(class VramDebugger, vramDebugger)
+	GBBASIC_PROPERTY(bool, vramDebuggerPreviewPaletteBits)
+	GBBASIC_PROPERTY(bool, vramDebuggerShowGrids)
+	GBBASIC_PROPERTY(float, vramDebuggerPreviousOuterWidth)
+	GBBASIC_PROPERTY(float, vramDebuggerWidth)
+	GBBASIC_PROPERTY(bool, vramDebuggerResizing)
+	GBBASIC_PROPERTY(bool, vramDebuggerResetting)
 
 private:
 	bool _opened = false;
@@ -702,10 +709,13 @@ public:
 	void debug(void);
 	virtual void cursor(Device::CursorTypes mode) override;
 
-	virtual void run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom, bool traceless);
+	void run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom, bool traceless);
 	virtual bool running(void) const override;
 	virtual void pause(class Window* wnd, class Renderer* rnd) override;
 	virtual void stop(class Window* wnd, class Renderer* rnd) override;
+
+	class VramDebugger* initializeVramDebugger(class Window* wnd, class Renderer* rnd);
+	void disposeVramDebugger(void);
 
 	void focusLost(Window* wnd, Renderer* rnd);
 	void focusGained(Window* wnd, Renderer* rnd);

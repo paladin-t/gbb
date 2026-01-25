@@ -9,6 +9,7 @@
 #include "editor.h"
 #include "emulator.h"
 #include "theme.h"
+#include "vram_debugger.h"
 #include "widgets.h"
 #include "../../lib/binjgb/src/emulator.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
@@ -26,6 +27,13 @@
 #ifndef EMULATOR_SGB_PADDING_Y
 #	define EMULATOR_SGB_PADDING_Y SGB_SCREEN_TOP
 #endif /* EMULATOR_SGB_PADDING_Y */
+
+#ifndef EMULATOR_VRAM_DEBUGGER_MAX_WIDTH
+#	define EMULATOR_VRAM_DEBUGGER_MAX_WIDTH 256.0f
+#endif /* EMULATOR_VRAM_DEBUGGER_MAX_WIDTH */
+#ifndef EMULATOR_VRAM_DEBUGGER_MIN_WIDTH
+#	define EMULATOR_VRAM_DEBUGGER_MIN_WIDTH 160.0f
+#endif /* EMULATOR_VRAM_DEBUGGER_MIN_WIDTH */
 
 /* ===========================================================================} */
 
@@ -58,7 +66,14 @@ struct Context {
 	float onscreenGamepadScale;
 	Math::Vec2<float> onscreenGamepadPadding;
 	bool* onscreenDebugEnabled = nullptr;
+	VramDebugger* vramDebugger = nullptr;
 	bool* vramDebugEnabled = nullptr;
+	bool* vramDebuggerPreviewPaletteBits = nullptr;
+	bool* vramDebuggerShowGrids = nullptr;
+	float* vramDebuggerPreviousOuterWidth = nullptr;
+	float* vramDebuggerWidth = nullptr;
+	bool* vramDebuggerResizing = nullptr;
+	bool* vramDebuggerResetting = nullptr;
 	Device::CursorTypes cursor = Device::CursorTypes::POINTER;
 	bool hasPopup;
 	unsigned deviceFps;
@@ -73,6 +88,9 @@ struct Context {
 	Math::Vec2f scale;      // `dstSize` / `srcSize`.
 	Math::Vec2i clientSize; // The size of the client area.
 
+	bool canShowOnscreenGamepad = false;
+	bool canShowVramDebugger = false;
+
 	Context(
 		Window* window_, Renderer* renderer_,
 		Theme* theme_,
@@ -83,7 +101,8 @@ struct Context {
 		bool integerScale_, bool fixRatio_,
 		bool* onscreenGamepadEnabled_, bool onscreenGamepadSwapAB_, float onscreenGamepadScale_, const Math::Vec2<float> onscreenGamepadPadding_,
 		bool* onscreenDebugEnabled_,
-		bool* vramDebugEnabled_,
+		VramDebugger* vramDebugger_, bool* vramDebugEnabled_, bool* vramDebuggerPreviewPaletteBits_, bool* vramDebuggerShowGrids_,
+		float* vramDebuggerPreviousOuterWidth_, float* vramDebuggerWidth_,  bool* vramDebuggerResizing_, bool* vramDebuggerResetting_,
 		Device::CursorTypes cursor_,
 		bool hasPopup_,
 		unsigned deviceFps_, unsigned fps_,
@@ -98,7 +117,8 @@ struct Context {
 		integerScale(integerScale_), fixRatio(fixRatio_),
 		onscreenGamepadEnabled(onscreenGamepadEnabled_), onscreenGamepadSwapAB(onscreenGamepadSwapAB_), onscreenGamepadScale(onscreenGamepadScale_), onscreenGamepadPadding(onscreenGamepadPadding_),
 		onscreenDebugEnabled(onscreenDebugEnabled_),
-		vramDebugEnabled(vramDebugEnabled_),
+		vramDebugger(vramDebugger_), vramDebugEnabled(vramDebugEnabled_), vramDebuggerPreviewPaletteBits(vramDebuggerPreviewPaletteBits_), vramDebuggerShowGrids(vramDebuggerShowGrids_),
+		vramDebuggerPreviousOuterWidth(vramDebuggerPreviousOuterWidth_), vramDebuggerWidth(vramDebuggerWidth_),  vramDebuggerResizing(vramDebuggerResizing_), vramDebuggerResetting(vramDebuggerResetting_),
 		cursor(cursor_),
 		hasPopup(hasPopup_),
 		deviceFps(deviceFps_), fps(fps_),
@@ -107,7 +127,7 @@ struct Context {
 	}
 
 	// Begin rendering context.
-	void begin(bool showSgbBorder) {
+	bool begin(bool showSgbBorder) {
 		// Prepare.
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -120,6 +140,51 @@ struct Context {
 			regMax.y - regMin.y - borderSize * 2
 		);
 
+		canShowVramDebugger = regSize.x >= SCREEN_WIDTH + EMULATOR_VRAM_DEBUGGER_MIN_WIDTH + 2;
+		const bool vramDbg = canShowVramDebugger && (!!vramDebugger && *vramDebugEnabled);
+		if (vramDbg) {
+			const ImGuiWindowFlags flags =
+				ImGuiWindowFlags_NoTitleBar |
+				ImGuiWindowFlags_NoResize |
+				ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_NoScrollbar |
+				ImGuiWindowFlags_NoCollapse |
+				ImGuiWindowFlags_NoSavedSettings |
+				ImGuiWindowFlags_NoBringToFrontOnFocus |
+				ImGuiWindowFlags_NoNav;
+
+			if (*vramDebuggerWidth <= 0) {
+				*vramDebuggerWidth = calculateVramDebuggerWidth(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
+			}
+			if (*vramDebuggerPreviousOuterWidth <= 0) {
+				*vramDebuggerPreviousOuterWidth = regSize.x;
+			}
+			if (*vramDebuggerPreviousOuterWidth != regSize.x) {
+				*vramDebuggerWidth = *vramDebuggerWidth / *vramDebuggerPreviousOuterWidth * regSize.x;
+				*vramDebuggerWidth = calculateVramDebuggerWidth(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
+				*vramDebuggerPreviousOuterWidth = regSize.x;
+			}
+
+			const ImVec2 curPos = ImGui::GetCursorScreenPos();
+			const ImVec2 size(
+				regSize.x - *vramDebuggerWidth,
+				regSize.y - (showStatus ? (statusBarHeight - style.ChildBorderSize) : style.ChildBorderSize)
+			);
+			ImGui::PushClipRect(curPos, curPos + size, false);
+
+			ImGui::BeginChild("#Cvs", ImVec2(regSize.x - *vramDebuggerWidth, regSize.y), true, flags);
+		}
+
+		ImVec2 regSize_ = regSize;
+		if (vramDbg) {
+			const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
+			const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
+			regSize_ = ImVec2(
+				regMax.x - regMin.x - borderSize * 2,
+				regMax.y - regMin.y - borderSize * 2
+			);
+		}
+
 		// Determine the source texture size.
 		clientSize = Math::Vec2i(Math::max(canvasTexture->width(), SCREEN_WIDTH), Math::max(canvasTexture->height(), SCREEN_HEIGHT));
 		srcSize = showSgbBorder ?
@@ -128,7 +193,7 @@ struct Context {
 
 		// Calculate the client area.
 		dstPos = ImGui::GetCursorPos();
-		dstSize = regSize;
+		dstSize = regSize_;
 		dstSize.y -= showStatus ? (statusBarHeight - style.ChildBorderSize) : style.ChildBorderSize;
 
 		if (integerScale) {
@@ -186,10 +251,15 @@ struct Context {
 			dstSize.x = (float)(dstSize.x - scale.x * (EMULATOR_SGB_PADDING_X * 2));
 			dstSize.y = (float)(dstSize.y - scale.y * (EMULATOR_SGB_PADDING_Y * 2));
 		}
+
+		// Finish.
+		return vramDbg;
 	}
 	// End rendering context.
-	void end(void) const {
+	void end(bool vramDbg) {
 		// Render the onscreen gamepad.
+		canShowOnscreenGamepad = false;
+
 		int pressed = 0;
 		if (*onscreenGamepadEnabled) {
 			pressed = input->updateOnscreenGamepad(
@@ -198,7 +268,8 @@ struct Context {
 				onscreenGamepadSwapAB,
 				onscreenGamepadScale,
 				onscreenGamepadPadding.x, onscreenGamepadPadding.y,
-				true
+				true,
+				&canShowOnscreenGamepad
 			);
 		}
 
@@ -216,6 +287,110 @@ struct Context {
 
 			input->sync();
 		}
+
+		if (vramDbg) {
+			ImGui::EndChild();
+
+			ImGui::PopClipRect();
+		}
+	}
+
+	void debugVram(bool vramDbg) {
+		// Prepare.
+		if (!vramDbg)
+			return;
+
+		const bool wasResizing = *vramDebuggerResizing;
+		bool isResizing = *vramDebuggerResizing;
+		bool isResetting = *vramDebuggerResetting;
+
+		ImGui::SameLine();
+
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1);
+		if (wasResizing) {
+			const ImVec4 &col = ImGui::GetStyleColorVec4(ImGuiCol_ResizeGripActive);
+			ImGui::PushStyleColor(ImGuiCol_Border, col);
+		}
+		const float borderSize = style.WindowBorderSize;
+
+		ImGuiWindowFlags flags =
+			ImGuiWindowFlags_NoTitleBar |
+			ImGuiWindowFlags_NoResize |
+			ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoCollapse |
+			ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_NoBringToFrontOnFocus |
+			ImGuiWindowFlags_AlwaysVerticalScrollbar |
+			ImGuiWindowFlags_NoNav;
+		const float x = (float)ImGui::GetCursorPosX();
+		const float width = *vramDebuggerWidth;
+		const float height = regSize.y - statusBarHeight - borderSize * 2;
+
+		// Resize.
+		const float gripMarginX = ImGui::WindowResizingPadding().x;
+		const float gripPaddingY = 4.0f;
+		if (isResizing && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			isResizing = false;
+		}
+		if (isResetting && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+			isResetting = false;
+		}
+		const bool isHoveringRect = ImGui::IsMouseHoveringRect(
+			ImVec2(x, gripPaddingY),
+			ImVec2(x + gripMarginX, height - gripPaddingY - style.ScrollbarSize),
+			false
+		);
+		if (isHoveringRect && !hasPopup) {
+			isResizing = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+
+			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+				isResetting = true;
+
+			ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+		} else if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+			isResizing = false;
+		}
+		if (isResizing && !isResetting) {
+			flags &= ~ImGuiWindowFlags_NoResize;
+		}
+
+		if (isResetting) {
+			*vramDebuggerWidth = 0;
+		} else if (isResizing) {
+			const ImVec2 mousePos = ImGui::GetMousePos();
+			*vramDebuggerWidth = calculateVramDebuggerWidth(regSize.x - mousePos.x);
+		}
+
+		// Draw the VRAM debugger.
+		ImGui::BeginChild("#VDbg", ImVec2(width, height), true, flags);
+		{
+			vramDebugger->update(
+				renderer, theme, canvasDevice,
+				*vramDebuggerPreviewPaletteBits, *vramDebuggerShowGrids
+			);
+		}
+		ImGui::EndChild();
+
+		// Finish.
+		if (wasResizing) {
+			ImGui::PopStyleColor();
+		}
+		ImGui::PopStyleVar();
+
+		*vramDebuggerResizing = isResizing;
+		*vramDebuggerResetting = isResetting;
+	}
+
+private:
+	float calculateVramDebuggerWidth(float width) const {
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		width = std::min(width, std::min(regSize.x - SCREEN_WIDTH, EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2));
+		width = std::max(width, EMULATOR_VRAM_DEBUGGER_MIN_WIDTH);
+
+		return std::floor(width);
 	}
 };
 
@@ -417,8 +592,10 @@ static void shortcuts(const Context &context) {
 
 	// Overlay operations.
 	if (modifier && !io.KeyShift && !io.KeyAlt) {
-		if (g)
-			*context.onscreenGamepadEnabled = !*context.onscreenGamepadEnabled;
+		if (context.canShowOnscreenGamepad) {
+			if (g)
+				*context.onscreenGamepadEnabled = !*context.onscreenGamepadEnabled;
+		}
 	}
 	if (modifier && !io.KeyShift && !io.KeyAlt) {
 		if (slash) {
@@ -442,13 +619,41 @@ static void menu(const Context &context) {
 	VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
 
 	if (ImGui::BeginPopup("@Views")) {
-		ImGui::MenuItem(context.theme->menu_OnscreenGamepad(), GBBASIC_MODIFIER_KEY_NAME "+G", context.onscreenGamepadEnabled);
+		if (context.canShowOnscreenGamepad) {
+			ImGui::MenuItem(context.theme->menu_OnscreenGamepad(), GBBASIC_MODIFIER_KEY_NAME "+G", context.onscreenGamepadEnabled);
+		} else {
+			ImGui::BeginDisabled();
+			ImGui::MenuItem(context.theme->menu_OnscreenGamepad(), GBBASIC_MODIFIER_KEY_NAME "+G", context.onscreenGamepadEnabled);
+			ImGui::EndDisabled();
+		}
 
 		ImGui::MenuItem(context.theme->menu_OnscreenDebug(), nullptr, context.onscreenDebugEnabled);
 
-		ImGui::Separator();
+		if (!!context.vramDebugger) {
+			ImGui::Separator();
 
-		ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
+			if (context.canShowVramDebugger) {
+				ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
+			} else {
+				ImGui::BeginDisabled();
+				ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
+				ImGui::EndDisabled();
+			}
+			if (context.canShowVramDebugger && *context.vramDebugEnabled) {
+				ImGui::MenuItem(context.theme->menu_PaletteBits(), nullptr, context.vramDebuggerPreviewPaletteBits);
+				if (ImGui::IsItemHovered()) {
+					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+					ImGui::SetTooltip(context.theme->tooltip_PreviewPaletteBitsForColoredOnly());
+				}
+				ImGui::MenuItem(context.theme->menu_Grids(), nullptr, context.vramDebuggerShowGrids);
+			} else {
+				ImGui::BeginDisabled();
+				ImGui::MenuItem(context.theme->menu_PaletteBits(), nullptr, context.vramDebuggerPreviewPaletteBits);
+				ImGui::MenuItem(context.theme->menu_Grids(), nullptr, context.vramDebuggerShowGrids);
+				ImGui::EndDisabled();
+			}
+		}
 
 		ImGui::EndPopup();
 	}
@@ -464,7 +669,8 @@ void emulator(
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,
-	bool &vramDebugEnabled,
+	class VramDebugger* vramDebugger, bool &vramDebugEnabled, bool &vramDebuggerPreviewPaletteBits, bool &vramDebuggerShowGrids,
+	float &vramDebuggerPreviousOuterWidth, float &vramDebuggerWidth, bool &vramDebuggerResizing, bool &vramDebuggerResetting,
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,
@@ -482,7 +688,8 @@ void emulator(
 		integerScale, fixRatio,
 		&onscreenGamepadEnabled, onscreenGamepadSwapAB, onscreenGamepadScale, onscreenGamepadPadding,
 		&onscreenDebugEnabled,
-		&vramDebugEnabled,
+		vramDebugger, &vramDebugEnabled, &vramDebuggerPreviewPaletteBits, &vramDebuggerShowGrids,
+		&vramDebuggerPreviousOuterWidth, &vramDebuggerWidth, &vramDebuggerResizing, &vramDebuggerResetting,
 		cursor,
 		hasPopup,
 		canvasDevice->fps(), fps,
@@ -495,7 +702,7 @@ void emulator(
 		return;
 
 	// Render emulation.
-	context.begin(!!canvasTextureForBorderFrame);
+	const bool vramDbg = context.begin(!!canvasTextureForBorderFrame);
 	{
 		// Render the canvas.
 		if (canvasTextureForBorderFrame) {
@@ -547,11 +754,14 @@ void emulator(
 			if (debug)
 				debug();
 		}
-
-		// Render the status.
-		renderStatus(context);
 	}
-	context.end();
+	context.end(vramDbg);
+
+	// Render VRAM debugger.
+	context.debugVram(vramDbg);
+
+	// Render the status.
+	renderStatus(context);
 
 	// Check the shortcuts.
 	shortcuts(context);
