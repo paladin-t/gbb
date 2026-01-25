@@ -737,11 +737,11 @@ Device::Obj DeviceBinjgb::getObj(int index) const {
 	result.tile = (UInt8)obj.tile;
 	result.byte3 = (UInt8)obj.byte3;
 	result.priority = obj.priority == OBJ_PRIORITY_ABOVE_BG ? ObjPriorities::ABOVE_BG : ObjPriorities::BEHIND_BG;
-	result.yflip = !!obj.yflip;
-	result.xflip = !!obj.xflip;
-	result.palette = (UInt8)obj.palette;
-	result.bank = (UInt8)obj.bank;
-	result.cgbPalette = (UInt8)obj.cgb_palette;
+	result.yFlip = !!obj.yflip;
+	result.xFlip = !!obj.xflip;
+	result.palette = (UInt8)Math::clamp(obj.palette, (UInt8)0, (UInt8)1);
+	result.bank = (UInt8)Math::clamp(obj.bank, (UInt8)0, (UInt8)1);
+	result.cgbPalette = (UInt8)Math::clamp(obj.cgb_palette, (UInt8)0, (UInt8)7);
 
 	return result;
 }
@@ -756,8 +756,8 @@ bool DeviceBinjgb::isObjVisible(const Obj* obj) const {
 	obj_.tile = (u8)obj->tile;
 	obj_.byte3 = (u8)obj->byte3;
 	obj_.priority = obj->priority == ObjPriorities::ABOVE_BG ? OBJ_PRIORITY_ABOVE_BG : OBJ_PRIORITY_BEHIND_BG;
-	obj_.yflip = obj->yflip ? TRUE : FALSE;
-	obj_.xflip = obj->xflip ? TRUE : FALSE;
+	obj_.yflip = obj->yFlip ? TRUE : FALSE;
+	obj_.xflip = obj->xFlip ? TRUE : FALSE;
 	obj_.palette = (u8)obj->palette;
 	obj_.bank = (u8)obj->bank;
 	obj_.cgb_palette = (u8)obj->cgbPalette;

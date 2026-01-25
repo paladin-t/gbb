@@ -1170,6 +1170,17 @@ bool Theme::open(class Renderer* rnd) {
 		"  Palette: {10}\n"
 		" Priority: {11}"
 	);
+	tooltipEmulator_VramDebugger_Oam(
+		" Position: {0}, {1}\n"
+		"  Tile No. {2} ({3})\n"
+		"Attribute: {4}\n"
+		" OAM addr: {5}\n"
+		"Tile addr: {6}:{7}\n"
+		"   H-flip: {8}\n"
+		"   V-flip: {9}\n"
+		"  Palette: {10}\n"
+		" Priority: {11}"
+	);
 	tooltipEmulator_VramDebugger_Tile(
 		"    Tile No. {0} ({1})\n"
 		"  Tile addr: {2}:{3}\n"

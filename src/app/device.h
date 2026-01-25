@@ -166,16 +166,16 @@ public:
 	typedef std::array<UInt8, DEVICE_TILE_BUFFER_WIDTH * DEVICE_TILE_BUFFER_HEIGHT> TileBuffer;
 	typedef std::array<UInt8, DEVICE_MAP_BUFFER_SIZE> MapBuffer;
 	struct Obj {
-		UInt8 y;
-		UInt8 x;
-		UInt8 tile;
-		UInt8 byte3;
-		ObjPriorities priority;
-		bool yflip;
-		bool xflip;
-		UInt8 palette;
-		UInt8 bank;
-		UInt8 cgbPalette;
+		UInt8 y = 0;
+		UInt8 x = 0;
+		UInt8 tile = 0;
+		UInt8 byte3 = 0;
+		ObjPriorities priority = ObjPriorities::ABOVE_BG;
+		bool yFlip = false;
+		bool xFlip = false;
+		UInt8 palette = 0;
+		UInt8 bank = 0;
+		UInt8 cgbPalette = 0;
 	};
 
 	/**< Protocols. */

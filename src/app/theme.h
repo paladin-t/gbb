@@ -898,6 +898,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_StatusNote)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_ToggleOnscreenGamepad)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_VramDebugger_Map)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_VramDebugger_Oam)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_VramDebugger_Tile)
 
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipFont_Info)
