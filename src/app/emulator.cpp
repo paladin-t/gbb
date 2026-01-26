@@ -72,6 +72,7 @@ struct Context {
 	bool* vramDebuggerShowGrids = nullptr;
 	float* vramDebuggerPreviousOuterWidth = nullptr;
 	float* vramDebuggerWidth = nullptr;
+	float* vramDebuggerHeight = nullptr;
 	bool* vramDebuggerResizing = nullptr;
 	bool* vramDebuggerResetting = nullptr;
 	Device::CursorTypes cursor = Device::CursorTypes::POINTER;
@@ -104,7 +105,7 @@ struct Context {
 		bool* onscreenGamepadEnabled_, bool onscreenGamepadSwapAB_, float onscreenGamepadScale_, const Math::Vec2<float> onscreenGamepadPadding_,
 		bool* onscreenDebugEnabled_,
 		VramDebugger* vramDebugger_, bool* vramDebugEnabled_, bool* vramDebuggerPreviewPaletteBits_, bool* vramDebuggerShowGrids_,
-		float* vramDebuggerPreviousOuterWidth_, float* vramDebuggerWidth_,  bool* vramDebuggerResizing_, bool* vramDebuggerResetting_,
+		float* vramDebuggerPreviousOuterWidth_, float* vramDebuggerWidth_, float* vramDebuggerHeight_,  bool* vramDebuggerResizing_, bool* vramDebuggerResetting_,
 		Device::CursorTypes cursor_,
 		bool hasPopup_,
 		unsigned deviceFps_, unsigned fps_,
@@ -121,7 +122,7 @@ struct Context {
 		onscreenGamepadEnabled(onscreenGamepadEnabled_), onscreenGamepadSwapAB(onscreenGamepadSwapAB_), onscreenGamepadScale(onscreenGamepadScale_), onscreenGamepadPadding(onscreenGamepadPadding_),
 		onscreenDebugEnabled(onscreenDebugEnabled_),
 		vramDebugger(vramDebugger_), vramDebugEnabled(vramDebugEnabled_), vramDebuggerPreviewPaletteBits(vramDebuggerPreviewPaletteBits_), vramDebuggerShowGrids(vramDebuggerShowGrids_),
-		vramDebuggerPreviousOuterWidth(vramDebuggerPreviousOuterWidth_), vramDebuggerWidth(vramDebuggerWidth_),  vramDebuggerResizing(vramDebuggerResizing_), vramDebuggerResetting(vramDebuggerResetting_),
+		vramDebuggerPreviousOuterWidth(vramDebuggerPreviousOuterWidth_), vramDebuggerWidth(vramDebuggerWidth_), vramDebuggerHeight(vramDebuggerHeight_),  vramDebuggerResizing(vramDebuggerResizing_), vramDebuggerResetting(vramDebuggerResetting_),
 		cursor(cursor_),
 		hasPopup(hasPopup_),
 		deviceFps(deviceFps_), fps(fps_),
@@ -336,10 +337,12 @@ struct Context {
 		const float x = (float)ImGui::GetCursorPosX();
 		const float height = regSize.y - statusBarHeight - borderSize * 2;
 		const bool heightIsSafeForVramDebugger = height >= vramDebugger->safeHeight();
-		if (!ramDebuggerGotSafeHeight) {
+		if (!ramDebuggerGotSafeHeight)
 			flags |= ImGuiWindowFlags_AlwaysVerticalScrollbar;
-		}
 		const float width = *vramDebuggerWidth;
+		const bool heightChanged = *vramDebuggerHeight != height;
+		if (heightChanged)
+			*vramDebuggerHeight = height;
 
 		// Resize.
 		const float gripMarginX = ImGui::WindowResizingPadding().x;
@@ -369,7 +372,7 @@ struct Context {
 			flags &= ~ImGuiWindowFlags_NoResize;
 		}
 
-		if (isResetting || vramDebugger->safeHeight() == 0) {
+		if (isResetting || heightChanged || vramDebugger->safeHeight() == 0) {
 			*vramDebuggerWidth = 0;
 		} else if (isResizing) {
 			const ImVec2 mousePos = ImGui::GetMousePos();
@@ -687,7 +690,7 @@ void emulator(
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,
 	class VramDebugger* vramDebugger, bool &vramDebugEnabled, bool &vramDebuggerPreviewPaletteBits, bool &vramDebuggerShowGrids,
-	float &vramDebuggerPreviousOuterWidth, float &vramDebuggerWidth, bool &vramDebuggerResizing, bool &vramDebuggerResetting,
+	float &vramDebuggerPreviousOuterWidth, float &vramDebuggerWidth, float &vramDebuggerHeight, bool &vramDebuggerResizing, bool &vramDebuggerResetting,
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,
@@ -707,7 +710,7 @@ void emulator(
 		&onscreenGamepadEnabled, onscreenGamepadSwapAB, onscreenGamepadScale, onscreenGamepadPadding,
 		&onscreenDebugEnabled,
 		vramDebugger, &vramDebugEnabled, &vramDebuggerPreviewPaletteBits, &vramDebuggerShowGrids,
-		&vramDebuggerPreviousOuterWidth, &vramDebuggerWidth, &vramDebuggerResizing, &vramDebuggerResetting,
+		&vramDebuggerPreviousOuterWidth, &vramDebuggerWidth, &vramDebuggerHeight, &vramDebuggerResizing, &vramDebuggerResetting,
 		cursor,
 		hasPopup,
 		canvasDevice->fps(), fps,

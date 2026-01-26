@@ -433,6 +433,7 @@ public:
 		TO_LOCATION,
 		COMPILE,
 		RUN,
+		TOGGLE_VRAM_DEBUGGER,
 		COUNT
 	};
 
@@ -630,6 +631,7 @@ public:
 	GBBASIC_PROPERTY(bool, vramDebuggerShowGrids)
 	GBBASIC_PROPERTY(float, vramDebuggerPreviousOuterWidth)
 	GBBASIC_PROPERTY(float, vramDebuggerWidth)
+	GBBASIC_PROPERTY(float, vramDebuggerHeight)
 	GBBASIC_PROPERTY(bool, vramDebuggerResizing)
 	GBBASIC_PROPERTY(bool, vramDebuggerResetting)
 
