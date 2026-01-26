@@ -10,6 +10,7 @@
 #include "vram_debugger.h"
 #include "widgets.h"
 #include "../utils/datetime.h"
+#include "../../lib/binjgb/src/emulator.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "../../lib/imgui/imgui_internal.h"
 
@@ -195,7 +196,10 @@ private:
 		Usages usage = Usages::MAP;
 		Math::Vec2i position;
 		int palette = 0; // CGB palette.
-		int obp = 0; // Classic palette for sprite.
+		struct {
+			int palette = 0; // Classic palette for sprite.
+			int index = 0; // OAM index.
+		} oam;
 
 		TileDetail() {
 		}
@@ -205,12 +209,13 @@ private:
 			palette(pal)
 		{
 		}
-		TileDetail(Usages use, const Math::Vec2i &pos, int pal, int obp_) :
+		TileDetail(Usages use, const Math::Vec2i &pos, int pal, int obp_, int idx) :
 			usage(use),
 			position(pos),
-			palette(pal),
-			obp(obp_)
+			palette(pal)
 		{
+			oam.palette = obp_;
+			oam.index = idx;
 		}
 
 		static void clear(TileDetail::Banks &details) {
@@ -228,8 +233,10 @@ private:
 	};
 
 	struct TilesBuffer {
+		typedef std::array<Math::Vec2i, 2> Points;
+
 		BufferTexture buffer;
-		Math::Vec2i highlight = Math::Vec2i(-1, -1);
+		Points highlights;
 
 		void touch(Renderer* rnd) {
 			buffer.touch(rnd, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 * GBBASIC_TILE_SIZE, VRAM_DEBUGGER_TILES_AREA_HEIGHT * GBBASIC_TILE_SIZE);
@@ -259,6 +266,7 @@ private:
 		BufferTexture buffer;
 		Device::Obj obj;
 		bool visible = false;
+		bool highlight = false;
 
 		void touch(Renderer* rnd) {
 			buffer.touch(rnd, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE * 2);
@@ -464,6 +472,11 @@ private:
 		}
 	} _oamTips;
 
+	struct {
+		bool highlighted = false;
+		Math::Recti area;
+	} _inGameHighlight;
+
 public:
 	VramDebuggerImpl() {
 	}
@@ -494,6 +507,27 @@ public:
 		_winMap.reset();
 		for (ObjBuffer &obj : _objs)
 			obj.reset();
+
+		return true;
+	}
+
+	virtual int highlightCount(void) const override {
+		if (_inGameHighlight.highlighted)
+			return 1;
+
+		return 0;
+	}
+	virtual bool getHighlight(int index, Math::Recti* area) const override {
+		if (area)
+			*area = Math::Recti();
+
+		if (!_inGameHighlight.highlighted)
+			return false;
+		if (index != 0)
+			return false;
+
+		if (area)
+			*area = _inGameHighlight.area;
 
 		return true;
 	}
@@ -600,7 +634,8 @@ private:
 			TileDetail::Banks &tileDetails,
 			bool is8x16Obj, const ObjBuffer::Array &objs
 		) -> void {
-			for (const ObjBuffer &obj : objs) {
+			for (int i = 0; i < (int)objs.size(); ++i) {
+				const ObjBuffer &obj = objs[i];
 				const Device::Obj &dobj = obj.obj;
 
 				const int ox = dobj.x;
@@ -613,12 +648,12 @@ private:
 
 				TileDetail::Ref &ref = tileDetails[bank][(int)TileDetail::Usages::OBJ][tile];
 				++ref.refCount;
-				const TileDetail detail(TileDetail::Usages::OBJ, Math::Vec2i(ox, oy), plt, obp);
+				const TileDetail detail(TileDetail::Usages::OBJ, Math::Vec2i(ox, oy), plt, obp, i);
 				ref.details.push_back(detail);
 				if (is8x16Obj) {
 					TileDetail::Ref &ref_ = tileDetails[bank][(int)TileDetail::Usages::OBJ][(tile + 1) % 255];
 					++ref_.refCount;
-					const TileDetail detail_(TileDetail::Usages::OBJ, Math::Vec2i(ox, oy + GBBASIC_TILE_SIZE), plt, obp);
+					const TileDetail detail_(TileDetail::Usages::OBJ, Math::Vec2i(ox, oy + GBBASIC_TILE_SIZE), plt, obp, i);
 					ref_.details.push_back(detail_);
 				}
 			}
@@ -706,7 +741,7 @@ private:
 									col = palettes[cplt].color[val];
 								} else {
 									const TileDetail &detail = details->front(); // Use the first for paletting.
-									col = palettes[(int)detail.usage + detail.obp].color[val];
+									col = palettes[(int)detail.usage + detail.oam.palette].color[val];
 								}
 							}
 						} else {
@@ -940,19 +975,21 @@ private:
 				ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
 			);
 		};
-		auto drawHighlight = [] (const ImVec2 &curPos, const Math::Vec2i &pos) -> void {
-			if (pos == Math::Vec2i(-1, -1))
-				return;
-
+		auto drawHighlights = [] (const ImVec2 &curPos, const TilesBuffer::Points &pos) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
 
-			const ImVec2 startPos((float)(pos.x * GBBASIC_TILE_SIZE), (float)(pos.y * GBBASIC_TILE_SIZE));
-			const ImVec2 endPos = startPos + ImVec2(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
-			drawList->AddRect(
-				curPos + startPos,
-				curPos + endPos + ImVec2(1, 1),
-				ImGui::GetColorU32(ImVec4(1, 0, 0, 0.75f))
-			);
+			for (const Math::Vec2i &pos_ : pos) {
+				if (pos_ == Math::Vec2i(-1, -1))
+					continue;
+
+				const ImVec2 startPos((float)(pos_.x * GBBASIC_TILE_SIZE), (float)(pos_.y * GBBASIC_TILE_SIZE));
+				const ImVec2 endPos = startPos + ImVec2(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
+				drawList->AddRect(
+					curPos + startPos,
+					curPos + endPos + ImVec2(1, 1),
+					ImGui::GetColorU32(ImVec4(1, 0, 0, 0.75f))
+				);
+			}
 		};
 
 		bool hasInfo = false;
@@ -980,7 +1017,7 @@ private:
 				if (showGrids)
 					drawGrids(curPos, dstSize);
 
-				drawHighlight(curPos, _tiles.highlight);
+				drawHighlights(curPos, _tiles.highlights);
 
 				if (ImGui::IsItemHovered()) {
 					const ImVec2 mousePos = ImGui::GetMousePos();
@@ -1009,7 +1046,7 @@ private:
 			if (showGrids)
 				drawGrids(curPos, dstSize);
 
-			drawHighlight(curPos, _tiles.highlight);
+			drawHighlights(curPos, _tiles.highlights);
 
 			if (ImGui::IsItemHovered()) {
 				const ImVec2 mousePos = ImGui::GetMousePos();
@@ -1023,16 +1060,17 @@ private:
 			}
 		}
 
-		MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
-		highlights.clear();
 		if (hasInfo) {
 			const UInt8 tile = (UInt8)(tilePos.x + tilePos.y * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-			const TileDetail::Array &details = _tileDetails[infoBank][(int)TileDetail::Usages::MAP][tile].details;
+			const TileDetail::Array &mapDetails = _tileDetails[infoBank][(int)TileDetail::Usages::MAP][tile].details;
+			const TileDetail::Array &oamDetails = _tileDetails[infoBank][(int)TileDetail::Usages::OBJ][tile].details;
 
 			const UInt16 addr = (UInt16)(
 				(0x8000 + (tilePos.x + tilePos.y * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK) * 16)
 			);
-			const int plt = details.empty() ? -1 : details.front().palette;
+			int plt = mapDetails.empty() ? -1 : mapDetails.front().palette;
+			if (plt == -1)
+				plt = oamDetails.empty() ? -1 : oamDetails.front().palette;
 			_tileTips.refresh(
 				theme,
 				tile,
@@ -1045,10 +1083,17 @@ private:
 				ImGui::SetTooltip(_tileTips.text);
 			}
 
-			for (const TileDetail &detail : details) {
+			MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
+			for (const TileDetail &detail : mapDetails) {
 				highlights.push_back(detail.position);
 			}
+			for (const TileDetail &detail : oamDetails) {
+				_objs[detail.oam.index].highlight = true;
+			}
 		}
+
+		_tiles.highlights[0] = Math::Vec2i(-1, -1);
+		_tiles.highlights[1] = Math::Vec2i(-1, -1);
 	}
 	void map(Renderer* rnd, Theme* theme, Device* device, bool showGrids) {
 		UInt8 bgX, bgY;
@@ -1262,7 +1307,6 @@ private:
 			}
 		}
 
-		_tiles.highlight = Math::Vec2i(-1, -1);
 		if (hasInfo) {
 			const Device::MapBuffer &mapBuf = _options.isBgLayerActive ? _bgMapBuf : _winMapBuf;
 			const Device::MapBuffer &mapAttrBuf = _options.isBgLayerActive ? _bgMapAttrBuf : _winMapAttrBuf;
@@ -1309,8 +1353,11 @@ private:
 					(ty + VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) :
 					ty)
 			);
-			_tiles.highlight = Math::Vec2i(tx + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank, ty_);
+			_tiles.highlights[0] = Math::Vec2i(tx + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank, ty_);
 		}
+
+		MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
+		highlights.clear();
 	}
 	void oam(Renderer* rnd, Theme* theme, Device* /* device */, bool showGrids) {
 		constexpr const int OBJECT_COUNT_PER_LINE = 8;
@@ -1330,41 +1377,63 @@ private:
 			return;
 		ImGui::NewLine(1);
 
-		auto drawOams = [rnd, showGrids, OBJECT_COUNT_PER_LINE] (bool is8x16Obj, const ObjBuffer::Array &objs, const ImVec2 &tileSize) -> int {
+		auto drawInvisibieLine = [] (const ImVec2 &curPos, const ImVec2 &tileSize) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
 
+			drawList->AddLine(
+				curPos + ImVec2(0, -1),
+				curPos + tileSize + ImVec2(0, -1),
+				ImGui::GetColorU32(ImVec4(1, 0, 0, 0.95f))
+			);
+		};
+		auto drawGrid = [] (const ImVec2 &curPos, const ImVec2 &tileSize) -> void {
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+			drawList->AddRect(
+				curPos,
+				curPos + tileSize,
+				ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
+			);
+		};
+		auto drawHighlight = [] (const ImVec2 &curPos, const ImVec2 &tileSize) -> void {
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+			drawList->AddRect(
+				curPos,
+				curPos + tileSize,
+				ImGui::GetColorU32(ImVec4(1, 0, 0, 0.75f))
+			);
+		};
+		auto drawOams = [rnd, showGrids, OBJECT_COUNT_PER_LINE, drawInvisibieLine, drawGrid, drawHighlight] (bool is8x16Obj, ObjBuffer::Array &objs, const ImVec2 &tileSize) -> int {
 			int hovering = -1;
 			for (int i = 0; i < (int)objs.size(); ++i) {
-				const ObjBuffer &obj = objs[i];
+				ObjBuffer &obj = objs[i];
 				const bool visible = obj.visible;
+				const bool highlight = obj.highlight;
+				if (highlight)
+					obj.highlight = false;
 
 				if (is8x16Obj) {
 					const ImVec2 curPos = ImGui::GetCursorScreenPos();
+					const ImVec2 tileSize_(tileSize.x, tileSize.y * 2);
 					ImGui::Image(
 						obj.buffer.texture->pointer(rnd),
-						ImVec2(tileSize.x, tileSize.y * 2),
+						tileSize_,
 						ImVec2(0, 0), ImVec2(1, 1),
 						ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 					);
 
-					if (!visible) {
-						drawList->AddLine(
-							curPos + ImVec2(0, -1),
-							curPos + ImVec2(tileSize.x, tileSize.y * 2) + ImVec2(0, -1),
-							ImGui::GetColorU32(ImVec4(1, 0, 0, 0.95f))
-						);
-					}
-					if (showGrids) {
-						drawList->AddRect(
-							curPos,
-							curPos + ImVec2(tileSize.x, tileSize.y * 2),
-							ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
-						);
-					}
+					if (!visible)
+						drawInvisibieLine(curPos, tileSize_);
 
-					if (hovering == -1 && ImGui::IsItemHovered()) {
+					if (showGrids)
+						drawGrid(curPos, tileSize_);
+
+					if (highlight)
+						drawHighlight(curPos, tileSize_);
+
+					if (hovering == -1 && ImGui::IsItemHovered())
 						hovering = i;
-					}
 				} else {
 					const ImVec2 curPos = ImGui::GetCursorScreenPos();
 					ImGui::Image(
@@ -1374,24 +1443,17 @@ private:
 						ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 					);
 
-					if (!visible) {
-						drawList->AddLine(
-							curPos + ImVec2(0, -1),
-							curPos + tileSize + ImVec2(0, -1),
-							ImGui::GetColorU32(ImVec4(1, 0, 0, 0.95f))
-						);
-					}
-					if (showGrids) {
-						drawList->AddRect(
-							curPos,
-							curPos + tileSize,
-							ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
-						);
-					}
+					if (!visible)
+						drawInvisibieLine(curPos, tileSize);
 
-					if (hovering == -1 && ImGui::IsItemHovered()) {
+					if (showGrids)
+						drawGrid(curPos, tileSize);
+
+					if (highlight)
+						drawHighlight(curPos, tileSize);
+
+					if (hovering == -1 && ImGui::IsItemHovered())
 						hovering = i;
-					}
 				}
 				ImGui::SameLine();
 				if ((i + 1) % OBJECT_COUNT_PER_LINE == 0) {
@@ -1435,6 +1497,7 @@ private:
 			}
 		}
 
+		_inGameHighlight.highlighted = false;
 		if (hasInfo) {
 			const ObjBuffer &obj = _objs[oamIndex];
 			const Device::Obj &dobj = obj.obj;
@@ -1475,6 +1538,29 @@ private:
 
 				ImGui::SetTooltip(_oamTips.text);
 			}
+
+			if (_tiles.highlights[0] == Math::Vec2i(-1, -1)) {
+				const std::div_t tdiv = std::div(tile, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+				const int tx = tdiv.rem;
+				const int ty = tdiv.quot % VRAM_DEBUGGER_TILES_AREA_HEIGHT;
+				_tiles.highlights[0] = Math::Vec2i(tx + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank, ty);
+				if (_is8x16Obj) {
+					const UInt8 tile_ = tile + 1;
+					const std::div_t tdiv_ = std::div(tile_, VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+					const int tx_ = tdiv_.rem;
+					const int ty_ = tdiv_.quot % VRAM_DEBUGGER_TILES_AREA_HEIGHT;
+					_tiles.highlights[1] = Math::Vec2i(tx_ + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank, ty_);
+				}
+			}
+
+			int x_ = x;
+			int y_ = y;
+			if (x_ >= SCREEN_WIDTH)
+				x_ -= 255;
+			if (y_ >= SCREEN_HEIGHT)
+				y_ -= 255;
+			_inGameHighlight.highlighted = true;
+			_inGameHighlight.area = Math::Recti::byXYWH(x_, y_, GBBASIC_TILE_SIZE, _is8x16Obj ? GBBASIC_TILE_SIZE * 2 : GBBASIC_TILE_SIZE);
 		}
 	}
 	void palettes(Renderer* /* rnd */, Theme* theme, Device* device) {

@@ -720,12 +720,38 @@ void emulator(
 			);
 		}
 		ImGui::SetCursorPos(context.dstPos);
+		const ImVec2 curPos = ImGui::GetCursorScreenPos();
 		ImGui::Image(
 			canvasTexture->pointer(rnd),
 			context.dstSize,
 			ImVec2(0, 0), ImVec2(1, 1),
 			ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 		);
+
+		// Render highlight area from the VRAM debugger.
+		if (vramDbg) {
+			const int n = vramDebugger->highlightCount();
+			if (n > 0) {
+				ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+				ImGui::PushClipRect(curPos, curPos + context.dstSize, true);
+				for (int i = 0; i < n; ++i) {
+					Math::Recti area;
+					if (!vramDebugger->getHighlight(i, &area))
+						continue;
+
+					const Math::Vec2f start(area.xMin() * context.scale.x, area.yMin() * context.scale.y);
+					const Math::Vec2f end((area.xMax() + 1) * context.scale.x, (area.yMax() + 1) * context.scale.y);
+
+					drawList->AddRect(
+						curPos + ImVec2((float)start.x, (float)start.y),
+						curPos + ImVec2((float)end.x, (float)end.y),
+						ImGui::GetColorU32(ImVec4(1, 0, 0, 0.75f))
+					);
+				}
+				ImGui::PopClipRect();
+			}
+		}
 
 		// Update the cursor.
 		if (ImGui::IsItemHovered() && !hasPopup) {

@@ -21,6 +21,12 @@ public:
 	virtual bool open(class Renderer* rnd, class Theme* theme) = 0;
 	virtual bool close(void) = 0;
 
+	virtual int highlightCount(void) const = 0;
+	/**
+	 * @param[out] area
+	 */
+	virtual bool getHighlight(int index, Math::Recti* area /* nullable */) const = 0;
+
 	virtual void update(
 		class Renderer* rnd, class Theme* theme, class Device* device,
 		bool previewPaletteBits, bool showGrids
