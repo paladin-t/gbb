@@ -104,18 +104,19 @@ EMSCRIPTEN_BINDINGS(Categories) {
 
 EMSCRIPTEN_BINDINGS(ExternalEventTypes) {
 	emscripten::enum_<Workspace::ExternalEventTypes>("ExternalEventTypes")
-		.value("RESIZE_WINDOW", Workspace::ExternalEventTypes::RESIZE_WINDOW)
-		.value("UNLOAD_WINDOW", Workspace::ExternalEventTypes::UNLOAD_WINDOW)
-		.value("LOAD_PROJECT",  Workspace::ExternalEventTypes::LOAD_PROJECT)
-		.value("PATCH_PROJECT", Workspace::ExternalEventTypes::PATCH_PROJECT)
-		.value("INPUT_KEY",     Workspace::ExternalEventTypes::INPUT_KEY)
-		.value("INPUT_TEXT",    Workspace::ExternalEventTypes::INPUT_TEXT)
-		.value("TO_CATEGORY",   Workspace::ExternalEventTypes::TO_CATEGORY)
-		.value("TO_PAGE",       Workspace::ExternalEventTypes::TO_PAGE)
-		.value("TO_LOCATION",   Workspace::ExternalEventTypes::TO_LOCATION)
-		.value("COMPILE",       Workspace::ExternalEventTypes::COMPILE)
-		.value("RUN",           Workspace::ExternalEventTypes::RUN)
-		.value("COUNT",         Workspace::ExternalEventTypes::COUNT)
+		.value("RESIZE_WINDOW",        Workspace::ExternalEventTypes::RESIZE_WINDOW)
+		.value("UNLOAD_WINDOW",        Workspace::ExternalEventTypes::UNLOAD_WINDOW)
+		.value("LOAD_PROJECT",         Workspace::ExternalEventTypes::LOAD_PROJECT)
+		.value("PATCH_PROJECT",        Workspace::ExternalEventTypes::PATCH_PROJECT)
+		.value("INPUT_KEY",            Workspace::ExternalEventTypes::INPUT_KEY)
+		.value("INPUT_TEXT",           Workspace::ExternalEventTypes::INPUT_TEXT)
+		.value("TO_CATEGORY",          Workspace::ExternalEventTypes::TO_CATEGORY)
+		.value("TO_PAGE",              Workspace::ExternalEventTypes::TO_PAGE)
+		.value("TO_LOCATION",          Workspace::ExternalEventTypes::TO_LOCATION)
+		.value("COMPILE",              Workspace::ExternalEventTypes::COMPILE)
+		.value("RUN",                  Workspace::ExternalEventTypes::RUN)
+		.value("TOGGLE_VRAM_DEBUGGER", Workspace::ExternalEventTypes::TOGGLE_VRAM_DEBUGGER)
+		.value("COUNT",                Workspace::ExternalEventTypes::COUNT)
 	;
 };
 
@@ -2720,6 +2721,15 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 			}
 
 			toRun(wnd, rnd);
+		}
+
+		break;
+	case ExternalEventTypes::TOGGLE_VRAM_DEBUGGER: {
+			fprintf(stdout, "SDL: TOGGLE_VRAM_DEBUGGER.\n");
+
+			const bool on = !!(int)(intptr_t)evt->user.data1;
+
+			settings().debugVramDebugEnabled = on;
 		}
 
 		break;

@@ -433,6 +433,7 @@ public:
 		TO_LOCATION,
 		COMPILE,
 		RUN,
+		TOGGLE_VRAM_DEBUGGER,
 		COUNT
 	};
 
