@@ -37,6 +37,7 @@ void emulator(
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,
+	bool isNewFrame,
 	ButtonEventHandler onDeviceButtonClicked /* nullable */, ButtonEventHandler onCartridgeButtonClicked /* nullable */,
 	DebugHandler debug
 );

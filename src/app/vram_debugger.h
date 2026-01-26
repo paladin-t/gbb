@@ -21,6 +21,8 @@ public:
 	virtual bool open(class Renderer* rnd, class Theme* theme) = 0;
 	virtual bool close(void) = 0;
 
+	virtual float safeHeight(void) const = 0;
+
 	virtual int highlightCount(void) const = 0;
 	/**
 	 * @param[out] area
@@ -29,7 +31,8 @@ public:
 
 	virtual void update(
 		class Renderer* rnd, class Theme* theme, class Device* device,
-		bool previewPaletteBits, bool showGrids
+		bool previewPaletteBits, bool showGrids,
+		bool isNewFrame
 	) = 0;
 
 	static VramDebugger* create(void);

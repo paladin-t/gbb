@@ -144,8 +144,8 @@ public:
 		class Window* wnd, class Renderer* rnd,
 		double delta,
 		class Texture* texture, class Texture* textureForBorderFrame,
-		bool allowInput,
-		const KeyboardModifiers* keyMods,
+		bool allowInput, const KeyboardModifiers* keyMods,
+		bool* isNewFrame,
 		AudioHandler handleAudio
 	) override;
 

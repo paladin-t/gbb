@@ -78,6 +78,7 @@ struct Context {
 	bool hasPopup;
 	unsigned deviceFps;
 	unsigned fps;
+	bool isNewFrame = false;
 	ButtonEventHandler onDeviceButtonClicked = nullptr;
 	ButtonEventHandler onCartridgeButtonClicked = nullptr;
 
@@ -90,6 +91,7 @@ struct Context {
 
 	bool canShowOnscreenGamepad = false;
 	bool canShowVramDebugger = false;
+	bool ramDebuggerGotSafeHeight = false;
 
 	Context(
 		Window* window_, Renderer* renderer_,
@@ -106,6 +108,7 @@ struct Context {
 		Device::CursorTypes cursor_,
 		bool hasPopup_,
 		unsigned deviceFps_, unsigned fps_,
+		bool isNewFrame_,
 		ButtonEventHandler onDeviceButtonClicked_, ButtonEventHandler onCartridgeButtonClicked_
 	) :
 		window(window_), renderer(renderer_),
@@ -122,6 +125,7 @@ struct Context {
 		cursor(cursor_),
 		hasPopup(hasPopup_),
 		deviceFps(deviceFps_), fps(fps_),
+		isNewFrame(isNewFrame_),
 		onDeviceButtonClicked(onDeviceButtonClicked_), onCartridgeButtonClicked(onCartridgeButtonClicked_)
 	{
 	}
@@ -153,15 +157,21 @@ struct Context {
 				ImGuiWindowFlags_NoBringToFrontOnFocus |
 				ImGuiWindowFlags_NoNav;
 
+			const float height = regSize.y - statusBarHeight - borderSize * 2;
+			ramDebuggerGotSafeHeight = height >= vramDebugger->safeHeight();
+
+			const float preferedWidth = ramDebuggerGotSafeHeight ?
+				(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + 2) :
+				(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
 			if (*vramDebuggerWidth <= 0) {
-				*vramDebuggerWidth = calculateVramDebuggerWidth(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
+				*vramDebuggerWidth = calculateVramDebuggerWidth(preferedWidth);
 			}
 			if (*vramDebuggerPreviousOuterWidth <= 0) {
 				*vramDebuggerPreviousOuterWidth = regSize.x;
 			}
 			if (*vramDebuggerPreviousOuterWidth != regSize.x) {
 				*vramDebuggerWidth = *vramDebuggerWidth / *vramDebuggerPreviousOuterWidth * regSize.x;
-				*vramDebuggerWidth = calculateVramDebuggerWidth(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
+				*vramDebuggerWidth = calculateVramDebuggerWidth(preferedWidth);
 				*vramDebuggerPreviousOuterWidth = regSize.x;
 			}
 
@@ -322,11 +332,14 @@ struct Context {
 			ImGuiWindowFlags_NoCollapse |
 			ImGuiWindowFlags_NoSavedSettings |
 			ImGuiWindowFlags_NoBringToFrontOnFocus |
-			ImGuiWindowFlags_AlwaysVerticalScrollbar |
 			ImGuiWindowFlags_NoNav;
 		const float x = (float)ImGui::GetCursorPosX();
-		const float width = *vramDebuggerWidth;
 		const float height = regSize.y - statusBarHeight - borderSize * 2;
+		const bool heightIsSafeForVramDebugger = height >= vramDebugger->safeHeight();
+		if (!ramDebuggerGotSafeHeight) {
+			flags |= ImGuiWindowFlags_AlwaysVerticalScrollbar;
+		}
+		const float width = *vramDebuggerWidth;
 
 		// Resize.
 		const float gripMarginX = ImGui::WindowResizingPadding().x;
@@ -368,7 +381,8 @@ struct Context {
 		{
 			vramDebugger->update(
 				renderer, theme, canvasDevice,
-				*vramDebuggerPreviewPaletteBits, *vramDebuggerShowGrids
+				*vramDebuggerPreviewPaletteBits, *vramDebuggerShowGrids,
+				isNewFrame
 			);
 		}
 		ImGui::EndChild();
@@ -387,7 +401,10 @@ private:
 	float calculateVramDebuggerWidth(float width) const {
 		ImGuiStyle &style = ImGui::GetStyle();
 
-		width = std::min(width, std::min(regSize.x - SCREEN_WIDTH, EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2));
+		const float maxWidth = ramDebuggerGotSafeHeight ?
+			(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + 2) :
+			(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
+		width = std::min(width, std::min(regSize.x - SCREEN_WIDTH, maxWidth));
 		width = std::max(width, EMULATOR_VRAM_DEBUGGER_MIN_WIDTH);
 
 		return std::floor(width);
@@ -674,6 +691,7 @@ void emulator(
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,
+	bool isNewFrame,
 	ButtonEventHandler onDeviceButtonClicked, ButtonEventHandler onCartridgeButtonClicked,
 	DebugHandler debug
 ) {
@@ -693,6 +711,7 @@ void emulator(
 		cursor,
 		hasPopup,
 		canvasDevice->fps(), fps,
+		isNewFrame,
 		onDeviceButtonClicked, onCartridgeButtonClicked
 	);
 
@@ -742,7 +761,6 @@ void emulator(
 
 					const Math::Vec2f start(area.xMin() * context.scale.x, area.yMin() * context.scale.y);
 					const Math::Vec2f end((area.xMax() + 1) * context.scale.x, (area.yMax() + 1) * context.scale.y);
-
 					drawList->AddRect(
 						curPos + ImVec2((float)start.x, (float)start.y),
 						curPos + ImVec2((float)end.x, (float)end.y),

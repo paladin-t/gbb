@@ -1046,7 +1046,7 @@ private:
 	void loadLinks(void);
 	void unloadLinks(void);
 
-	bool execute(Window* wnd, Renderer* rnd, double delta, unsigned* fpsReq);
+	bool execute(Window* wnd, Renderer* rnd, double delta, unsigned* fpsReq, bool* isNewFrame /* nullable */);
 	bool perform(Window* wnd, Renderer* rnd, double delta, unsigned* fpsReq, Device::AudioHandler handleAudio /* nullable */);
 	void saveSram(Window* wnd, Renderer* rnd);
 
@@ -1065,7 +1065,7 @@ private:
 	void tabs(Window* wnd, Renderer* rnd);
 	void filter(Window* wnd, Renderer* rnd);
 
-	void body(Window* wnd, Renderer* rnd, double delta, unsigned fps, bool* indicated);
+	void body(Window* wnd, Renderer* rnd, double delta, unsigned fps, bool isNewFrame, bool* indicated);
 	void recent(Window* wnd, Renderer* rnd, float marginTop, float marginBottom);
 	void notepad(Window* wnd, Renderer* rnd, float marginTop, float marginBottom);
 	void font(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, double delta);
@@ -1078,7 +1078,7 @@ private:
 	void scene(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, double delta);
 	void console(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, double delta);
 	void document(Window* wnd, Renderer* rnd, float marginTop, float marginBottom);
-	void emulator(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, unsigned fps, bool* indicated);
+	void emulator(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, unsigned fps, bool isNewFrame, bool* indicated);
 	void debug(Window* wnd, Renderer* rnd, float marginTop, float marginBottom);
 	void blank(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, Categories category);
 	void found(Window* wnd, Renderer* rnd, double delta);

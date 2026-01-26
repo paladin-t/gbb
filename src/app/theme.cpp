@@ -852,6 +852,10 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_VramDebugger_Layer("Layer");
 	windowEmulator_VramDebugger_Oam("OAM");
 	windowEmulator_VramDebugger_Palettes("Palettes");
+	windowEmulator_VramDebugger_StatusReadonly("Status (readonly)");
+	windowEmulator_VramDebugger_StatusReadonly_BgOn("BG on");
+	windowEmulator_VramDebugger_StatusReadonly_ObjOn("OBJ on");
+	windowEmulator_VramDebugger_StatusReadonly_WinOn("WIN on");
 	windowEmulator_VramDebugger_Tiles("Tiles");
 
 	windowTiles_CreateMap("Create map");

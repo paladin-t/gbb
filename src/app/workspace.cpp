@@ -1718,7 +1718,8 @@ bool Workspace::update(Window* wnd, Renderer* rnd, double delta, unsigned fps, u
 	bool result = false;
 
 	// Execute.
-	result = execute(wnd, rnd, delta, fpsReq);
+	bool isNewFrame = false;
+	result = execute(wnd, rnd, delta, fpsReq, &isNewFrame);
 
 	// Perform.
 	perform(wnd, rnd, delta, fpsReq, nullptr);
@@ -1735,7 +1736,7 @@ bool Workspace::update(Window* wnd, Renderer* rnd, double delta, unsigned fps, u
 	head(wnd, rnd, delta, fpsReq);
 
 	// Body.
-	body(wnd, rnd, delta, fps, indicated);
+	body(wnd, rnd, delta, fps, isNewFrame, indicated);
 
 	// Search result.
 	found(wnd, rnd, delta);
@@ -4744,7 +4745,14 @@ void Workspace::updateAudioDevice(Window* wnd, Renderer* rnd, double delta, unsi
 
 	*fpsReq = GBBASIC_ACTIVE_FRAME_RATE;
 
-	audioDevice()->update(wnd, rnd, delta, nullptr, nullptr, false, nullptr, handleAudio);
+	audioDevice()->update(
+		wnd, rnd,
+		delta,
+		nullptr, nullptr,
+		false, nullptr,
+		nullptr,
+		handleAudio
+	);
 }
 
 bool Workspace::delay(Delayed::Handler delayed_, const std::string &key, const Delayed::Amount &delay_) {
@@ -6698,7 +6706,7 @@ void Workspace::unloadLinks(void) {
 	links().clear();
 }
 
-bool Workspace::execute(Window* wnd, Renderer* rnd, double delta, unsigned* fpsReq) {
+bool Workspace::execute(Window* wnd, Renderer* rnd, double delta, unsigned* fpsReq, bool* isNewFrame) {
 	ImGuiIO &io = ImGui::GetIO();
 
 	if (!canvasDevice())
@@ -6744,7 +6752,14 @@ bool Workspace::execute(Window* wnd, Renderer* rnd, double delta, unsigned* fpsR
 	}
 
 	const Device::KeyboardModifiers keyMods(io.KeyCtrl, io.KeyShift, io.KeyAlt, io.KeySuper);
-	canvasDevice()->update(wnd, rnd, delta, canvasTexture().get(), canvasTextureForBorderFrame().get(), !popupBox() && !menuOpened(), &keyMods, audioHandler);
+	canvasDevice()->update(
+		wnd, rnd,
+		delta,
+		canvasTexture().get(), canvasTextureForBorderFrame().get(),
+		!popupBox() && !menuOpened(), &keyMods,
+		isNewFrame,
+		audioHandler
+	);
 
 	return true;
 }
@@ -10379,7 +10394,7 @@ void Workspace::filter(Window*, Renderer* rnd) {
 	ImGui::BringWindowToDisplayFront(window);
 }
 
-void Workspace::body(Window* wnd, Renderer* rnd, double delta, unsigned fps, bool* indicated) {
+void Workspace::body(Window* wnd, Renderer* rnd, double delta, unsigned fps, bool isNewFrame, bool* indicated) {
 	const float menuH = menuHeight();
 	const float searchResultH = searchResultVisible() ? searchResultHeight() : 0.0f;
 
@@ -10440,7 +10455,7 @@ void Workspace::body(Window* wnd, Renderer* rnd, double delta, unsigned fps, boo
 
 		break;
 	case Categories::EMULATOR:
-		emulator(wnd, rnd, menuH, 0.0f, fps, indicated);
+		emulator(wnd, rnd, menuH, 0.0f, fps, isNewFrame, indicated);
 
 		break;
 	default: // Do nothing.
@@ -11588,7 +11603,7 @@ void Workspace::document(Window* wnd, Renderer* rnd, float marginTop, float marg
 	ImGui::PopStyleColor();
 }
 
-void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, unsigned fps, bool* indicated) {
+void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, unsigned fps, bool isNewFrame, bool* indicated) {
 	// Prepare.
 	ImGuiStyle &style = ImGui::GetStyle();
 
@@ -11632,6 +11647,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			canvasCursorMode(),
 			!!popupBox(),
 			fps,
+			isNewFrame,
 			[&] (void) -> void {
 				showPreferences(wnd, rnd, "device");
 			},

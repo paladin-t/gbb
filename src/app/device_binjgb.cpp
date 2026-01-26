@@ -1054,11 +1054,14 @@ bool DeviceBinjgb::update(
 	class Window* wnd, class Renderer* rnd,
 	double delta,
 	class Texture* texture, class Texture* textureForBorderFrame,
-	bool allowInput,
-	const KeyboardModifiers* keyMods,
+	bool allowInput, const KeyboardModifiers* keyMods,
+	bool* isNewFrame,
 	AudioHandler handleAudio
 ) {
 	// Prepare.
+	if (isNewFrame)
+		*isNewFrame = false;
+
 	if (!_emulator)
 		return false;
 
@@ -1149,6 +1152,9 @@ bool DeviceBinjgb::update(
 				_longPeriodDutyMaxValue = 0;
 				_longPeriodDutyTicks = 0;
 			}
+
+			if (isNewFrame)
+				*isNewFrame = true;
 		}
 
 		// Update the audio system.

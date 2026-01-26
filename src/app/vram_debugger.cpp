@@ -293,6 +293,8 @@ private:
 	struct {
 		bool isBgLayerActive = true;
 		float paletteTextWidthPerLine = 0;
+		float startY = 0;
+		float safeHeight = 0;
 	} _options;
 
 	Device::MapBuffer _bgMapBuf;
@@ -511,6 +513,10 @@ public:
 		return true;
 	}
 
+	virtual float safeHeight(void) const override {
+		return _options.safeHeight;
+	}
+
 	virtual int highlightCount(void) const override {
 		if (_inGameHighlight.highlighted)
 			return 1;
@@ -534,27 +540,36 @@ public:
 
 	virtual void update(
 		class Renderer* rnd, class Theme* theme, class Device* device,
-		bool previewPaletteBits, bool showGrids
+		bool previewPaletteBits, bool showGrids,
+		bool isNewFrame
 	) override {
-		refresh(rnd, theme, device, previewPaletteBits);
+		refresh(rnd, theme, device, previewPaletteBits, isNewFrame);
 
-		tiles(rnd, theme, device, showGrids);
-		ImGui::NewLine(1);
-		ImGui::Separator();
+		begin(rnd);
+		{
+			tiles(rnd, theme, device, showGrids);
+			ImGui::NewLine(1);
+			ImGui::Separator();
 
-		map(rnd, theme, device, showGrids);
-		ImGui::NewLine(1);
-		ImGui::Separator();
+			map(rnd, theme, device, showGrids);
+			ImGui::NewLine(1);
+			ImGui::Separator();
 
-		oam(rnd, theme, device, showGrids);
-		ImGui::NewLine(1);
-		ImGui::Separator();
+			oam(rnd, theme, device, showGrids);
+			ImGui::NewLine(1);
+			ImGui::Separator();
 
-		palettes(rnd, theme, device);
+			palettes(rnd, theme, device);
+			ImGui::NewLine(1);
+			ImGui::Separator();
+
+			status(rnd, theme, device);
+		}
+		end(rnd);
 	}
 
 private:
-	void refresh(Renderer* /* rnd */, Theme* /* theme */, Device* device, bool previewPaletteBits) {
+	void refresh(Renderer* /* rnd */, Theme* /* theme */, Device* device, bool previewPaletteBits, bool /* isNewFrame */) {
 		// Retrieve data.
 		const bool isCgb = device->deviceHasCgbSupport();
 
@@ -932,6 +947,13 @@ private:
 			_is8x16Obj,
 			_tiles
 		);
+	}
+
+	void begin(Renderer* /* rnd */) {
+		_options.startY = ImGui::GetCursorPosY();
+	}
+	void end(Renderer* /* rnd */) {
+		_options.safeHeight = ImGui::GetCursorPosY() - _options.startY + 32;
 	}
 
 	void tiles(Renderer* rnd, Theme* theme, Device* /* device */, bool showGrids) {
@@ -1718,6 +1740,36 @@ private:
 				ImGui::NewLine();
 				ImGui::NewLine(1);
 			}
+		}
+	}
+	void status(Renderer* /* rnd */, Theme* theme, Device* device) {
+		bool bgOn = device->getBgDisplay();
+		bool winOn = device->getWindowDisplay();
+		bool objOn = device->getObjDisplay();
+
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		const float borderSize = style.ChildBorderSize;
+		const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
+		const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
+		const ImVec2 regSize(
+			regMax.x - regMin.x - borderSize * 2,
+			regMax.y - regMin.y - borderSize * 2
+		);
+
+		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_StatusReadonly().c_str(), regSize.x, flags))
+			return;
+		ImGui::NewLine(1);
+
+		if (ImGui::Checkbox(theme->windowEmulator_VramDebugger_StatusReadonly_BgOn(), &bgOn)) {
+			// Do nothing.
+		}
+		if (ImGui::Checkbox(theme->windowEmulator_VramDebugger_StatusReadonly_WinOn(), &winOn)) {
+			// Do nothing.
+		}
+		if (ImGui::Checkbox(theme->windowEmulator_VramDebugger_StatusReadonly_ObjOn(), &objOn)) {
+			// Do nothing.
 		}
 	}
 };

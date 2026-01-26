@@ -2502,7 +2502,14 @@ private:
 						if (tools.hasPlayerPlayed) {
 							stop = true;
 						} else {
-							const bool ret = job.device->update(nullptr, nullptr, SETUP_STEP, nullptr, nullptr, false, nullptr, nullptr);
+							const bool ret = job.device->update(
+								nullptr, nullptr,
+								SETUP_STEP,
+								nullptr, nullptr,
+								false, nullptr,
+								nullptr,
+								nullptr
+							);
 							if (!ret) {
 								const std::string msg = Text::format(ws->theme()->warning_SfxTimeoutWhenRenderingSoundShapeAtPage(), { Text::toString(job.page) });
 								self->warn(ws, msg, true);
@@ -2516,7 +2523,14 @@ private:
 
 					tools.hasPlayerPlayed = true;
 
-					const bool ret = job.device->update(nullptr, nullptr, STEP, nullptr, nullptr, false, nullptr, callback);
+					const bool ret = job.device->update(
+						nullptr, nullptr,
+						STEP,
+						nullptr, nullptr,
+						false, nullptr,
+						nullptr,
+						callback
+					);
 					if (!ret) {
 						const std::string msg = Text::format(ws->theme()->warning_SfxTimeoutWhenRenderingSoundShapeAtPage(), { Text::toString(job.page) });
 						self->warn(ws, msg, true);
