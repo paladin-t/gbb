@@ -158,7 +158,7 @@ struct Context {
 				ImGuiWindowFlags_NoNav;
 
 			const float height = regSize.y - statusBarHeight - borderSize * 2;
-			ramDebuggerGotSafeHeight = height >= vramDebugger->safeHeight();
+			ramDebuggerGotSafeHeight = vramDebugger->safeHeight() > 0 && height >= vramDebugger->safeHeight();
 
 			const float preferedWidth = ramDebuggerGotSafeHeight ?
 				(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + 2) :

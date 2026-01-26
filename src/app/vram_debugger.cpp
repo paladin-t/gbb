@@ -226,6 +226,7 @@ private:
 					for (int i = 0; i < (int)section.size(); ++i) {
 						Ref &ref = section[i];
 						ref.details.clear();
+						ref.refCount = 0;
 					}
 				}
 			}
@@ -975,25 +976,27 @@ private:
 		auto drawGrids = [] (const ImVec2 &curPos, const ImVec2 &dstSize) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
 
-			const float w = dstSize.x;
-			const float h = dstSize.y;
-			for (float i = GBBASIC_TILE_SIZE; i < w; i += GBBASIC_TILE_SIZE) {
+			const int w = (int)dstSize.x;
+			const int h = (int)dstSize.y;
+			for (int i = GBBASIC_TILE_SIZE; i < w; i += GBBASIC_TILE_SIZE) {
+				const ImVec4 col = (i == w / 2) ? ImVec4(0.5f, 0.5f, 1, 0.25f) : ImVec4(1, 1, 1, 0.25f);
 				drawList->AddLine(
-					curPos + ImVec2(i, 0),
-					curPos + ImVec2(i, h),
-					ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
+					curPos + ImVec2((float)i, 0),
+					curPos + ImVec2((float)i, (float)h),
+					ImGui::GetColorU32(col)
 				);
 			}
-			for (float j = GBBASIC_TILE_SIZE; j < h; j += GBBASIC_TILE_SIZE) {
+			for (int j = GBBASIC_TILE_SIZE; j < h; j += GBBASIC_TILE_SIZE) {
+				const ImVec4 col = (j == h / 3 || j == h / 3 * 2) ? ImVec4(0.5f, 0.5f, 1, 0.25f) : ImVec4(1, 1, 1, 0.25f);
 				drawList->AddLine(
-					curPos + ImVec2(0, j),
-					curPos + ImVec2(w, j),
-					ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
+					curPos + ImVec2(0, (float)j),
+					curPos + ImVec2((float)w, (float)j),
+					ImGui::GetColorU32(col)
 				);
 			}
 			drawList->AddRect(
 				curPos + ImVec2(-1, -1),
-				curPos + ImVec2(w, h) + ImVec2(1, 1),
+				curPos + ImVec2((float)w, (float)h) + ImVec2(1, 1),
 				ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
 			);
 		};
@@ -1014,7 +1017,8 @@ private:
 			}
 		};
 
-		bool hasInfo = false;
+		bool hasInfoForMap = false;
+		bool hasInfoForOam = false;
 		int infoBank = 0;
 		Math::Vec2i tilePos;
 		const ImVec2 dstSize(VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 * GBBASIC_TILE_SIZE, VRAM_DEBUGGER_TILES_AREA_HEIGHT * GBBASIC_TILE_SIZE);
@@ -1046,7 +1050,8 @@ private:
 					const ImVec2 diff = mousePos - curPos;
 					const ImVec2 tilePos_ = diff / GBBASIC_TILE_SIZE;
 					if (tilePos_.x >= 0 && tilePos_.x < VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 && tilePos_.y >= 0 && tilePos_.y < VRAM_DEBUGGER_TILES_AREA_HEIGHT) {
-						hasInfo = true;
+						hasInfoForMap = tilePos_.y >= VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT;
+						hasInfoForOam = tilePos_.y < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2;
 						infoBank = tilePos_.x < VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK ? 0 : 1;
 						tilePos = Math::Vec2i((int)tilePos_.x - VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * infoBank, (int)tilePos_.y);
 					}
@@ -1075,14 +1080,15 @@ private:
 				const ImVec2 diff = mousePos - curPos;
 				const ImVec2 tilePos_ = diff / GBBASIC_TILE_SIZE;
 				if (tilePos_.x >= 0 && tilePos_.x < VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * 2 && tilePos_.y >= 0 && tilePos_.y < VRAM_DEBUGGER_TILES_AREA_HEIGHT) {
-					hasInfo = true;
+					hasInfoForMap = tilePos_.y >= VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT;
+					hasInfoForOam = tilePos_.y < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2;
 					infoBank = tilePos_.x < VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK ? 0 : 1;
 					tilePos = Math::Vec2i((int)tilePos_.x - VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * infoBank, (int)tilePos_.y);
 				}
 			}
 		}
 
-		if (hasInfo) {
+		if (hasInfoForMap || hasInfoForOam) {
 			const UInt8 tile = (UInt8)(tilePos.x + tilePos.y * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
 			const TileDetail::Array &mapDetails = _tileDetails[infoBank][(int)TileDetail::Usages::MAP][tile].details;
 			const TileDetail::Array &oamDetails = _tileDetails[infoBank][(int)TileDetail::Usages::OBJ][tile].details;
@@ -1105,12 +1111,16 @@ private:
 				ImGui::SetTooltip(_tileTips.text);
 			}
 
-			MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
-			for (const TileDetail &detail : mapDetails) {
-				highlights.push_back(detail.position);
+			if (hasInfoForMap) {
+				MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
+				for (const TileDetail &detail : mapDetails) {
+					highlights.push_back(detail.position);
+				}
 			}
-			for (const TileDetail &detail : oamDetails) {
-				_objs[detail.oam.index].highlight = true;
+			if (hasInfoForOam) {
+				for (const TileDetail &detail : oamDetails) {
+					_objs[detail.oam.index].highlight = true;
+				}
 			}
 		}
 
@@ -1417,11 +1427,11 @@ private:
 				ImGui::GetColorU32(ImVec4(1, 1, 1, 0.25f))
 			);
 		};
-		auto drawHighlight = [] (const ImVec2 &curPos, const ImVec2 &tileSize) -> void {
+		auto drawHighlight = [] (const ImVec2 &curPos, const ImVec2 &tileSize, bool isFirst) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
 
 			drawList->AddRect(
-				curPos,
+				curPos + ImVec2(isFirst ? 1.0f : 0.0f, 0.0f),
 				curPos + tileSize,
 				ImGui::GetColorU32(ImVec4(1, 0, 0, 0.75f))
 			);
@@ -1429,6 +1439,7 @@ private:
 		auto drawOams = [rnd, showGrids, OBJECT_COUNT_PER_LINE, drawInvisibieLine, drawGrid, drawHighlight] (bool is8x16Obj, ObjBuffer::Array &objs, const ImVec2 &tileSize) -> int {
 			int hovering = -1;
 			for (int i = 0; i < (int)objs.size(); ++i) {
+				const int indexInLinePlusOne = (i + 1) % OBJECT_COUNT_PER_LINE;
 				ObjBuffer &obj = objs[i];
 				const bool visible = obj.visible;
 				const bool highlight = obj.highlight;
@@ -1452,7 +1463,7 @@ private:
 						drawGrid(curPos, tileSize_);
 
 					if (highlight)
-						drawHighlight(curPos, tileSize_);
+						drawHighlight(curPos, tileSize_, indexInLinePlusOne == 1);
 
 					if (hovering == -1 && ImGui::IsItemHovered())
 						hovering = i;
@@ -1472,13 +1483,13 @@ private:
 						drawGrid(curPos, tileSize);
 
 					if (highlight)
-						drawHighlight(curPos, tileSize);
+						drawHighlight(curPos, tileSize, indexInLinePlusOne == 1);
 
 					if (hovering == -1 && ImGui::IsItemHovered())
 						hovering = i;
 				}
 				ImGui::SameLine();
-				if ((i + 1) % OBJECT_COUNT_PER_LINE == 0) {
+				if (indexInLinePlusOne == 0) {
 					ImGui::NewLine();
 					ImGui::NewLine(1);
 				}
