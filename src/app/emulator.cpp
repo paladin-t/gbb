@@ -369,7 +369,7 @@ struct Context {
 			flags &= ~ImGuiWindowFlags_NoResize;
 		}
 
-		if (isResetting) {
+		if (isResetting || vramDebugger->safeHeight() == 0) {
 			*vramDebuggerWidth = 0;
 		} else if (isResizing) {
 			const ImVec2 mousePos = ImGui::GetMousePos();

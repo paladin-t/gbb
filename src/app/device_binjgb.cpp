@@ -664,7 +664,7 @@ void DeviceBinjgb::getSgbMapAttrBuffer(UInt8 map[90]) const {
 
 	u8 val[90];
 	emulator_get_sgb_attr_map(_emulator, val);
-	memcpy(map, val, sizeof(map));
+	memcpy(map, val, sizeof(val));
 }
 
 void DeviceBinjgb::getBgScroll(UInt8* x, UInt8* y) const {

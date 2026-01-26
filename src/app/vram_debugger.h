@@ -21,7 +21,7 @@ public:
 	virtual bool open(class Renderer* rnd, class Theme* theme) = 0;
 	virtual bool close(void) = 0;
 
-	virtual float safeHeight(void) const = 0;
+	virtual int safeHeight(void) const = 0;
 
 	virtual int highlightCount(void) const = 0;
 	/**

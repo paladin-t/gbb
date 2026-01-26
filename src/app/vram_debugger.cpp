@@ -295,7 +295,7 @@ private:
 		bool isBgLayerActive = true;
 		float paletteTextWidthPerLine = 0;
 		float startY = 0;
-		float safeHeight = 0;
+		int safeHeight = 0;
 	} _options;
 
 	Device::MapBuffer _bgMapBuf;
@@ -514,7 +514,7 @@ public:
 		return true;
 	}
 
-	virtual float safeHeight(void) const override {
+	virtual int safeHeight(void) const override {
 		return _options.safeHeight;
 	}
 
@@ -954,7 +954,7 @@ private:
 		_options.startY = ImGui::GetCursorPosY();
 	}
 	void end(Renderer* /* rnd */) {
-		_options.safeHeight = ImGui::GetCursorPosY() - _options.startY + 32;
+		_options.safeHeight = (int)(ImGui::GetCursorPosY() - _options.startY + 48);
 	}
 
 	void tiles(Renderer* rnd, Theme* theme, Device* /* device */, bool showGrids) {
