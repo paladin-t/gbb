@@ -27707,8 +27707,8 @@ public:
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
 				id = (std::string)tk->data();
-				if (id == "def")
-					action = ResourceManipulations::DEF;
+				if (id == "load")
+					action = ResourceManipulations::LOAD;
 			})) { THROW_INVALID_OPERATION(onError, idtk); }
 			if (!consume(Token::Types::KEYWORD, "dialog")) { THROW_INVALID_SYNTAX(onError); }
 			if (expectBrackets(action)) {
@@ -27728,7 +27728,7 @@ public:
 
 			// Determine the manipulation.
 			switch (action) {
-			case ResourceManipulations::DEF: {
+			case ResourceManipulations::LOAD: {
 					if (argn != 4 && argn != 5) {
 						THROW_INVALID_SYNTAX(onError);
 					}
@@ -38005,7 +38005,7 @@ private:
 				if (!LineNumber(q, opts)) return false;
 				if (!(id = must(Token::Types::SYMBOL)(q))) return false;
 				else name = (std::string)id->data();
-				if (name != "def") return false;
+				if (name != "load") return false;
 				if (!must(Token::Types::KEYWORD, "dialog")(q)) return false;
 				if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
 				Arguments(q, children);
