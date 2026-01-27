@@ -27665,6 +27665,334 @@ public:
 	using Node::dump;
 };
 
+class NodeDialogManipulation : public Node {
+private:
+	Scheduled _scheduled;
+
+public:
+	NodeDialogManipulation() {
+	}
+	virtual ~NodeDialogManipulation() override {
+	}
+
+	NODE_TYPE(Types::DIALOG_MANIPULATION)
+
+	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		const Generator_Void_Void generator = [&] (void) -> void {
+			// Prepare.
+			Context &ctx = context.top();
+			State &state = top();
+
+			const Asm::Instructions &INSTRUCTIONS = *ctx.instructions;
+
+			// Determine the location in the ROM.
+			state.inRom.bank = ctx.bank;
+			state.inRom.address = ctx.addressCursor;
+			state.inRom.size = 0;
+
+			// Reset the states.
+			_scheduled = Scheduled();
+
+			// Consume the tokens.
+			Token::Ptr idtk = nullptr;
+			std::string id;
+			ResourceManipulations action = ResourceManipulations::NONE;
+			int argn = 0;
+			bool newLine = true;
+			if (ctx.expect.lnno) {
+				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				})) { THROW_INVALID_SYNTAX(onError); }
+			}
+			if (!consume([&] (Token::Ptr tk) -> void {
+				idtk = tk;
+				id = (std::string)tk->data();
+				if (id == "def")
+					action = ResourceManipulations::DEF;
+			})) { THROW_INVALID_OPERATION(onError, idtk); }
+			if (!consume(Token::Types::KEYWORD, "dialog")) { THROW_INVALID_SYNTAX(onError); }
+			if (expectBrackets(action)) {
+				if (!consume(Token::Types::OPERATOR, "(")) { THROW_INVALID_SYNTAX(onError); }
+				if (!consume(Token::Types::OPERATOR, ")")) { THROW_INVALID_SYNTAX(onError); }
+			}
+			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
+				argn = (int)tk->data();
+			})) { THROW_INVALID_SYNTAX(onError); }
+			if (expectAssign(action)) {
+				if (!consume(Token::Types::OPERATOR, "=")) { THROW_INVALID_SYNTAX(onError); }
+			}
+			if (consume(Token::Types::OPERATOR, "(")) {
+				if (!consume(Token::Types::OPERATOR, ")")) { THROW_INVALID_SYNTAX(onError); }
+			}
+			if (consume(Token::Types::OPERATOR, ";")) { newLine = false; }
+
+			// Determine the manipulation.
+			switch (action) {
+			case ResourceManipulations::DEF: {
+					if (argn != 4 && argn != 5) {
+						THROW_INVALID_SYNTAX(onError);
+					}
+					if (_children.size() <= 5) {
+						THROW_TOO_FEW_ARGUMENTS(onError);
+					} else if (_children.size() >= 6 && _children.size() <= 11) {
+						// Do nothing.
+					} else {
+						THROW_TOO_MANY_ARGUMENTS(onError);
+					}
+
+					Token::Ptr tk = nullptr;
+					int width = 0;
+					int height = 0;
+					if (!isInt16(context, 2, width, &tk)) { THROW_TYPE_EXPECTED(onError, "Integer constant", tk); }
+					if (!isInt16(context, 3, height, &tk)) { THROW_TYPE_EXPECTED(onError, "Integer constant", tk); }
+
+					// `DEF LABEL(x, y, w, h, base_tile = 0) = layer, margin_x = 0, margin_y = 0, blit_interval = 10, x_offset = 0`.
+					writeRoutine(
+						bytes, context,
+						Asm::Types::DEF_WIDGET, GUI_WIDGET_TYPE_LABEL, -1,
+						[&] (Counter &stk) -> int {
+							if (argn == 4) {
+								if (_children.size() == 6) {
+									Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // X offset.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)GUI_BLIT_INTERVAL); // Interval.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // Margin y.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // Margin x.
+									writeChildren(bytes, context, Range(5), stk, onError); // Layer.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // Base tile.
+									writeChildren(bytes, context, Range(3, 0), stk, onError); // X, y, width, height.
+								} else if (_children.size() == 7) {
+									Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // X offset.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)GUI_BLIT_INTERVAL); // Interval.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // Margin y.
+									writeChildren(bytes, context, Range(6, 5), stk, onError); // Layer, margin x.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // Base tile.
+									writeChildren(bytes, context, Range(3, 0), stk, onError); // X, y, width, height.
+								} else if (_children.size() == 8) {
+									Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // X offset.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)GUI_BLIT_INTERVAL); // Interval.
+									writeChildren(bytes, context, Range(7, 5), stk, onError); // Layer, margin x, margin y.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // Base tile.
+									writeChildren(bytes, context, Range(3, 0), stk, onError); // X, y, width, height.
+								} else if (_children.size() == 9) {
+									Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // X offset.
+									writeChildren(bytes, context, Range(8, 5), stk, onError); // Layer, margin x, margin y, interval.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // Base tile.
+									writeChildren(bytes, context, Range(3, 0), stk, onError); // X, y, width, height.
+								} else /* if (_children.size() == 10) */ {
+									writeChildren(bytes, context, Range(9, 5), stk, onError); // Layer, margin x, margin y, interval, x offset.
+									Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // Base tile.
+									writeChildren(bytes, context, Range(3, 0), stk, onError); // X, y, width, height.
+								}
+
+								return 10;
+							} else /* if (argn == 5) */ {
+								if (_children.size() == 7) {
+									Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // X offset.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)GUI_BLIT_INTERVAL); // Interval.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // Margin y.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // Margin x.
+									writeChildren(bytes, context, Range(6), stk, onError); // Layer.
+									writeChildren(bytes, context, Range(4, 0), stk, onError); // X, y, width, height, base tile.
+								} else if (_children.size() == 8) {
+									Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // X offset.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)GUI_BLIT_INTERVAL); // Interval.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // Margin y.
+									writeChildren(bytes, context, Range(7, 6), stk, onError); // Layer, margin x.
+									writeChildren(bytes, context, Range(4, 0), stk, onError); // X, y, width, height, base tile.
+								} else if (_children.size() == 9) {
+									Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // X offset.
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)GUI_BLIT_INTERVAL); // Interval.
+									writeChildren(bytes, context, Range(8, 6), stk, onError); // Layer, margin x, margin y.
+									writeChildren(bytes, context, Range(4, 0), stk, onError); // X, y, width, height, base tile.
+								} else if (_children.size() == 10) {
+									Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // X offset.
+									writeChildren(bytes, context, Range(9, 6), stk, onError); // Layer, margin x, margin y, interval.
+									writeChildren(bytes, context, Range(4, 0), stk, onError); // X, y, width, height, base tile.
+								} else /* if (_children.size() == 11) */ {
+									writeChildren(bytes, context, Range(10, 6), stk, onError); // Layer, margin x, margin y, interval, x offset.
+									writeChildren(bytes, context, Range(4, 0), stk, onError); // X, y, width, height, base tile.
+								}
+
+								return 10;
+							}
+						},
+						nullptr,
+						onError
+					);
+
+					// `FILE TILE(first, n) = "{builtin}"|#pg|#pg:n|"{name}"`.
+					const int tilesAssetArgIndex = argn;
+					bool byName_ = false;
+					std::string name;
+					if (isString(context, tilesAssetArgIndex, &name, nullptr)) byName_ = true;
+					if (byName_) {
+						if (!ctx.symbols) { THROW_INVALID_ASSET_POINT(onError); }
+						const RomLocation* romLocation = ctx.symbols->find(name);
+						const TilesAssets &tiles = ctx.assets->tiles;
+						int pageIndex = -1;
+						const TilesAssets::Entry* tilesEntry = tiles.find(name, &pageIndex); // By asset name.
+						if (romLocation) {
+							const int bank = romLocation->bank;
+							const int address = romLocation->address;
+							writeRoutine(
+								bytes, context,
+								Asm::Types::FILL_TILE, ASSET_SOURCE_FAR, GRAPHICS_LAYER_MAP, 2,
+								[&] (Counter &stk) -> int {
+									Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)(width * height)); // N.
+									if (argn == 4) {
+										args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+										args = fill(args, (UInt16)0); // Base tile.
+									} else {
+										writeChildren(bytes, context, Range(4), stk, onError); // Base tile.
+									}
+
+									return 2;
+								},
+								[&] (Counter &) -> void {
+									emit(bytes, context, (UInt8)bank);
+									emit(bytes, context, (UInt16)address);
+								},
+								onError
+							);
+						} else if (tilesEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							writeRoutine(
+								bytes, context,
+								Asm::Types::FILL_TILE, ASSET_SOURCE_FAR, GRAPHICS_LAYER_MAP, 2,
+								[&] (Counter &stk) -> int {
+									Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)(width * height)); // N.
+									if (argn == 4) {
+										args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+										args = fill(args, (UInt16)0); // Base tile.
+									} else {
+										writeChildren(bytes, context, Range(4), stk, onError); // Base tile.
+									}
+
+									return 2;
+								},
+								[&] (Counter &) -> void {
+									const SourceLocation target(pageIndex);
+									const int offset = (int)bytes->peek();
+									_scheduled = Scheduled(target, bytes->pointer(), bytes->pointer() + offset, false);
+									emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
+									emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
+								},
+								onError
+							);
+						} else {
+							std::string fuzzyName;
+							if (tiles.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						writeRoutine(
+							bytes, context,
+							Asm::Types::FILL_TILE, ASSET_SOURCE_FAR, GRAPHICS_LAYER_MAP, 2,
+							[&] (Counter &stk) -> int {
+								Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+								args = fill(args, (UInt16)(width * height)); // N.
+								if (argn == 4) {
+									args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+									args = fill(args, (UInt16)0); // Base tile.
+								} else {
+									writeChildren(bytes, context, Range(4), stk, onError); // Base tile.
+								}
+
+								return 2;
+							},
+							[&] (Counter &) -> void {
+								int page = -1;
+								Destination dest(0);
+								const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, tilesAssetArgIndex);
+								if (tks.size() == 1) { /* Do nothing. */ }
+								else if (!dest.isLeft()) { THROW_INVALID_ASSET_POINT(onError); }
+
+								if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+								if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::TILES, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+								const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
+								const int offset = (int)bytes->peek();
+								emit(bytes, context, (UInt8)COMPILER_PLACEHOLDER);
+								emit(bytes, context, (UInt16)COMPILER_PLACEHOLDER);
+								_scheduled = Scheduled(target, offset, false);
+							},
+							onError
+						);
+					}
+				}
+
+				break;
+			default:
+				THROW_INVALID_OPERATION(onError, idtk);
+			}
+		};
+
+		write(bytes, context, generator, false, onError);
+	}
+	virtual void post(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		Context &ctx = context.top();
+
+		if (!_scheduled.pending())
+			return;
+
+		if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+		Pipeline::Resource::Array locations;
+		if (!ctx.pipeline->lookup(AssetsBundle::Categories::TILES, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+		if (locations.size() != 1) { THROW_INVALID_ASSET_POINT(onError); }
+		const int bank = locations.front().bank;
+		const int address = locations.front().address;
+		const int size = locations.front().size;
+		const int offset = _scheduled.target.sub * 8 * 2;
+		if (offset >= size) { THROW_INVALID_ASSET_POINT(onError); }
+
+		Byte* args = _scheduled.args(bytes->pointer());
+		args = fill(args, (UInt8)bank);
+		args = fill(args, (UInt16)(address + offset));
+	}
+
+	virtual Abstract abstract(void) const override {
+		return abstract("DIALOG");
+	}
+	using Node::abstract;
+
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "DIALOG");
+	}
+	using Node::dump;
+};
+
 class NodeScroll : public Node {
 public:
 	NodeScroll() {
@@ -29594,6 +29922,7 @@ public:
 			ADD_STATEMENT("label",             node<NodeLabelManipulation>(),              Token::Types::KEYWORD,    false);
 			ADD_STATEMENT("progressbar",       node<NodeProgressBarManipulation>(),        Token::Types::KEYWORD,    false);
 			ADD_STATEMENT("menu",              node<NodeMenuManipulation>(),               Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("dialog",            node<NodeDialogManipulation>(),             Token::Types::KEYWORD,    false);
 
 			// Scroll.
 			ADD_STATEMENT("scroll",            node<NodeScroll>(),                         Token::Types::KEYWORD,    false);
@@ -37666,6 +37995,62 @@ private:
 				return true;
 			}
 		);
+		const Combinator DialogM( // GUI dialog manipulations.
+			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				State q = begin();
+				Node::Array children;
+				Token::Ptr id = nullptr;
+				std::string name;
+
+				if (!LineNumber(q, opts)) return false;
+				if (!(id = must(Token::Types::SYMBOL)(q))) return false;
+				else name = (std::string)id->data();
+				if (name != "def") return false;
+				if (!must(Token::Types::KEYWORD, "dialog")(q)) return false;
+				if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+				Arguments(q, children);
+				CHECK_UNEXPECTED(q);
+				if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+				{
+					const int n = (int)children.size();
+					Token::Ptr node(new Token());
+					node
+						->type(Token::Types::INTEGER)
+						->data(n);
+					q.tokens.push_back(node);
+				}
+				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (must(Token::Types::OPERATOR, "(")(q)) {
+					if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
+						Arguments(q, children);
+						CHECK_UNEXPECTED(q);
+					}
+					if (!must(Token::Types::OPERATOR, ")")(q)) return false;
+				} else {
+					Arguments(q, children);
+					CHECK_UNEXPECTED(q);
+				}
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+
+				Node::Ptr node = createNode(
+					"dialog", id->data(),
+					{
+						{ "allow_call", true }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				node->add(children);
+
+				return true;
+			}
+		);
 		const Combinator Scroll( // `SCROLL`.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				State q = begin();
@@ -38014,7 +38399,7 @@ private:
 			ImageM,
 			TileM, MapM, WindowM, SpriteM,
 			SceneM, ActorM, EmoteM, ProjectileM, TriggerM,
-			WidgetM, LabelM, ProgressBarM, MenuM, Scroll,
+			WidgetM, LabelM, ProgressBarM, MenuM, DialogM, Scroll,
 
 			Touch,
 

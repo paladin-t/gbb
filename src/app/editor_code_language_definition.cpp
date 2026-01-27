@@ -284,6 +284,7 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 		"label",
 		"progressbar",
 		"menu",
+		"dialog",
 
 		// Scroll.
 		"scroll",
