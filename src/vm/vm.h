@@ -135,6 +135,9 @@ extern UINT16 vm_exception_data;  // Exception data or parameters address.
 #endif /* VM_EXCEPTION_ENABLED */
 
 // Operators.
+#define VM_OP_R_INT8                    -1
+#define VM_OP_R_INT16                   -2
+#define VM_OP_R_REF                     -3
 #define VM_OP_EQ                         1
 #define VM_OP_LT                         2
 #define VM_OP_LE                         3
@@ -144,9 +147,28 @@ extern UINT16 vm_exception_data;  // Exception data or parameters address.
 #define VM_OP_AND                        7
 #define VM_OP_OR                         8
 #define VM_OP_NOT                        9
-#define VM_OP_R_INT8                    -1
-#define VM_OP_R_INT16                   -2
-#define VM_OP_R_REF                     -3
+#define VM_OP_ADD                       10
+#define VM_OP_SUB                       11
+#define VM_OP_MUL                       12
+#define VM_OP_DIV                       13
+#define VM_OP_MOD                       14
+#define VM_OP_BAND                      15
+#define VM_OP_BOR                       16
+#define VM_OP_BXOR                      17
+#define VM_OP_SHL                       18
+#define VM_OP_SHR                       19
+#define VM_OP_BNOT                      20
+#define VM_OP_NEG                       21
+#define VM_OP_SGN                       22
+#define VM_OP_ABS                       23
+#define VM_OP_SQR                       24
+#define VM_OP_SQRT                      25
+#define VM_OP_SIN                       26
+#define VM_OP_COS                       27
+#define VM_OP_ATAN2                     28
+#define VM_OP_POW                       29
+#define VM_OP_MIN                       30
+#define VM_OP_MAX                       31
 
 // The core instruction functions.
 void vm_nop(SCRIPT_CTX * THIS) OLDCALL BANKED;

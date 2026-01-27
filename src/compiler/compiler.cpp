@@ -2192,11 +2192,6 @@ struct Op {
 		INT8,
 		INT16,
 		REF,
-		ADD,
-		SUB,
-		MUL,
-		DIV,
-		MOD,
 		EQ,
 		LT,
 		LE,
@@ -2206,12 +2201,17 @@ struct Op {
 		AND,
 		OR,
 		NOT,
+		ADD,
+		SUB,
+		MUL,
+		DIV,
+		MOD,
 		BITWISE_AND,
 		BITWISE_OR,
 		BITWISE_XOR,
-		BITWISE_NOT,
 		BITWISE_LSHIFT,
 		BITWISE_RSHIFT,
+		BITWISE_NOT,
 		NEG,
 		SGN,
 		ABS,
@@ -2239,41 +2239,41 @@ struct Op {
 	}
 };
 Op::Operators Op::OPERATORS = array(
-	Op( 0,    0,    0,    0), // STOP.
-	Op(-1,    1,    0,    0), // INT8.
-	Op(-2,    2,    0,    0), // INT16.
-	Op(-3,    2,    0,    0), // REF.
-	Op('+',   0,   -1,    5), // ADD.
-	Op('-',   0,   -1,    5), // SUB.
-	Op('*',   0,   -1,    6), // MUL.
-	Op('/',   0,   -1,    6), // DIV.
-	Op('%',   0,   -1,    6), // MOD.
-	Op( 1,    0,   -1,    4), // EQ.
-	Op( 2,    0,   -1,    4), // LT.
-	Op( 3,    0,   -1,    4), // LE.
-	Op( 4,    0,   -1,    4), // GT.
-	Op( 5,    0,   -1,    4), // GE.
-	Op( 6,    0,   -1,    4), // NE.
-	Op( 7,    0,   -1,    3), // AND.
-	Op( 8,    0,   -1,    3), // OR.
-	Op( 9,    0,    1,    8), // NOT.
-	Op('&',   0,   -1,    7), // BITWISE_AND.
-	Op('|',   0,   -1,    7), // BITWISE_OR.
-	Op('^',   0,   -1,    7), // BITWISE_XOR.
-	Op('~',   0,    1,    7), // BITWISE_NOT.
-	Op('<',   0,   -1,    7), // BITWISE_LSHIFT.
-	Op('>',   0,   -1,    7), // BITWISE_RSHIFT.
-	Op('_',   0,    1,    8), // NEG.
-	Op('s',   0,   -1,    1), // SGN.
-	Op('@',   0,   -1,    1), // ABS.
-	Op('q',   0,   -1,    1), // SQR.
-	Op('Q',   0,   -1,    1), // SQRT.
-	Op('S',   0,   -1,    1), // SIN.
-	Op('C',   0,   -1,    1), // COS.
-	Op('T',   0,   -1,    1), // ATAN2.
-	Op('P',   0,   -1,    1), // POWI.
-	Op('m',   0,   -1,    2), // MIN.
-	Op('M',   0,   -1,    2)  // MAX.
+	Op( 0,   0,    0,    0), // STOP.
+	Op(-1,   1,    0,    0), // INT8.
+	Op(-2,   2,    0,    0), // INT16.
+	Op(-3,   2,    0,    0), // REF.
+	Op( 1,   0,   -1,    4), // EQ.
+	Op( 2,   0,   -1,    4), // LT.
+	Op( 3,   0,   -1,    4), // LE.
+	Op( 4,   0,   -1,    4), // GT.
+	Op( 5,   0,   -1,    4), // GE.
+	Op( 6,   0,   -1,    4), // NE.
+	Op( 7,   0,   -1,    3), // AND.
+	Op( 8,   0,   -1,    3), // OR.
+	Op( 9,   0,    1,    8), // NOT.
+	Op(10,   0,   -1,    5), // ADD.
+	Op(11,   0,   -1,    5), // SUB.
+	Op(12,   0,   -1,    6), // MUL.
+	Op(13,   0,   -1,    6), // DIV.
+	Op(14,   0,   -1,    6), // MOD.
+	Op(15,   0,   -1,    7), // BITWISE_AND.
+	Op(16,   0,   -1,    7), // BITWISE_OR.
+	Op(17,   0,   -1,    7), // BITWISE_XOR.
+	Op(18,   0,   -1,    7), // BITWISE_LSHIFT.
+	Op(19,   0,   -1,    7), // BITWISE_RSHIFT.
+	Op(20,   0,    1,    7), // BITWISE_NOT.
+	Op(21,   0,    1,    8), // NEG.
+	Op(22,   0,   -1,    1), // SGN.
+	Op(23,   0,   -1,    1), // ABS.
+	Op(24,   0,   -1,    1), // SQR.
+	Op(25,   0,   -1,    1), // SQRT.
+	Op(26,   0,   -1,    1), // SIN.
+	Op(27,   0,   -1,    1), // COS.
+	Op(28,   0,   -1,    1), // ATAN2.
+	Op(29,   0,   -1,    1), // POWI.
+	Op(30,   0,   -1,    2), // MIN.
+	Op(31,   0,   -1,    2)  // MAX.
 );
 
 enum class EventTypes {
@@ -7750,24 +7750,7 @@ private:
 				switch (tk->type()) {
 				case Token::Types::OPERATOR: {
 						const std::string data = (std::string)tk->data();
-						if (data == "+") {
-							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::ADD]); DEC_COUNTER(stk, 2);
-							++offset;
-						} else if (data == "-") {
-							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::SUB]); DEC_COUNTER(stk, 2);
-							++offset;
-						} else if (data == NEGATIVE) {
-							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::NEG]);
-						} else if (data == "*") {
-							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::MUL]); DEC_COUNTER(stk, 2);
-							++offset;
-						} else if (data == "/") {
-							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::DIV]); DEC_COUNTER(stk, 2);
-							++offset;
-						} else if (data == "mod") {
-							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::MOD]); DEC_COUNTER(stk, 2);
-							++offset;
-						} else if (data == "=") {
+						if (data == "=") {
 							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::EQ]); DEC_COUNTER(stk, 2);
 							++offset;
 						} else if (data == "<") {
@@ -7793,6 +7776,23 @@ private:
 							++offset;
 						} else if (data == "not") {
 							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::NOT]);
+						} else if (data == "+") {
+							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::ADD]); DEC_COUNTER(stk, 2);
+							++offset;
+						} else if (data == "-") {
+							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::SUB]); DEC_COUNTER(stk, 2);
+							++offset;
+						} else if (data == NEGATIVE) {
+							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::NEG]);
+						} else if (data == "*") {
+							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::MUL]); DEC_COUNTER(stk, 2);
+							++offset;
+						} else if (data == "/") {
+							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::DIV]); DEC_COUNTER(stk, 2);
+							++offset;
+						} else if (data == "mod") {
+							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::MOD]); DEC_COUNTER(stk, 2);
+							++offset;
 						} else if (data == "band") {
 							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::BITWISE_AND]); DEC_COUNTER(stk, 2);
 							++offset;
@@ -7802,14 +7802,14 @@ private:
 						} else if (data == "bxor") {
 							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::BITWISE_XOR]); DEC_COUNTER(stk, 2);
 							++offset;
-						} else if (data == "bnot") {
-							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::BITWISE_NOT]);
 						} else if (data == "lshift") {
 							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::BITWISE_LSHIFT]); DEC_COUNTER(stk, 2);
 							++offset;
 						} else if (data == "rshift") {
 							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::BITWISE_RSHIFT]); DEC_COUNTER(stk, 2);
 							++offset;
+						} else if (data == "bnot") {
+							emit(bytes, context, Op::OPERATORS[(size_t)Op::Types::BITWISE_NOT]);
 						}
 					}
 
@@ -8053,26 +8053,26 @@ private:
 						const bool allowUnaryNot = expectsOperand && expectsOperand->type() == Token::Types::OPERATOR &&
 							(
 								expectsOperand->data() == "("      ||
-								expectsOperand->data() == "+"      ||
-								expectsOperand->data() == "-"      ||
-								expectsOperand->data() == "*"      ||
-								expectsOperand->data() == "/"      ||
-								expectsOperand->data() == "mod"    ||
 								expectsOperand->data() == "="      ||
 								expectsOperand->data() == "<"      ||
 								expectsOperand->data() == "<="     ||
 								expectsOperand->data() == ">"      ||
 								expectsOperand->data() == ">="     ||
 								expectsOperand->data() == "<>"     ||
+								expectsOperand->data() == "+"      ||
+								expectsOperand->data() == "-"      ||
+								expectsOperand->data() == "*"      ||
+								expectsOperand->data() == "/"      ||
+								expectsOperand->data() == "mod"    ||
 								expectsOperand->data() == "and"    ||
 								expectsOperand->data() == "or"     ||
 								expectsOperand->data() == "not"    ||
 								expectsOperand->data() == "band"   ||
 								expectsOperand->data() == "bor"    ||
 								expectsOperand->data() == "bxor"   ||
-								expectsOperand->data() == "bnot"   ||
 								expectsOperand->data() == "lshift" ||
-								expectsOperand->data() == "rshift"
+								expectsOperand->data() == "rshift" ||
+								expectsOperand->data() == "bnot"
 							);
 						const bool isUnaryNot = tk->type() == Token::Types::OPERATOR &&
 							(tk->data() == "not" || tk->data() == "bnot"); // Is a unary `NOT` or `BNOT`.
@@ -29342,9 +29342,9 @@ public:
 			ADD_STATEMENT("band",              NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
 			ADD_STATEMENT("bor",               NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
 			ADD_STATEMENT("bxor",              NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("bnot",              NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
 			ADD_STATEMENT("lshift",            NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
 			ADD_STATEMENT("rshift",            NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
+			ADD_STATEMENT("bnot",              NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
 
 			// Function-like `OP(...)`.
 			ADD_STATEMENT("sgn",               node<NodeMath>("sgn"),                      Token::Types::OPERATOR,   false);
@@ -29961,11 +29961,6 @@ public:
 			/**< Operators. */
 
 			// `a OP b` or `OP a`.
-			ADD_OPERATOR("+",        OperatorTable::Entry(Op::Types::ADD,              2,   false));
-			ADD_OPERATOR("-",        OperatorTable::Entry(Op::Types::SUB,              2,   false));
-			ADD_OPERATOR("*",        OperatorTable::Entry(Op::Types::MUL,              2,   false));
-			ADD_OPERATOR("/",        OperatorTable::Entry(Op::Types::DIV,              2,   false));
-			ADD_OPERATOR("mod",      OperatorTable::Entry(Op::Types::MOD,              2,   false));
 			ADD_OPERATOR("=",        OperatorTable::Entry(Op::Types::EQ,               2,   false));
 			ADD_OPERATOR("<",        OperatorTable::Entry(Op::Types::LT,               2,   false));
 			ADD_OPERATOR("<=",       OperatorTable::Entry(Op::Types::LE,               2,   false));
@@ -29975,12 +29970,17 @@ public:
 			ADD_OPERATOR("and",      OperatorTable::Entry(Op::Types::AND,              2,   false));
 			ADD_OPERATOR("or",       OperatorTable::Entry(Op::Types::OR,               2,   false));
 			ADD_OPERATOR("not",      OperatorTable::Entry(Op::Types::NOT,              1,   false));
+			ADD_OPERATOR("+",        OperatorTable::Entry(Op::Types::ADD,              2,   false));
+			ADD_OPERATOR("-",        OperatorTable::Entry(Op::Types::SUB,              2,   false));
+			ADD_OPERATOR("*",        OperatorTable::Entry(Op::Types::MUL,              2,   false));
+			ADD_OPERATOR("/",        OperatorTable::Entry(Op::Types::DIV,              2,   false));
+			ADD_OPERATOR("mod",      OperatorTable::Entry(Op::Types::MOD,              2,   false));
 			ADD_OPERATOR("band",     OperatorTable::Entry(Op::Types::BITWISE_AND,      2,   false));
 			ADD_OPERATOR("bor",      OperatorTable::Entry(Op::Types::BITWISE_OR,       2,   false));
 			ADD_OPERATOR("bxor",     OperatorTable::Entry(Op::Types::BITWISE_XOR,      2,   false));
-			ADD_OPERATOR("bnot",     OperatorTable::Entry(Op::Types::BITWISE_NOT,      1,   false));
 			ADD_OPERATOR("lshift",   OperatorTable::Entry(Op::Types::BITWISE_LSHIFT,   2,   false));
 			ADD_OPERATOR("rshift",   OperatorTable::Entry(Op::Types::BITWISE_RSHIFT,   2,   false));
+			ADD_OPERATOR("bnot",     OperatorTable::Entry(Op::Types::BITWISE_NOT,      1,   false));
 			ADD_OPERATOR(NEGATIVE,   OperatorTable::Entry(Op::Types::NEG,              1,   false));
 
 			// Function-like `OP(...)`.

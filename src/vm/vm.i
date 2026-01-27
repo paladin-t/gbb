@@ -186,11 +186,6 @@ OP_VM_ACC_CONST                 = 0x19
 .endm
 
 OP_VM_RPN                       = 0x1A
-        .ADD                    = '+'
-        .SUB                    = '-'
-        .MUL                    = '*'
-        .DIV                    = '/'
-        .MOD                    = '%'
         ; .EQ                   = 1
         ; .LT                   = 2
         ; .LE                   = 3
@@ -200,23 +195,28 @@ OP_VM_RPN                       = 0x1A
         .AND                    = 7
         .OR                     = 8
         .NOT                    = 9
-        .B_AND                  = '&'
-        .B_OR                   = '|'
-        .B_XOR                  = '^'
-        .B_LSHIFT               = '<'
-        .B_RSHIFT               = '>'
-        .B_NOT                  = '~'
-        .NEG                    = '_'
-        .SGN                    = 's'
-        .ABS                    = '@'
-        .SQR                    = 'q'
-        .SQRT                   = 'Q'
-        .SIN                    = 'S'
-        .COS                    = 'C'
-        .ATAN2                  = 'T'
-        .POWI                   = 'P'
-        .MIN                    = 'm'
-        .MAX                    = 'M'
+        .ADD                    = 10
+        .SUB                    = 11
+        .MUL                    = 12
+        .DIV                    = 13
+        .MOD                    = 14
+        .B_AND                  = 15
+        .B_OR                   = 16
+        .B_XOR                  = 17
+        .B_LSHIFT               = 18
+        .B_RSHIFT               = 19
+        .B_NOT                  = 20
+        .NEG                    = 21
+        .SGN                    = 22
+        .ABS                    = 23
+        .SQR                    = 24
+        .SQRT                   = 25
+        .SIN                    = 26
+        .COS                    = 27
+        .ATAN2                  = 28
+        .POWI                   = 29
+        .MIN                    = 30
+        .MAX                    = 31
 .macro VM_RPN
         .db OP_VM_RPN
 .endm
