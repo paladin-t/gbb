@@ -2,7 +2,7 @@
 #
 # This software may be modified and distributed under the terms
 # of the MIT license.  See the LICENSE file for details.
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.10)
 project(binjgb)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -36,6 +36,7 @@ add_custom_target(${name}-copy-to-bin ALL
 endfunction ()
 
 if (NOT EMSCRIPTEN)
+  set(OpenGL_GL_PREFERENCE LEGACY)
   find_package(SDL2)
   find_package(OpenGL)
 

@@ -1175,6 +1175,7 @@ static Result get_cart_info(FileData* file_data, size_t offset,
 
   u32 rom_byte_size = s_rom_bank_count[cart_info->rom_size] << ROM_BANK_SHIFT;
   *max_file_size = MAX(*max_file_size, offset + rom_byte_size);
+  cart_info->size = *max_file_size;
 
   return OK;
   ON_ERROR_RETURN;

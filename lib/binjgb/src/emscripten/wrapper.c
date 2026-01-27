@@ -177,6 +177,12 @@ FileData* ext_ram_file_data_new(Emulator* e) {
   return file_data;
 }
 
+FileData* state_file_data_new(Emulator* e) {
+  FileData* file_data = xmalloc(s_emulator_state_size);
+  emulator_init_state_file_data(file_data);
+  return file_data;
+}
+
 void* get_file_data_ptr(FileData* file_data) {
   return file_data->data;
 }
