@@ -197,8 +197,9 @@ private:
 		Math::Vec2i position;
 		int palette = 0; // CGB palette.
 		struct {
-			int palette = 0; // Classic palette for sprite.
 			int index = 0; // OAM index.
+			int palette = 0; // Classic palette for sprite.
+			bool visible = false;
 		} oam;
 
 		TileDetail() {
@@ -209,13 +210,14 @@ private:
 			palette(pal)
 		{
 		}
-		TileDetail(Usages use, const Math::Vec2i &pos, int pal, int obp_, int idx) :
+		TileDetail(Usages use, const Math::Vec2i &pos, int pal, int idx, int obp_, bool vis) :
 			usage(use),
 			position(pos),
 			palette(pal)
 		{
-			oam.palette = obp_;
 			oam.index = idx;
+			oam.palette = obp_;
+			oam.visible = vis;
 		}
 
 		static void clear(TileDetail::Banks &details) {
@@ -655,6 +657,22 @@ private:
 			TileDetail::Banks &tileDetails,
 			bool is8x16Obj, const ObjBuffer::Array &objs
 		) -> void {
+			auto addDetail = [] (TileDetail::Ref &ref, const TileDetail &detail) -> void {
+				if (ref.details.empty()) {
+					ref.details.push_back(detail);
+
+					return;
+				}
+
+				if (ref.details.front().oam.visible) {
+					ref.details.push_back(detail);
+
+					return;
+				}
+
+				ref.details.insert(ref.details.begin(), detail);
+			};
+
 			for (int i = 0; i < (int)objs.size(); ++i) {
 				const ObjBuffer &obj = objs[i];
 				const Device::Obj &dobj = obj.obj;
@@ -670,14 +688,14 @@ private:
 				TileDetail::Ref &ref = tileDetails[bank][(int)TileDetail::Usages::OBJ][tile];
 				if (obj.visible)
 					++ref.refCount;
-				const TileDetail detail(TileDetail::Usages::OBJ, Math::Vec2i(ox, oy), plt, obp, i);
-				ref.details.push_back(detail);
+				const TileDetail detail(TileDetail::Usages::OBJ, Math::Vec2i(ox, oy), plt, i, obp, obj.visible);
+				addDetail(ref, detail);
 				if (is8x16Obj) {
 					TileDetail::Ref &ref_ = tileDetails[bank][(int)TileDetail::Usages::OBJ][(tile + 1) % 255];
 					if (obj.visible)
 						++ref_.refCount;
-					const TileDetail detail_(TileDetail::Usages::OBJ, Math::Vec2i(ox, oy + GBBASIC_TILE_SIZE), plt, obp, i);
-					ref_.details.push_back(detail_);
+					const TileDetail detail_(TileDetail::Usages::OBJ, Math::Vec2i(ox, oy + GBBASIC_TILE_SIZE), plt, i, obp, obj.visible);
+					addDetail(ref_, detail_);
 				}
 			}
 		};
@@ -1105,9 +1123,16 @@ private:
 			const UInt16 addr = (UInt16)(
 				(0x8000 + (tilePos.x + tilePos.y * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK) * 16)
 			);
-			int plt = mapDetails.empty() ? -1 : mapDetails.front().palette;
-			if (plt == -1)
-				plt = oamDetails.empty() ? -1 : oamDetails.front().palette;
+			int plt = -1;
+			if (hasInfoForMap) {
+				plt = mapDetails.empty() ? -1 : mapDetails.front().palette; // Prefer MAP palette.
+				if (plt == -1)
+					plt = oamDetails.empty() ? -1 : oamDetails.front().palette;
+			} else if (hasInfoForOam) {
+				plt = oamDetails.empty() ? -1 : oamDetails.front().palette; // Prefer OAM palette.
+				if (plt == -1)
+					plt = mapDetails.empty() ? -1 : mapDetails.front().palette;
+			}
 			int refCount = 0;
 			if (hasInfoForMap)
 				refCount += mapRef.refCount;
