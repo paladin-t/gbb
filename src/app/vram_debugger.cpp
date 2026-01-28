@@ -739,26 +739,34 @@ private:
 					const bool isForObj = ty < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2;
 					const bool isForBg = (ty >= VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT) ||
 						!isForObj; // Must be for BG if is not for obj.
-					const UInt8 bgTile = isForBg ?
+					const UInt8 bgTileY = isForBg ?
 						(UInt8)((ty < VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2) ?
 							ty :
 							(ty - VRAM_DEBUGGER_TILES_SECTION_HALF_HEIGHT * 2)) :
 						0;
-					const UInt8 objTile = isForObj ?
+					const UInt8 objTileY = isForObj ?
 						(UInt8)ty :
 						0;
+					const UInt8 bgTile = (UInt8)(tx + bgTileY * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+					const TileDetail::Ref &bgRef = tileDetails[bank][(int)TileDetail::Usages::MAP][bgTile];
+					const UInt8 objTile = (UInt8)(tx + objTileY * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
+					const TileDetail::Ref &objRef = tileDetails[bank][(int)TileDetail::Usages::OBJ][objTile];
 					const TileDetail::Array* details = nullptr;
 					int refCount = 0;
-					if (isForBg) {
-						const UInt8 tile = (UInt8)(tx + bgTile * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-						const TileDetail::Ref &ref = tileDetails[bank][(int)TileDetail::Usages::MAP][tile];
-						details = &ref.details;
-						refCount = ref.refCount;
-					} else /* if (isForObj) */ {
-						const UInt8 tile = (UInt8)(tx + objTile * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-						const TileDetail::Ref &ref = tileDetails[bank][(int)TileDetail::Usages::OBJ][tile];
-						details = &ref.details;
-						refCount = ref.refCount;
+					if (isForObj) {
+						details = &objRef.details; // Prefer OAM.
+						refCount = objRef.refCount;
+						if (refCount == 0 && bgRef.refCount > 0) {
+							details = &bgRef.details;
+							refCount = bgRef.refCount;
+						}
+					} else /* if (isForBg) */ {
+						details = &bgRef.details; // Prefer MAP.
+						refCount = bgRef.refCount;
+						if (refCount == 0 && objRef.refCount > 0) {
+							details = &objRef.details;
+							refCount = objRef.refCount;
+						}
 					}
 
 					const int x = (tx + VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK * bank) * GBBASIC_TILE_SIZE + px;
