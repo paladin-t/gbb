@@ -672,6 +672,7 @@
     <ClCompile Include="src\app\editor_console.cpp" />
     <ClCompile Include="src\app\editor_code_binding.cpp" />
     <ClCompile Include="src\app\editor_code_language_definition.cpp" />
+    <ClCompile Include="src\app\editor_map_as_image.cpp" />
     <ClCompile Include="src\app\editor_music.cpp" />
     <ClCompile Include="src\app\editor_code.cpp" />
     <ClCompile Include="src\app\editor_font.cpp" />
@@ -1026,6 +1027,7 @@
     <ClInclude Include="src\app\editor_console.h" />
     <ClInclude Include="src\app\editor_code_binding.h" />
     <ClInclude Include="src\app\editor_code_language_definition.h" />
+    <ClInclude Include="src\app\editor_map_as_image.h" />
     <ClInclude Include="src\app\editor_music.h" />
     <ClInclude Include="src\app\editor_code.h" />
     <ClInclude Include="src\app\editor_font.h" />

@@ -234,6 +234,7 @@ list(
   "../src/app/editor_console.cpp"
   "../src/app/editor_font.cpp"
   "../src/app/editor_map.cpp"
+  "../src/app/editor_map_as_image.cpp"
   "../src/app/editor_music.cpp"
   "../src/app/editor_palette.cpp"
   "../src/app/editor_properties.cpp"

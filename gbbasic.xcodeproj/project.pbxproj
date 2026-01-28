@@ -44,6 +44,7 @@
 		038E776E2582133D00A94374 /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = 038E775B2582133B00A94374 /* crc32.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		038E77702582133D00A94374 /* gzclose.c in Sources */ = {isa = PBXBuildFile; fileRef = 038E775D2582133C00A94374 /* gzclose.c */; };
 		03FEADAF25C94ED3006A5EF0 /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 03FEADAE25C94ED3006A5EF0 /* imgui_tables.cpp */; };
+		6866CE3F2F29C0600040C3AB /* editor_map_as_image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6866CE3D2F29C0600040C3AB /* editor_map_as_image.cpp */; };
 		689DD3FA2E2F37C5001D2B86 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD3F72E2F37C5001D2B86 /* main.cpp */; };
 		689DD4282E2F3A36001D2B86 /* stb_vorbis.c in Sources */ = {isa = PBXBuildFile; fileRef = 689DD4142E2F3A34001D2B86 /* stb_vorbis.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		689DD4322E2F3AB6001D2B86 /* promise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD4312E2F3AB6001D2B86 /* promise.cpp */; };
@@ -303,6 +304,8 @@
 		038E77602582133D00A94374 /* zlib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = zlib.h; path = lib/zlib/zlib.h; sourceTree = "<group>"; };
 		038E77612582133D00A94374 /* gzguts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzguts.h; path = lib/zlib/gzguts.h; sourceTree = "<group>"; };
 		03FEADAE25C94ED3006A5EF0 /* imgui_tables.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_tables.cpp; path = lib/imgui/imgui_tables.cpp; sourceTree = "<group>"; };
+		6866CE3D2F29C0600040C3AB /* editor_map_as_image.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = editor_map_as_image.cpp; path = src/app/editor_map_as_image.cpp; sourceTree = "<group>"; };
+		6866CE3E2F29C0600040C3AB /* editor_map_as_image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = editor_map_as_image.h; path = src/app/editor_map_as_image.h; sourceTree = "<group>"; };
 		688D8A2B2E33339700B7C5DA /* Info-Emu.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "Info-Emu.plist"; path = "src/app/mac/Info-Emu.plist"; sourceTree = "<group>"; };
 		688D8A2D2E3333A900B7C5DA /* Info-Steam.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "Info-Steam.plist"; path = "src/app/mac/Info-Steam.plist"; sourceTree = "<group>"; };
 		689DD3F72E2F37C5001D2B86 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = src/main.cpp; sourceTree = "<group>"; };
@@ -1201,6 +1204,8 @@
 				689DD57D2E2F3F10001D2B86 /* editor_console.h */,
 				689DD5B92E2F3F16001D2B86 /* editor_font.cpp */,
 				689DD5C72E2F3F17001D2B86 /* editor_font.h */,
+				6866CE3D2F29C0600040C3AB /* editor_map_as_image.cpp */,
+				6866CE3E2F29C0600040C3AB /* editor_map_as_image.h */,
 				689DD5842E2F3F10001D2B86 /* editor_map.cpp */,
 				689DD57A2E2F3F0F001D2B86 /* editor_map.h */,
 				689DD5902E2F3F12001D2B86 /* editor_music.cpp */,
@@ -1725,6 +1730,7 @@
 				038E76552582109700A94374 /* imgui_demo.cpp in Sources */,
 				689DD5202E2F3DE8001D2B86 /* bytes.cpp in Sources */,
 				689DD5712E2F3EED001D2B86 /* compiler.cpp in Sources */,
+				6866CE3F2F29C0600040C3AB /* editor_map_as_image.cpp in Sources */,
 				689DD5EA2E2F3F18001D2B86 /* editor_search_result.cpp in Sources */,
 				689DD5D62E2F3F18001D2B86 /* editor_map.cpp in Sources */,
 				038E76532582109700A94374 /* imgui_widgets.cpp in Sources */,

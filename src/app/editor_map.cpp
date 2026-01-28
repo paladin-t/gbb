@@ -8,6 +8,7 @@
 
 #include "commands_map.h"
 #include "editor_map.h"
+#include "editor_map_as_image.h"
 #include "editor_tiles.h"
 #include "theme.h"
 #include "workspace.h"
