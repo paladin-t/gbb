@@ -317,18 +317,21 @@ private:
 		UInt8 bank = 0;
 		UInt16 address = 0;
 		int palette = -1;
+		int refCount = 0;
 		std::string text;
 
 		void refresh(
 			Theme* theme,
 			UInt8 tile_,
 			UInt8 bank_, UInt16 addr,
-			int plt
+			int plt,
+			int ref
 		) {
 			if (
 				tile == tile_ &&
 				bank == bank_ && address == addr &&
-				palette == plt
+				palette == plt &&
+				refCount == ref
 			) {
 				return;
 			}
@@ -337,13 +340,15 @@ private:
 			bank = bank_;
 			address = addr;
 			palette = plt;
+			refCount = ref;
 
 			text = Text::format(
 				theme->tooltipEmulator_VramDebugger_Tile(),
 				{
 					Text::toHex(tile, 2, '0', true), Text::toString(tile),
 					Text::toString(bank), Text::toHex(address, 4, '0', true),
-					palette == -1 ? "-" : Text::toString(palette)
+					palette == -1 ? "-" : Text::toString(palette),
+					Text::toString(refCount)
 				}
 			);
 		}
@@ -663,12 +668,14 @@ private:
 				const int plt = dobj.cgbPalette;
 
 				TileDetail::Ref &ref = tileDetails[bank][(int)TileDetail::Usages::OBJ][tile];
-				++ref.refCount;
+				if (obj.visible)
+					++ref.refCount;
 				const TileDetail detail(TileDetail::Usages::OBJ, Math::Vec2i(ox, oy), plt, obp, i);
 				ref.details.push_back(detail);
 				if (is8x16Obj) {
 					TileDetail::Ref &ref_ = tileDetails[bank][(int)TileDetail::Usages::OBJ][(tile + 1) % 255];
-					++ref_.refCount;
+					if (obj.visible)
+						++ref_.refCount;
 					const TileDetail detail_(TileDetail::Usages::OBJ, Math::Vec2i(ox, oy + GBBASIC_TILE_SIZE), plt, obp, i);
 					ref_.details.push_back(detail_);
 				}
@@ -1090,8 +1097,10 @@ private:
 
 		if (hasInfoForMap || hasInfoForOam) {
 			const UInt8 tile = (UInt8)(tilePos.x + tilePos.y * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK);
-			const TileDetail::Array &mapDetails = _tileDetails[infoBank][(int)TileDetail::Usages::MAP][tile].details;
-			const TileDetail::Array &oamDetails = _tileDetails[infoBank][(int)TileDetail::Usages::OBJ][tile].details;
+			const TileDetail::Ref &mapRef = _tileDetails[infoBank][(int)TileDetail::Usages::MAP][tile];
+			const TileDetail::Ref &oamRef = _tileDetails[infoBank][(int)TileDetail::Usages::OBJ][tile];
+			const TileDetail::Array &mapDetails = mapRef.details;
+			const TileDetail::Array &oamDetails = oamRef.details;
 
 			const UInt16 addr = (UInt16)(
 				(0x8000 + (tilePos.x + tilePos.y * VRAM_DEBUGGER_TILES_AREA_WIDTH_PER_BANK) * 16)
@@ -1099,11 +1108,17 @@ private:
 			int plt = mapDetails.empty() ? -1 : mapDetails.front().palette;
 			if (plt == -1)
 				plt = oamDetails.empty() ? -1 : oamDetails.front().palette;
+			int refCount = 0;
+			if (hasInfoForMap)
+				refCount += mapRef.refCount;
+			if (hasInfoForOam)
+				refCount += oamRef.refCount;
 			_tileTips.refresh(
 				theme,
 				tile,
 				(UInt8)infoBank, addr,
-				plt
+				plt,
+				refCount
 			);
 			if (!_tileTips.text.empty()) {
 				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));

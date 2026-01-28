@@ -1188,7 +1188,8 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_VramDebugger_Tile(
 		"    Tile No. {0} ({1})\n"
 		"  Tile addr: {2}:{3}\n"
-		"Guessed plt. {4}"
+		"Guessed plt. {4}\n"
+		"  Ref count: {5}"
 	);
 
 	tooltipFont_Info("{0} glyphs");
