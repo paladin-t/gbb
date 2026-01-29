@@ -221,14 +221,14 @@ OP_VM_RPN                       = 0x1A
         .db OP_VM_RPN
 .endm
 .macro .R_INT8 ARG0
-        .db -1, #<ARG0
+        .db 32, #<ARG0
 .endm
 .macro .R_INT16 ARG0
-        .db -2
+        .db 33
         .dw #ARG0
 .endm
 .macro .R_REF ARG0
-        .db -3
+        .db 34
         .dw #ARG0
 .endm
 .macro .R_OPERATOR ARG0

@@ -135,9 +135,9 @@ extern UINT16 vm_exception_data;  // Exception data or parameters address.
 #endif /* VM_EXCEPTION_ENABLED */
 
 // Operators.
-#define VM_OP_R_INT8                    -1
-#define VM_OP_R_INT16                   -2
-#define VM_OP_R_REF                     -3
+#define VM_OP_R_INT8                    32
+#define VM_OP_R_INT16                   33
+#define VM_OP_R_REF                     34
 #define VM_OP_EQ                         1
 #define VM_OP_LT                         2
 #define VM_OP_LE                         3

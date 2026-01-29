@@ -1,6 +1,8 @@
 #pragma bank 1
 
 #if defined __SDCC
+#   pragma disable_warning 110
+
 #   include <gbdk/console.h>
 #else /* __SDCC */
 #   error "Not implemented."
@@ -332,32 +334,26 @@ void vm_rpn(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS) OLDCALL NONBANK
 
     ARGS = THIS->stack_ptr;
     while (TRUE) {
-        INT8 op = *(THIS->PC++);
-        if (op < 0) {
+        UINT8 op = *(THIS->PC++);
+        if (op >= 32) {
             switch (op) {
-            // Reference.
-            case VM_OP_R_REF:
+            case VM_OP_R_INT8: // Int8.
+                op = *(THIS->PC++);
+                *(THIS->stack_ptr) = op;
+
+                break;
+            case VM_OP_R_INT16: // Int16.
+                *(THIS->stack_ptr) = *((UINT16 *)(THIS->PC));
+                THIS->PC += 2;
+
+                break;
+            case VM_OP_R_REF: // Reference.
                 idx = *((INT16 *)(THIS->PC));
                 if (idx < 0) A = ARGS + idx; else A = script_memory + idx;
                 *(THIS->stack_ptr) = *A;
                 THIS->PC += 2;
 
                 break;
-
-            // Int16.
-            case VM_OP_R_INT16:
-                *(THIS->stack_ptr) = *((UINT16 *)(THIS->PC));
-                THIS->PC += 2;
-
-                break;
-
-            // Int8.
-            case VM_OP_R_INT8:
-                op = *(THIS->PC++);
-                *(THIS->stack_ptr) = op;
-
-                break;
-
             default:
                 SWITCH_ROM_BANK(_save);
 

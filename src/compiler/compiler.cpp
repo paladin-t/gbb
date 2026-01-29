@@ -2185,7 +2185,7 @@ const Asm::Instructions Asm::INSTRUCTIONS = array(
 );
 
 struct Op {
-	typedef Int8 Opcode;
+	typedef UInt8 Opcode;
 
 	enum class Types : Byte {
 		STOP,
@@ -2240,9 +2240,9 @@ struct Op {
 };
 Op::Operators Op::OPERATORS = array(
 	Op( 0,   0,    0,    0), // STOP.
-	Op(-1,   1,    0,    0), // INT8.
-	Op(-2,   2,    0,    0), // INT16.
-	Op(-3,   2,    0,    0), // REF.
+	Op(32,   1,    0,    0), // INT8.
+	Op(33,   2,    0,    0), // INT16.
+	Op(34,   2,    0,    0), // REF.
 	Op( 1,   0,   -1,    4), // EQ.
 	Op( 2,   0,   -1,    4), // LT.
 	Op( 3,   0,   -1,    4), // LE.
