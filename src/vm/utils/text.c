@@ -21,6 +21,16 @@ UINT8 int16_to_str(INT16 n, unsigned char * s) BANKED {
 
         return 1;
     }
+    if (n == 0x8000 /* -32768 */) { // To avoid a overflow issue.
+        *s++ = '-';
+        *s++ = '3';
+        *s++ = '2';
+        *s++ = '7';
+        *s++ = '6';
+        *s++ = '8';
+
+        return 6;
+    }
 
     UINT8 result = 0;
     if (n < 0) {
@@ -29,11 +39,11 @@ UINT8 int16_to_str(INT16 n, unsigned char * s) BANKED {
         n = -n;
     }
     UINT8 c = 0;
-    if (n <= 9) c = 1;
-    else if (n <= 99) c = 2;
-    else if (n <= 999) c = 3;
-    else if (n <= 9999) c = 4;
-    else /* if (n <= 99999) */ c = 5;
+    if (n < 10) c = 1;
+    else if (n < 100) c = 2;
+    else if (n < 1000) c = 3;
+    else if (n < 10000) c = 4;
+    else /* if (n <= 32767) */ c = 5;
     s += c;
 
     while (n) {
