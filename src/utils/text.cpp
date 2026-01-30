@@ -702,13 +702,14 @@ std::string Text::snakeToPascal(const std::string &str) {
 }
 
 std::string Text::sanitizeFilename(const std::string &str, char replacementChar) {
-	std::string result = str;
+	// Prepare.
+	std::wstring wresult = Unicode::toWide(str);
 
 	// Define illegal characters.
-	std::string illegalChars = "/\\?%*:|\"<>";
+	std::wstring illegalChars = L"/\\?%*:|\"<>";
 
 #if defined GBBASIC_OS_WIN
-	illegalChars += "&$!';`";
+	illegalChars += L"&$!';`";
 #elif defined GBBASIC_OS_MAC
 	// Do nothing.
 #elif defined GBBASIC_OS_LINUX
@@ -716,14 +717,14 @@ std::string Text::sanitizeFilename(const std::string &str, char replacementChar)
 #endif /* Platform macro. */
 
 	// Replace illegal characters.
-	for (char &c : result) {
-		if (illegalChars.find(c) != std::string::npos) {
+	for (wchar_t &c : wresult) {
+		if (illegalChars.find(c) != std::wstring::npos) {
 			c = replacementChar;
 		}
 	}
 
 	// Replace control characters.
-	for (char &c : result) {
+	for (wchar_t &c : wresult) {
 		if (std::iscntrl(static_cast<unsigned char>(c))) {
 			c = replacementChar;
 		}
@@ -731,27 +732,27 @@ std::string Text::sanitizeFilename(const std::string &str, char replacementChar)
 
 	// Replace reserved names.
 #if defined GBBASIC_OS_WIN
-	constexpr const char* WINDOWS_RESERVED_NAMES[] = {
-		"CON", "PRN", "AUX", "NUL",
-		"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-		"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+	constexpr const wchar_t* WINDOWS_RESERVED_NAMES[] = {
+		L"CON", L"PRN", L"AUX", L"NUL",
+		L"COM1", L"COM2", L"COM3", L"COM4", L"COM5", L"COM6", L"COM7", L"COM8", L"COM9",
+		L"LPT1", L"LPT2", L"LPT3", L"LPT4", L"LPT5", L"LPT6", L"LPT7", L"LPT8", L"LPT9"
 	};
 
-	std::string upperStr = result;
+	std::wstring upperStr = wresult;
 	std::transform(upperStr.begin(), upperStr.end(), upperStr.begin(), ::toupper);
 
-	for (const char* reserved : WINDOWS_RESERVED_NAMES) {
+	for (const wchar_t* reserved : WINDOWS_RESERVED_NAMES) {
 		if (upperStr == reserved) {
-			result = "_" + result;
+			wresult = L"_" + wresult;
 
 			break;
 		}
 
-		const size_t dotPos = upperStr.find('.');
-		if (dotPos != std::string::npos) {
-			const std::string nameOnly = upperStr.substr(0, dotPos);
+		const size_t dotPos = upperStr.find(L'.');
+		if (dotPos != std::wstring::npos) {
+			const std::wstring nameOnly = upperStr.substr(0, dotPos);
 			if (nameOnly == reserved) {
-				result = "_" + result;
+				wresult = L"_" + wresult;
 
 				break;
 			}
@@ -760,38 +761,41 @@ std::string Text::sanitizeFilename(const std::string &str, char replacementChar)
 #endif /* Platform macro. */
 
 	// Remove if ends with dot.
-	if (!result.empty() && (result.back() == '.' || result.back() == ' ')) {
-		result.back() = replacementChar;
+	if (!wresult.empty() && (wresult.back() == L'.' || wresult.back() == L' ')) {
+		wresult.back() = replacementChar;
 	}
 
 	size_t pos = 0;
-	while ((pos = result.find("..", pos)) != std::string::npos) {
-		result.replace(pos, 2, std::string(2, replacementChar));
+	while ((pos = wresult.find(L"..", pos)) != std::wstring::npos) {
+		wresult.replace(pos, 2, std::wstring(2, replacementChar));
 		pos += 2;
 	}
 
 	// Ensure it's not empty.
-	if (result.empty()) {
-		result = "Unnamed";
+	if (wresult.empty()) {
+		wresult = L"Unnamed";
 	}
 
 	// Limit the length.
 	const size_t maxLen = 255; // Safe for most operating systems.
-	if (result.length() > maxLen) {
-		const size_t lastDot = result.find_last_of('.');
-		if (lastDot != std::string::npos && lastDot > result.length() - 10) {
-			const std::string ext = result.substr(lastDot);
-			const std::string name = result.substr(0, lastDot);
+	if (wresult.length() > maxLen) {
+		const size_t lastDot = wresult.find_last_of(L'.');
+		if (lastDot != std::wstring::npos && lastDot > wresult.length() - 10) {
+			const std::wstring ext = wresult.substr(lastDot);
+			const std::wstring name = wresult.substr(0, lastDot);
 
 			const size_t keepLen = maxLen - ext.length();
 			if (keepLen > 0)
-				result = name.substr(0, keepLen) + ext;
+				wresult = name.substr(0, keepLen) + ext;
 			else
-				result = name.substr(0, maxLen);
+				wresult = name.substr(0, maxLen);
 		} else {
-			result = result.substr(0, maxLen);
+			wresult = wresult.substr(0, maxLen);
 		}
 	}
+
+	// Finish.
+	const std::string result = Unicode::fromWide(wresult);
 
 	return result;
 }
