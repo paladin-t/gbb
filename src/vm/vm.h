@@ -10,6 +10,15 @@
 
 BANKREF_EXTERN(VM_MAIN)
 
+// Types.
+#ifndef FASTUINT8
+#   if defined __SDCC && defined NINTENDO
+#       define FASTUINT8 SFR
+#   else
+#       define FASTUINT8 UINT8
+#   endif
+#endif /* FASTUINT8 */
+
 // Memory bus addresses.
 #ifndef ROM_ADDRESS
 #   define ROM_ADDRESS                   0x0000

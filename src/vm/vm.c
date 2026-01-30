@@ -717,8 +717,8 @@ void vm_fill(SCRIPT_CTX * THIS, INT16 idx, INT16 value, INT16 count) OLDCALL BAN
 }
 
 // Executes one step in the passed context.
-static SFR current_fn_bank;
-static SFR current_fn_nargs;
+static FASTUINT8 current_fn_bank;
+static FASTUINT8 current_fn_nargs;
 static UINT16 current_sp;
 BOOLEAN VM_STEP(SCRIPT_CTX * CTX) NAKED NONBANKED STEP_FUNC_ATTR {
     (void)CTX;
