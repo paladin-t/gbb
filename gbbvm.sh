@@ -61,13 +61,13 @@ bootstrap="bootstrap"
 builtin="builtin"
 
 macros="-DVM_TOTAL_CONTEXT_STACK_SIZE=1024 -DVM_MAX_CONTEXTS=16 -DVM_HEAP_SIZE=1024"
-cflag="-Wf\"--opt-code-speed\" $macros -Wf-Isrc/vm -Wa-Isrc/vm -Wa-Isrc/vm/drv/hUGE/player-gbdk"
+cflag="-Wf\"--max-allocs-per-node 50000\" -Wf\"--opt-code-speed\" $macros -Wf-Isrc/vm -Wa-Isrc/vm -Wa-Isrc/vm/drv/hUGE/player-gbdk"
 
 libs="-Wl-lsrc/vm/drv/hUGE/lib/hUGEDriver.lib -Wl-ksrc/vm/drv/hUGE/lib"
 carty="-Wl-yt0x1b -Wm-yc"
 nbanks="-Wl-yo16 -Wm-ya16 -autobank"
 symbols="-Wl-j -Wl-m -Wl-w -Wm-yS"
-lflag="-Wf\"--opt-code-speed\" $libs $carty $nbanks $symbols"
+lflag="$libs $carty $nbanks $symbols"
 
 # Build.
 color_echo "2F" "Building..."

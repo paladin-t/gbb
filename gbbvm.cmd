@@ -43,13 +43,13 @@ set bootstrap=bootstrap
 set builtin=builtin
 
 set macros=-DVM_TOTAL_CONTEXT_STACK_SIZE=1024 -DVM_MAX_CONTEXTS=16 -DVM_HEAP_SIZE=1024
-set cflag=-Wf"--opt-code-speed" %macros% -Wf-Isrc\vm -Wa-Isrc\vm -Wa-Isrc\vm\drv\hUGE\player-gbdk
+set cflag=-Wf"--max-allocs-per-node 50000" -Wf"--opt-code-speed" %macros% -Wf-Isrc\vm -Wa-Isrc\vm -Wa-Isrc\vm\drv\hUGE\player-gbdk
 
 set libs=-Wl-lsrc\vm\drv\hUGE\lib\hUGEDriver.lib -Wl-ksrc\vm\drv\hUGE\lib
 set carty=-Wl-yt0x1b -Wm-yc
 set nbanks=-Wl-yo16 -Wm-ya16 -autobank
 set symbols=-Wl-j -Wl-m -Wl-w -Wm-yS
-set lflag=-Wf"--opt-code-speed" %libs% %carty% %nbanks% %symbols%
+set lflag=%libs% %carty% %nbanks% %symbols%
 
 REM Build.
 call :COLOR 2F "Building..."
