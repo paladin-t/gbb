@@ -112,6 +112,7 @@ private:
 	struct {
 		Tracker::ViewTypes index = Tracker::ViewTypes::TRACKER;
 		Tracker::ViewTypes target = Tracker::ViewTypes::TRACKER;
+		float pianoScrollX = 0.0f;
 	} _view;
 	struct {
 		std::string text;
@@ -820,7 +821,8 @@ private:
 
 		// Render the header.
 		const float headY = ImGui::GetCursorPosY();
-		ImGui::BeginChild("@Hdr", ImVec2(splitter.first, headerHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs);
+		ImGui::SetCursorPosX(-_view.pianoScrollX);
+		ImGui::BeginChild("@Hdr", ImVec2(splitter.first + _view.pianoScrollX, headerHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs);
 		{
 			const ImU32 col = ws->theme()->style()->musicSideColor;
 			ImGui::PushStyleColor(ImGuiCol_Text, col);
@@ -848,6 +850,8 @@ private:
 			VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
 			ImGui::SetWindowFontScale((float)magnification);
+
+			_view.pianoScrollX = ImGui::GetScrollX();
 
 			const ImVec2 wndStart = ImGui::GetWindowPos();
 			const ImVec2 wndSize = ImGui::GetWindowSize();
