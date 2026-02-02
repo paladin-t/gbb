@@ -2126,13 +2126,16 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, !!WORKSPACE_OPEN_BIN_FOR_NOTEPAD_ENABLED, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
-									[this, prj] (bool ok) -> void {
+									[wnd, rnd, this, prj] (bool ok) -> void {
 										if (!ok)
 											return;
 
 										validateProject(prj.get());
+
+										if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 									}
 								)
 								.fail(
@@ -2334,7 +2337,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 								return;
 							}
 
-							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, !!WORKSPACE_OPEN_BIN_FOR_NOTEPAD_ENABLED, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
 									[wnd, rnd, this, cat, page, sub, prj, toCompile, toRun] (bool ok) -> void {
 										if (!ok) {
@@ -7385,13 +7388,16 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 						if (io.KeyCtrl)
 							return;
 
-						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+						Operations::fileOpen(wnd, rnd, this, prj, !!WORKSPACE_OPEN_BIN_FOR_NOTEPAD_ENABLED, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
-								[this, prj] (bool ok) -> void {
+								[wnd, rnd, this, prj] (bool ok) -> void {
 									if (!ok)
 										return;
 
 									validateProject(prj.get());
+
+									if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
+										launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 								}
 							);
 					}
@@ -8130,13 +8136,16 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 								if (io.KeyCtrl)
 									return;
 
-								Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+								Operations::fileOpen(wnd, rnd, this, prj, !!WORKSPACE_OPEN_BIN_FOR_NOTEPAD_ENABLED, fontConfig().empty() ? nullptr : fontConfig().c_str())
 									.then(
-										[this, prj] (bool ok) -> void {
+										[wnd, rnd, this, prj] (bool ok) -> void {
 											if (!ok)
 												return;
 
 											validateProject(prj.get());
+
+											if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
+												launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 										}
 									);
 							}
@@ -8443,13 +8452,16 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 									if (io.KeyCtrl)
 										return;
 
-									Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+									Operations::fileOpen(wnd, rnd, this, prj, !!WORKSPACE_OPEN_BIN_FOR_NOTEPAD_ENABLED, fontConfig().empty() ? nullptr : fontConfig().c_str())
 										.then(
-											[this, prj] (bool ok) -> void {
+											[wnd, rnd, this, prj] (bool ok) -> void {
 												if (!ok)
 													return;
 
 												validateProject(prj.get());
+
+												if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
+													launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 											}
 										);
 								}
@@ -9250,13 +9262,16 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, !!WORKSPACE_OPEN_BIN_FOR_NOTEPAD_ENABLED, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
-									[this, prj] (bool ok) -> void {
+									[wnd, rnd, this, prj] (bool ok) -> void {
 										if (!ok)
 											return;
 
 										validateProject(prj.get());
+
+										if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 									}
 								);
 						}
@@ -10646,7 +10661,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 
 						Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
 							.then(
-								[this, prj] (bool ok) -> void {
+								[wnd, rnd, this, prj] (bool ok) -> void {
 									if (!ok)
 										return;
 
@@ -10939,13 +10954,16 @@ void Workspace::notepad(Window* wnd, Renderer* rnd, float marginTop, float margi
 							if (io.KeyCtrl)
 								return;
 
-							Operations::fileOpen(wnd, rnd, this, prj, false, fontConfig().empty() ? nullptr : fontConfig().c_str())
+							Operations::fileOpen(wnd, rnd, this, prj, !!WORKSPACE_OPEN_BIN_FOR_NOTEPAD_ENABLED, fontConfig().empty() ? nullptr : fontConfig().c_str())
 								.then(
-									[this, prj] (bool ok) -> void {
+									[wnd, rnd, this, prj] (bool ok) -> void {
 										if (!ok)
 											return;
 
 										validateProject(prj.get());
+
+										if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
 									}
 								);
 						}
