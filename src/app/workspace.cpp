@@ -1884,7 +1884,12 @@ void Workspace::cursor(Device::CursorTypes mode) {
 }
 
 void Workspace::run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom, bool traceless) {
-	Operations::projectRun(wnd, rnd, this, rom, nullptr, traceless);
+	Operations::projectRun(wnd, rnd, this, rom, nullptr, traceless)
+		.fail(
+			[this] (void) -> void {
+				messagePopupBox(theme()->dialogPrompt_UnsupportedRom(), nullptr, nullptr, nullptr);
+			}
+		);
 }
 
 bool Workspace::running(void) const {
@@ -9585,13 +9590,15 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					settings().inputOnscreenGamepadEnabled = true;
 				}
 			}
-			if (canvasDevice()->paused()) {
-				if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Resume().c_str())) {
-					canvasDevice()->resume();
-				}
-			} else {
-				if (ImGui::MenuBarImageButton(theme()->iconPause()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_Pause().c_str())) {
-					canvasDevice()->pause();
+			if (canvasDevice()) {
+				if (canvasDevice()->paused()) {
+					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Resume().c_str())) {
+						canvasDevice()->resume();
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconPause()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_Pause().c_str())) {
+						canvasDevice()->pause();
+					}
 				}
 			}
 			if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
@@ -12764,7 +12771,12 @@ void Workspace::runProject(Window* wnd, Renderer* rnd, Bytes::Ptr rom) {
 	Operations::projectLoadSram(wnd, rnd, this, prj, sram)
 		.always(
 			[wnd, rnd, this, rom, sram] (void) -> void {
-				Operations::projectRun(wnd, rnd, this, rom, sram, false);
+				Operations::projectRun(wnd, rnd, this, rom, sram, false)
+					.fail(
+						[this] (void) -> void {
+							messagePopupBox(theme()->dialogPrompt_UnsupportedRom(), nullptr, nullptr, nullptr);
+						}
+					);
 			}
 		);
 }

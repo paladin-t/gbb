@@ -841,8 +841,11 @@ bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, 
 	init.force_dmg       = (_enabledDeviceType == DeviceTypes::CLASSIC || _enabledDeviceType == DeviceTypes::CLASSIC_EXTENDED) ? TRUE : FALSE;
 	init.cgb_color_curve = CGB_COLOR_CURVE_GAMBATTE;
 	_emulator = emulator_new(&init);
-	if (!_emulator)
+	if (!_emulator) {
+		xfree(data);
+
 		return false;
+	}
 
 	setBwPalette(PALETTE_TYPE_BGP,  _classicPalette[0].toRGBA(), _classicPalette[1].toRGBA(), _classicPalette[2].toRGBA(), _classicPalette[3].toRGBA());
 	setBwPalette(PALETTE_TYPE_OBP0, _classicPalette[0].toRGBA(), _classicPalette[1].toRGBA(), _classicPalette[2].toRGBA(), _classicPalette[3].toRGBA());

@@ -674,6 +674,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Trim("Trim");
 	dialogPrompt_UninstalledKernel("Uninstalled kernel \"{0}\".");
 	dialogPrompt_UnsupportedOperation("Unsupported operation.");
+	dialogPrompt_UnsupportedRom("Unsupported ROM.");
 	dialogPrompt_UseGravity("Use gravity");
 	dialogPrompt_UsePan("Use pan");
 	dialogPrompt_ViewAs("View as");

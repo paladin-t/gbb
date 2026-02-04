@@ -474,6 +474,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Trim)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_UninstalledKernel)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_UnsupportedOperation)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_UnsupportedRom)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_UseGravity)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_UsePan)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ViewAs)

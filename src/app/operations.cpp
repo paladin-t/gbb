@@ -4566,7 +4566,12 @@ promise::Promise Operations::projectRun(Window* wnd, Renderer* rnd, Workspace* w
 				ws->canvasDevice()->close(nullptr);
 				ws->canvasDevice(nullptr);
 
+				ws->category(Workspace::Categories::CONSOLE);
+
 				df.reject();
+
+				ws->warn("Unsupported ROM.");
+				ws->print("End running.");
 
 				return;
 			}
