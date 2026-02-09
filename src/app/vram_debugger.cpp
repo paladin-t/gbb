@@ -753,19 +753,19 @@ private:
 					const TileDetail::Ref &objRef = tileDetails[bank][(int)TileDetail::Usages::OBJ][objTile];
 					const TileDetail::Array* details = nullptr;
 					int refCount = 0;
-					if (isForObj) {
-						details = &objRef.details; // Prefer OAM.
-						refCount = objRef.refCount;
-						if (refCount == 0 && bgRef.refCount > 0) {
-							details = &bgRef.details;
-							refCount = bgRef.refCount;
-						}
-					} else /* if (isForBg) */ {
+					if (isForBg) {
 						details = &bgRef.details; // Prefer MAP.
 						refCount = bgRef.refCount;
-						if (refCount == 0 && objRef.refCount > 0) {
+						if (refCount == 0 && objRef.refCount > 0 && isForObj) {
 							details = &objRef.details;
 							refCount = objRef.refCount;
+						}
+					} else /* if (isForObj) */ {
+						details = &objRef.details; // Prefer OAM.
+						refCount = objRef.refCount;
+						if (refCount == 0 && bgRef.refCount > 0 && isForBg) {
+							details = &bgRef.details;
+							refCount = bgRef.refCount;
 						}
 					}
 
