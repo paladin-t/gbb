@@ -344,6 +344,9 @@ public:
 			SDL_SetHintWithPriority(SDL_HINT_RENDER_VSYNC, "1", SDL_HINT_OVERRIDE);
 			SDL_SetHintWithPriority(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1", SDL_HINT_OVERRIDE);
 #endif /* Platform macro. */
+#ifdef SDL_HINT_IME_SHOW_UI
+			SDL_SetHintWithPriority(SDL_HINT_IME_SHOW_UI, "1", SDL_HINT_OVERRIDE);
+#endif /* SDL_HINT_IME_SHOW_UI */
 
 			int moditorIndex = 0;
 			int wndX = -1;
