@@ -650,7 +650,7 @@ public:
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowSearch)
 
-	GBBASIC_PROPERTY_READONLY(std::string, windowPalette)
+	GBBASIC_PROPERTY_READONLY(std::string, windowGlobalPalette)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowCode_SearchFor)
 

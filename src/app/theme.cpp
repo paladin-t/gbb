@@ -845,7 +845,7 @@ bool Theme::open(class Renderer* rnd) {
 
 	windowSearch("Search");
 
-	windowPalette("Palette");
+	windowGlobalPalette("Global Palette");
 
 	windowCode_SearchFor("Search for");
 

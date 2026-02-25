@@ -190,6 +190,13 @@ private:
 		}
 	} _size;
 	struct {
+		// TODO: EDIT MAP AS IMAGE
+		// TRANSFER
+
+		void clear(void) {
+		}
+	} _compacted;
+	struct {
 		CelGetter getCel = nullptr;
 		CelSetter setCel = nullptr;
 		CelsGetter getCels = nullptr;
@@ -565,6 +572,9 @@ public:
 	}
 	virtual void leave(class Workspace*) override {
 		_tools.stopMapTesting();
+
+		// TODO: EDIT MAP AS IMAGE
+		// TRANSFER
 
 		if (entry())
 			entry()->cleanup(); // Clean up the outdated editable and runtime resources.
@@ -984,6 +994,9 @@ public:
 		
 		updateAsMap(wnd, rnd, ws, width, height, splitter, statusBarHeight, statusBarActived, allowMouseOperations);
 
+		// TODO: EDIT MAP AS IMAGE
+		// TRANSFER
+
 		renderStatus(wnd, rnd, ws, width, statusBarHeight, statusBarActived);
 	}
 
@@ -1343,7 +1356,16 @@ private:
 				}
 				ImGui::SameLine();
 			}
-			if (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER) {
+			if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER) {
+				// TODO: EDIT MAP AS IMAGE
+				// SELECT
+
+				// TODO: EDIT MAP AS IMAGE
+				// WARN FOR TILE OVERRIDING
+
+				// TODO: ASSET LOCAL PALETTE
+				// SELECT
+			} else /* if (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER) */ {
 				ImGui::NewLine();
 				bool enabledLayer = entry()->hasAttributes;
 				ImGui::Dummy(ImVec2(xOffset, 0));
@@ -1366,6 +1388,15 @@ private:
 				ImGui::SameLine();
 			}
 			ImGui::PopID();
+
+			if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER) {
+				ImGui::PushID("@Plt");
+				{
+					// TODO: ASSET LOCAL PALETTE
+					// EDIT
+				}
+				ImGui::PopID();
+			}
 
 			ImGui::PushID("@Ref");
 			if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER) {
@@ -2227,6 +2258,8 @@ private:
 				float width_ = 0.0f;
 				const float wndWidth = ImGui::GetWindowWidth();
 				ImGui::SetCursorPosX(wndWidth - _statusWidth);
+				// TODO: EDIT MAP AS IMAGE
+				// TRANSFER
 				if (wndWidth >= 430) {
 					if (_status.info.empty()) {
 						const int w = object()->width() / GBBASIC_TILE_SIZE;
@@ -2478,6 +2511,9 @@ private:
 		// Exporting.
 		if (ImGui::BeginPopup("@Xpt")) {
 			if (ImGui::MenuItem(ws->theme()->menu_Code())) {
+				// TODO: EDIT MAP AS IMAGE
+				// TRANSFER
+
 				do {
 					std::string txt;
 					if (!entry()->serializeBasic(txt, _index))
@@ -3735,6 +3771,9 @@ private:
 		return true;
 	}
 
+	// TODO: EDIT MAP AS IMAGE
+	// TRANSFER
+
 	bool playMapTesting(Window* wnd, Renderer* rnd, Workspace* ws) {
 		// Prepare.
 		if (ws->running())
@@ -3768,6 +3807,9 @@ private:
 		ws->run(wnd, rnd, rom_, true);
 
 		_tools.isPlaying = true;
+
+		// TODO: EDIT MAP AS IMAGE
+		// TRANSFER
 
 		// Finish.
 		return true;

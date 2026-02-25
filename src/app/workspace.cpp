@@ -3344,7 +3344,7 @@ void Workspace::showPaletteEditor(
 				rnd, this,
 				theme(),
 				group, changed,
-				theme()->windowPalette(),
+				theme()->windowGlobalPalette(),
 				currentProject().get(),
 				confirm, cancel, apply,
 				theme()->generic_Ok().c_str(), theme()->generic_Cancel().c_str(), theme()->generic_Apply().c_str()

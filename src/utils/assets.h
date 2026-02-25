@@ -751,6 +751,8 @@ struct MapAssets {
 		int ref = 0; // To a tiles.
 		bool hasAttributes = false;
 		Map::Ptr attributes = nullptr;
+		bool useLocalPalette = false;
+		PaletteAssets::Array localPalette;
 		std::string name;
 		int magnification = -1; // Non-polluting.
 		bool optimize = true;

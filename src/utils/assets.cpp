@@ -3637,7 +3637,7 @@ Texture::Ptr MapAssets::Entry::touch(void) {
 	TilesAssets::Entry* ref_ = getTiles(ref);
 	if (!ref_)
 		return nullptr;
-	Texture::Ptr &tex = ref_->touch();
+	Texture::Ptr &tex = ref_->touch(); // TODO: ASSET LOCAL PALETTE
 	if (!tex)
 		return nullptr;
 
@@ -3708,6 +3708,8 @@ bool MapAssets::Entry::serializeBasic(std::string &val, int page) const {
 	val.clear();
 
 	// Serialize the code.
+	(void)useLocalPalette; // TODO: ASSET LOCAL PALETTE
+
 	std::string asset;
 	if (name.empty())
 		asset = "#" + Text::toString(page);
@@ -4000,6 +4002,10 @@ bool MapAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarnin
 	rapidjson::Value* attributes_ = nullptr;
 	Jpath::get(doc, attributes_, "attributes");
 
+	Jpath::set(doc, doc, useLocalPalette, "use_local_palette");
+
+	(void)localPalette; // TODO: ASSET LOCAL PALETTE
+
 	Jpath::set(doc, doc, name, "name");
 
 	Jpath::set(doc, doc, magnification, "magnification");
@@ -4085,6 +4091,11 @@ bool MapAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler 
 	}
 
 	Jpath::get(doc, hasAttributes, "has_attributes");
+
+	if (!Jpath::get(doc, useLocalPalette, "use_local_palette"))
+		useLocalPalette = false;
+
+	(void)localPalette; // TODO: ASSET LOCAL PALETTE
 
 	if (!Jpath::get(doc, name, "name"))
 		name.clear();
@@ -4384,6 +4395,9 @@ bool MapAssets::parseImage(
 
 	// Convert the true-color image to paletted.
 	Image::Ptr paletted(val->quantized2Bpp());
+
+	// TODO: EDIT MAP AS IMAGE
+	// CALCULATE PALETTE
 
 	// Slice the image.
 	Slice::Array slices;
@@ -7023,6 +7037,8 @@ bool SceneAssets::Entry::serializeBasic(std::string &val, int page, bool loading
 	val.clear();
 
 	// Serialize the code.
+	// TODO: ASSET LOCAL PALETTE
+
 	std::string asset;
 	if (name.empty())
 		asset = "#" + Text::toString(page);

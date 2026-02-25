@@ -3391,6 +3391,7 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 									prj->tilesGetter(), prj->tilesPageCount(),
 									std::bind(operationsHandlePrint, ws, std::placeholders::_1), std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2)
 								);
+								// TODO: EDIT MAP AS IMAGE
 								if (!loaded) {
 									df.reject();
 
