@@ -256,6 +256,66 @@ void Delete::destroy(Command* ptr) {
 	delete impl;
 }
 
+SetLocalPaletteEnabled::SetLocalPaletteEnabled() {
+	enabled(false);
+	old(false);
+}
+
+SetLocalPaletteEnabled::~SetLocalPaletteEnabled() {
+}
+
+unsigned SetLocalPaletteEnabled::type(void) const {
+	return TYPE();
+}
+
+const char* SetLocalPaletteEnabled::toString(void) const {
+	return "Set local palette enabled";
+}
+
+Command* SetLocalPaletteEnabled::redo(Object::Ptr obj, int argc, const Variant* argv) {
+	::Map::Ptr ptr = Object::as<::Map::Ptr>(obj);
+	(void)ptr;
+	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
+	MapAssets::Entry* entry = (MapAssets::Entry*)(arg0);
+
+	old(entry->localPaletteEnabled);
+	entry->localPaletteEnabled = enabled();
+
+	return this;
+}
+
+Command* SetLocalPaletteEnabled::undo(Object::Ptr obj, int argc, const Variant* argv) {
+	::Map::Ptr ptr = Object::as<::Map::Ptr>(obj);
+	(void)ptr;
+	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
+	MapAssets::Entry* entry = (MapAssets::Entry*)(arg0);
+
+	entry->localPaletteEnabled = old();
+
+	return this;
+}
+
+SetLocalPaletteEnabled* SetLocalPaletteEnabled::with(bool val) {
+	enabled(val);
+
+	return this;
+}
+
+Command* SetLocalPaletteEnabled::exec(Object::Ptr obj, int argc, const Variant* argv) {
+	return redo(obj, argc, argv);
+}
+
+Command* SetLocalPaletteEnabled::create(void) {
+	SetLocalPaletteEnabled* result = new SetLocalPaletteEnabled();
+
+	return result;
+}
+
+void SetLocalPaletteEnabled::destroy(Command* ptr) {
+	SetLocalPaletteEnabled* impl = static_cast<SetLocalPaletteEnabled*>(ptr);
+	delete impl;
+}
+
 SetName::SetName() {
 }
 

@@ -458,6 +458,7 @@ public:
 			->reg<Commands::Map::Cut>()
 			->reg<Commands::Map::Paste>()
 			->reg<Commands::Map::Delete>()
+			->reg<Commands::Map::SetLocalPaletteEnabled>()
 			->reg<Commands::Map::SetName>()
 			->reg<Commands::Map::SwitchLayer>()
 			->reg<Commands::Map::ToggleMask>()
@@ -1357,14 +1358,29 @@ private:
 				ImGui::SameLine();
 			}
 			if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER) {
+				ImGui::NewLine();
+				Editing::Tools::separate(rnd, ws, spwidth);
+
 				// TODO: EDIT MAP AS IMAGE
 				// SELECT
 
 				// TODO: EDIT MAP AS IMAGE
 				// WARN FOR TILE OVERRIDING
 
-				// TODO: ASSET LOCAL PALETTE
-				// SELECT
+				do {
+					ImGui::Dummy(ImVec2(xOffset, 0));
+					ImGui::SameLine();
+					ImGui::SetNextItemWidth(mwidth);
+					bool localPaletteEnabled = entry()->localPaletteEnabled;
+					if (ImGui::Checkbox(ws->theme()->windowMap_LocalPalette(), &localPaletteEnabled)) {
+						Command* cmd = enqueue<Commands::Map::SetLocalPaletteEnabled>()
+							->with(localPaletteEnabled)
+							->exec(object(), Variant((void*)entry()));
+
+						_refresh(cmd);
+					}
+					ImGui::SameLine();
+				} while (false);
 			} else /* if (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER) */ {
 				ImGui::NewLine();
 				bool enabledLayer = entry()->hasAttributes;
@@ -1389,7 +1405,7 @@ private:
 			}
 			ImGui::PopID();
 
-			if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER) {
+			if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER && entry()->localPaletteEnabled) {
 				ImGui::PushID("@Plt");
 				{
 					// TODO: ASSET LOCAL PALETTE
@@ -2885,6 +2901,7 @@ private:
 			Command::is<Commands::Map::Delete>(cmd) ||
 			Command::is<Commands::Map::ToggleMask>(cmd);
 		const bool refreshAllPalette =
+			Command::is<Commands::Map::SetLocalPaletteEnabled>(cmd) ||
 			Command::is<Commands::Map::Resize>(cmd) ||
 			Command::is<Commands::Map::Import>(cmd);
 
@@ -2898,6 +2915,7 @@ private:
 			_status.info.clear();
 			_estimated.filled = false;
 			entry()->cleanup(); // Clean up the outdated editable and runtime resources. Will recalculate the tile size after this.
+			ws->skipFrame(); // Skip a frame to avoid glitch.
 		}
 		if (refreshLayers) {
 			_status.info.clear();
@@ -2925,6 +2943,7 @@ private:
 		}
 		if (refreshAllPalette) {
 			entry()->cleanup();
+			ws->skipFrame(); // Skip a frame to avoid glitch.
 		}
 	}
 

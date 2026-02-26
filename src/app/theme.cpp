@@ -865,6 +865,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowMap_1_Graphics("1. Graphics");
 	windowMap_2_Attributes("2. Attributes");
 	windowMap_CreateScene("Create scene");
+	windowMap_LocalPalette("Local palette");
 	windowMap_RefTiles("Tiles #{0}");
 
 	windowAudio_Duty1("DUTY 1");

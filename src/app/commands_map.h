@@ -154,6 +154,36 @@ public:
 	static void destroy(Command* ptr);
 };
 
+class SetLocalPaletteEnabled : public Command {
+public:
+	GBBASIC_PROPERTY(bool, enabled)
+
+	GBBASIC_PROPERTY(bool, old)
+
+public:
+	SetLocalPaletteEnabled();
+	virtual ~SetLocalPaletteEnabled() override;
+
+	GBBASIC_CLASS_TYPE('L', 'P', 'E', 'M')
+
+	virtual unsigned type(void) const override;
+
+	virtual const char* toString(void) const override;
+
+	virtual Command* redo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::redo;
+	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::undo;
+
+	virtual SetLocalPaletteEnabled* with(bool val);
+
+	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::exec;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
 class SetName : public Command {
 public:
 	GBBASIC_PROPERTY(std::string, name)
@@ -183,7 +213,6 @@ public:
 	static Command* create(void);
 	static void destroy(Command* ptr);
 };
-
 
 class SwitchLayer : public Layered::Layered {
 public:

@@ -3708,7 +3708,7 @@ bool MapAssets::Entry::serializeBasic(std::string &val, int page) const {
 	val.clear();
 
 	// Serialize the code.
-	(void)useLocalPalette; // TODO: ASSET LOCAL PALETTE
+	(void)localPaletteEnabled; // TODO: ASSET LOCAL PALETTE
 
 	std::string asset;
 	if (name.empty())
@@ -4002,11 +4002,11 @@ bool MapAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarnin
 	rapidjson::Value* attributes_ = nullptr;
 	Jpath::get(doc, attributes_, "attributes");
 
-	Jpath::set(doc, doc, useLocalPalette, "use_local_palette");
+	Jpath::set(doc, doc, localPaletteEnabled, "local_palette", "enabled");
 
-	Jpath::set(doc, doc, Jpath::ANY(), "local_palette");
+	Jpath::set(doc, doc, Jpath::ANY(), "local_palette", "colors");
 	rapidjson::Value* colors = nullptr;
-	Jpath::get(doc, colors, "local_palette");
+	Jpath::get(doc, colors, "local_palette", "colors");
 	for (int i = 0; i < (int)localPalette.size(); ++i) {
 		const PaletteAssets::Entry &entry = localPalette[i];
 
@@ -4106,19 +4106,19 @@ bool MapAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler 
 
 	Jpath::get(doc, hasAttributes, "has_attributes");
 
-	if (!Jpath::get(doc, useLocalPalette, "use_local_palette"))
-		useLocalPalette = false;
+	if (!Jpath::get(doc, localPaletteEnabled, "local_palette", "enabled"))
+		localPaletteEnabled = false;
 
 	do {
 		localPalette.clear();
 		const rapidjson::Value* colors = nullptr;
-		if (!Jpath::get(doc, colors, "local_palette")) {
-			assetsRaiseWarningOrError("Cannot find \"local_palette\" entry in JSON.", false, onWarningOrError);
+		if (!Jpath::get(doc, colors, "local_palette", "colors")) {
+			assetsRaiseWarningOrError("Cannot find \"local_palette/colors\" entry in JSON.", false, onWarningOrError);
 
 			break;
 		}
 		if (!colors || !colors->IsArray()) {
-			assetsRaiseWarningOrError("Invalid \"local_palette\" entry.", false, onWarningOrError);
+			assetsRaiseWarningOrError("Invalid \"local_palette/colors\" entry.", false, onWarningOrError);
 
 			break;
 		}

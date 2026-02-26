@@ -670,6 +670,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_1_Graphics)
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_2_Attributes)
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_CreateScene)
+	GBBASIC_PROPERTY_READONLY(std::string, windowMap_LocalPalette)
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_RefTiles)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowAudio_Duty1)
