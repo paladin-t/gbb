@@ -1103,7 +1103,7 @@ bool PaletteAssets::toString(std::string &val, WarningOrErrorHandler onWarningOr
 
 		rapidjson::Value val_;
 		if (!entry->toJson(val_, doc)) {
-			assetsRaiseWarningOrError("Cannot serialize palette at page {0}.", i, true, onWarningOrError);
+			assetsRaiseWarningOrError("Cannot serialize palette at {0}.", i, true, onWarningOrError);
 
 			continue;
 		}
@@ -4004,7 +4004,21 @@ bool MapAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarnin
 
 	Jpath::set(doc, doc, useLocalPalette, "use_local_palette");
 
-	(void)localPalette; // TODO: ASSET LOCAL PALETTE
+	Jpath::set(doc, doc, Jpath::ANY(), "local_palette");
+	rapidjson::Value* colors = nullptr;
+	Jpath::get(doc, colors, "local_palette");
+	for (int i = 0; i < (int)localPalette.size(); ++i) {
+		const PaletteAssets::Entry &entry = localPalette[i];
+
+		rapidjson::Value val_;
+		if (!entry.toJson(val_, doc)) {
+			assetsRaiseWarningOrError("Cannot serialize palette at {0}.", i, true, onWarningOrError);
+
+			continue;
+		}
+
+		colors->PushBack(val_, doc.GetAllocator());
+	}
 
 	Jpath::set(doc, doc, name, "name");
 
@@ -4095,7 +4109,34 @@ bool MapAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler 
 	if (!Jpath::get(doc, useLocalPalette, "use_local_palette"))
 		useLocalPalette = false;
 
-	(void)localPalette; // TODO: ASSET LOCAL PALETTE
+	do {
+		localPalette.clear();
+		const rapidjson::Value* colors = nullptr;
+		if (!Jpath::get(doc, colors, "local_palette")) {
+			assetsRaiseWarningOrError("Cannot find \"local_palette\" entry in JSON.", false, onWarningOrError);
+
+			break;
+		}
+		if (!colors || !colors->IsArray()) {
+			assetsRaiseWarningOrError("Invalid \"local_palette\" entry.", false, onWarningOrError);
+
+			break;
+		}
+
+		for (auto it = colors->Begin(); it != colors->End(); ++it) {
+			PaletteAssets::Entry p;
+
+			const rapidjson::Value &val_ = *it;
+			if (!p.fromJson(val_))
+				continue;
+
+			localPalette.push_back(p);
+		}
+	} while (false);
+	const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+	if (!localPalette.empty() && (int)localPalette.size() != n) {
+		localPalette.resize(n);
+	}
 
 	if (!Jpath::get(doc, name, "name"))
 		name.clear();
