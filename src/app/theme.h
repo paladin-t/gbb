@@ -929,6 +929,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_Info)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_InfoLayer)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_InfoLayers)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_LocalPalette)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_Optimize)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_StopTesting)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_TestMap)

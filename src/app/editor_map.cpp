@@ -459,6 +459,7 @@ public:
 			->reg<Commands::Map::Paste>()
 			->reg<Commands::Map::Delete>()
 			->reg<Commands::Map::SetLocalPaletteEnabled>()
+			->reg<Commands::Map::SetLocalPalette>()
 			->reg<Commands::Map::SetName>()
 			->reg<Commands::Map::SwitchLayer>()
 			->reg<Commands::Map::ToggleMask>()
@@ -1372,12 +1373,22 @@ private:
 					ImGui::SameLine();
 					ImGui::SetNextItemWidth(mwidth);
 					bool localPaletteEnabled = entry()->localPaletteEnabled;
+					PaletteAssets::Array localPalette = entry()->localPalette;
+					const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+					if ((int)localPalette.size() != n) {
+						localPalette.resize(n);
+					}
 					if (ImGui::Checkbox(ws->theme()->windowMap_LocalPalette(), &localPaletteEnabled)) {
 						Command* cmd = enqueue<Commands::Map::SetLocalPaletteEnabled>()
-							->with(localPaletteEnabled)
+							->with(localPaletteEnabled, localPalette)
 							->exec(object(), Variant((void*)entry()));
 
 						_refresh(cmd);
+					}
+					if (ImGui::IsItemHovered()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						ImGui::SetTooltip(ws->theme()->tooltipMap_LocalPalette());
 					}
 					ImGui::SameLine();
 				} while (false);
@@ -2902,6 +2913,7 @@ private:
 			Command::is<Commands::Map::ToggleMask>(cmd);
 		const bool refreshAllPalette =
 			Command::is<Commands::Map::SetLocalPaletteEnabled>(cmd) ||
+			Command::is<Commands::Map::SetLocalPalette>(cmd) ||
 			Command::is<Commands::Map::Resize>(cmd) ||
 			Command::is<Commands::Map::Import>(cmd);
 
@@ -2941,7 +2953,7 @@ private:
 				}
 			};
 		}
-		if (refreshAllPalette) {
+		if (refreshAllPalette && _project->preferencesPreviewPaletteBits()) {
 			entry()->cleanup();
 			ws->skipFrame(); // Skip a frame to avoid glitch.
 		}

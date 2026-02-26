@@ -3708,7 +3708,26 @@ bool MapAssets::Entry::serializeBasic(std::string &val, int page) const {
 	val.clear();
 
 	// Serialize the code.
-	(void)localPaletteEnabled; // TODO: ASSET LOCAL PALETTE
+	if (localPaletteEnabled) {
+		for (int i = 0; i < (int)localPalette.size(); ++i) {
+			const PaletteAssets::Entry &entry = localPalette[i];
+			for (int j = 0; j < entry.data->count(); ++j) {
+				Colour col;
+				entry.data->get(j, col);
+
+				val += "palette ";
+				val += "MAP_LAYER, ";
+				val += Text::toString(i % 8) + ", ";
+				val += Text::toString(j) + ", ";
+				val += "rgb(";
+				val += Text::toString(col.r) + ", ";
+				val += Text::toString(col.g) + ", ";
+				val += Text::toString(col.b);
+				val += ")";
+				val += "\n";
+			}
+		}
+	}
 
 	std::string asset;
 	if (name.empty())
@@ -7078,7 +7097,27 @@ bool SceneAssets::Entry::serializeBasic(std::string &val, int page, bool loading
 	val.clear();
 
 	// Serialize the code.
-	// TODO: ASSET LOCAL PALETTE
+	const MapAssets::Entry* mapEntry = getMap(refMap);
+	if (mapEntry && !mapEntry->localPaletteEnabled) {
+		for (int i = 0; i < (int)mapEntry->localPalette.size(); ++i) {
+			const PaletteAssets::Entry &entry = mapEntry->localPalette[i];
+			for (int j = 0; j < entry.data->count(); ++j) {
+				Colour col;
+				entry.data->get(j, col);
+
+				val += "palette ";
+				val += "MAP_LAYER, ";
+				val += Text::toString(i % 8) + ", ";
+				val += Text::toString(j) + ", ";
+				val += "rgb(";
+				val += Text::toString(col.r) + ", ";
+				val += Text::toString(col.g) + ", ";
+				val += Text::toString(col.b);
+				val += ")";
+				val += "\n";
+			}
+		}
+	}
 
 	std::string asset;
 	if (name.empty())

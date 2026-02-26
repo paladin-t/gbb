@@ -157,8 +157,10 @@ public:
 class SetLocalPaletteEnabled : public Command {
 public:
 	GBBASIC_PROPERTY(bool, enabled)
+	GBBASIC_PROPERTY(PaletteAssets::Array, palette)
 
 	GBBASIC_PROPERTY(bool, old)
+	GBBASIC_PROPERTY(PaletteAssets::Array, oldPalette)
 
 public:
 	SetLocalPaletteEnabled();
@@ -175,7 +177,37 @@ public:
 	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::undo;
 
-	virtual SetLocalPaletteEnabled* with(bool val);
+	virtual SetLocalPaletteEnabled* with(bool val, const PaletteAssets::Array &pal);
+
+	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::exec;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class SetLocalPalette : public Command {
+public:
+	GBBASIC_PROPERTY(PaletteAssets::Array, palette)
+
+	GBBASIC_PROPERTY(PaletteAssets::Array, old)
+
+public:
+	SetLocalPalette();
+	virtual ~SetLocalPalette() override;
+
+	GBBASIC_CLASS_TYPE('L', 'P', 'C', 'M')
+
+	virtual unsigned type(void) const override;
+
+	virtual const char* toString(void) const override;
+
+	virtual Command* redo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::redo;
+	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::undo;
+
+	virtual SetLocalPalette* with(const PaletteAssets::Array &pal);
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;

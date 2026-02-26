@@ -1216,6 +1216,14 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipMap_Info("{0} tiles\n{1} active {2}");
 	tooltipMap_InfoLayer("layer");
 	tooltipMap_InfoLayers("layers");
+	tooltipMap_LocalPalette(
+		"Check to enable the local palette for:\n"
+		"  * Local palette data for this map asset\n"
+		"  * Palette operations for code export\n"
+		"  * Edit-time preview using the local palette\n"
+		"It doesn't compile into map resource,\n"
+		"consider using code export for it."
+	);
 	tooltipMap_Optimize(
 		"It is recommended to keep this option\n"
 		"checked to optimize footprint,\n"
