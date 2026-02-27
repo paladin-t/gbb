@@ -1060,6 +1060,20 @@ bool colorable(
 );
 
 /**
+ * @param[in, out] newValue
+ * @param[in, out] editingColorGroup
+ * @param[in, out] editingColorIndex
+ * @param[in, out] openColorPicker
+ */
+bool palette(
+	Renderer* rnd, Workspace* ws,
+	const PaletteAssets::Array &palette,
+	Colour &newValue,
+	int* editingColorGroup, int* editingColorIndex, bool* openColorPicker,
+	float width = -1.0f
+);
+
+/**
  * @param[in, out] newName
  * @param[in, out] initialized
  * @param[in, out] focused

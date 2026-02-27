@@ -195,7 +195,7 @@ private:
 
 		void clear(void) {
 		}
-	} _compacted;
+	} _transfer;
 	struct {
 		CelGetter getCel = nullptr;
 		CelSetter setCel = nullptr;
@@ -283,6 +283,9 @@ private:
 	std::function<void(int, bool)> _setLayerEnabled = nullptr;
 	struct Tools {
 		int layer = 0;
+		int editingColorGroup = -1;
+		int editingColorIndex = -1;
+		bool openColorPicker = false;
 		Editing::Tools::PaintableTools painting = Editing::Tools::PENCIL;
 		Editing::Tools::BitwiseOperations bitwiseOperations = Editing::Tools::SET;
 		bool scaled = false;
@@ -313,6 +316,9 @@ private:
 
 		void clear(void) {
 			layer = 0;
+			editingColorGroup = -1;
+			editingColorIndex = -1;
+			openColorPicker = false;
 			painting = Editing::Tools::PENCIL;
 			bitwiseOperations = Editing::Tools::SET;
 			scaled = false;
@@ -1417,12 +1423,27 @@ private:
 			ImGui::PopID();
 
 			if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER && entry()->localPaletteEnabled) {
-				ImGui::PushID("@Plt");
-				{
-					// TODO: ASSET LOCAL PALETTE
-					// EDIT
+				ImGui::NewLine();
+				Colour newValue;
+				const bool changed = Editing::Tools::palette(
+					rnd, ws,
+					entry()->localPalette,
+					newValue,
+					&_tools.editingColorGroup, &_tools.editingColorIndex, &_tools.openColorPicker,
+					spwidth
+				);
+				if (changed) {
+					PaletteAssets::Array localPalette = entry()->localPalette;
+					const PaletteAssets::Entry &entry_ = localPalette[_tools.editingColorGroup];
+					const Indexed::Ptr &palette_ = entry_.data;
+					palette_->set(_tools.editingColorIndex, &newValue);
+
+					Command* cmd = enqueue<Commands::Map::SetLocalPalette>()
+						->with(localPalette)
+						->exec(object(), Variant((void*)entry()));
+
+					_refresh(cmd);
 				}
-				ImGui::PopID();
 			}
 
 			ImGui::PushID("@Ref");

@@ -212,6 +212,9 @@ public:
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;
 
+	virtual bool isSimilarTo(const Command* other) const override;
+	virtual bool mergeWith(const Command* other) override;
+
 	static Command* create(void);
 	static void destroy(Command* ptr);
 };

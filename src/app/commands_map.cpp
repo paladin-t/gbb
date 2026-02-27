@@ -367,6 +367,27 @@ Command* SetLocalPalette::exec(Object::Ptr obj, int argc, const Variant* argv) {
 	return redo(obj, argc, argv);
 }
 
+bool SetLocalPalette::isSimilarTo(const Command* other) const {
+	if (other->type() != TYPE())
+		return false;
+
+	const SetLocalPalette* other_ = Command::as<SetLocalPalette>(other);
+	(void)other_;
+
+	return true;
+}
+
+bool SetLocalPalette::mergeWith(const Command* other) {
+	if (other->type() != TYPE())
+		return false;
+
+	const SetLocalPalette* other_ = Command::as<SetLocalPalette>(other);
+
+	palette(other_->palette());
+
+	return true;
+}
+
 Command* SetLocalPalette::create(void) {
 	SetLocalPalette* result = new SetLocalPalette();
 

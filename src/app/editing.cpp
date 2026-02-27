@@ -5711,6 +5711,119 @@ bool colorable(
 	return result;
 }
 
+bool palette(
+	Renderer*, Workspace* ws,
+	const PaletteAssets::Array &palette,
+	Colour &newValue,
+	int* editingColorGroup, int* editingColorIndex, bool* openColorPicker,
+	float width
+) {
+	ImGuiStyle &style = ImGui::GetStyle();
+
+	Theme* theme = ws->theme();
+
+	bool result = false;
+
+	if (width <= 0)
+		width = ImGui::GetContentRegionAvail().x;
+	constexpr const int X_COUNT = EDITING_ITEM_COUNT_PER_LINE - 1;
+	float xOffset = 0;
+	float size = width / (X_COUNT + 1);
+	const float iconSize = (float)theme->iconSize();
+	if (size > iconSize) {
+		size = iconSize * (int)(size / iconSize);
+		xOffset = (width - size * (X_COUNT + 1)) * 0.5f;
+	}
+
+	VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+	VariableGuard<decltype(style.ItemInnerSpacing)> guardItemInnerSpacing(&style.ItemInnerSpacing, style.ItemInnerSpacing, ImVec2());
+
+	constexpr const char* const GRP[] = {
+		"BG0", "BG1", "BG2", "BG3", "BG4", "BG5", "BG6", "BG7"
+	};
+
+	const int n = Math::min((int)GBBASIC_COUNTOF(GRP), (int)palette.size());
+	for (int j = 0; j < n; ++j) {
+		const PaletteAssets::Entry &entry = palette[j];
+		const Indexed::Ptr &palette_ = entry.data;
+
+		ImGui::Dummy(ImVec2(xOffset, 0));
+		ImGui::SameLine();
+		const float xPos = ImGui::GetCursorPosX();
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted(GRP[j]);
+		ImGui::SameLine();
+		ImGui::SetCursorPosX(xPos + iconSize);
+
+		for (int i = 0; i < palette_->count(); ++i) {
+			Colour color;
+			palette_->get(i, color);
+			const ImVec4 col4v(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f);
+
+			ImGui::PushID(i);
+
+			const float size = ImGui::GetTextLineHeightWithSpacing();
+			if (ImGui::ColorButton("", col4v, ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_AlphaPreview, ImVec2(iconSize, size))) {
+				// Do nothing.
+			}
+			ImGui::SameLine();
+
+			ImGui::PopID();
+
+			if (ImGui::IsItemHovered() && (ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_Right))) {
+				*editingColorGroup = j;
+				*editingColorIndex = i;
+				*openColorPicker = true;
+			}
+		}
+		ImGui::NewLine();
+		ImGui::NewLine(1);
+	}
+	ImGui::SameLine();
+
+	if (*openColorPicker) {
+		*openColorPicker = false;
+		ImGui::OpenPopup("@Pkr");
+	}
+	do {
+		VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+
+		if (ImGui::BeginPopup("@Pkr")) {
+			VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+			const PaletteAssets::Entry &entry = palette[*editingColorGroup];
+			const Indexed::Ptr &palette_ = entry.data;
+
+			Colour col;
+			palette_->get(*editingColorIndex, col);
+			float col4f[] = {
+				Math::clamp(col.r / 255.0f, 0.0f, 1.0f),
+				Math::clamp(col.g / 255.0f, 0.0f, 1.0f),
+				Math::clamp(col.b / 255.0f, 0.0f, 1.0f),
+				Math::clamp(col.a / 255.0f, 0.0f, 1.0f)
+			};
+
+			if (ImGui::ColorPicker4("", col4f, ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoSidePreview)) {
+				const Colour value(
+					(Byte)(col4f[0] * 255),
+					(Byte)(col4f[1] * 255),
+					(Byte)(col4f[2] * 255),
+					(Byte)(col4f[3] * 255)
+				);
+				newValue = value;
+				result = true;
+			}
+
+			ImGui::EndPopup();
+		} else {
+			*editingColorGroup = -1;
+			*editingColorIndex = -1;
+		}
+	} while (false);
+
+	return result;
+}
+
 bool namable(
 	Renderer*,
 	Workspace* ws,
