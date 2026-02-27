@@ -1088,6 +1088,20 @@ private:
 
 				return bits;
 			};
+			auto getCol = [&] (int plt) -> const PaletteAssets::Entry* {
+				const PaletteAssets::Entry* entry_ = nullptr;
+				const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+				const bool localPaletteEnabled = entry()->localPaletteEnabled;
+				const PaletteAssets::Array &localPalette = entry()->localPalette;
+				if (localPaletteEnabled && (int)localPalette.size() == n) {
+					plt = Math::clamp(plt, 0, (int)localPalette.size());
+					entry_ = &localPalette[plt];
+				} else {
+					entry_ = _project->getPalette(plt);
+				}
+
+				return entry_;
+			};
 			auto getFlip = [&] (const Math::Vec2i &pos) -> int {
 				if (!entry()->hasAttributes)
 					return (int)Editing::Flips::NONE;
@@ -1220,7 +1234,7 @@ private:
 						_tools.transparentBackbroundVisible,
 						std::numeric_limits<int>::min(),
 						_overlay,
-						getPlt,
+						getPlt, getCol,
 						getFlip,
 						_tools.mouseActionButton
 					)
@@ -1239,7 +1253,7 @@ private:
 					_tools.transparentBackbroundVisible,
 					std::numeric_limits<int>::min(),
 					nullptr,
-					getPlt,
+					getPlt, getCol,
 					getFlip,
 					_tools.mouseActionButton
 				);
@@ -1257,7 +1271,7 @@ private:
 						false,
 						std::numeric_limits<int>::min(),
 						_overlay,
-						nullptr,
+						nullptr, nullptr,
 						nullptr,
 						_tools.mouseActionButton
 					)

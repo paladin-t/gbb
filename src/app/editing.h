@@ -271,6 +271,8 @@ struct TriggerIndex {
 	void clear(void);
 };
 
+typedef std::function<const PaletteAssets::Entry* (int)> PaletteColorGetter;
+
 typedef std::function<int(const Math::Vec2i &)> MapCelGetter;
 
 typedef std::function<int(const Math::Vec2i &, TriggerIndex::Array &)> SceneTriggerQuerier;
@@ -343,7 +345,7 @@ bool map(
 	bool showTransparentBackbround = true,
 	int ignoreCel = -1,
 	MapCelGetter getCel = nullptr,
-	MapCelGetter getPlt = nullptr,
+	MapCelGetter getPlt = nullptr, PaletteColorGetter getCol = nullptr,
 	MapCelGetter getFlip = nullptr,
 	int mouseActionButton = 0
 );
@@ -363,7 +365,7 @@ bool map(
 	bool showTransparentBackbround = true,
 	int ignoreCel = -1,
 	MapCelGetter getCel = nullptr,
-	MapCelGetter getPlt = nullptr,
+	MapCelGetter getPlt = nullptr, PaletteColorGetter getCol = nullptr,
 	MapCelGetter getFlip = nullptr,
 	int mouseActionButton = 0
 );

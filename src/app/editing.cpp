@@ -1040,7 +1040,7 @@ bool tiles(
 
 bool map(
 	Renderer* rnd, Workspace* ws,
-	const Project* prj,
+	const Project*,
 	const char* id,
 	const Map* ptr, const Math::Vec2i &tileSize,
 	bool paletted,
@@ -1051,7 +1051,7 @@ bool map(
 	bool showTransparentBackbround,
 	int ignoreCel,
 	MapCelGetter getCel,
-	MapCelGetter getPlt,
+	MapCelGetter getPlt, PaletteColorGetter getCol,
 	MapCelGetter getFlip,
 	int mouseActionButton
 ) {
@@ -1114,7 +1114,9 @@ bool map(
 						int plt = 0;
 						if (getPlt)
 							plt = getPlt(Math::Vec2i(i, j));
-						const PaletteAssets::Entry* entry = prj->getPalette(plt);
+						const PaletteAssets::Entry* entry = nullptr;
+						if (getCol)
+							entry = getCol(plt);
 						if (entry)
 							tex = ptr->sub(rnd, i, j, 1, 1, entry->data, plt);
 						else
@@ -1296,7 +1298,7 @@ bool map(
 	bool showTransparentBackbround,
 	int ignoreCel,
 	MapCelGetter getCel,
-	MapCelGetter getPlt,
+	MapCelGetter getPlt, PaletteColorGetter getCol,
 	MapCelGetter getFlip,
 	int mouseActionButton
 ) {
@@ -1313,7 +1315,7 @@ bool map(
 		showTransparentBackbround,
 		ignoreCel,
 		getCel,
-		getPlt,
+		getPlt, getCol,
 		getFlip,
 		mouseActionButton
 	);

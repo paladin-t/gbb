@@ -1367,6 +1367,28 @@ public:
 
 				return bits;
 			};
+			auto getCol = [&] (int plt) -> const PaletteAssets::Entry* {
+				const int refMap = entry()->refMap;
+				const MapAssets::Entry* mapEntry = entry()->getMap(refMap);
+				if (!mapEntry || !mapEntry->data) {
+					PaletteAssets::Entry* entry_ = _project->getPalette(plt);
+
+					return entry_;
+				}
+
+				const PaletteAssets::Entry* entry_ = nullptr;
+				const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+				const bool localPaletteEnabled = mapEntry->localPaletteEnabled;
+				const PaletteAssets::Array &localPalette = mapEntry->localPalette;
+				if (localPaletteEnabled && (int)localPalette.size() == n) {
+					plt = Math::clamp(plt, 0, (int)localPalette.size());
+					entry_ = &localPalette[plt];
+				} else {
+					entry_ = _project->getPalette(plt);
+				}
+
+				return entry_;
+			};
 			auto getFlip = [&] (const Math::Vec2i &pos) -> int {
 				if (!object()->hasAttributes())
 					return (int)Editing::Flips::NONE;
@@ -1444,7 +1466,7 @@ public:
 					_tools.transparentBackbroundVisible,
 					std::numeric_limits<int>::min(),
 					nullptr,
-					getPlt,
+					getPlt, getCol,
 					getFlip,
 					_tools.mouseActionButton
 				);
@@ -1466,7 +1488,7 @@ public:
 
 						return idx;
 					},
-					nullptr,
+					nullptr, nullptr,
 					nullptr,
 					_tools.mouseActionButton
 				);
@@ -1488,7 +1510,7 @@ public:
 
 						return idx;
 					},
-					nullptr,
+					nullptr, nullptr,
 					nullptr,
 					_tools.mouseActionButton
 				);
@@ -1640,7 +1662,7 @@ public:
 								_tools.transparentBackbroundVisible,
 								std::numeric_limits<int>::min(),
 								_overlay,
-								getPlt,
+								getPlt, getCol,
 								getFlip,
 								_tools.mouseActionButton
 							)
@@ -1689,7 +1711,7 @@ public:
 								false,
 								std::numeric_limits<int>::min(),
 								_overlay,
-								nullptr,
+								nullptr, nullptr,
 								nullptr,
 								_tools.mouseActionButton
 							)
@@ -1730,7 +1752,7 @@ public:
 								false,
 								std::numeric_limits<int>::min(),
 								_overlay,
-								nullptr,
+								nullptr, nullptr,
 								nullptr,
 								_tools.mouseActionButton
 							)

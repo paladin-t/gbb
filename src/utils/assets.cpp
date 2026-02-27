@@ -3637,7 +3637,7 @@ Texture::Ptr MapAssets::Entry::touch(void) {
 	TilesAssets::Entry* ref_ = getTiles(ref);
 	if (!ref_)
 		return nullptr;
-	Texture::Ptr &tex = ref_->touch(); // TODO: ASSET LOCAL PALETTE
+	Texture::Ptr &tex = ref_->touch();
 	if (!tex)
 		return nullptr;
 
