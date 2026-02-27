@@ -5778,8 +5778,10 @@ bool palette(
 				*openColorPicker = true;
 			}
 		}
-		ImGui::NewLine();
-		ImGui::NewLine(1);
+		if (j != n - 1) {
+			ImGui::NewLine();
+			ImGui::NewLine(1);
+		}
 	}
 	ImGui::SameLine();
 

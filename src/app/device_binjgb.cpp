@@ -1478,7 +1478,7 @@ void DeviceBinjgb::updateAudio(
 }
 
 bool DeviceBinjgb::processStreaming(class Window* wnd, class Renderer* rnd) {
-	// Extension feature: stream transfering.
+	// Extension feature: stream transferring.
 	if (!deviceHasExtSupport()) // GBB EXTENSION.
 		return false;
 

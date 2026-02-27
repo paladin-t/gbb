@@ -670,6 +670,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_1_Graphics)
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_2_Attributes)
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_CreateScene)
+	GBBASIC_PROPERTY_READONLY(std::string, windowMap_EditAsImage)
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_LocalPalette)
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap_RefTiles)
 
@@ -926,6 +927,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_BitsPalette)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_CreateANewTilesAssetPage)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_CreateASceneReferencingThisMapPage)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_EditAsImage)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_Info)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_InfoLayer)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_InfoLayers)

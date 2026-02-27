@@ -1380,14 +1380,27 @@ private:
 			}
 			if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER) {
 				ImGui::NewLine();
-				Editing::Tools::separate(rnd, ws, spwidth);
+				ImGui::NewLine(1);
+				do {
+					ImGui::Dummy(ImVec2(xOffset, 0));
+					ImGui::SameLine();
+					ImGui::SetNextItemWidth(mwidth);
+					bool editAsImage = entry()->editAsImage;
+					if (ImGui::Checkbox(ws->theme()->windowMap_EditAsImage(), &editAsImage)) {
+						entry()->editAsImage = editAsImage;
+					}
+					if (ImGui::IsItemHovered()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-				// TODO: EDIT MAP AS IMAGE
-				// SELECT
-
+						ImGui::SetTooltip(ws->theme()->tooltipMap_EditAsImage());
+					}
+					ImGui::SameLine();
+				} while (false);
 				// TODO: EDIT MAP AS IMAGE
 				// WARN FOR TILE OVERRIDING
 
+				ImGui::NewLine();
+				Editing::Tools::separate(rnd, ws, spwidth);
 				do {
 					ImGui::Dummy(ImVec2(xOffset, 0));
 					ImGui::SameLine();

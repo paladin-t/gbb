@@ -4021,6 +4021,8 @@ bool MapAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarnin
 	rapidjson::Value* attributes_ = nullptr;
 	Jpath::get(doc, attributes_, "attributes");
 
+	Jpath::set(doc, doc, editAsImage, "edit_as_image");
+
 	Jpath::set(doc, doc, localPaletteEnabled, "local_palette", "enabled");
 
 	Jpath::set(doc, doc, Jpath::ANY(), "local_palette", "colors");
@@ -4124,6 +4126,9 @@ bool MapAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler 
 	}
 
 	Jpath::get(doc, hasAttributes, "has_attributes");
+
+	if (!Jpath::get(doc, editAsImage, "edit_as_image"))
+		editAsImage = false;
 
 	if (!Jpath::get(doc, localPaletteEnabled, "local_palette", "enabled"))
 		localPaletteEnabled = false;

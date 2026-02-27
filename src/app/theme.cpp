@@ -865,6 +865,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowMap_1_Graphics("1. Graphics");
 	windowMap_2_Attributes("2. Attributes");
 	windowMap_CreateScene("Create scene");
+	windowMap_EditAsImage("Edit as image");
 	windowMap_LocalPalette("Local palette");
 	windowMap_RefTiles("Tiles #{0}");
 
@@ -1213,6 +1214,15 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipMap_BitsPalette("   Palette: {0} (colored only)\n");
 	tooltipMap_CreateANewTilesAssetPage("Create a new tiles asset page");
 	tooltipMap_CreateASceneReferencingThisMapPage("Create a scene referencing this map page");
+	tooltipMap_EditAsImage(
+		"Check to edit map as image with:\n"
+		"  * Editing image by pixel by pixel\n"
+		"  * Picking colors from local palette\n"
+		"  * Transferring to tiled data\n"
+		"Uncheck to edit map normally with:\n"
+		"  * Editing by tiles\n"
+		"  * Directly accessing tiled data"
+	);
 	tooltipMap_Info("{0} tiles\n{1} active {2}");
 	tooltipMap_InfoLayer("layer");
 	tooltipMap_InfoLayers("layers");
@@ -1221,8 +1231,8 @@ bool Theme::open(class Renderer* rnd) {
 		"  * Local palette data for this map asset\n"
 		"  * Palette operations for code export\n"
 		"  * Edit-time preview using the local palette\n"
-		"It doesn't compile into map resource,\n"
-		"consider using code export for it."
+		"It doesn't compile into map resource, consider\n"
+		"using code export for it."
 	);
 	tooltipMap_Optimize(
 		"It is recommended to keep this option\n"
