@@ -511,7 +511,10 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_CannotRenameProject("Cannot rename project.");
 	dialogPrompt_CannotSaveData("Cannot save data.");
 	dialogPrompt_CannotSaveProject("Cannot save project.");
-	dialogPrompt_CannotSaveProjectSeeTheConsoleForDetails("Cannot save project.\nSee the console for details.");
+	dialogPrompt_CannotSaveProjectSeeTheConsoleForDetails(
+		"Cannot save project.\n"
+		"See the console for details."
+	);
 	dialogPrompt_CannotSaveSramState("Cannot save SRAM state.");
 	dialogPrompt_CannotSaveToReadonlyLocations("Cannot save to readonly locations.");
 	dialogPrompt_CannotUseThisImage("Cannot use this image");
@@ -579,7 +582,10 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_InstalledKernel("Installed kernel \"{0}\".");
 	dialogPrompt_Installing("Installing...");
 	dialogPrompt_Interval("Interval");
-	dialogPrompt_InvalidBorderImageSize256x224pxRequired("Invalid border image size,\n256x224px required");
+	dialogPrompt_InvalidBorderImageSize256x224pxRequired(
+		"Invalid border image size,\n"
+		"256x224px required"
+	);
 	dialogPrompt_InvalidData("Invalid data");
 	dialogPrompt_InvalidDataSeeTheConsoleWindowForDetails("Invalid data; see the console window for details.");
 	dialogPrompt_InvalidFile("Invalid file.");
@@ -587,7 +593,11 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_JumpGravity("Jump gravity");
 	dialogPrompt_Length("Length");
 	dialogPrompt_LifeTime("Lift time");
-	dialogPrompt_LinuxFileDialogRequirements("Requires zenity/matedialog/qarma/kdialog\nto show file dialogs. (To open or save\nsomething.)");
+	dialogPrompt_LinuxFileDialogRequirements(
+		"Requires zenity/matedialog/qarma/kdialog\n"
+		"to show file dialogs. (To open or save\n"
+		"something.)"
+	);
 	dialogPrompt_Loading("Loading...");
 	dialogPrompt_Map("Map:");
 	dialogPrompt_MapPage("Map page");
@@ -596,6 +606,17 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_MaxSize("Max size");
 	dialogPrompt_Missing("Missing");
 	dialogPrompt_MoveSpeed("Move speed");
+	dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetCreateANewTilesAssetPageForImporting(
+		"Multiple map assets reference the\n"
+		"source tiles asset. Create a new\n"
+		"tiles asset page for importing?"
+	);
+	dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetEditingAsAnImageMayBreakOtherMapsContinueAnyway(
+		"Multiple map assets reference the\n"
+		"source tiles asset. Editing as an\n"
+		"image may break other maps.\n"
+		"Continue anyway?"
+	);
 	dialogPrompt_Name("Name");
 	dialogPrompt_NoData("No data");
 	dialogPrompt_NoInit("No init");
@@ -664,8 +685,11 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_SweepTime_6("46.9ms (6/128Hz)");
 	dialogPrompt_SweepTime_7("54.7ms (7/128Hz)");
 	dialogPrompt_TheProjectIsNotSavedYet("The project is not saved yet.");
-	dialogPrompt_ThereAreMoreThanOneMapAssetsReferencingToTheSourceTilesAssetCreateANewTilesAssetPageForImporting("There are more than one map assets\nreferencing to the source tiles asset.\nCreate a new tiles asset page for importing?");
-	dialogPrompt_TheRomIsEncodedInTheUrlOfTheOpenedBrowserPageMakeSureYourBrowserSupportsLongUrl("The ROM is encoded in the URL of the\nopened browser page. Make sure your\nbrowser supports long URL.");
+	dialogPrompt_TheRomIsEncodedInTheUrlOfTheOpenedBrowserPageMakeSureYourBrowserSupportsLongUrl(
+		"The ROM is encoded in the URL of the\n"
+		"opened browser page. Make sure your\n"
+		"browser supports long URL."
+	);
 	dialogPrompt_Thresholds("Thresholds");
 	dialogPrompt_TicksPerRow("Ticks per row");
 	dialogPrompt_Tiles("Tiles:");
@@ -712,12 +736,19 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_KernelError_MissingKernelComponent("Missing kernel component.");
 	dialogAsk_BrowseTheExportedFile("Browser the exported file?");
 	dialogAsk_ClearAllRecentProjects("Clear all recent projects?");
-	dialogAsk_ProjectHasBeenBuiltAndIsBeingHostedAt_StopHostingAndBrowseThePackage("The project has been built and is being hosted\nat {0}.\nStop hosting and browse the package?");
+	dialogAsk_ProjectHasBeenBuiltAndIsBeingHostedAt_StopHostingAndBrowseThePackage(
+		"The project has been built and is being hosted\n"
+		"at {0}.\n"
+		"Stop hosting and browse the package?"
+	);
 	dialogAsk_RemoveFromDisk("Remove from disk");
 	dialogAsk_RemoveTheCurrentAssetPage("Remove the current asset page?");
 	dialogAsk_RemoveTheCurrentProject("Remove the current project?");
 	dialogAsk_SaveTheCurrentProject("Save the current project?");
-	dialogAsk_KernelQuestion_AKernelWithIdAlreadyExistsOverwrite("A kernel with ID \"{0}\" already exists.\nOverwrite?");
+	dialogAsk_KernelQuestion_AKernelWithIdAlreadyExistsOverwrite(
+		"A kernel with ID \"{0}\" already exists.\n"
+		"Overwrite?"
+	);
 	dialogInput_Input("Input");
 	dialogInput_ProjectName("Project name:");
 	dialogProjectCreating_Kernel("Kernel:");
@@ -907,22 +938,22 @@ bool Theme::open(class Renderer* rnd) {
 
 	windowActivities("Activities");
 	windowActivities_Activities("Activities:");
-	std::string activities;
-	activities += " Total opened projects: {0}\n";
-	activities += "         Opened BASICs: {1}\n";
-	activities += "           Opened ROMs: {2}\n";
-	activities += "----------------------------------------\n";
-	activities += "Total created projects: {3}\n";
-	activities += "        Created BASICs: {4}\n";
-	activities += "----------------------------------------\n";
-	activities += "    Total played times: {5}\n";
-	activities += "      Played BASIC for: {6}\n";
-	activities += "        Played ROM for: {7}\n";
-	activities += "----------------------------------------\n";
-	activities += "     Total played time: {8}\n";
-	activities += "          Played BASIC: {9}\n";
-	activities += "            Played ROM: {10}\n";
-	windowActivities_ContentInfo(activities);
+	windowActivities_ContentInfo(
+		" Total opened projects: {0}\n"
+		"         Opened BASICs: {1}\n"
+		"           Opened ROMs: {2}\n"
+		"----------------------------------------\n"
+		"Total created projects: {3}\n"
+		"        Created BASICs: {4}\n"
+		"----------------------------------------\n"
+		"    Total played times: {5}\n"
+		"      Played BASIC for: {6}\n"
+		"        Played ROM for: {7}\n"
+		"----------------------------------------\n"
+		"     Total played time: {8}\n"
+		"          Played BASIC: {9}\n"
+		"            Played ROM: {10}\n"
+	);
 
 	windowAbout("About");
 
@@ -954,8 +985,16 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_DeleteFrame("Delete frame");
 	tooltip_EjectSourceCodeVm("Eject Source Code (VM)");
 	tooltip_Export("Export");
-	tooltip_ForAlignToTileMovementForControllers("For align-to-tile movement for controllers\nEnable for 16x16px aligned, otherwise 8x8px aligned\n(Usually leave disabled)");
-	tooltip_ForAutoAlignToTileMovementForControllers("Determined automatically!\nFor auto-align-to-tile movement for controllers\nEnable for 16x16px-based auto aligning, otherwise 8x8px-based");
+	tooltip_ForAlignToTileMovementForControllers(
+		"For align-to-tile movement for controllers\n"
+		"Enable for 16x16px aligned, otherwise 8x8px aligned\n"
+		"(Usually leave disabled)"
+	);
+	tooltip_ForAutoAlignToTileMovementForControllers(
+		"Determined automatically!\n"
+		"For auto-align-to-tile movement for controllers\n"
+		"Enable for 16x16px-based auto aligning, otherwise 8x8px-based"
+	);
 	tooltip_GenerateAndCopyCode("Generate and copy code");
 	tooltip_GlobalSearch("Global search");
 	tooltip_HighBits("High bits");
@@ -978,7 +1017,10 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_Menu("Menu");
 	tooltip_MonoEditor("Mono editor");
 	tooltip_OpenRefPalette("Open ref palette");
-	tooltip_OpenRefPaletteTurnOffPaletteBitsPreviewToUseThis("Open ref palette\n(Turn off palette bits preview to use this)");
+	tooltip_OpenRefPaletteTurnOffPaletteBitsPreviewToUseThis(
+		"Open ref palette\n"
+		"(Turn off palette bits preview to use this)"
+	);
 	tooltip_OrderedByDefault("Ordered by default");
 	tooltip_OrderedByEarliestCreated("Ordered by earliest created");
 	tooltip_OrderedByEarliestModified("Ordered by earliest modified");
@@ -991,7 +1033,10 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_PreviewPaletteBitsForColoredOnly("Preview palette bits (for colored only)");
 	tooltip_Refreshing("Refreshing...");
 	tooltip_Reset("Reset");
-	tooltip_ResizeTheCurrentAssetToResolve("Resize the current asset to resolve\n(Will clear any redo/undo record)");
+	tooltip_ResizeTheCurrentAssetToResolve(
+		"Resize the current asset to resolve\n"
+		"(Will clear any redo/undo record)"
+	);
 	tooltip_SetRoutine("Set routine");
 	tooltip_Space("(Space)");
 	tooltip_SplitEditor("Split editor");
@@ -999,7 +1044,10 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_Url("URL");
 	tooltip_UseByteMatrixViewOnTheToolbar("Use byte matrix view on the toolbar");
 	tooltip_ViaClipboard("Via clipboard");
-	tooltip_ViaClipboardForTheCurrentFrameOnly("Via clipboard\n(For the current frame only)");
+	tooltip_ViaClipboardForTheCurrentFrameOnly(
+		"Via clipboard\n"
+		"(For the current frame only)"
+	);
 	tooltip_View("View");
 	tooltip_Warning("Warning");
 	tooltip_WhetherToBuildThisLayer("Whether to build this layer");
@@ -1034,11 +1082,20 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEdit_ToolEllipse("Ellipse (E)");
 	tooltipEdit_ToolEllipseFill("Ellipse fill (Shift+E)");
 	tooltipEdit_ToolEraser("Delete (D)");
-	tooltipEdit_ToolEyedropper("Pick (I)\nAlt+LMB");
-	tooltipEdit_ToolHand("Move the edit area (H)\nShift+LMB or MMB");
+	tooltipEdit_ToolEyedropper(
+		"Pick (I)\n"
+		"Alt+LMB"
+	);
+	tooltipEdit_ToolHand(
+		"Move the edit area (H)\n"
+		"Shift+LMB or MMB"
+	);
 	tooltipEdit_ToolJumpToRef("Jump to ref (R)");
 	tooltipEdit_ToolLasso("Select (M)");
-	tooltipEdit_ToolLassoWithTilewise("Select (M)\nHold " GBBASIC_MODIFIER_KEY_NAME " for tilewise");
+	tooltipEdit_ToolLassoWithTilewise(
+		"Select (M)\n"
+		"Hold " GBBASIC_MODIFIER_KEY_NAME " for tilewise"
+	);
 	tooltipEdit_ToolLine("Line (L)");
 	tooltipEdit_ToolMove("Move (P)");
 	tooltipEdit_ToolPaintbucket("Fill (G)");
@@ -1054,25 +1111,66 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipProject_Resume("Resume (F5)");
 	tooltipProject_Stop("Stop (Shift+F5)");
 
-	tooltipActor_AddFrame("Add frame\nHold Shift to copy");
-	tooltipActor_AppendFrame("Append frame\nHold Shift to copy");
-	tooltipActor_Bit0("Bit 0\n(palette bit, colored only)");
-	tooltipActor_Bit1("Bit 1\n(palette bit, colored only)");
-	tooltipActor_Bit2("Bit 2\n(palette bit, colored only)");
-	tooltipActor_Bit3("Bit 3\n(bank index, colored only)");
-	tooltipActor_Bit4("Bit 4\n(palette index, classic only)");
-	tooltipActor_Bit5("Bit 5\n(horizontal flip, determined automatically)");
-	tooltipActor_Bit6("Bit 6\n(vertical flip, determined automatically)");
-	tooltipActor_Bit7("Bit 7\n(priority)");
+	tooltipActor_AddFrame(
+		"Add frame\n"
+		"Hold Shift to copy"
+	);
+	tooltipActor_AppendFrame(
+		"Append frame\n"
+		"Hold Shift to copy"
+	);
+	tooltipActor_Bit0(
+		"Bit 0\n"
+		"(palette bit, colored only)"
+	);
+	tooltipActor_Bit1(
+		"Bit 1\n"
+		"(palette bit, colored only)"
+	);
+	tooltipActor_Bit2(
+		"Bit 2\n"
+		"(palette bit, colored only)"
+	);
+	tooltipActor_Bit3(
+		"Bit 3\n"
+		"(bank index, colored only)"
+	);
+	tooltipActor_Bit4(
+		"Bit 4\n"
+		"(palette index, classic only)"
+	);
+	tooltipActor_Bit5(
+		"Bit 5\n"
+		"(horizontal flip, determined automatically)"
+	);
+	tooltipActor_Bit6(
+		"Bit 6\n"
+		"(vertical flip, determined automatically)"
+	);
+	tooltipActor_Bit7(
+		"Bit 7\n"
+		"(priority)"
+	);
 	tooltipActor_CheckToApplyToAllFrames("Check to apply to all frames");
 	tooltipActor_CheckToChangeBitToAllTiles("Check to change bit to all tiles");
 	tooltipActor_CopyDefinition("Copy definition");
 	tooltipActor_Export("Export");
 	tooltipActor_ForAnimationTicking("For animation ticking");
 	tooltipActor_ForPlacingInSceneEditor("For placing in scene editor");
-	tooltipActor_Info(" Tile count: {0}\n Tile bytes: {1}\nMax sprites: {2}\nActor bytes: {3}");
-	tooltipActor_InsertFrame("Insert frame\nHold Shift to copy");
-	tooltipActor_IntervalInfo("0, 1, 3, 7, 15, 31, 63, 127 are prefered\n255 for paused");
+	tooltipActor_Info(
+		" Tile count: {0}\n"
+		" Tile bytes: {1}\n"
+		"Max sprites: {2}\n"
+		"Actor bytes: {3}"
+	);
+	tooltipActor_InsertFrame(
+		"Insert frame\n"
+		"Hold Shift to copy"
+	);
+	tooltipActor_IntervalInfo(
+		"0, 1, 3, 7, 15, 31, 63, 127 are prefered\n"
+		"255 for paused"
+	);
 	tooltipActor_IntervalTooltips().push_back("Paused");
 	tooltipActor_IntervalTooltips().push_back("0.47 FPS (Slow)");
 	tooltipActor_IntervalTooltips().push_back("0.94 FPS");
@@ -1083,14 +1181,16 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipActor_IntervalTooltips().push_back("  30 FPS");
 	tooltipActor_IntervalTooltips().push_back("  60 FPS (Fast)");
 	tooltipActor_PasteDefinition("Paste definition");
-	tooltipActor_Refresh("Refresh (Ctrl+Shift+R)");
+	tooltipActor_Refresh("Refresh");
 	tooltipActor_StopTesting("Stop testing");
 	tooltipActor_TestActor("Test actor");
 	tooltipActor_ToAllFrames("To all frames");
 	tooltipActor_ToAllTiles("To all tiles");
 
-	tooltipArbitrary_Note(tooltipArbitrary_Note() + "* For parameterized GUI text\n");
-	tooltipArbitrary_Note(tooltipArbitrary_Note() + "* Each font asset has its own arbitrary data");
+	tooltipArbitrary_Note(
+		"* For parameterized GUI text\n"
+		"* Each font asset has its own arbitrary data"
+	);
 
 	tooltipAudio_AppendRowOfOrders("Append row of orders");
 	tooltipAudio_CopyInstrument("Copy instrument");
@@ -1152,7 +1252,12 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipAudio_StopMusic("Stop music");
 	tooltipAudio_StopSfx("Stop SFX");
 
-	tooltipCode_Info("{0} {5} in {1} {6}\n    Var: {2}\n  Array: {3}\n   Loop: {4}");
+	tooltipCode_Info(
+		"{0} {5} in {1} {6}\n"
+		"    Var: {2}\n"
+		"  Array: {3}\n"
+		"   Loop: {4}"
+	);
 	tooltipCode_InfoAllocation("allocation");
 	tooltipCode_InfoAllocations("allocations");
 	tooltipCode_InfoWord("word");
@@ -1160,11 +1265,13 @@ bool Theme::open(class Renderer* rnd) {
 
 	tooltipEmulator_AlternativeSpeed("Alternative speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
 	tooltipEmulator_NormalSpeed("Normal speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
-	tooltipEmulator_StatusNote(tooltipEmulator_StatusNote() + "Cartridge flag: {0}\n");
-	tooltipEmulator_StatusNote(tooltipEmulator_StatusNote() + "Cartridge ext.: {1}\n");
-	tooltipEmulator_StatusNote(tooltipEmulator_StatusNote() + "   Device flag: {2}\n");
-	tooltipEmulator_StatusNote(tooltipEmulator_StatusNote() + "Cartridge SRAM: {3}\n");
-	tooltipEmulator_StatusNote(tooltipEmulator_StatusNote() + "Cartridge RTC : {4}");
+	tooltipEmulator_StatusNote(
+		"Cartridge flag: {0}\n"
+		"Cartridge ext.: {1}\n"
+		"   Device flag: {2}\n"
+		"Cartridge SRAM: {3}\n"
+		"Cartridge RTC : {4}"
+	);
 	tooltipEmulator_ToggleOnscreenGamepad("Toggle onscreen gamepad");
 	tooltipEmulator_VramDebugger_Map(
 		" Position: {0}, {1}\n"
@@ -1196,17 +1303,44 @@ bool Theme::open(class Renderer* rnd) {
 	);
 
 	tooltipFont_Info("{0} glyphs");
-	tooltipFont_Trim("Whether to trim glyph height.\nIt is recommended to keep this option checked.");
+	tooltipFont_Trim(
+		"Whether to trim glyph height.\n"
+		"It is recommended to keep this option checked."
+	);
 
 	tooltipMap_Attributes("Attributes:");
-	tooltipMap_Bit0("Bit 0\n(palette bit, colored only)");
-	tooltipMap_Bit1("Bit 1\n(palette bit, colored only)");
-	tooltipMap_Bit2("Bit 2\n(palette bit, colored only)");
-	tooltipMap_Bit3("Bit 3\n(bank index, colored only)");
-	tooltipMap_Bit4("Bit 4\n(not used)");
-	tooltipMap_Bit5("Bit 5\n(horizontal flip, colored only)");
-	tooltipMap_Bit6("Bit 6\n(vertical flip, colored only)");
-	tooltipMap_Bit7("Bit 7\n(priority, colored only)");
+	tooltipMap_Bit0(
+		"Bit 0\n"
+		"(palette bit, colored only)"
+	);
+	tooltipMap_Bit1(
+		"Bit 1\n"
+		"(palette bit, colored only)"
+	);
+	tooltipMap_Bit2(
+		"Bit 2\n"
+		"(palette bit, colored only)"
+	);
+	tooltipMap_Bit3(
+		"Bit 3\n"
+		"(bank index, colored only)"
+	);
+	tooltipMap_Bit4(
+		"Bit 4\n"
+		"(not used)"
+	);
+	tooltipMap_Bit5(
+		"Bit 5\n"
+		"(horizontal flip, colored only)"
+	);
+	tooltipMap_Bit6(
+		"Bit 6\n"
+		"(vertical flip, colored only)"
+	);
+	tooltipMap_Bit7(
+		"Bit 7\n"
+		"(priority, colored only)"
+	);
 	tooltipMap_BitBank    ("      Bank: {0} (colored only)\n");
 	tooltipMap_BitHFlip   ("    H-flip: {0} (colored only)\n");
 	tooltipMap_BitPriority("  Priority: {0} (colored only)");
@@ -1223,7 +1357,10 @@ bool Theme::open(class Renderer* rnd) {
 		"  * Editing by tiles\n"
 		"  * Directly accessing tiled data"
 	);
-	tooltipMap_Info("{0} tiles\n{1} active {2}");
+	tooltipMap_Info(
+		"{0} tiles\n"
+		"{1} active {2}"
+	);
 	tooltipMap_InfoLayer("layer");
 	tooltipMap_InfoLayers("layers");
 	tooltipMap_LocalPalette(
@@ -1246,13 +1383,18 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipMap_TestMap("Test map");
 	tooltipMap_UpdateTheRefTilesAssetPage("Update the ref tiles asset page");
 
-	tooltipPalette_Index0("(1)\nIgnored by sprites");
+	tooltipPalette_Index0(
+		"(1)\n"
+		"Ignored by sprites"
+	);
 	tooltipPalette_Index1("(2)");
 	tooltipPalette_Index2("(3)");
 	tooltipPalette_Index3("(4)");
-	tooltipPalette_Note(tooltipPalette_Note() + "* Works with colored devices only\n");
-	tooltipPalette_Note(tooltipPalette_Note() + "* Will be compiled into final ROM\n");
-	tooltipPalette_Note(tooltipPalette_Note() + "* Copy and paste code to change programmingly");
+	tooltipPalette_Note(
+		"* Works with colored devices only\n"
+		"* Will be compiled into final ROM\n"
+		"* Copy and paste code to change programmingly"
+	);
 
 	tooltipProjectProperty_ProjectIcon2BppDetails("32x32px, 2bpp for ROM");
 	tooltipProjectProperty_ProjectIconDetails("32x32px for application");
@@ -1262,32 +1404,72 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipProjectProperty_ResetBorder("Reset border");
 	tooltipProjectProperty_ResetPalettesToUseTheSharedAsset("Reset palettes to use the shared asset");
 	tooltipProjectProperty_ResetIcon("Reset icon");
-	tooltipProjectProperty_WhetherToCompileInStrictModeTreatsSomeWarningsAsErrors("Whether to compile in strict mode\n(Treats some warnings as errors)");
+	tooltipProjectProperty_WhetherToCompileInStrictModeTreatsSomeWarningsAsErrors(
+		"Whether to compile in strict mode\n"
+		"(Treats some warnings as errors)"
+	);
 
-	tooltipScene_ActorDetails("  Index: {0}\n    Pos: {1},{2}\n Bounds: {3},{4},{5},{6}\n Update: {7}\nOn hits: {8}");
+	tooltipScene_ActorDetails(
+		"  Index: {0}\n"
+		"    Pos: {1},{2}\n"
+		" Bounds: {3},{4},{5},{6}\n"
+		" Update: {7}\n"
+		"On hits: {8}"
+	);
 	tooltipScene_Attributes("Attributes:");
-	tooltipScene_Bit0("Bit 0\n(blocking left)");
-	tooltipScene_Bit1("Bit 1\n(blocking right)");
-	tooltipScene_Bit2("Bit 2\n(blocking up)");
-	tooltipScene_Bit3("Bit 3\n(blocking down)");
-	tooltipScene_Bit4("Bit 4\n(is ladder)");
-	tooltipScene_Bit5("Bit 5\n(not used)");
-	tooltipScene_Bit6("Bit 6\n(not used)");
-	tooltipScene_Bit7("Bit 7\n(not used)");
+	tooltipScene_Bit0(
+		"Bit 0\n"
+		"(blocking left)"
+	);
+	tooltipScene_Bit1(
+		"Bit 1\n"
+		"(blocking right)"
+	);
+	tooltipScene_Bit2(
+		"Bit 2\n"
+		"(blocking up)"
+	);
+	tooltipScene_Bit3(
+		"Bit 3\n"
+		"(blocking down)"
+	);
+	tooltipScene_Bit4(
+		"Bit 4\n"
+		"(is ladder)"
+	);
+	tooltipScene_Bit5(
+		"Bit 5\n"
+		"(not used)"
+	);
+	tooltipScene_Bit6(
+		"Bit 6\n"
+		"(not used)"
+	);
+	tooltipScene_Bit7(
+		"Bit 7\n"
+		"(not used)"
+	);
 	tooltipScene_BitBlockingDown ("   Blocking down: {0}\n");
 	tooltipScene_BitBlockingLeft ("   Blocking left: {0}\n");
 	tooltipScene_BitBlockingRight("  Blocking right: {0}\n");
 	tooltipScene_BitBlockingUp   ("     Blocking up: {0}\n");
 	tooltipScene_BitIsLadder     ("       Is ladder: {0}");
 	tooltipScene_CopyDefinition("Copy definition");
-	tooltipScene_Info("{0} tiles\n{1} active {2}");
+	tooltipScene_Info(
+		"{0} tiles\n"
+		"{1} active {2}"
+	);
 	tooltipScene_InfoLayer("layer");
 	tooltipScene_InfoLayers("layers");
 	tooltipScene_PasteDefinition("Paste definition");
 	tooltipScene_Properties("Properties:");
 	tooltipScene_StopTesting("Stop testing");
 	tooltipScene_TestScene("Test scene");
-	tooltipScene_TriggerDetails("Index: {0}\n  Pos: {1},{2}\n Size: {3}x{4}");
+	tooltipScene_TriggerDetails(
+		"Index: {0}\n"
+		"  Pos: {1},{2}\n"
+		" Size: {3}x{4}"
+	);
 
 	tooltipTiles_CreateAMapReferencingThisTilesPage("Create a map referencing this tiles page");
 	tooltipTiles_Info("{0} tiles");

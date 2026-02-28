@@ -8,7 +8,6 @@
 
 #include "commands_map.h"
 #include "editor_map.h"
-#include "editor_map_as_image.h"
 #include "editor_tiles.h"
 #include "theme.h"
 #include "workspace.h"
@@ -17,6 +16,7 @@
 #include "../utils/encoding.h"
 #include "../utils/file_sandbox.h"
 #include "../utils/filesystem.h"
+#include "../utils/marker.h"
 #include "../utils/parsers.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "../../lib/imgui/imgui_internal.h"
@@ -31,6 +31,10 @@
 #ifndef EDITOR_MAP_UNLOAD_SYMBOLS_ON_FINISH
 #	define EDITOR_MAP_UNLOAD_SYMBOLS_ON_FINISH 1
 #endif /* EDITOR_MAP_UNLOAD_SYMBOLS_ON_FINISH */
+
+#ifndef EDITOR_MAP_LOCAL_PALETTE_COLOR_CHANGED_DEBOUNCE_INTERVAL
+#	define EDITOR_MAP_LOCAL_PALETTE_COLOR_CHANGED_DEBOUNCE_INTERVAL 0.5
+#endif /* EDITOR_MAP_LOCAL_PALETTE_COLOR_CHANGED_DEBOUNCE_INTERVAL */
 
 /* ===========================================================================} */
 
@@ -117,11 +121,13 @@ private:
 	struct {
 		std::string text;
 		Editing::Tiler cursor;
+		Marker<bool> transferring = Marker<bool>(false);
 		std::string info;
 
 		void clear(void) {
 			text.clear();
 			cursor = Editing::Tiler();
+			transferring = Marker<bool>(false);
 			info.clear();
 		}
 	} _status;
@@ -190,10 +196,24 @@ private:
 		}
 	} _size;
 	struct {
-		// TODO: EDIT MAP AS IMAGE
-		// TRANSFER
+		Renderer* renderer = nullptr; // Foreign.
+		Image::Ptr image = nullptr;
+		Texture::Ptr texture = nullptr;
+		bool filled = false;
+		Semaphore generated;
 
+		void reset(void) {
+			image = nullptr;
+			texture = nullptr;
+			filled = false;
+			generated.wait();
+		}
 		void clear(void) {
+			renderer = nullptr;
+			image = nullptr;
+			texture = nullptr;
+			filled = false;
+			generated.wait();
 		}
 	} _transfer;
 	struct {
@@ -283,9 +303,10 @@ private:
 	std::function<void(int, bool)> _setLayerEnabled = nullptr;
 	struct Tools {
 		int layer = 0;
-		int editingColorGroup = -1;
-		int editingColorIndex = -1;
-		bool openColorPicker = false;
+		int editingLocalPaletteColorGroup = -1;
+		int editingLocalPaletteColorIndex = -1;
+		bool openLocalPaletteColorPicker = false;
+		Debounce debounceLocalPaletteColorChanged = Debounce(EDITOR_MAP_LOCAL_PALETTE_COLOR_CHANGED_DEBOUNCE_INTERVAL);
 		Editing::Tools::PaintableTools painting = Editing::Tools::PENCIL;
 		Editing::Tools::BitwiseOperations bitwiseOperations = Editing::Tools::SET;
 		bool scaled = false;
@@ -316,9 +337,10 @@ private:
 
 		void clear(void) {
 			layer = 0;
-			editingColorGroup = -1;
-			editingColorIndex = -1;
-			openColorPicker = false;
+			editingLocalPaletteColorGroup = -1;
+			editingLocalPaletteColorIndex = -1;
+			openLocalPaletteColorPicker = false;
+			debounceLocalPaletteColorChanged.clear();
 			painting = Editing::Tools::PENCIL;
 			bitwiseOperations = Editing::Tools::SET;
 			scaled = false;
@@ -348,6 +370,7 @@ private:
 			postType = Editing::Tools::PENCIL;
 		}
 	} _tools;
+	Debounce _debounce;
 	Processor _processors[Editing::Tools::COUNT] = {
 		Processor( // Hand.
 			std::bind(&EditorMapImpl::handToolDown, this, std::placeholders::_1),
@@ -528,6 +551,8 @@ public:
 		_ref.gridUnit = _ref.cursor.size;
 		_ref.transparentBackbroundVisible = num.pressed();
 
+		_transfer.renderer = rnd;
+
 		_setLayer = std::bind(&EditorMapImpl::changeLayer, this, wnd, rnd, ws, std::placeholders::_1);
 		_setLayerEnabled = std::bind(&EditorMapImpl::toggleLayer, this, wnd, rnd, ws, std::placeholders::_1, std::placeholders::_2);
 
@@ -549,6 +574,8 @@ public:
 
 		fprintf(stdout, "Map editor closed: #%d.\n", _index);
 
+		_transfer.clear();
+
 		_project = nullptr;
 		_index = -1;
 
@@ -569,20 +596,62 @@ public:
 		_setLayer = nullptr;
 		_setLayerEnabled = nullptr;
 		_tools.clear();
+		_debounce.clear();
 	}
 
 	virtual int index(void) const override {
 		return _index;
 	}
 
-	virtual void enter(class Workspace*) override {
-		// Do nothing.
+	virtual void enter(class Workspace* ws) override {
+		if (entry() && entry()->editAsImage) {
+			const int ref = entry()->ref;
+			const Project::Indices mapsRefToTheSameTiles = _project->getMapsRefToTiles(ref);
+			if (mapsRefToTheSameTiles.size() > 1) {
+				ImGui::MessagePopupBox::ConfirmedHandler confirm(
+					[ws, this] (void) -> void {
+						WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+						if (!_transfer.filled)
+							transferImageToTiled(ws);
+					},
+					nullptr
+				);
+				ImGui::MessagePopupBox::DeniedHandler deny(
+					[ws, this] (void) -> void {
+						WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+						entry()->editAsImage = false;
+					},
+					nullptr
+				);
+				ws->messagePopupBox(
+					ws->theme()->dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetEditingAsAnImageMayBreakOtherMapsContinueAnyway(),
+					confirm,
+					deny,
+					nullptr,
+					nullptr,
+					nullptr,
+					nullptr,
+					nullptr,
+					nullptr,
+					nullptr
+				);
+			}
+		} else {
+			_transfer.filled = true;
+		}
 	}
-	virtual void leave(class Workspace*) override {
+	virtual void leave(class Workspace* ws) override {
 		_tools.stopMapTesting();
 
-		// TODO: EDIT MAP AS IMAGE
-		// TRANSFER
+		if (entry() && entry()->editAsImage) {
+			if (!_transfer.filled) {
+				transferImageToTiled(ws);
+
+				_transfer.generated.wait();
+			}
+		}
 
 		if (entry())
 			entry()->cleanup(); // Clean up the outdated editable and runtime resources.
@@ -1000,10 +1069,23 @@ public:
 			return;
 		}
 		
-		updateAsMap(wnd, rnd, ws, width, height, splitter, statusBarHeight, statusBarActived, allowMouseOperations);
+		const bool editAsTiled = !(_tools.layer == ASSETS_MAP_GRAPHICS_LAYER && entry()->editAsImage);
+		if (editAsTiled)
+			updateAsTiled(wnd, rnd, ws, width, height, splitter, statusBarHeight, statusBarActived, allowMouseOperations);
+		else
+			updateAsImage(wnd, rnd, ws, width, height, splitter, statusBarHeight, statusBarActived, allowMouseOperations);
 
-		// TODO: EDIT MAP AS IMAGE
-		// TRANSFER
+		if (entry() && entry()->editAsImage) {
+			if (_debounce.fire()) {
+				if (!_transfer.filled)
+					transferImageToTiled(ws);
+			}
+		}
+
+		if (_tools.debounceLocalPaletteColorChanged.fire()) {
+			entry()->cleanup();
+			ws->skipFrame(); // Skip a frame to avoid glitch.
+		}
 
 		renderStatus(wnd, rnd, ws, width, statusBarHeight, statusBarActived);
 	}
@@ -1055,10 +1137,10 @@ public:
 	}
 
 private:
-	void updateAsMap(
+	void updateAsTiled(
 		Window* wnd, Renderer* rnd,
 		Workspace* ws,
-		float /* width */, float height,
+		float width, float height,
 		const Ref::Splitter &splitter, const float &statusBarHeight, bool &statusBarActived,
 		bool allowMouseOperations
 	) {
@@ -1322,564 +1404,765 @@ private:
 		ImGui::SameLine();
 		ImGui::BeginChild("@Tls", ImVec2(splitter.second, height - statusBarHeight), true, _ref.windowFlags());
 		{
-			_ref.fill(rnd, _project, false);
-			float xOffset = 0;
-			const float spwidth = _ref.windowWidth(splitter.second);
-			const float mwidth = Editing::Tools::measure(
-				rnd, ws,
-				&xOffset,
-				nullptr,
-				-1.0f
+			updateTools(
+				wnd, rnd,
+				ws,
+				width, height,
+				splitter, statusBarHeight, statusBarActived,
+				false
 			);
+		}
+		ImGui::EndChild();
+		ImGui::PopStyleVar();
+	}
+	void updateAsImage(
+		Window* wnd, Renderer* rnd,
+		Workspace* ws,
+		float width, float height,
+		const Ref::Splitter &splitter, const float &statusBarHeight, bool &statusBarActived,
+		bool allowMouseOperations
+	) {
+		if (entry()->refresh()) { // Refresh the outdated editable resources.
+			_ref.fill(rnd, _project, true);
 
-			bool inputFieldFocused = false;
-			bool inputFieldFocused_ = false;
-			auto canUseShortcuts = [ws, this] (void) -> bool {
-				return !_tools.inputFieldFocused && ws->canUseShortcuts() && !ImGui::IsMouseDown(ImGuiMouseButton_Left);
+			entry()->touch();
+		}
+		Map::Tiles tiles;
+		if (!object()->tiles(tiles) || !tiles.texture)
+			entry()->touch(); // Ensure the runtime resources are ready.
+		if (!object()->tiles(tiles) || !tiles.texture)
+			return;
+
+		ImGuiWindowFlags flags = ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav;
+		if (_tools.scaled) {
+			flags |= ImGuiWindowFlags_AlwaysVerticalScrollbar;
+			flags |= ImGuiWindowFlags_AlwaysHorizontalScrollbar;
+		}
+		ImGui::BeginChild("@Pat", ImVec2(splitter.first, height - statusBarHeight), false, flags);
+		{
+			if (textureAsImage()) {
+				Image::Ptr &img = objectAsImage();
+				Texture::Ptr &tex = textureAsImage();
+
+				Editing::Brush cursor; // TODO: = _cursor
+				const bool withCursor = _tools.painting != Editing::Tools::HAND;
+
+				const int pixelWidth = object()->width() * _tileSize.x;
+				const int pixelHeight = object()->height() * _tileSize.y;
+
+				constexpr const int MAGNIFICATIONS[] = {
+					1, 2, 4, 8
+				};
+				if (_tools.magnification == -1) {
+					const float PADDING = 32.0f;
+					const float s = (splitter.first + PADDING) / pixelWidth;
+					const float t = ((height - statusBarHeight) + PADDING) / pixelHeight;
+					int m = 0;
+					int n = 0;
+					for (int i = 0; i < GBBASIC_COUNTOF(MAGNIFICATIONS); ++i) {
+						if (s > MAGNIFICATIONS[i])
+							m = i;
+						if (t > MAGNIFICATIONS[i])
+							n = i;
+					}
+					_tools.magnification = Math::min(m, n);
+				}
+				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS));
+
+				const ImVec2 content = ImGui::GetContentRegionAvail();
+				float width_ = (float)pixelWidth;
+				if (content.x / GBBASIC_TILE_SIZE > 1600 || content.y / GBBASIC_TILE_SIZE > 1600) {
+					width_ *= 32;
+					_tools.scaled = true;
+				} else if (content.x / GBBASIC_TILE_SIZE > 800 || content.y / GBBASIC_TILE_SIZE > 800) {
+					width_ *= 16;
+					_tools.scaled = true;
+				} else if (content.x / GBBASIC_TILE_SIZE > 400 || content.y / GBBASIC_TILE_SIZE > 400) {
+					width_ *= 8;
+					_tools.scaled = true;
+				} else if (content.x / GBBASIC_TILE_SIZE > 200 || content.y / GBBASIC_TILE_SIZE > 200) {
+					width_ *= 4;
+					_tools.scaled = true;
+				} else if (content.x / GBBASIC_TILE_SIZE > 100 || content.y / GBBASIC_TILE_SIZE > 100) {
+					width_ *= 2;
+					_tools.scaled = true;
+				}
+				width_ *= (float)(MAGNIFICATIONS[_tools.magnification]);
+
+				_painting.set(
+					Editing::tiles(
+						rnd, ws,
+						img.get(), tex.get(),
+						width_,
+						withCursor ? &cursor : nullptr, false,
+						nullptr, // TODO: _selection.brush.empty() ? nullptr : &_selection.brush,
+						nullptr, // TODO: _overlay.texture ? _overlay.texture.get() : nullptr,
+						&_tools.gridUnit, _tools.showGrids && _tools.gridsVisible,
+						_tools.transparentBackbroundVisible,
+						_tools.mouseActionButton,
+						nullptr
+					)
+				);
+				if (
+					_painting ||
+					_tools.painting == Editing::Tools::STAMP
+				) {
+					// TODO: _cursor = cursor;
+				}
+				// TODO: refreshStatus(wnd, rnd, ws, &cursor);
+			} else {
+				_painting.set(false);
+			}
+
+			if (allowMouseOperations) {
+				if (_painting.down()) {
+					if (_processors[_tools.painting].down)
+						_processors[_tools.painting].down(rnd);
+				}
+				if (_painting && _painting.moved()) {
+					if (_processors[_tools.painting].move)
+						_processors[_tools.painting].move(rnd);
+				}
+				if (_painting.up()) {
+					if (_processors[_tools.painting].up)
+						_processors[_tools.painting].up(rnd);
+				}
+				if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
+					if (_processors[_tools.painting].hover)
+						_processors[_tools.painting].hover(rnd);
+				}
+			}
+
+			// TODO
+			/*if (_binding.skipFrame) {
+				_binding.skipFrame = false;
+				ws->skipFrame(); // Skip a frame to avoid glitch.
+			}*/
+
+			statusBarActived |= ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
+
+			// TODO: context(wnd, rnd, ws);
+		}
+		ImGui::EndChild();
+
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1);
+		ImGui::SameLine();
+		ImGui::BeginChild("@Tls", ImVec2(splitter.second, height - statusBarHeight), true, _ref.windowFlags());
+		{
+			updateTools(
+				wnd, rnd,
+				ws,
+				width, height,
+				splitter, statusBarHeight, statusBarActived,
+				true
+			);
+		}
+		ImGui::EndChild();
+		ImGui::PopStyleVar();
+	}
+	void updateTools(
+		Window* wnd, Renderer* rnd,
+		Workspace* ws,
+		float /* width */, float /* height */,
+		const Ref::Splitter &splitter, const float &/* statusBarHeight */, bool &statusBarActived,
+		bool asImage
+	) {
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		_ref.fill(rnd, _project, false);
+		float xOffset = 0;
+		const float spwidth = _ref.windowWidth(splitter.second);
+		const float mwidth = Editing::Tools::measure(
+			rnd, ws,
+			&xOffset,
+			nullptr,
+			-1.0f
+		);
+
+		bool inputFieldFocused = false;
+		bool inputFieldFocused_ = false;
+		auto canUseShortcuts = [ws, this] (void) -> bool {
+			return !_tools.inputFieldFocused && ws->canUseShortcuts() && !ImGui::IsMouseDown(ImGuiMouseButton_Left);
+		};
+
+		ImGui::PushID("@Lyr");
+		{
+			ImGui::Dummy(ImVec2(xOffset, 0));
+			ImGui::SameLine();
+			const char* items[] = {
+				ws->theme()->windowMap_1_Graphics().c_str(),
+				ws->theme()->windowMap_2_Attributes().c_str()
+			};
+			const char* tooltips[] = {
+				ws->theme()->tooltip_LayerMap().c_str(),
+				ws->theme()->tooltip_LayerAttributes().c_str()
 			};
 
-			ImGui::PushID("@Lyr");
-			{
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+			VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+			ImGui::SetNextItemWidth(mwidth);
+			if (ImGui::Combo("", &_tools.layer, items, GBBASIC_COUNTOF(items), tooltips)) {
+				if (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER) {
+#if GBBASIC_ASSET_AUTO_SWITCH_TOOL_TO_EYEDROPPER_ENABLED
+					if (_tools.painting == Editing::Tools::PENCIL)
+						_tools.painting = Editing::Tools::EYEDROPPER;
+					else if (_tools.painting == Editing::Tools::STAMP)
+						_tools.painting = Editing::Tools::EYEDROPPER;
+#else /* GBBASIC_ASSET_AUTO_SWITCH_TOOL_TO_EYEDROPPER_ENABLED */
+					if (_tools.painting == Editing::Tools::STAMP)
+						_tools.painting = Editing::Tools::PENCIL;
+#endif /* GBBASIC_ASSET_AUTO_SWITCH_TOOL_TO_EYEDROPPER_ENABLED */
+				}
+				_ref.byteTooltip.clear();
+				_status.clear();
+				refreshStatus(wnd, rnd, ws, &_cursor);
+			}
+			if (ImGui::IsItemHovered()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip("(Ctrl+Shift+1/2)");
+			}
+			ImGui::SameLine();
+		}
+		if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER) {
+			ImGui::NewLine();
+			ImGui::NewLine(1);
+			do {
 				ImGui::Dummy(ImVec2(xOffset, 0));
 				ImGui::SameLine();
-				const char* items[] = {
-					ws->theme()->windowMap_1_Graphics().c_str(),
-					ws->theme()->windowMap_2_Attributes().c_str()
-				};
-				const char* tooltips[] = {
-					ws->theme()->tooltip_LayerMap().c_str(),
-					ws->theme()->tooltip_LayerAttributes().c_str()
-				};
-
-				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
-				VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
-
 				ImGui::SetNextItemWidth(mwidth);
-				if (ImGui::Combo("", &_tools.layer, items, GBBASIC_COUNTOF(items), tooltips)) {
-					if (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER) {
-#if GBBASIC_ASSET_AUTO_SWITCH_TOOL_TO_EYEDROPPER_ENABLED
-						if (_tools.painting == Editing::Tools::PENCIL)
-							_tools.painting = Editing::Tools::EYEDROPPER;
-						else if (_tools.painting == Editing::Tools::STAMP)
-							_tools.painting = Editing::Tools::EYEDROPPER;
-#else /* GBBASIC_ASSET_AUTO_SWITCH_TOOL_TO_EYEDROPPER_ENABLED */
-						if (_tools.painting == Editing::Tools::STAMP)
-							_tools.painting = Editing::Tools::PENCIL;
-#endif /* GBBASIC_ASSET_AUTO_SWITCH_TOOL_TO_EYEDROPPER_ENABLED */
-					}
-					_ref.byteTooltip.clear();
-					_status.clear();
-					refreshStatus(wnd, rnd, ws, &_cursor);
-				}
-				if (ImGui::IsItemHovered()) {
-					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+				bool editAsImage = entry()->editAsImage;
+				if (ImGui::Checkbox(ws->theme()->windowMap_EditAsImage(), &editAsImage)) {
+					const int ref = entry()->ref;
+					const Project::Indices mapsRefToTheSameTiles = _project->getMapsRefToTiles(ref);
+					if (editAsImage && mapsRefToTheSameTiles.size() > 1) {
+						ImGui::MessagePopupBox::ConfirmedHandler confirm(
+							[ws, this, editAsImage] (void) -> void {
+								WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
-					ImGui::SetTooltip("(Ctrl+Shift+1/2)");
-				}
-				ImGui::SameLine();
-			}
-			if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER) {
-				ImGui::NewLine();
-				ImGui::NewLine(1);
-				do {
-					ImGui::Dummy(ImVec2(xOffset, 0));
-					ImGui::SameLine();
-					ImGui::SetNextItemWidth(mwidth);
-					bool editAsImage = entry()->editAsImage;
-					if (ImGui::Checkbox(ws->theme()->windowMap_EditAsImage(), &editAsImage)) {
+								entry()->editAsImage = editAsImage;
+							},
+							nullptr
+						);
+						ImGui::MessagePopupBox::DeniedHandler deny(
+							[ws] (void) -> void {
+								WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+								// Do nothing.
+							},
+							nullptr
+						);
+						ws->messagePopupBox(
+							ws->theme()->dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetEditingAsAnImageMayBreakOtherMapsContinueAnyway(),
+							confirm,
+							deny,
+							nullptr,
+							nullptr,
+							nullptr,
+							nullptr,
+							nullptr,
+							nullptr,
+							nullptr
+						);
+					} else {
 						entry()->editAsImage = editAsImage;
 					}
-					if (ImGui::IsItemHovered()) {
-						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+					if (editAsImage) {
+						const Editing::Tools::PaintableTools prevTool = _tools.painting;
 
-						ImGui::SetTooltip(ws->theme()->tooltipMap_EditAsImage());
+						if (prevTool == Editing::Tools::STAMP)
+							_tools.painting = Editing::Tools::PENCIL;
+					} else {
+						_transfer.reset();
 					}
-					ImGui::SameLine();
-				} while (false);
-				// TODO: EDIT MAP AS IMAGE
-				// WARN FOR TILE OVERRIDING
-
-				ImGui::NewLine();
-				Editing::Tools::separate(rnd, ws, spwidth);
-				do {
-					ImGui::Dummy(ImVec2(xOffset, 0));
-					ImGui::SameLine();
-					ImGui::SetNextItemWidth(mwidth);
-					bool localPaletteEnabled = entry()->localPaletteEnabled;
-					PaletteAssets::Array localPalette = entry()->localPalette;
-					const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
-					if ((int)localPalette.size() != n) {
-						localPalette.resize(n);
-					}
-					if (ImGui::Checkbox(ws->theme()->windowMap_LocalPalette(), &localPaletteEnabled)) {
-						Command* cmd = enqueue<Commands::Map::SetLocalPaletteEnabled>()
-							->with(localPaletteEnabled, localPalette)
-							->exec(object(), Variant((void*)entry()));
-
-						_refresh(cmd);
-					}
-					if (ImGui::IsItemHovered()) {
-						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
-
-						ImGui::SetTooltip(ws->theme()->tooltipMap_LocalPalette());
-					}
-					ImGui::SameLine();
-				} while (false);
-			} else /* if (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER) */ {
-				ImGui::NewLine();
-				bool enabledLayer = entry()->hasAttributes;
-				ImGui::Dummy(ImVec2(xOffset, 0));
-				ImGui::SameLine();
-				ImGui::SetNextItemWidth(mwidth);
-				if (ImGui::Checkbox(ws->theme()->generic_Enabled(), &enabledLayer)) {
-					Command* cmd = enqueue<Commands::Map::SwitchLayer>()
-						->with(_setLayerEnabled)
-						->with(enabledLayer)
-						->with(_setLayer, _tools.layer)
-						->exec(currentLayer());
-
-					_refresh(cmd);
 				}
 				if (ImGui::IsItemHovered()) {
 					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-					ImGui::SetTooltip(ws->theme()->tooltip_WhetherToBuildThisLayer());
+					ImGui::SetTooltip(ws->theme()->tooltipMap_EditAsImage());
 				}
 				ImGui::SameLine();
-			}
-			ImGui::PopID();
+			} while (false);
 
-			if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER && entry()->localPaletteEnabled) {
-				ImGui::NewLine();
-				Colour newValue;
-				const bool changed = Editing::Tools::palette(
-					rnd, ws,
-					entry()->localPalette,
-					newValue,
-					&_tools.editingColorGroup, &_tools.editingColorIndex, &_tools.openColorPicker,
-					spwidth
-				);
-				if (changed) {
-					PaletteAssets::Array localPalette = entry()->localPalette;
-					const PaletteAssets::Entry &entry_ = localPalette[_tools.editingColorGroup];
-					const Indexed::Ptr &palette_ = entry_.data;
-					palette_->set(_tools.editingColorIndex, &newValue);
-
-					Command* cmd = enqueue<Commands::Map::SetLocalPalette>()
-						->with(localPalette)
+			ImGui::NewLine();
+			Editing::Tools::separate(rnd, ws, spwidth);
+			do {
+				ImGui::Dummy(ImVec2(xOffset, 0));
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(mwidth);
+				bool localPaletteEnabled = entry()->localPaletteEnabled;
+				PaletteAssets::Array localPalette = entry()->localPalette;
+				const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+				if ((int)localPalette.size() != n) {
+					localPalette.resize(n);
+				}
+				if (ImGui::Checkbox(ws->theme()->windowMap_LocalPalette(), &localPaletteEnabled)) {
+					Command* cmd = enqueue<Commands::Map::SetLocalPaletteEnabled>()
+						->with(localPaletteEnabled, localPalette)
 						->exec(object(), Variant((void*)entry()));
 
 					_refresh(cmd);
 				}
-			}
-
-			ImGui::PushID("@Ref");
-			if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER) {
-				const float unitSize = Editing::Tools::unitSize(rnd, ws, spwidth);
-
-				VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
-				VariableGuard<decltype(style.ItemInnerSpacing)> guardItemInnerSpacing(&style.ItemInnerSpacing, style.ItemInnerSpacing, ImVec2());
-
-				ImGui::NewLine();
-				Editing::Tools::separate(rnd, ws, spwidth);
-				const float curPosX = ImGui::GetCursorPosX();
-				ImGui::Dummy(ImVec2(xOffset, 0));
-				ImGui::SameLine();
-				if (ImGui::ImageButton(ws->theme()->iconRef()->pointer(rnd), ImVec2(unitSize, unitSize), ImColor(IM_COL32_WHITE), false, ws->theme()->tooltip_JumpToRefTiles().c_str())) {
-					_ref.resolving = true;
-				}
 				if (ImGui::IsItemHovered()) {
 					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-					ImGui::SetTooltip(ws->theme()->tooltip_ChangeRefTiles());
+					ImGui::SetTooltip(ws->theme()->tooltipMap_LocalPalette());
 				}
 				ImGui::SameLine();
-				ImGui::Dummy(ImVec2(style.ChildBorderSize, 0));
-				ImGui::SameLine();
-				const float prevWidth = ImGui::GetCursorPosX() - curPosX;
-				const ImVec2 size(mwidth - prevWidth + xOffset, unitSize);
-				if (ImGui::Button(_ref.refTilesText, size) && _ref.refIndex >= 0) {
-					ws->category(Workspace::Categories::TILES);
-					ws->changePage(wnd, rnd, _project, Workspace::Categories::TILES, _ref.refIndex);
-				}
-				if (ImGui::IsItemHovered()) {
-					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+			} while (false);
+		} else /* if (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER) */ {
+			ImGui::NewLine();
+			bool enabledLayer = entry()->hasAttributes;
+			ImGui::Dummy(ImVec2(xOffset, 0));
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(mwidth);
+			if (ImGui::Checkbox(ws->theme()->generic_Enabled(), &enabledLayer)) {
+				Command* cmd = enqueue<Commands::Map::SwitchLayer>()
+					->with(_setLayerEnabled)
+					->with(enabledLayer)
+					->with(_setLayer, _tools.layer)
+					->exec(currentLayer());
 
-					ImGui::SetTooltip(ws->theme()->tooltip_JumpToRefTiles());
-				}
-			} else /* if (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER) */ {
-				ImGui::NewLine();
-				Editing::Tools::separate(rnd, ws, spwidth);
+				_refresh(cmd);
 			}
-			ImGui::PopID();
+			if (ImGui::IsItemHovered()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			auto bits = [&] (bool disabled) -> void {
-				if (_tools.layer != ASSETS_MAP_ATTRIBUTES_LAYER || _status.cursor.position == Math::Vec2i(-1, -1))
-					return;
+				ImGui::SetTooltip(ws->theme()->tooltip_WhetherToBuildThisLayer());
+			}
+			ImGui::SameLine();
+		}
+		ImGui::PopID();
+
+		if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER && entry()->localPaletteEnabled) {
+			ImGui::NewLine();
+			Colour newValue;
+			const bool changed = Editing::Tools::palette(
+				rnd, ws,
+				entry()->localPalette,
+				newValue,
+				&_tools.editingLocalPaletteColorGroup, &_tools.editingLocalPaletteColorIndex, &_tools.openLocalPaletteColorPicker,
+				spwidth
+			);
+			if (changed) {
+				PaletteAssets::Array localPalette = entry()->localPalette;
+				const PaletteAssets::Entry &entry_ = localPalette[_tools.editingLocalPaletteColorGroup];
+				const Indexed::Ptr &palette_ = entry_.data;
+				palette_->set(_tools.editingLocalPaletteColorIndex, &newValue);
+
+				Command* cmd = enqueue<Commands::Map::SetLocalPalette>()
+					->with(localPalette)
+					->exec(object(), Variant((void*)entry()));
+
+				_refresh(cmd);
+			}
+		}
+
+		ImGui::PushID("@Ref");
+		if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER) {
+			const float unitSize = Editing::Tools::unitSize(rnd, ws, spwidth);
+
+			VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+			VariableGuard<decltype(style.ItemInnerSpacing)> guardItemInnerSpacing(&style.ItemInnerSpacing, style.ItemInnerSpacing, ImVec2());
+
+			ImGui::NewLine();
+			Editing::Tools::separate(rnd, ws, spwidth);
+			const float curPosX = ImGui::GetCursorPosX();
+			ImGui::Dummy(ImVec2(xOffset, 0));
+			ImGui::SameLine();
+			if (ImGui::ImageButton(ws->theme()->iconRef()->pointer(rnd), ImVec2(unitSize, unitSize), ImColor(IM_COL32_WHITE), false, ws->theme()->tooltip_JumpToRefTiles().c_str())) {
+				_ref.resolving = true;
+			}
+			if (ImGui::IsItemHovered()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip(ws->theme()->tooltip_ChangeRefTiles());
+			}
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(style.ChildBorderSize, 0));
+			ImGui::SameLine();
+			const float prevWidth = ImGui::GetCursorPosX() - curPosX;
+			const ImVec2 size(mwidth - prevWidth + xOffset, unitSize);
+			if (ImGui::Button(_ref.refTilesText, size) && _ref.refIndex >= 0) {
+				ws->category(Workspace::Categories::TILES);
+				ws->changePage(wnd, rnd, _project, Workspace::Categories::TILES, _ref.refIndex);
+			}
+			if (ImGui::IsItemHovered()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip(ws->theme()->tooltip_JumpToRefTiles());
+			}
+		} else /* if (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER) */ {
+			ImGui::NewLine();
+			Editing::Tools::separate(rnd, ws, spwidth);
+		}
+		ImGui::PopID();
+
+		auto bits = [&] (bool disabled) -> void {
+			if (_tools.layer != ASSETS_MAP_ATTRIBUTES_LAYER || _status.cursor.position == Math::Vec2i(-1, -1))
+				return;
 
 #if GBBASIC_ASSET_AUTO_MODIFY_MASK_ON_TOGGLED_ENABLED
-				Byte cel = (Byte)currentLayer()->get(_status.cursor.position.x, _status.cursor.position.y);
-				const std::string prompt = ws->theme()->status_Pos() + " " + Text::toString(_status.cursor.position.x) + "," + Text::toString(_status.cursor.position.y);
+			Byte cel = (Byte)currentLayer()->get(_status.cursor.position.x, _status.cursor.position.y);
+			const std::string prompt = ws->theme()->status_Pos() + " " + Text::toString(_status.cursor.position.x) + "," + Text::toString(_status.cursor.position.y);
 #else /* GBBASIC_ASSET_AUTO_MODIFY_MASK_ON_TOGGLED_ENABLED */
-				Byte cel = (Byte)(_ref.attributesCursor.unit().x + _ref.attributesCursor.unit().y * ASSETS_MAP_ATTRIBUTES_REF_WIDTH);
-				const std::string &prompt = ws->theme()->dialogPrompt_InBits();
+			Byte cel = (Byte)(_ref.attributesCursor.unit().x + _ref.attributesCursor.unit().y * ASSETS_MAP_ATTRIBUTES_REF_WIDTH);
+			const std::string &prompt = ws->theme()->dialogPrompt_InBits();
 #endif /* GBBASIC_ASSET_AUTO_MODIFY_MASK_ON_TOGGLED_ENABLED */
-				const char* tooltipBits[8] = {
-					ws->theme()->tooltipMap_Bit0().c_str(),
-					ws->theme()->tooltipMap_Bit1().c_str(),
-					ws->theme()->tooltipMap_Bit2().c_str(),
-					ws->theme()->tooltipMap_Bit3().c_str(),
-					ws->theme()->tooltipMap_Bit4().c_str(),
-					ws->theme()->tooltipMap_Bit5().c_str(),
-					ws->theme()->tooltipMap_Bit6().c_str(),
-					ws->theme()->tooltipMap_Bit7().c_str()
-				};
-				const bool changed = Editing::Tools::maskable(
-					rnd, ws,
-					&cel,
-					0b11111111,
-					spwidth,
-					disabled,
-					prompt.c_str(),
-					ws->theme()->tooltip_HighBits().c_str(), ws->theme()->tooltip_LowBits().c_str(),
-					tooltipBits
-				);
-				if (changed) {
-#if GBBASIC_ASSET_AUTO_MODIFY_MASK_ON_TOGGLED_ENABLED
-					enqueue<Commands::Map::ToggleMask>()
-						->with(
-							std::bind(&EditorMapImpl::getCel, this, rnd, std::placeholders::_1, std::placeholders::_2),
-							std::bind(&EditorMapImpl::setCel, this, rnd, std::placeholders::_1, std::placeholders::_2),
-							1
-						)
-						->with(
-							Math::Vec2i(object()->width(), object()->height()),
-							_status.cursor.position, cel,
-							nullptr
-						)
-						->with(_setLayer, _tools.layer)
-						->exec(currentLayer());
-#endif /* GBBASIC_ASSET_AUTO_MODIFY_MASK_ON_TOGGLED_ENABLED */
-
-					const Image* img = ws->theme()->imageByte();
-					const int objw = img->width() / _tileSize.x;
-					const std::div_t div = std::div(cel, objw);
-					_ref.attributesCursor.position = Math::Vec2i(div.rem * _tileSize.x, div.quot * _tileSize.y);
-					_ref.attributesCursor.size = _tileSize;
-				}
+			const char* tooltipBits[8] = {
+				ws->theme()->tooltipMap_Bit0().c_str(),
+				ws->theme()->tooltipMap_Bit1().c_str(),
+				ws->theme()->tooltipMap_Bit2().c_str(),
+				ws->theme()->tooltipMap_Bit3().c_str(),
+				ws->theme()->tooltipMap_Bit4().c_str(),
+				ws->theme()->tooltipMap_Bit5().c_str(),
+				ws->theme()->tooltipMap_Bit6().c_str(),
+				ws->theme()->tooltipMap_Bit7().c_str()
 			};
+			const bool changed = Editing::Tools::maskable(
+				rnd, ws,
+				&cel,
+				0b11111111,
+				spwidth,
+				disabled,
+				prompt.c_str(),
+				ws->theme()->tooltip_HighBits().c_str(), ws->theme()->tooltip_LowBits().c_str(),
+				tooltipBits
+			);
+			if (changed) {
+#if GBBASIC_ASSET_AUTO_MODIFY_MASK_ON_TOGGLED_ENABLED
+				enqueue<Commands::Map::ToggleMask>()
+					->with(
+						std::bind(&EditorMapImpl::getCel, this, rnd, std::placeholders::_1, std::placeholders::_2),
+						std::bind(&EditorMapImpl::setCel, this, rnd, std::placeholders::_1, std::placeholders::_2),
+						1
+					)
+					->with(
+						Math::Vec2i(object()->width(), object()->height()),
+						_status.cursor.position, cel,
+						nullptr
+					)
+					->with(_setLayer, _tools.layer)
+					->exec(currentLayer());
+#endif /* GBBASIC_ASSET_AUTO_MODIFY_MASK_ON_TOGGLED_ENABLED */
 
-			if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER) {
+				const Image* img = ws->theme()->imageByte();
+				const int objw = img->width() / _tileSize.x;
+				const std::div_t div = std::div(cel, objw);
+				_ref.attributesCursor.position = Math::Vec2i(div.rem * _tileSize.x, div.quot * _tileSize.y);
+				_ref.attributesCursor.size = _tileSize;
+			}
+		};
+
+		if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER && !asImage) {
+			ImGui::Dummy(ImVec2(xOffset, 0));
+			ImGui::SameLine();
+			ImGui::BeginChild("@Img", ImVec2(mwidth, spwidth), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav);
+
+			if (_ref.image && _ref.texture) {
+				float refWidth = spwidth - style.ScrollbarSize - style.ChildBorderSize * 4;
+				if (_ref.image->width() >= refWidth) {
+					refWidth = (float)_ref.image->width();
+				} else {
+					if (_ref.image->width() > _ref.image->height())
+						refWidth *= (float)_ref.image->width() / _ref.image->height();
+				}
+				Editing::Brush cursor = _ref.cursor;
+				bool painting = false;
+				if (_tools.painting == Editing::Tools::STAMP) {
+					painting = Editing::tiles(
+						rnd, ws,
+						_ref.image.get(), _ref.texture.get(),
+						refWidth,
+						&cursor, true, std::move(_ref.stamp),
+						nullptr,
+						nullptr,
+						&_ref.gridUnit, _ref.showGrids && _ref.gridsVisible,
+						_ref.transparentBackbroundVisible,
+						ImGuiMouseButton_Left,
+						nullptr
+					);
+				} else {
+					painting = Editing::tiles(
+						rnd, ws,
+						_ref.image.get(), _ref.texture.get(),
+						refWidth,
+						&cursor, true,
+						nullptr,
+						nullptr,
+						&_ref.gridUnit, _ref.showGrids && _ref.gridsVisible,
+						_ref.transparentBackbroundVisible,
+						ImGuiMouseButton_Left,
+						nullptr
+					);
+				}
+				if (painting || _tools.painting == Editing::Tools::STAMP)
+					_ref.cursor = cursor;
+				if (painting)
+					showRefStatus(wnd, rnd, ws, _ref.cursor);
+			}
+
+			statusBarActived |= ImGui::IsWindowFocused();
+
+			ImGui::EndChild();
+		} else if (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER) {
+			const bool disabled = _tools.painting == Editing::Tools::STAMP;
+			if (_project->preferencesUseByteMatrix()) {
 				ImGui::Dummy(ImVec2(xOffset, 0));
 				ImGui::SameLine();
 				ImGui::BeginChild("@Img", ImVec2(mwidth, spwidth), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav);
 
-				if (_ref.image && _ref.texture) {
+				const Image* img = ws->theme()->imageByte();
+				Texture* tex = ws->theme()->textureByte();
+				if (img && tex) {
 					float refWidth = spwidth - style.ScrollbarSize - style.ChildBorderSize * 4;
-					if (_ref.image->width() >= refWidth) {
-						refWidth = (float)_ref.image->width();
+					if (img->width() >= refWidth) {
+						refWidth = (float)img->width();
 					} else {
-						if (_ref.image->width() > _ref.image->height())
-							refWidth *= (float)_ref.image->width() / _ref.image->height();
+						if (img->width() > img->height())
+							refWidth *= (float)img->width() / img->height();
 					}
-					Editing::Brush cursor = _ref.cursor;
+					Editing::Brush cursor = _ref.attributesCursor;
 					bool painting = false;
 					if (_tools.painting == Editing::Tools::STAMP) {
 						painting = Editing::tiles(
 							rnd, ws,
-							_ref.image.get(), _ref.texture.get(),
+							img, tex,
 							refWidth,
 							&cursor, true, std::move(_ref.stamp),
 							nullptr,
 							nullptr,
 							&_ref.gridUnit, _ref.showGrids && _ref.gridsVisible,
-							_ref.transparentBackbroundVisible,
+							false,
 							ImGuiMouseButton_Left,
 							nullptr
 						);
 					} else {
 						painting = Editing::tiles(
 							rnd, ws,
-							_ref.image.get(), _ref.texture.get(),
+							img, tex,
 							refWidth,
 							&cursor, true,
 							nullptr,
 							nullptr,
 							&_ref.gridUnit, _ref.showGrids && _ref.gridsVisible,
-							_ref.transparentBackbroundVisible,
+							false,
 							ImGuiMouseButton_Left,
 							nullptr
 						);
 					}
 					if (painting || _tools.painting == Editing::Tools::STAMP)
-						_ref.cursor = cursor;
+						_ref.attributesCursor = cursor;
 					if (painting)
-						showRefStatus(wnd, rnd, ws, _ref.cursor);
+						showRefStatus(wnd, rnd, ws, _ref.attributesCursor);
 				}
 
 				statusBarActived |= ImGui::IsWindowFocused();
 
 				ImGui::EndChild();
-			} else /* if (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER) */ {
-				const bool disabled = _tools.painting == Editing::Tools::STAMP;
-				if (_project->preferencesUseByteMatrix()) {
-					ImGui::Dummy(ImVec2(xOffset, 0));
-					ImGui::SameLine();
-					ImGui::BeginChild("@Img", ImVec2(mwidth, spwidth), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav);
-
-					const Image* img = ws->theme()->imageByte();
-					Texture* tex = ws->theme()->textureByte();
-					if (img && tex) {
-						float refWidth = spwidth - style.ScrollbarSize - style.ChildBorderSize * 4;
-						if (img->width() >= refWidth) {
-							refWidth = (float)img->width();
-						} else {
-							if (img->width() > img->height())
-								refWidth *= (float)img->width() / img->height();
-						}
-						Editing::Brush cursor = _ref.attributesCursor;
-						bool painting = false;
-						if (_tools.painting == Editing::Tools::STAMP) {
-							painting = Editing::tiles(
-								rnd, ws,
-								img, tex,
-								refWidth,
-								&cursor, true, std::move(_ref.stamp),
-								nullptr,
-								nullptr,
-								&_ref.gridUnit, _ref.showGrids && _ref.gridsVisible,
-								false,
-								ImGuiMouseButton_Left,
-								nullptr
-							);
-						} else {
-							painting = Editing::tiles(
-								rnd, ws,
-								img, tex,
-								refWidth,
-								&cursor, true,
-								nullptr,
-								nullptr,
-								&_ref.gridUnit, _ref.showGrids && _ref.gridsVisible,
-								false,
-								ImGuiMouseButton_Left,
-								nullptr
-							);
-						}
-						if (painting || _tools.painting == Editing::Tools::STAMP)
-							_ref.attributesCursor = cursor;
-						if (painting)
-							showRefStatus(wnd, rnd, ws, _ref.attributesCursor);
-					}
-
-					statusBarActived |= ImGui::IsWindowFocused();
-
-					ImGui::EndChild();
-				} else {
-					const UInt8 oldIdx = (UInt8)(_ref.attributesCursor.unit().x + _ref.attributesCursor.unit().y * ASSETS_MAP_ATTRIBUTES_REF_WIDTH);
-					UInt8 idx = oldIdx;
-					const bool painting = Editing::Tools::byte(
-						rnd, ws,
-						oldIdx,
-						&idx,
-						spwidth,
-						&inputFieldFocused_,
-						disabled,
-						ws->theme()->dialogPrompt_Byte().c_str(),
-						[ws, this] (UInt8 attrs) -> const char* {
-							if (_ref.byteTooltip.empty()) {
-								_ref.byteTooltip += ws->theme()->tooltipMap_Attributes();
-								_ref.byteTooltip += "\n";
-
-								const int pltBits = attrs & ((1 << GBBASIC_MAP_PALETTE_BIT2) | (1 << GBBASIC_MAP_PALETTE_BIT1) | (1 << GBBASIC_MAP_PALETTE_BIT0));
-								const int bankBit = (attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001;
-								const int hFlipBit = (attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001;
-								const int vFlipBit = (attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001;
-								const int priBit = (attrs >> GBBASIC_MAP_PRIORITY_BIT) & 0x00000001;
-								_ref.byteTooltip += Text::format(ws->theme()->tooltipMap_BitsPalette(), { Text::toString(pltBits) });
-								_ref.byteTooltip += Text::format(ws->theme()->tooltipMap_BitBank(), { Text::toString(bankBit) });
-								_ref.byteTooltip += Text::format(ws->theme()->tooltipMap_BitHFlip(), { Text::toString(hFlipBit) });
-								_ref.byteTooltip += Text::format(ws->theme()->tooltipMap_BitVFlip(), { Text::toString(vFlipBit) });
-								_ref.byteTooltip += Text::format(ws->theme()->tooltipMap_BitPriority(), { Text::toString(priBit) });
-							}
-
-							return _ref.byteTooltip.c_str();
-						}
-					);
-					if (painting) {
-						const std::div_t div = std::div(idx, ASSETS_MAP_ATTRIBUTES_REF_WIDTH);
-						_ref.attributesCursor.position = Math::Vec2i(div.rem * _tileSize.x, div.quot * _tileSize.y);
-						_ref.byteTooltip.clear();
-					}
-					inputFieldFocused |= inputFieldFocused_;
-				}
-
-				ImGui::NewLine(1.0f);
-				bits(disabled);
-
-				const char* tooltipOps[4] = {
-					ws->theme()->tooltip_BitwiseSet().c_str(),
-					ws->theme()->tooltip_BitwiseAnd().c_str(),
-					ws->theme()->tooltip_BitwiseOr().c_str(),
-					ws->theme()->tooltip_BitwiseXor().c_str()
-				};
-				ImGui::NewLine(1.0f);
-				Editing::Tools::bitwise(
+			} else {
+				const UInt8 oldIdx = (UInt8)(_ref.attributesCursor.unit().x + _ref.attributesCursor.unit().y * ASSETS_MAP_ATTRIBUTES_REF_WIDTH);
+				UInt8 idx = oldIdx;
+				const bool painting = Editing::Tools::byte(
 					rnd, ws,
-					&_tools.bitwiseOperations,
-					spwidth,
-					disabled,
-					ws->theme()->tooltip_BitwiseOperations().c_str(), tooltipOps
-				);
-				ImGui::NewLine(1.0f);
-			}
-
-			const unsigned mask = _tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER ?
-				0xffffffff & ~(1 << Editing::Tools::STAMP) :
-				0xffffffff;
-			Editing::Tools::separate(rnd, ws, spwidth);
-			if (Editing::Tools::paintable(rnd, ws, &_tools.painting, -1.0f, canUseShortcuts(), false, mask)) {
-				if (_tools.painting == Editing::Tools::STAMP) {
-					_processors[Editing::Tools::STAMP] = Processor{
-						std::bind(&EditorMapImpl::stampToolDown, this, std::placeholders::_1),
-						nullptr,
-						std::bind(&EditorMapImpl::stampToolUp, this, std::placeholders::_1),
-						std::bind(&EditorMapImpl::stampToolHover, this, std::placeholders::_1)
-					};
-				} else {
-					_ref.cursor.size = _tileSize;
-					_ref.attributesCursor.size = _tileSize;
-				}
-
-				if (_tools.painting == Editing::Tools::STAMP) {
-					_tools.bitwiseOperations = Editing::Tools::SET;
-				}
-
-				destroyOverlay();
-			}
-
-			Editing::Tools::separate(rnd, ws, spwidth);
-			Editing::Tools::magnifiable(rnd, ws, &_tools.magnification, -1.0f, canUseShortcuts());
-
-			switch (_tools.painting) {
-			case Editing::Tools::PENCIL: // Fall through.
-			case Editing::Tools::LINE: // Fall through.
-			case Editing::Tools::BOX: // Fall through.
-			case Editing::Tools::BOX_FILL: // Fall through.
-			case Editing::Tools::ELLIPSE: // Fall through.
-			case Editing::Tools::ELLIPSE_FILL:
-				Editing::Tools::separate(rnd, ws, spwidth);
-				Editing::Tools::weighable(rnd, ws, &_tools.weighting, -1.0f, canUseShortcuts());
-
-				break;
-			default: // Do nothing.
-				break;
-			}
-
-			if (!_tools.post) {
-				Editing::Tools::separate(rnd, ws, spwidth);
-				Editing::Tools::RotationsAndFlippings flipping = Editing::Tools::INVALID;
-				unsigned mask = 0xffffffff;
-				Math::Recti frame;
-				area(&frame);
-				if (frame.width() == 1 && frame.height() == 1) {
-					mask &= ~(1 << Editing::Tools::ROTATE_CLOCKWISE);
-					mask &= ~(1 << Editing::Tools::ROTATE_ANTICLOCKWISE);
-					mask &= ~(1 << Editing::Tools::HALF_TURN);
-					mask &= ~(1 << Editing::Tools::FLIP_VERTICALLY);
-					mask &= ~(1 << Editing::Tools::FLIP_HORIZONTALLY);
-				} else if (frame.width() != frame.height()) {
-					mask &= ~(1 << Editing::Tools::ROTATE_CLOCKWISE);
-					mask &= ~(1 << Editing::Tools::ROTATE_ANTICLOCKWISE);
-				}
-				if (Editing::Tools::flippable(rnd, ws, &flipping, -1.0f, canUseShortcuts(), mask)) {
-					flip(flipping);
-				}
-			}
-
-			Editing::Tools::separate(rnd, ws, spwidth);
-			if (
-				Editing::Tools::namable(
-					rnd, ws,
-					entry()->name, _tools.namableText,
-					spwidth,
-					nullptr, &inputFieldFocused_,
-					ws->theme()->dialogPrompt_Name().c_str()
-				)
-			) {
-				if (_project->canRenameMap(_index, _tools.namableText, nullptr)) {
-					Command* cmd = enqueue<Commands::Map::SetName>()
-						->with(_tools.namableText)
-						->exec(object(), Variant((void*)entry()));
-
-					_refresh(cmd);
-				} else {
-					_tools.namableText = entry()->name;
-
-					warn(ws, ws->theme()->warning_MapNameIsAlreadyInUse(), true);
-				}
-			}
-			inputFieldFocused |= inputFieldFocused_;
-
-			Editing::Tools::separate(rnd, ws, spwidth);
-			const int width_ = object()->width();
-			const int height_ = object()->height();
-			if (
-				Editing::Tools::resizable(
-					rnd, ws,
-					width_, height_,
-					&_size.width, &_size.height,
-					GBBASIC_MAP_MAX_WIDTH, GBBASIC_MAP_MAX_HEIGHT, GBBASIC_MAP_MAX_AREA_SIZE,
+					oldIdx,
+					&idx,
 					spwidth,
 					&inputFieldFocused_,
-					ws->theme()->dialogPrompt_Size_InTiles().c_str(),
-					ws->theme()->warning_MapSizeOutOfBounds().c_str(),
-					std::bind(&EditorMapImpl::warn, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
-				)
-			) {
-				_size.width = Math::clamp(_size.width, 1, GBBASIC_MAP_MAX_WIDTH);
-				_size.height = Math::clamp(_size.height, 1, GBBASIC_MAP_MAX_HEIGHT);
-				if (_size.width != width_ || _size.height != height_)
-					post(RESIZE, _size.width, _size.height);
-			}
-			inputFieldFocused |= inputFieldFocused_;
+					disabled,
+					ws->theme()->dialogPrompt_Byte().c_str(),
+					[ws, this] (UInt8 attrs) -> const char* {
+						if (_ref.byteTooltip.empty()) {
+							_ref.byteTooltip += ws->theme()->tooltipMap_Attributes();
+							_ref.byteTooltip += "\n";
 
+							const int pltBits = attrs & ((1 << GBBASIC_MAP_PALETTE_BIT2) | (1 << GBBASIC_MAP_PALETTE_BIT1) | (1 << GBBASIC_MAP_PALETTE_BIT0));
+							const int bankBit = (attrs >> GBBASIC_MAP_BANK_BIT) & 0x00000001;
+							const int hFlipBit = (attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001;
+							const int vFlipBit = (attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001;
+							const int priBit = (attrs >> GBBASIC_MAP_PRIORITY_BIT) & 0x00000001;
+							_ref.byteTooltip += Text::format(ws->theme()->tooltipMap_BitsPalette(), { Text::toString(pltBits) });
+							_ref.byteTooltip += Text::format(ws->theme()->tooltipMap_BitBank(), { Text::toString(bankBit) });
+							_ref.byteTooltip += Text::format(ws->theme()->tooltipMap_BitHFlip(), { Text::toString(hFlipBit) });
+							_ref.byteTooltip += Text::format(ws->theme()->tooltipMap_BitVFlip(), { Text::toString(vFlipBit) });
+							_ref.byteTooltip += Text::format(ws->theme()->tooltipMap_BitPriority(), { Text::toString(priBit) });
+						}
+
+						return _ref.byteTooltip.c_str();
+					}
+				);
+				if (painting) {
+					const std::div_t div = std::div(idx, ASSETS_MAP_ATTRIBUTES_REF_WIDTH);
+					_ref.attributesCursor.position = Math::Vec2i(div.rem * _tileSize.x, div.quot * _tileSize.y);
+					_ref.byteTooltip.clear();
+				}
+				inputFieldFocused |= inputFieldFocused_;
+			}
+
+			ImGui::NewLine(1.0f);
+			bits(disabled);
+
+			const char* tooltipOps[4] = {
+				ws->theme()->tooltip_BitwiseSet().c_str(),
+				ws->theme()->tooltip_BitwiseAnd().c_str(),
+				ws->theme()->tooltip_BitwiseOr().c_str(),
+				ws->theme()->tooltip_BitwiseXor().c_str()
+			};
+			ImGui::NewLine(1.0f);
+			Editing::Tools::bitwise(
+				rnd, ws,
+				&_tools.bitwiseOperations,
+				spwidth,
+				disabled,
+				ws->theme()->tooltip_BitwiseOperations().c_str(), tooltipOps
+			);
+			ImGui::NewLine(1.0f);
+		}
+
+		const unsigned mask = (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER || asImage) ?
+			0xffffffff & ~(1 << Editing::Tools::STAMP) :
+			0xffffffff;
+		Editing::Tools::separate(rnd, ws, spwidth);
+		if (Editing::Tools::paintable(rnd, ws, &_tools.painting, -1.0f, canUseShortcuts(), false, mask)) {
+			if (_tools.painting == Editing::Tools::STAMP) {
+				_processors[Editing::Tools::STAMP] = Processor{
+					std::bind(&EditorMapImpl::stampToolDown, this, std::placeholders::_1),
+					nullptr,
+					std::bind(&EditorMapImpl::stampToolUp, this, std::placeholders::_1),
+					std::bind(&EditorMapImpl::stampToolHover, this, std::placeholders::_1)
+				};
+			} else {
+				_ref.cursor.size = _tileSize;
+				_ref.attributesCursor.size = _tileSize;
+			}
+
+			if (_tools.painting == Editing::Tools::STAMP) {
+				_tools.bitwiseOperations = Editing::Tools::SET;
+			}
+
+			destroyOverlay();
+		}
+
+		Editing::Tools::separate(rnd, ws, spwidth);
+		Editing::Tools::magnifiable(rnd, ws, &_tools.magnification, -1.0f, canUseShortcuts());
+
+		switch (_tools.painting) {
+		case Editing::Tools::PENCIL: // Fall through.
+		case Editing::Tools::LINE: // Fall through.
+		case Editing::Tools::BOX: // Fall through.
+		case Editing::Tools::BOX_FILL: // Fall through.
+		case Editing::Tools::ELLIPSE: // Fall through.
+		case Editing::Tools::ELLIPSE_FILL:
 			Editing::Tools::separate(rnd, ws, spwidth);
-			bool optimize = entry()->optimize;
-			if (
-				Editing::Tools::togglable(
-					rnd, ws,
-					&optimize,
-					spwidth,
-					ws->theme()->dialogPrompt_Optimize().c_str(),
-					ws->theme()->tooltipMap_Optimize().c_str()
-				)
-			) {
-				Command* cmd = enqueue<Commands::Map::SetOptimized>()
-					->with(optimize)
+			Editing::Tools::weighable(rnd, ws, &_tools.weighting, -1.0f, canUseShortcuts());
+
+			break;
+		default: // Do nothing.
+			break;
+		}
+
+		if (!_tools.post) {
+			Editing::Tools::separate(rnd, ws, spwidth);
+			Editing::Tools::RotationsAndFlippings flipping = Editing::Tools::INVALID;
+			unsigned mask = 0xffffffff;
+			Math::Recti frame;
+			area(&frame);
+			if (frame.width() == 1 && frame.height() == 1) {
+				mask &= ~(1 << Editing::Tools::ROTATE_CLOCKWISE);
+				mask &= ~(1 << Editing::Tools::ROTATE_ANTICLOCKWISE);
+				mask &= ~(1 << Editing::Tools::HALF_TURN);
+				mask &= ~(1 << Editing::Tools::FLIP_VERTICALLY);
+				mask &= ~(1 << Editing::Tools::FLIP_HORIZONTALLY);
+			} else if (frame.width() != frame.height()) {
+				mask &= ~(1 << Editing::Tools::ROTATE_CLOCKWISE);
+				mask &= ~(1 << Editing::Tools::ROTATE_ANTICLOCKWISE);
+			}
+			if (Editing::Tools::flippable(rnd, ws, &flipping, -1.0f, canUseShortcuts(), mask)) {
+				flip(flipping);
+			}
+		}
+
+		Editing::Tools::separate(rnd, ws, spwidth);
+		if (
+			Editing::Tools::namable(
+				rnd, ws,
+				entry()->name, _tools.namableText,
+				spwidth,
+				nullptr, &inputFieldFocused_,
+				ws->theme()->dialogPrompt_Name().c_str()
+			)
+		) {
+			if (_project->canRenameMap(_index, _tools.namableText, nullptr)) {
+				Command* cmd = enqueue<Commands::Map::SetName>()
+					->with(_tools.namableText)
 					->exec(object(), Variant((void*)entry()));
 
 				_refresh(cmd);
+			} else {
+				_tools.namableText = entry()->name;
+
+				warn(ws, ws->theme()->warning_MapNameIsAlreadyInUse(), true);
 			}
-
-			Editing::Tools::separate(rnd, ws, spwidth);
-			ImGui::Dummy(ImVec2(xOffset, 0));
-			ImGui::SameLine();
-			if (ImGui::Button(ws->theme()->windowMap_CreateScene(), ImVec2(mwidth, 0))) {
-				ws->addScenePageFrom(wnd, rnd, _index);
-			}
-			if (ImGui::IsItemHovered()) {
-				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
-
-				ImGui::SetTooltip(ws->theme()->tooltipMap_CreateASceneReferencingThisMapPage());
-			}
-
-			_tools.inputFieldFocused = inputFieldFocused;
-
-			statusBarActived |= ImGui::IsWindowFocused();
 		}
-		ImGui::EndChild();
-		ImGui::PopStyleVar();
+		inputFieldFocused |= inputFieldFocused_;
+
+		Editing::Tools::separate(rnd, ws, spwidth);
+		const int width_ = object()->width();
+		const int height_ = object()->height();
+		if (
+			Editing::Tools::resizable(
+				rnd, ws,
+				width_, height_,
+				&_size.width, &_size.height,
+				GBBASIC_MAP_MAX_WIDTH, GBBASIC_MAP_MAX_HEIGHT, GBBASIC_MAP_MAX_AREA_SIZE,
+				spwidth,
+				&inputFieldFocused_,
+				ws->theme()->dialogPrompt_Size_InTiles().c_str(),
+				ws->theme()->warning_MapSizeOutOfBounds().c_str(),
+				std::bind(&EditorMapImpl::warn, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
+			)
+		) {
+			_size.width = Math::clamp(_size.width, 1, GBBASIC_MAP_MAX_WIDTH);
+			_size.height = Math::clamp(_size.height, 1, GBBASIC_MAP_MAX_HEIGHT);
+			if (_size.width != width_ || _size.height != height_)
+				post(RESIZE, _size.width, _size.height);
+		}
+		inputFieldFocused |= inputFieldFocused_;
+
+		Editing::Tools::separate(rnd, ws, spwidth);
+		bool optimize = entry()->optimize;
+		if (
+			Editing::Tools::togglable(
+				rnd, ws,
+				&optimize,
+				spwidth,
+				ws->theme()->dialogPrompt_Optimize().c_str(),
+				ws->theme()->tooltipMap_Optimize().c_str()
+			)
+		) {
+			Command* cmd = enqueue<Commands::Map::SetOptimized>()
+				->with(optimize)
+				->exec(object(), Variant((void*)entry()));
+
+			_refresh(cmd);
+		}
+
+		Editing::Tools::separate(rnd, ws, spwidth);
+		ImGui::Dummy(ImVec2(xOffset, 0));
+		ImGui::SameLine();
+		if (ImGui::Button(ws->theme()->windowMap_CreateScene(), ImVec2(mwidth, 0))) {
+			ws->addScenePageFrom(wnd, rnd, _index);
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(ws->theme()->tooltipMap_CreateASceneReferencingThisMapPage());
+		}
+
+		_tools.inputFieldFocused = inputFieldFocused;
+
+		statusBarActived |= ImGui::IsWindowFocused();
 	}
 
 	bool shortcuts(Window* wnd, Renderer* rnd, Workspace* ws) {
@@ -2330,34 +2613,49 @@ private:
 			ImGui::TextUnformatted(_estimated.text);
 			ImGui::SameLine();
 			do {
+				_status.transferring = _transfer.generated.working();
+				const Marker<bool>::Values transferring = _status.transferring.values();
 				float width_ = 0.0f;
 				const float wndWidth = ImGui::GetWindowWidth();
 				ImGui::SetCursorPosX(wndWidth - _statusWidth);
-				// TODO: EDIT MAP AS IMAGE
-				// TRANSFER
 				if (wndWidth >= 430) {
-					if (_status.info.empty()) {
-						const int w = object()->width() / GBBASIC_TILE_SIZE;
-						const int h = object()->height() / GBBASIC_TILE_SIZE;
-						int l = 1;
-						if (entry()->hasAttributes)
-							++l;
-						_status.info = Text::format(
-							ws->theme()->tooltipMap_Info(),
-							{
-								Text::toString(w * h),
-								Text::toString(l),
-								l <= 1 ? ws->theme()->tooltipMap_InfoLayer() : ws->theme()->tooltipMap_InfoLayers()
-							}
-						);
-					}
+					if (transferring.first) {
+						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_Button));
+						ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_Button));
+						ImGui::ImageButton(ws->theme()->iconWorking()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_Compacting().c_str());
+						ImGui::PopStyleColor(2);
+						width_ += ImGui::GetItemRectSize().x;
+						ImGui::SameLine();
+					} else if (!_transfer.filled) {
+						if (ImGui::ImageButton(ws->theme()->iconRefresh()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipActor_Refresh().c_str())) {
+							refreshImageToTiled(ws);
+						}
+						width_ += ImGui::GetItemRectSize().x;
+						ImGui::SameLine();
+					} else {
+						if (_status.info.empty()) {
+							const int w = object()->width() / GBBASIC_TILE_SIZE;
+							const int h = object()->height() / GBBASIC_TILE_SIZE;
+							int l = 1;
+							if (entry()->hasAttributes)
+								++l;
+							_status.info = Text::format(
+								ws->theme()->tooltipMap_Info(),
+								{
+									Text::toString(w * h),
+									Text::toString(l),
+									l <= 1 ? ws->theme()->tooltipMap_InfoLayer() : ws->theme()->tooltipMap_InfoLayers()
+								}
+							);
+						}
 
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_Button));
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_Button));
-					ImGui::ImageButton(ws->theme()->iconInfo()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, _status.info.empty() ? nullptr : _status.info.c_str());
-					ImGui::PopStyleColor(2);
-					width_ += ImGui::GetItemRectSize().x;
-					ImGui::SameLine();
+						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_Button));
+						ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_Button));
+						ImGui::ImageButton(ws->theme()->iconInfo()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, _status.info.empty() ? nullptr : _status.info.c_str());
+						ImGui::PopStyleColor(2);
+						width_ += ImGui::GetItemRectSize().x;
+						ImGui::SameLine();
+					}
 				}
 				if (!_warnings.empty()) {
 					const ImVec4 col = ImGui::ColorConvertU32ToFloat4(ws->theme()->style()->warningColor);
@@ -2586,18 +2884,45 @@ private:
 		// Exporting.
 		if (ImGui::BeginPopup("@Xpt")) {
 			if (ImGui::MenuItem(ws->theme()->menu_Code())) {
-				// TODO: EDIT MAP AS IMAGE
-				// TRANSFER
-
-				do {
+				auto serialize = [ws, this] (void) -> void {
 					std::string txt;
 					if (!entry()->serializeBasic(txt, _index))
-						break;
+						return;
 
 					Platform::setClipboardText(txt.c_str());
 
 					ws->bubble(ws->theme()->dialogPrompt_ExportedCode(), nullptr);
-				} while (false);
+				};
+
+				if (entry() && entry()->editAsImage) {
+					do {
+						if (_transfer.filled) {
+							serialize();
+
+							break;
+						}
+
+						ImGui::WaitingPopupBox::TimeoutHandler timeout(
+							[ws, this, serialize] (void) -> void {
+								transferImageToTiled(ws);
+
+								_transfer.generated.wait();
+
+								serialize();
+
+								ws->popupBox(nullptr);
+							},
+							nullptr
+						);
+						ws->waitingPopupBox(
+							true, ws->theme()->dialogPrompt_Compacting(),
+							true, timeout,
+							true
+						);
+					} while (false);
+				} else {
+					serialize();
+				}
 			}
 			if (ImGui::IsItemHovered()) {
 				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -2960,10 +3285,27 @@ private:
 			Command::is<Commands::Map::Delete>(cmd) ||
 			Command::is<Commands::Map::ToggleMask>(cmd);
 		const bool refreshAllPalette =
-			Command::is<Commands::Map::SetLocalPaletteEnabled>(cmd) ||
-			Command::is<Commands::Map::SetLocalPalette>(cmd) ||
 			Command::is<Commands::Map::Resize>(cmd) ||
 			Command::is<Commands::Map::Import>(cmd);
+		const bool refreshAllPaletteWithDebounce =
+			Command::is<Commands::Map::SetLocalPaletteEnabled>(cmd) ||
+			Command::is<Commands::Map::SetLocalPalette>(cmd);
+		const bool invalidateTiledData =
+			Command::is<Commands::Map::Pencil>(cmd) ||
+			Command::is<Commands::Map::Line>(cmd) ||
+			Command::is<Commands::Map::Box>(cmd) ||
+			Command::is<Commands::Map::BoxFill>(cmd) ||
+			Command::is<Commands::Map::Ellipse>(cmd) ||
+			Command::is<Commands::Map::EllipseFill>(cmd) ||
+			Command::is<Commands::Map::Fill>(cmd) ||
+			Command::is<Commands::Map::Replace>(cmd) ||
+			Command::is<Commands::Map::Stamp>(cmd) ||
+			Command::is<Commands::Map::Rotate>(cmd) ||
+			Command::is<Commands::Map::Flip>(cmd) ||
+			Command::is<Commands::Map::Cut>(cmd) ||
+			Command::is<Commands::Map::Paste>(cmd) ||
+			Command::is<Commands::Map::Delete>(cmd) ||
+			Command::is<Commands::Map::Resize>(cmd);
 
 		if (refillName) {
 			_tools.namableText = entry()->name;
@@ -3004,6 +3346,12 @@ private:
 		if (refreshAllPalette && _project->preferencesPreviewPaletteBits()) {
 			entry()->cleanup();
 			ws->skipFrame(); // Skip a frame to avoid glitch.
+		}
+		if (refreshAllPaletteWithDebounce && _project->preferencesPreviewPaletteBits()) {
+			_tools.debounceLocalPaletteColorChanged.modified();
+		}
+		if (invalidateTiledData) {
+			invalidateTiled();
 		}
 	}
 
@@ -3368,10 +3716,16 @@ private:
 			_cursor.position, idx,
 			nullptr
 		);
+
+		if (entry()->editAsImage)
+			_debounce.modified();
 	}
 	void paintToolUp(Renderer*) {
 		if (!_commands->empty())
 			_commands->back()->redo(currentLayer());
+
+		if (entry()->editAsImage)
+			_debounce.modified();
 
 		destroyOverlay();
 	}
@@ -3391,6 +3745,36 @@ private:
 		Map::Ptr &layer = _tools.layer == ASSETS_MAP_GRAPHICS_LAYER ? object() : attributes();
 
 		return layer;
+	}
+	void touchAsImage(void) {
+		if (!entry())
+			return;
+
+		if (!_transfer.image) {
+			const int ref = entry()->ref;
+			const TilesAssets::Entry* entry_ = _project->getTiles(ref);
+			Image::Ptr img(Image::create());
+			if (!MapAssets::serializeImage(*entry_, *entry(), img.get()))
+				return;
+
+			_transfer.image = img;
+		}
+
+		if (!_transfer.texture || !_transfer.texture->pointer(_transfer.renderer)) {
+			_transfer.texture = Texture::Ptr(Texture::create());
+			_transfer.texture->fromImage(_transfer.renderer, Texture::STREAMING, _transfer.image.get(), Texture::NEAREST);
+			_transfer.texture->blend(Texture::BLEND);
+		}
+	}
+	Image::Ptr &objectAsImage(void) {
+		touchAsImage();
+
+		return _transfer.image;
+	}
+	Texture::Ptr &textureAsImage(void) {
+		touchAsImage();
+
+		return _transfer.texture;
 	}
 
 	int getOverlayCel(const Math::Vec2i &pos) const {
@@ -3626,7 +4010,7 @@ private:
 				nullptr
 			);
 			ws->messagePopupBox(
-				ws->theme()->dialogPrompt_ThereAreMoreThanOneMapAssetsReferencingToTheSourceTilesAssetCreateANewTilesAssetPageForImporting(),
+				ws->theme()->dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetCreateANewTilesAssetPageForImporting(),
 				confirm,
 				deny,
 				cancel,
@@ -3757,7 +4141,7 @@ private:
 				nullptr
 			);
 			ws->messagePopupBox(
-				ws->theme()->dialogPrompt_ThereAreMoreThanOneMapAssetsReferencingToTheSourceTilesAssetCreateANewTilesAssetPageForImporting(),
+				ws->theme()->dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetCreateANewTilesAssetPageForImporting(),
 				confirm,
 				deny,
 				cancel,
@@ -3850,8 +4234,112 @@ private:
 		return true;
 	}
 
-	// TODO: EDIT MAP AS IMAGE
-	// TRANSFER
+	void refreshImageToTiled(Workspace *ws) {
+		if (_transfer.filled)
+			return;
+
+		if (!entry()->editAsImage) {
+			_transfer.filled = true;
+
+			return;
+		}
+
+		ImGui::WaitingPopupBox::TimeoutHandler timeout(
+			[ws, this] (void) -> void {
+				transferImageToTiled(ws);
+
+				_transfer.generated.wait();
+
+				ws->popupBox(nullptr);
+			},
+			nullptr
+		);
+		ws->waitingPopupBox(
+			true, ws->theme()->dialogPrompt_Compacting(),
+			true, timeout,
+			true
+		);
+	}
+	bool invalidateTiled(void) {
+		if (!entry())
+			return false;
+
+		if (!entry()->editAsImage) {
+			_transfer.filled = true;
+
+			return true;
+		}
+
+		// TODO: EDIT MAP AS IMAGE
+		// TRANSFER
+
+		_transfer.filled = false;
+
+		_debounce.modified();
+
+		return true;
+	}
+	bool transferImageToTiled(Workspace* ws) {
+		struct Data {
+			bool retained = false;
+
+			Data() {
+			}
+		};
+
+		if (!entry())
+			return false;
+
+		if (!entry()->editAsImage) {
+			_transfer.filled = true;
+
+			return true;
+		}
+
+		if (_transfer.generated.working())
+			_transfer.generated.wait();
+
+		Data* data = new Data();
+		_transfer.generated = ws->async(
+			std::bind(
+				[] (WorkTask* /* task */, Data* /* data */) -> uintptr_t { // On work thread.
+					// TODO: EDIT MAP AS IMAGE
+					// TRANSFER
+
+					return (uintptr_t)0;
+				},
+				std::placeholders::_1, data
+			),
+			std::bind(
+				[this] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
+					// TODO: EDIT MAP AS IMAGE
+					// TRANSFER
+					data->retained = true;
+				},
+				std::placeholders::_1, std::placeholders::_2, data
+			),
+			std::bind(
+				[this] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
+					if (!data->retained) {
+						// TODO: EDIT MAP AS IMAGE
+						// TRANSFER
+					}
+
+					// TODO: EDIT MAP AS IMAGE
+					// TRANSFER
+
+					_transfer.filled = true;
+
+					_estimated.filled = false;
+
+					delete data;
+				},
+				std::placeholders::_1, std::placeholders::_2, data
+			)
+		);
+
+		return true;
+	}
 
 	bool playMapTesting(Window* wnd, Renderer* rnd, Workspace* ws) {
 		// Prepare.
@@ -3867,28 +4355,56 @@ private:
 		// Start measuring performance.
 		const long long start = DateTime::ticks();
 
+		// The compile procedure.
+		auto compile = [wnd, rnd, ws, this, start] (void) -> bool {
+			// Compile.
+			const Bytes::Ptr rom_ = compileMap(wnd, rnd, ws, this, entry(), _tools);
+
+			if (!rom_)
+				return false;
+
+			// Finish measuring performance.
+			const long long end = DateTime::ticks();
+			const long long diff = end - start;
+			const double secs = DateTime::toSeconds(diff);
+			const std::string time = Text::toString(secs, 6, 0, ' ', std::ios::fixed);
+
+			const std::string msg = "Completed in " + time + "s.";
+			fprintf(stdout, "%s\n", msg.c_str());
+
+			// Run and play.
+			ws->run(wnd, rnd, rom_, true);
+
+			_tools.isPlaying = true;
+
+			// Finish.
+			return true;
+		};
+
 		// Compile.
-		const Bytes::Ptr rom_ = compileMap(wnd, rnd, ws, this, entry(), _tools);
+		if (entry() && entry()->editAsImage) {
+			// Async.
+			ImGui::WaitingPopupBox::TimeoutHandler timeout(
+				[ws, this, compile] (void) -> void {
+					if (!_transfer.filled)
+						transferImageToTiled(ws);
 
-		if (!rom_)
-			return false;
+					_transfer.generated.wait();
 
-		// Finish measuring performance.
-		const long long end = DateTime::ticks();
-		const long long diff = end - start;
-		const double secs = DateTime::toSeconds(diff);
-		const std::string time = Text::toString(secs, 6, 0, ' ', std::ios::fixed);
+					compile();
 
-		const std::string msg = "Completed in " + time + "s.";
-		fprintf(stdout, "%s\n", msg.c_str());
-
-		// Run and play.
-		ws->run(wnd, rnd, rom_, true);
-
-		_tools.isPlaying = true;
-
-		// TODO: EDIT MAP AS IMAGE
-		// TRANSFER
+					ws->popupBox(nullptr);
+				},
+				nullptr
+			);
+			ws->waitingPopupBox(
+				true, ws->theme()->dialogPrompt_Compacting(),
+				true, timeout,
+				true
+			);
+		} else {
+			compile();
+		}
 
 		// Finish.
 		return true;

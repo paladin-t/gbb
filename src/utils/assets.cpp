@@ -4384,6 +4384,8 @@ bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets
 			Image::Ptr tmp(Image::create());
 			const Math::Recti area = Math::Recti::byXYWH(x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
 			tiles_.serializeImage(tmp.get(), &area);
+			// TODO: EDIT MAP AS IMAGE
+			// LOCAL PALETTE
 			bool hFlip = false;
 			bool vFlip = false;
 			if (map_.hasAttributes && map_.attributes) {

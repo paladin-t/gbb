@@ -1988,11 +1988,6 @@ private:
 			}
 		}
 
-		const Editing::Shortcut ctrlShiftR(SDL_SCANCODE_R, true, true);
-		if (ctrlShiftR.pressed() && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-			refreshAllEntriesSlices(ws, false);
-		}
-
 		return true;
 	}
 
@@ -3699,7 +3694,8 @@ private:
 		// Start measuring performance.
 		const long long start = DateTime::ticks();
 
-		auto finish = [wnd, rnd, ws, this, start] (void) -> bool {
+		// The compile procedure.
+		auto compile = [wnd, rnd, ws, this, start] (void) -> bool {
 			// Compile.
 			const Bytes::Ptr rom_ = compileActor(wnd, rnd, ws, this, entry(), _tools);
 
@@ -3726,13 +3722,13 @@ private:
 
 		// Async.
 		ImGui::WaitingPopupBox::TimeoutHandler timeout(
-			[ws, this, finish] (void) -> void {
+			[ws, this, compile] (void) -> void {
 				if (!_compacted.filled)
 					compactAllEntriesSlices(ws, true);
 
 				_compacted.generated.wait();
 
-				finish();
+				compile();
 
 				ws->popupBox(nullptr);
 			},

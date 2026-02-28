@@ -5764,6 +5764,8 @@ bool palette(
 
 			ImGui::PushID(i);
 
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
 			const float size = ImGui::GetTextLineHeightWithSpacing();
 			if (ImGui::ColorButton("", col4v, ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_AlphaPreview, ImVec2(iconSize, size))) {
 				// Do nothing.
