@@ -545,9 +545,6 @@
     <ClCompile Include="src\app\vram_debugger.cpp">
       <Filter>app</Filter>
     </ClCompile>
-    <ClCompile Include="src\app\editor_map_as_image.cpp">
-      <Filter>app\editors</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="utils">
@@ -1602,9 +1599,6 @@
     </ClInclude>
     <ClInclude Include="src\app\vram_debugger.h">
       <Filter>app</Filter>
-    </ClInclude>
-    <ClInclude Include="src\app\editor_map_as_image.h">
-      <Filter>app\editors</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
