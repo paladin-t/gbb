@@ -960,6 +960,12 @@ void Reference::destroy(Command* ptr) {
 	delete impl;
 }
 
+namespace AsImage {
+
+// TODO: EDIT MAP AS IMAGE
+
+}
+
 }
 
 }

@@ -23,6 +23,8 @@
 #include "../../lib/jpath/jpath.hpp"
 #include <SDL.h>
 
+#include "editor_map.inl"
+
 /*
 ** {===========================================================================
 ** Macros and constants
@@ -195,6 +197,7 @@ private:
 			height = 0;
 		}
 	} _size;
+	EditorMapAsImage _asImage;
 	struct { // Transfer for edit-as-image.
 		Renderer* renderer = nullptr; // Foreign.
 		Image::Ptr image = nullptr;
@@ -574,6 +577,7 @@ public:
 
 		fprintf(stdout, "Map editor closed: #%d.\n", _index);
 
+		_asImage.clear();
 		_transfer.clear();
 
 		_project = nullptr;
@@ -679,6 +683,8 @@ public:
 		copy(true);
 	}
 	void copy(bool clearSelection) {
+		// TODO: AS IMAGE
+
 		auto toString = [] (const Math::Recti &area, const Editing::Dots &dots) -> std::string {
 			rapidjson::Document doc;
 			Jpath::set(doc, doc, area.width(), "width");
@@ -726,6 +732,8 @@ public:
 			_selection.clear();
 	}
 	virtual void cut(void) override {
+		// TODO: AS IMAGE
+
 		if (!_binding.getCel || !_binding.setCel)
 			return;
 
@@ -748,6 +756,8 @@ public:
 		return Platform::hasClipboardText();
 	}
 	virtual void paste(void) override {
+		// TODO: AS IMAGE
+
 		auto fromString = [] (const std::string &buf, Math::Recti &area, Editing::Dot::Array &dots) -> bool {
 			rapidjson::Document doc;
 			if (!Json::fromString(doc, buf.c_str()))
@@ -801,6 +811,8 @@ public:
 		destroyOverlay();
 	}
 	virtual void del(bool) override {
+		// TODO: AS IMAGE
+
 		if (!_binding.getCel || !_binding.setCel)
 			return;
 
@@ -864,6 +876,8 @@ public:
 	}
 
 	virtual void redo(BaseAssets::Entry*) override {
+		// TODO: AS IMAGE
+
 		auto execRedo = [this] (void) -> void {
 			const Command* cmd = _commands->redoable();
 			if (!cmd)
@@ -902,6 +916,8 @@ public:
 		entry()->increaseRevision();
 	}
 	virtual void undo(BaseAssets::Entry*) override {
+		// TODO: AS IMAGE
+
 		auto execUndo = [this] (void) -> void {
 			const Command* cmd = _commands->undoable();
 			if (!cmd)
@@ -1452,7 +1468,7 @@ private:
 				Image::Ptr &img = objectAsImage();
 				Texture::Ptr &tex = textureAsImage();
 
-				Editing::Brush cursor; // TODO: = _cursor
+				Editing::Brush cursor = _asImage.cursor;
 				const bool withCursor = _tools.painting != Editing::Tools::HAND;
 
 				const int pixelWidth = object()->width() * _tileSize.x;
@@ -1503,8 +1519,8 @@ private:
 						img.get(), tex.get(),
 						width_,
 						withCursor ? &cursor : nullptr, false,
-						nullptr, // TODO: _selection.brush.empty() ? nullptr : &_selection.brush,
-						nullptr, // TODO: _overlay.texture ? _overlay.texture.get() : nullptr,
+						_asImage.selection.brush.empty() ? nullptr : &_asImage.selection.brush,
+						_asImage.overlay.texture ? _asImage.overlay.texture.get() : nullptr,
 						&_tools.gridUnit, _tools.showGrids && _tools.gridsVisible,
 						_tools.transparentBackbroundVisible,
 						_tools.mouseActionButton,
@@ -1515,7 +1531,7 @@ private:
 					_painting ||
 					_tools.painting == Editing::Tools::STAMP
 				) {
-					// TODO: _cursor = cursor;
+					_asImage.cursor = cursor;
 				}
 				// TODO: refreshStatus(wnd, rnd, ws, &cursor);
 			} else {
@@ -2279,8 +2295,10 @@ private:
 		}
 
 		const Editing::Shortcut esc(SDL_SCANCODE_ESCAPE);
-		if (esc.pressed())
+		if (esc.pressed()) {
 			_selection.clear();
+			_asImage.selection.clear();
+		}
 
 #if defined GBBASIC_OS_APPLE
 		const Editing::Shortcut pgUp(SDL_SCANCODE_PAGEUP, false, false, false, false, false, true);
@@ -2309,6 +2327,8 @@ private:
 	}
 
 	void context(Window*, Renderer* rnd, Workspace* ws) {
+		// TODO: AS IMAGE
+
 		switch (_tools.layer) {
 		case ASSETS_MAP_GRAPHICS_LAYER: {
 				ImGuiStyle &style = ImGui::GetStyle();

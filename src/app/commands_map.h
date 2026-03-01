@@ -446,6 +446,12 @@ public:
 	static void destroy(Command* ptr);
 };
 
+namespace AsImage {
+
+// TODO: EDIT MAP AS IMAGE
+
+}
+
 }
 
 }

@@ -1617,6 +1617,9 @@
     <None Include="lib\clip\clip_osx.mm">
       <Filter>lib\clip</Filter>
     </None>
+    <None Include="src\app\editor_map.inl">
+      <Filter>app\editors</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\app\win\gbbasic.rc">
