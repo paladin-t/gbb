@@ -234,7 +234,7 @@ private:
 			y = 0;
 		}
 	} _anchor;
-	struct {
+	struct { // Compacted for preview, saving, etc.
 		Renderer* renderer = nullptr; // Foreign.
 		Image::Ptr image = nullptr;
 		Texture::Ptr texture = nullptr;
@@ -1186,7 +1186,7 @@ public:
 					}
 					_tools.magnification = Math::min(m, n);
 				}
-				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS));
+				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS) - 1);
 
 				const ImVec2 content = ImGui::GetContentRegionAvail();
 				float width_ = (float)cwidth;

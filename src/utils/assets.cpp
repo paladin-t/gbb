@@ -3161,7 +3161,7 @@ bool TilesAssets::Entry::parseJson(Image::Ptr &img, const std::string &val, Pars
 	return true;
 }
 
-bool TilesAssets::Entry::serializeImage(Image* val, const Math::Recti* area) const {
+bool TilesAssets::Entry::serializeImage(Image* val, const Math::Recti* area, PaletteColorGetter getCol) const {
 	// Prepare.
 	if (!val)
 		return false;
@@ -3176,7 +3176,8 @@ bool TilesAssets::Entry::serializeImage(Image* val, const Math::Recti* area) con
 				int idx = 0;
 				data->get(i + (int)area_.xMin(), j + (int)area_.yMin(), idx);
 				Colour col;
-				palette->get(idx, col);
+				if (!getCol || !getCol(idx, col))
+					palette->get(idx, col);
 				tmp->set(i, j, col);
 			}
 		}
@@ -3192,7 +3193,20 @@ bool TilesAssets::Entry::serializeImage(Image* val, const Math::Recti* area) con
 	return true;
 }
 
-bool TilesAssets::Entry::serializeImage(Bytes* val, const char* type, const Math::Recti* area) const {
+bool TilesAssets::Entry::serializeImage(Image* val, const Math::Recti* area) const {
+	return serializeImage(
+		val, area,
+		[this] (int idx, Colour &out) -> bool {
+			Colour col;
+			palette->get(idx, col);
+			out = col;
+
+			return true;
+		}
+	);
+}
+
+bool TilesAssets::Entry::serializeImage(Bytes* val, const char* type, const Math::Recti* area, PaletteColorGetter getCol) const {
 	// Prepare.
 	if (!val)
 		return false;
@@ -3209,7 +3223,8 @@ bool TilesAssets::Entry::serializeImage(Bytes* val, const char* type, const Math
 				int idx = 0;
 				data->get(i + (int)area_.xMin(), j + (int)area_.yMin(), idx);
 				Colour col;
-				palette->get(idx, col);
+				if (!getCol || !getCol(idx, col))
+					palette->get(idx, col);
 				tmp->set(i, j, col);
 			}
 		}
@@ -3223,6 +3238,19 @@ bool TilesAssets::Entry::serializeImage(Bytes* val, const char* type, const Math
 
 	// Finish.
 	return true;
+}
+
+bool TilesAssets::Entry::serializeImage(Bytes* val, const char* type, const Math::Recti* area) const {
+	return serializeImage(
+		val, type, area,
+		[this] (int idx, Colour &out) -> bool {
+			Colour col;
+			palette->get(idx, col);
+			out = col;
+
+			return true;
+		}
+	);
 }
 
 bool TilesAssets::Entry::parseImage(Image::Ptr &img, const Image* val, ParsingStatuses &status) const {
@@ -4380,12 +4408,36 @@ bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets
 			const std::div_t div = std::div(cel, tiles_.data->width() / GBBASIC_TILE_SIZE);
 			const int x = div.rem;
 			const int y = div.quot;
+			const Math::Recti area = Math::Recti::byXYWH(x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
 
 			Image::Ptr tmp(Image::create());
-			const Math::Recti area = Math::Recti::byXYWH(x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
-			tiles_.serializeImage(tmp.get(), &area);
-			// TODO: EDIT MAP AS IMAGE
-			// LOCAL PALETTE
+
+			const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+			const bool localPaletteEnabled = map_.localPaletteEnabled;
+			const PaletteAssets::Array &localPalette = map_.localPalette;
+			if (localPaletteEnabled && (int)localPalette.size() == n) {
+				tiles_.serializeImage(
+					tmp.get(), &area,
+					[&] (int idx, Colour &out) -> bool {
+						const std::div_t div = std::div(idx, GBBASIC_PALETTE_PER_GROUP_COUNT);
+						const int plt = div.quot;
+						const int idx_ = div.rem;
+						if (plt < 0 || plt >= (int)localPalette.size())
+							return false;
+						if (idx_ < 0 || idx_ >= GBBASIC_PALETTE_PER_GROUP_COUNT)
+							return false;
+
+						Colour col;
+						localPalette[plt].data->get(idx_, col);
+						out = col;
+
+						return true;
+					}
+				);
+			} else {
+				tiles_.serializeImage(tmp.get(), &area);
+			}
+
 			bool hFlip = false;
 			bool vFlip = false;
 			if (map_.hasAttributes && map_.attributes) {
@@ -4393,6 +4445,7 @@ bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets
 				hFlip = !!((attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001);
 				vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
 			}
+
 			tmp->blit(val, i * GBBASIC_TILE_SIZE, j * GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, 0, 0, hFlip, vFlip);
 		}
 	}

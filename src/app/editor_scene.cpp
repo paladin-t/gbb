@@ -1381,7 +1381,7 @@ public:
 				const bool localPaletteEnabled = mapEntry->localPaletteEnabled;
 				const PaletteAssets::Array &localPalette = mapEntry->localPalette;
 				if (localPaletteEnabled && (int)localPalette.size() == n) {
-					plt = Math::clamp(plt, 0, (int)localPalette.size());
+					plt = Math::clamp(plt, 0, (int)localPalette.size() - 1);
 					entry_ = &localPalette[plt];
 				} else {
 					entry_ = _project->getPalette(plt);
@@ -1430,7 +1430,7 @@ public:
 				}
 				_tools.magnification = Math::min(m, n);
 			}
-			_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS));
+			_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS) - 1);
 
 			const ImVec2 content = ImGui::GetContentRegionAvail();
 			float width_ = (float)(object()->width() * _tileSize.x);

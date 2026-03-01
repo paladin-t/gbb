@@ -683,6 +683,8 @@ struct CodeAssets {
 
 struct TilesAssets {
 	struct Entry : public BaseAssets::Entry, public BaseAssets::Versionable, public BaseAssets::Invalidatable {
+		typedef std::function<bool(int, Colour &)> PaletteColorGetter;
+
 		Image::Ptr data = nullptr;
 		int ref = 0; // To a palette.
 		std::string name;
@@ -713,7 +715,9 @@ struct TilesAssets {
 		bool serializeJson(std::string &val, bool pretty) const;
 		bool parseJson(Image::Ptr &img, const std::string &val, ParsingStatuses &status) const;
 
+		bool serializeImage(Image* val, const Math::Recti* area /* nullable */, PaletteColorGetter getCol /* nullable */) const;
 		bool serializeImage(Image* val, const Math::Recti* area /* nullable */) const;
+		bool serializeImage(Bytes* val, const char* type, const Math::Recti* area /* nullable */, PaletteColorGetter getCol /* nullable */) const;
 		bool serializeImage(Bytes* val, const char* type, const Math::Recti* area /* nullable */) const;
 		bool parseImage(Image::Ptr &img, const Image* val, ParsingStatuses &status) const;
 		bool parseImage(Image::Ptr &img, const Bytes* val, ParsingStatuses &status) const;

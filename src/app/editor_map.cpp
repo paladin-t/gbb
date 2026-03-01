@@ -195,7 +195,7 @@ private:
 			height = 0;
 		}
 	} _size;
-	struct {
+	struct { // Transfer for edit-as-image.
 		Renderer* renderer = nullptr; // Foreign.
 		Image::Ptr image = nullptr;
 		Texture::Ptr texture = nullptr;
@@ -612,8 +612,8 @@ public:
 					[ws, this] (void) -> void {
 						WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
-						if (!_transfer.filled)
-							transferImageToTiled(ws);
+						/*if (!_transfer.filled)
+							transferImageToTiled(ws);*/
 					},
 					nullptr
 				);
@@ -1085,6 +1085,14 @@ public:
 		if (_tools.debounceLocalPaletteColorChanged.fire()) {
 			entry()->cleanup();
 			ws->skipFrame(); // Skip a frame to avoid glitch.
+
+			if (entry()->editAsImage) {
+				_transfer.reset();
+
+				_debounce.modified();
+			} else {
+				_transfer.filled = true;
+			}
 		}
 
 		renderStatus(wnd, rnd, ws, width, statusBarHeight, statusBarActived);
@@ -1176,7 +1184,7 @@ private:
 				const bool localPaletteEnabled = entry()->localPaletteEnabled;
 				const PaletteAssets::Array &localPalette = entry()->localPalette;
 				if (localPaletteEnabled && (int)localPalette.size() == n) {
-					plt = Math::clamp(plt, 0, (int)localPalette.size());
+					plt = Math::clamp(plt, 0, (int)localPalette.size() - 1);
 					entry_ = &localPalette[plt];
 				} else {
 					entry_ = _project->getPalette(plt);
@@ -1280,7 +1288,7 @@ private:
 				}
 				_tools.magnification = Math::min(m, n);
 			}
-			_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS));
+			_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS) - 1);
 
 			const ImVec2 content = ImGui::GetContentRegionAvail();
 			float width_ = (float)(object()->width() * _tileSize.x);
@@ -1467,7 +1475,7 @@ private:
 					}
 					_tools.magnification = Math::min(m, n);
 				}
-				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS));
+				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS) - 1);
 
 				const ImVec2 content = ImGui::GetContentRegionAvail();
 				float width_ = (float)pixelWidth;
@@ -1642,6 +1650,7 @@ private:
 								WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
 								entry()->editAsImage = editAsImage;
+								editAsImageChanged(entry()->editAsImage);
 							},
 							nullptr
 						);
@@ -1667,14 +1676,7 @@ private:
 						);
 					} else {
 						entry()->editAsImage = editAsImage;
-					}
-					if (editAsImage) {
-						const Editing::Tools::PaintableTools prevTool = _tools.painting;
-
-						if (prevTool == Editing::Tools::STAMP)
-							_tools.painting = Editing::Tools::PENCIL;
-					} else {
-						_transfer.reset();
+						editAsImageChanged(entry()->editAsImage);
 					}
 				}
 				if (ImGui::IsItemHovered()) {
@@ -4339,6 +4341,19 @@ private:
 		);
 
 		return true;
+	}
+	void editAsImageChanged(bool editAsImage) {
+		if (!editAsImage) {
+			_transfer.reset();
+
+			_transfer.filled = true;
+
+			return;
+		}
+
+		const Editing::Tools::PaintableTools prevTool = _tools.painting;
+		if (prevTool == Editing::Tools::STAMP)
+			_tools.painting = Editing::Tools::PENCIL;
 	}
 
 	bool playMapTesting(Window* wnd, Renderer* rnd, Workspace* ws) {
