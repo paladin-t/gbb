@@ -13,10 +13,6 @@
 
 struct EditorMapAsImage {
 private:
-	struct Pixels {
-		Colour colored[EDITING_ITEM_COUNT_PER_LINE * 2];
-	};
-
 	typedef std::function<bool(const Math::Vec2i &, Editing::Dot &)> PixelGetter;
 	typedef std::function<bool(const Math::Vec2i &, const Editing::Dot &)> PixelSetter;
 
@@ -138,16 +134,27 @@ public:
 	struct Ref {
 		int palette = 0;
 		float real[4] = { 1, 1, 1, 1 };
-		Pixels* latest = nullptr;
 
 		void clear(void) {
 			palette = 0;
 			for (int i = 0; i < GBBASIC_COUNTOF(real); ++i)
 				real[i] = 1.0f;
-			if (latest) {
-				delete latest;
-				latest = nullptr;
-			}
+		}
+		Colour toColor(void) const {
+			const Colour col(
+				(Byte)(real[0] * 255),
+				(Byte)(real[1] * 255),
+				(Byte)(real[2] * 255),
+				(Byte)(real[3] * 255)
+			);
+
+			return col;
+		}
+		void fromColor(const Colour &col) {
+			real[0] = Math::clamp(col.r / 255.0f, 0.0f, 1.0f);
+			real[1] = Math::clamp(col.g / 255.0f, 0.0f, 1.0f);
+			real[2] = Math::clamp(col.b / 255.0f, 0.0f, 1.0f);
+			real[3] = Math::clamp(col.a / 255.0f, 0.0f, 1.0f);
 		}
 	} ref;
 	struct Tools {
@@ -599,22 +606,7 @@ public:
 	}
 
 	void update(void) {
-		if (!ref.latest) {
-			if (!shared.getObject()->paletted()) {
-				ref.latest = new Pixels();
-				const Colour white(255, 255, 255, 255);
-				ref.latest->colored[0] = Colour(255, 0, 0, 255);
-				ref.latest->colored[1] = Colour(0, 255, 0, 255);
-				ref.latest->colored[2] = Colour(255, 255, 0, 255);
-				ref.latest->colored[3] = Colour(0, 0, 255, 255);
-				ref.latest->colored[4] = Colour(255, 0, 255, 255);
-				ref.latest->colored[5] = Colour(0, 255, 255, 255);
-				ref.latest->colored[6] = Colour(0, 0, 0, 255);
-				ref.latest->colored[7] = Colour(255, 255, 255, 255);
-				ref.latest->colored[8] = Colour(128, 128, 128, 255);
-				ref.latest->colored[9] = Colour(255, 255, 255, 0);
-			}
-		}
+		// Do nothing.
 	}
 
 private:
@@ -631,6 +623,17 @@ private:
 	void clearOverlay(Renderer* rnd) {
 		overlay.texture->fromImage(rnd, Texture::STREAMING, overlay.blank.get(), Texture::NEAREST);
 		overlay.texture->blend(Texture::BLEND);
+	}
+
+	template<typename T> T* enqueue(void) {
+		T* result = commands->enqueue<T>();
+
+		shared.project->toPollEditor(true);
+
+		return result;
+	}
+	void refresh(Workspace* /* ws */, const Command* /* cmd */) {
+		// Do nothing.
 	}
 
 	void handToolDown(Renderer*) {
@@ -666,10 +669,7 @@ private:
 		} else {
 			Colour col;
 			shared.getObject()->get(cursor.position.x, cursor.position.y, col);
-			ref.real[0] = Math::clamp(col.r / 255.0f, 0.0f, 1.0f);
-			ref.real[1] = Math::clamp(col.g / 255.0f, 0.0f, 1.0f);
-			ref.real[2] = Math::clamp(col.b / 255.0f, 0.0f, 1.0f);
-			ref.real[3] = Math::clamp(col.a / 255.0f, 0.0f, 1.0f);
+			ref.fromColor(col);
 		}
 	}
 	void eyedropperToolMove(Renderer*) {
@@ -680,22 +680,8 @@ private:
 		} else {
 			Colour col;
 			shared.getObject()->get(cursor.position.x, cursor.position.y, col);
-			ref.real[0] = Math::clamp(col.r / 255.0f, 0.0f, 1.0f);
-			ref.real[1] = Math::clamp(col.g / 255.0f, 0.0f, 1.0f);
-			ref.real[2] = Math::clamp(col.b / 255.0f, 0.0f, 1.0f);
-			ref.real[3] = Math::clamp(col.a / 255.0f, 0.0f, 1.0f);
+			ref.fromColor(col);
 		}
-	}
-
-	template<typename T> T* enqueue(void) {
-		T* result = commands->enqueue<T>();
-
-		shared.project->toPollEditor(true);
-
-		return result;
-	}
-	void refresh(Workspace* /* ws */, const Command* /* cmd */) {
-		// Do nothing.
 	}
 
 	template<typename T> void paintbucketToolUp_(Renderer* rnd, const Math::Recti &sel) {
@@ -715,13 +701,7 @@ private:
 				cursor.position, ref.palette
 			);
 		} else {
-			const Colour col(
-				(Byte)(ref.real[0] * 255),
-				(Byte)(ref.real[1] * 255),
-				(Byte)(ref.real[2] * 255),
-				(Byte)(ref.real[3] * 255)
-			);
-
+			const Colour col = ref.toColor();
 			cmd->with(
 				Math::Vec2i(shared.getObject()->width(), shared.getObject()->height()),
 				selection.brush.empty() ? nullptr : &sel,
@@ -897,13 +877,7 @@ private:
 				}
 			);
 		} else {
-			const Colour col(
-				(Byte)(ref.real[0] * 255),
-				(Byte)(ref.real[1] * 255),
-				(Byte)(ref.real[2] * 255),
-				(Byte)(ref.real[3] * 255)
-			);
-
+			const Colour col = ref.toColor();
 			cmd->with(
 				Math::Vec2i(shared.getObject()->width(), shared.getObject()->height()),
 				cursor.position, col,

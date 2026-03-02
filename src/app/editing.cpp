@@ -5718,7 +5718,9 @@ bool palette(
 	const PaletteAssets::Array &palette,
 	Colour &newValue,
 	int* editingColorGroup, int* editingColorIndex, bool* openColorPicker,
-	float width
+	bool canPickColor, bool* colorPicked, Colour* pickedColor,
+	float width,
+	const char* prompt
 ) {
 	ImGuiStyle &style = ImGui::GetStyle();
 
@@ -5766,19 +5768,47 @@ bool palette(
 
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
+			const ImVec2 pos = ImGui::GetCursorScreenPos();
 			const float size = ImGui::GetTextLineHeightWithSpacing();
-			if (ImGui::ColorButton("", col4v, ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_AlphaPreview, ImVec2(iconSize, size))) {
-				// Do nothing.
+
+			if (canPickColor) {
+				if (ImGui::ColorButton("", col4v, ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_AlphaPreview, ImVec2(iconSize, size))) {
+					// Do nothing.
+				}
+
+				if (ImGui::IsItemHovered()) {
+					if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+						*colorPicked = true;
+						*pickedColor = color;
+
+						ImGui::Indicator(pos, pos + ImVec2(iconSize, size));
+					} else if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+						*editingColorGroup = j;
+						*editingColorIndex = i;
+						*openColorPicker = true;
+					}
+
+					ImGui::ColorTooltip(prompt ? prompt : "", color, ImGuiColorEditFlags_None);
+				}
+			} else {
+				if (ImGui::ColorButton("", col4v, ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_AlphaPreview, ImVec2(iconSize, size))) {
+					// Do nothing.
+				}
+
+				if (ImGui::IsItemHovered()) {
+					if ((ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_Right))) {
+						*editingColorGroup = j;
+						*editingColorIndex = i;
+						*openColorPicker = true;
+					}
+
+					ImGui::ColorTooltip("", color, ImGuiColorEditFlags_None);
+				}
 			}
+
 			ImGui::SameLine();
 
 			ImGui::PopID();
-
-			if (ImGui::IsItemHovered() && (ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_Right))) {
-				*editingColorGroup = j;
-				*editingColorIndex = i;
-				*openColorPicker = true;
-			}
 		}
 		if (j != n - 1) {
 			ImGui::NewLine();

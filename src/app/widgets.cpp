@@ -6405,7 +6405,9 @@ void ColorTooltip(const char* text, const Colour &col, ImGuiColorEditFlags flags
 	const char* text_end = text ? FindRenderedTextEnd(text, NULL) : text;
 	if (text_end > text) {
 		TextEx(text, text_end);
+		NewLine(2);
 		Separator();
+		NewLine(2);
 	}
 
 	ImVec2 sz(g.FontSize * 3 + g.Style.FramePadding.y * 2, g.FontSize * 3 + g.Style.FramePadding.y * 2);

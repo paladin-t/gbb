@@ -1132,7 +1132,6 @@ public:
 			if (!_ref.latest) {
 				if (!object()->paletted()) {
 					_ref.latest = new Pixels();
-					const Colour white(255, 255, 255, 255);
 					_ref.latest->colored[0] = Colour(255, 0, 0, 255);
 					_ref.latest->colored[1] = Colour(0, 255, 0, 255);
 					_ref.latest->colored[2] = Colour(255, 255, 0, 255);

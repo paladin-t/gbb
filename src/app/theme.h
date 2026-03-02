@@ -764,6 +764,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_LayerProperties)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_LayerTriggers)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ListView)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltip_LmbToPickRmbToChange)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_LowBits)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_MatchWholeWords)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_Menu)

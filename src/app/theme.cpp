@@ -1012,6 +1012,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_LayerProperties("Blocking, ladder information, etc.");
 	tooltip_LayerTriggers("Placed trigger definitions");
 	tooltip_ListView("List view");
+	tooltip_LmbToPickRmbToChange("LMB to pick, RMB to change");
 	tooltip_LowBits("Low bits");
 	tooltip_MatchWholeWords("Match whole words");
 	tooltip_Menu("Menu");

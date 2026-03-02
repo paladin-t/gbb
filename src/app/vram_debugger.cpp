@@ -1719,7 +1719,7 @@ private:
 						if (ImGui::IsItemHovered()) {
 							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-							ImGui::ColorTooltip("", col, (ImGuiColorEditFlags_NoAlpha));
+							ImGui::ColorTooltip("", col, ImGuiColorEditFlags_None);
 						}
 						ImGui::SameLine();
 						ImGui::PopID();
@@ -1787,7 +1787,7 @@ private:
 					if (ImGui::IsItemHovered()) {
 						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-						ImGui::ColorTooltip("", col, (ImGuiColorEditFlags_NoAlpha));
+						ImGui::ColorTooltip("", col, ImGuiColorEditFlags_None);
 					}
 					ImGui::SameLine();
 					ImGui::PopID();

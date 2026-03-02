@@ -1841,12 +1841,16 @@ private:
 		if (_tools.layer == ASSETS_MAP_GRAPHICS_LAYER && entry()->localPaletteEnabled) {
 			ImGui::NewLine();
 			Colour newValue;
+			bool colorPicked = false;
+			Colour pickedColor;
 			const bool changed = Editing::Tools::palette(
 				rnd, ws,
 				entry()->localPalette,
 				newValue,
 				&_tools.editingLocalPaletteColorGroup, &_tools.editingLocalPaletteColorIndex, &_tools.openLocalPaletteColorPicker,
-				spwidth
+				isEditingAsImage(), &colorPicked, &pickedColor,
+				spwidth,
+				ws->theme()->tooltip_LmbToPickRmbToChange().c_str()
 			);
 			if (changed) {
 				PaletteAssets::Array localPalette = entry()->localPalette;
@@ -1859,6 +1863,9 @@ private:
 					->exec(object(), Variant((void*)entry()));
 
 				_refresh(cmd);
+			}
+			if (colorPicked) {
+				_asImage.ref.fromColor(pickedColor);
 			}
 		}
 
@@ -4555,6 +4562,15 @@ private:
 		const Editing::Tools::PaintableTools prevTool = _tools.painting;
 		if (prevTool == Editing::Tools::STAMP)
 			_tools.painting = Editing::Tools::PENCIL;
+
+		PaletteAssets::Array localPalette = entry()->localPalette;
+		if (!localPalette.empty()) {
+			const PaletteAssets::Entry &entry_ = localPalette.front();
+			const Indexed::Ptr &palette_ = entry_.data;
+			Colour col;
+			palette_->get(0, col);
+			_asImage.ref.fromColor(col);
+		}
 	}
 
 	bool playMapTesting(Window* wnd, Renderer* rnd, Workspace* ws) {

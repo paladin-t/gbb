@@ -1066,13 +1066,17 @@ bool colorable(
  * @param[in, out] editingColorGroup
  * @param[in, out] editingColorIndex
  * @param[in, out] openColorPicker
+ * @param[out] colorPicked
+ * @param[out] pickedColor
  */
 bool palette(
 	Renderer* rnd, Workspace* ws,
 	const PaletteAssets::Array &palette,
 	Colour &newValue,
 	int* editingColorGroup, int* editingColorIndex, bool* openColorPicker,
-	float width = -1.0f
+	bool canPickColor, bool* colorPicked, Colour* pickedColor,
+	float width = -1.0f,
+	const char* prompt = nullptr
 );
 
 /**
