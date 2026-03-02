@@ -3315,6 +3315,9 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 							}
 
 							prj->addMapPage(str, true, preferedName.empty() ? nullptr : preferedName.c_str());
+							MapAssets::Entry* mapEntry = prj->getMap(prj->mapPageCount() - 1);
+							mapEntry->allowFlip = allowFlip;
+
 							prj->hasDirtyAsset(true);
 
 							ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::MAP);
@@ -3425,6 +3428,8 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 #endif /* Platform macro. */
 
 								prj->addMapPage(mapStr, true, preferedName.empty() ? nullptr : preferedName.c_str());
+								MapAssets::Entry* mapEntry = prj->getMap(prj->mapPageCount() - 1);
+								mapEntry->allowFlip = allowFlip;
 
 								ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::MAP);
 

@@ -199,6 +199,7 @@ private:
 	} _size;
 	EditorMapAsImage _asImage;
 	struct { // Transfer for edit-as-image.
+		Window* window = nullptr; // Foreign.
 		Renderer* renderer = nullptr; // Foreign.
 		Image::Ptr image = nullptr;
 		Texture::Ptr texture = nullptr;
@@ -554,6 +555,7 @@ public:
 		_ref.gridUnit = _ref.cursor.size;
 		_ref.transparentBackbroundVisible = num.pressed();
 
+		_transfer.window = wnd;
 		_transfer.renderer = rnd;
 
 		_setLayer = std::bind(&EditorMapImpl::changeLayer, this, wnd, rnd, ws, std::placeholders::_1);
@@ -584,10 +586,12 @@ public:
 			&_tools.painting,
 			&_tools.mouseActionButton,
 			&_tools.weighting,
+			&_debounce,
 			[&] (void) -> void {
 				_transfer.texture = nullptr;
 				touchAsImage(); // Ensure the runtime resources are ready.
-			}
+			},
+			std::bind(&EditorMapImpl::invalidateTiled, this)
 		);
 
 		fprintf(stdout, "Map editor opened: #%d.\n", _index);
@@ -636,11 +640,10 @@ public:
 			const Project::Indices mapsRefToTheSameTiles = _project->getMapsRefToTiles(ref);
 			if (mapsRefToTheSameTiles.size() > 1) {
 				ImGui::MessagePopupBox::ConfirmedHandler confirm(
-					[ws, this] (void) -> void {
+					[ws] (void) -> void {
 						WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
-						/*if (!_transfer.filled)
-							transferImageToTiled(ws);*/
+						// Do nothing.
 					},
 					nullptr
 				);
@@ -1164,13 +1167,6 @@ public:
 			updateAsTiled(wnd, rnd, ws, width, height, splitter, statusBarHeight, statusBarActived, allowMouseOperations);
 		else
 			updateAsImage(wnd, rnd, ws, width, height, splitter, statusBarHeight, statusBarActived, allowMouseOperations);
-
-		if (isEditingAsImage()) {
-			if (_debounce.fire()) {
-				if (!_transfer.filled)
-					transferImageToTiled(ws);
-			}
-		}
 
 		if (_tools.debounceLocalPaletteColorChanged.fire()) {
 			entry()->cleanup();
@@ -1714,7 +1710,7 @@ private:
 						_tools.painting = Editing::Tools::PENCIL;
 #endif /* GBBASIC_ASSET_AUTO_SWITCH_TOOL_TO_EYEDROPPER_ENABLED */
 				}
-				activeLayerChanged(_tools.layer);
+				activeLayerChanged(ws, _tools.layer);
 				_ref.byteTooltip.clear();
 				_status.clear();
 				if (isEditingAsImage())
@@ -1748,7 +1744,7 @@ private:
 								WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
 								entry()->editAsImage = editAsImage;
-								editAsImageChanged(entry()->editAsImage);
+								editAsImageChanged(ws, entry()->editAsImage);
 							},
 							nullptr
 						);
@@ -1774,7 +1770,7 @@ private:
 						);
 					} else {
 						entry()->editAsImage = editAsImage;
-						editAsImageChanged(entry()->editAsImage);
+						editAsImageChanged(ws, entry()->editAsImage);
 					}
 				}
 				if (ImGui::IsItemHovered()) {
@@ -2810,7 +2806,7 @@ private:
 				const float wndWidth = ImGui::GetWindowWidth();
 				ImGui::SetCursorPosX(wndWidth - _statusWidth);
 				if (wndWidth >= 430) {
-					if (transferring.first) {
+					/*if (transferring.first) {
 						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_Button));
 						ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_Button));
 						ImGui::ImageButton(ws->theme()->iconWorking()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_Compacting().c_str());
@@ -2823,7 +2819,7 @@ private:
 						}
 						width_ += ImGui::GetItemRectSize().x;
 						ImGui::SameLine();
-					} else {
+					} else*/ {
 						if (_status.info.empty()) {
 							const int w = object()->width() / GBBASIC_TILE_SIZE;
 							const int h = object()->height() / GBBASIC_TILE_SIZE;
@@ -3484,22 +3480,6 @@ private:
 		const bool refreshAllPaletteWithDebounce =
 			Command::is<Commands::Map::SetLocalPaletteEnabled>(cmd) ||
 			Command::is<Commands::Map::SetLocalPalette>(cmd);
-		const bool invalidateTiledData =
-			Command::is<Commands::Map::Pencil>(cmd) ||
-			Command::is<Commands::Map::Line>(cmd) ||
-			Command::is<Commands::Map::Box>(cmd) ||
-			Command::is<Commands::Map::BoxFill>(cmd) ||
-			Command::is<Commands::Map::Ellipse>(cmd) ||
-			Command::is<Commands::Map::EllipseFill>(cmd) ||
-			Command::is<Commands::Map::Fill>(cmd) ||
-			Command::is<Commands::Map::Replace>(cmd) ||
-			Command::is<Commands::Map::Stamp>(cmd) ||
-			Command::is<Commands::Map::Rotate>(cmd) ||
-			Command::is<Commands::Map::Flip>(cmd) ||
-			Command::is<Commands::Map::Cut>(cmd) ||
-			Command::is<Commands::Map::Paste>(cmd) ||
-			Command::is<Commands::Map::Delete>(cmd) ||
-			Command::is<Commands::Map::Resize>(cmd);
 
 		if (refillName) {
 			_tools.namableText = entry()->name;
@@ -3543,9 +3523,6 @@ private:
 		}
 		if (refreshAllPaletteWithDebounce && _project->preferencesPreviewPaletteBits()) {
 			_tools.debounceLocalPaletteColorChanged.modified();
-		}
-		if (invalidateTiledData) {
-			invalidateTiled();
 		}
 	}
 
@@ -3910,16 +3887,10 @@ private:
 			_cursor.position, idx,
 			nullptr
 		);
-
-		if (isEditingAsImage())
-			_debounce.modified();
 	}
 	void paintToolUp(Renderer*) {
 		if (!_commands->empty())
 			_commands->back()->redo(currentLayer());
-
-		if (isEditingAsImage())
-			_debounce.modified();
 
 		destroyOverlay();
 	}
@@ -4469,9 +4440,6 @@ private:
 			return true;
 		}
 
-		// TODO: EDIT MAP AS IMAGE
-		// TRANSFER
-
 		_transfer.filled = false;
 
 		_debounce.modified();
@@ -4479,10 +4447,38 @@ private:
 		return true;
 	}
 	bool transferImageToTiled(Workspace* ws) {
-		struct Data {
-			bool retained = false;
+		struct Data : public NonCopyable {
+			Project* project = nullptr;
+			Image::Ptr image = nullptr;
+			bool allowFlip = false;
+			Texture::Ptr attribtex = nullptr;
+			TilesAssets::Entry* tiles = nullptr;
+			MapAssets::Entry* map = nullptr;
+			std::string error;
+			bool loaded = false;
 
-			Data() {
+			Data(Renderer* rnd, Project* prj, Image::Ptr img, bool allowFlip_, Texture* texByte) {
+				project = prj;
+				image = img;
+				allowFlip = allowFlip_;
+				attribtex = Texture::Ptr(texByte, [] (Texture*) -> void { /* Do nothing. */ });
+				tiles = new TilesAssets::Entry(rnd, prj->paletteGetter());
+				map = new MapAssets::Entry("", prj->tilesGetter(), attribtex);
+			}
+			~Data() {
+				delete map;
+				map = nullptr;
+
+				delete tiles;
+				tiles = nullptr;
+
+				attribtex = nullptr;
+
+				project = nullptr;
+
+				allowFlip = false;
+
+				image = nullptr;
 			}
 		};
 
@@ -4498,34 +4494,86 @@ private:
 		if (_transfer.generated.working())
 			_transfer.generated.wait();
 
-		Data* data = new Data();
+		Image::Ptr &img = objectAsImage();
+		Data* data = new Data(
+			_transfer.renderer, _project,
+			img, entry()->allowFlip,
+			ws->theme()->textureByte()
+		);
 		_transfer.generated = ws->async(
 			std::bind(
-				[] (WorkTask* /* task */, Data* /* data */) -> uintptr_t { // On work thread.
-					// TODO: EDIT MAP AS IMAGE
-					// TRANSFER
+				[] (WorkTask* /* task */, Data* data) -> uintptr_t { // On work thread.
+					const bool loaded = MapAssets::parseImage(
+						*data->tiles, *data->map,
+						data->image.get(), data->allowFlip,
+						false,
+						data->project->paletteGetter(),
+						data->project->tilesGetter(), data->project->tilesPageCount(),
+						nullptr, [data] (const char* msg, bool isWarning) -> void {
+							if (!isWarning)
+								data->error = msg;
+						}
+					);
+					data->loaded = loaded;
 
 					return (uintptr_t)0;
 				},
 				std::placeholders::_1, data
 			),
 			std::bind(
-				[this] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
+				[this] (WorkTask* /* task */, uintptr_t /* ptr */, Data* /* data */) -> void { // On main thread.
 					// TODO: EDIT MAP AS IMAGE
 					// TRANSFER
-					data->retained = true;
 				},
 				std::placeholders::_1, std::placeholders::_2, data
 			),
 			std::bind(
-				[this] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
-					if (!data->retained) {
-						// TODO: EDIT MAP AS IMAGE
-						// TRANSFER
-					}
+				[this, ws] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
+					TilesAssets::Entry &tiles = *data->tiles;
+					MapAssets::Entry &map = *data->map;
+					const int ref = entry()->ref;
 
-					// TODO: EDIT MAP AS IMAGE
-					// TRANSFER
+					do {
+						_refresh(enqueue<Commands::Map::BeginGroup>()
+							->with("Import")
+							->exec(object(), Variant((void*)entry()), attributes()));
+						{
+							TilesAssets::Entry* entry_ = _project->getTiles(ref);
+							if (!entry_) {
+								ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
+
+								break;
+							}
+							const Variant ret = ws->touchTilesEditor(_transfer.window, _transfer.renderer, _project, ref, entry_)
+								->post(Editable::IMPORT, (void*)&tiles);
+							const unsigned refCmdId = (unsigned)(Variant::Long)ret;
+
+							_refresh(enqueue<Commands::Map::Reference>()
+								->with(_project, (unsigned)AssetsBundle::Categories::TILES, ref, refCmdId)
+								->exec(object(), Variant((void*)entry()), attributes()));
+
+							if (object()->width() != map.data->width() || object()->height() != map.data->height()) {
+								Command* cmd = enqueue<Commands::Map::Resize>()
+									->with(Math::Vec2i(map.data->width(), map.data->height()))
+									->with(_setLayer, _tools.layer)
+									->exec(object(), Variant((void*)entry()), attributes());
+
+								_refresh(cmd);
+
+								_selection.clear();
+							}
+
+							Command* cmd = enqueue<Commands::Map::Import>()
+								->with(map.data, map.hasAttributes, map.attributes)
+								->with(_setLayer, _tools.layer)
+								->exec(object(), Variant((void*)entry()), attributes());
+
+							_refresh(cmd);
+						}
+						_refresh(enqueue<Commands::Map::EndGroup>()
+							->with("Import")
+							->exec(object(), Variant((void*)entry()), attributes()));
+					} while (false);
 
 					_transfer.filled = true;
 
@@ -4539,19 +4587,25 @@ private:
 
 		return true;
 	}
-	void commitEditRecordsAsImage(void) {
-		// TODO: AS IMAGE
-	}
 
-	void activeLayerChanged(int layer) {
+	void activeLayerChanged(Workspace* ws, int layer) {
 		if (!isEditingAsImage())
 			return;
 
-		if (layer != ASSETS_MAP_GRAPHICS_LAYER)
-			commitEditRecordsAsImage();
+		if (layer != ASSETS_MAP_GRAPHICS_LAYER) {
+			if (!_transfer.filled)
+				transferImageToTiled(ws);
+
+			_transfer.generated.wait();
+		}
 	}
-	void editAsImageChanged(bool editAsImage) {
+	void editAsImageChanged(Workspace* ws, bool editAsImage) {
 		if (!editAsImage) {
+			if (!_transfer.filled)
+				transferImageToTiled(ws);
+
+			_transfer.generated.wait();
+
 			_transfer.reset();
 
 			_transfer.filled = true;

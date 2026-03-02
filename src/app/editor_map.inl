@@ -42,6 +42,8 @@ private:
 
 	typedef std::function<void(void)> TextureReloader;
 
+	typedef std::function<void(void)> TiledInvalidator;
+
 public:
 	bool initialized = false;
 
@@ -52,7 +54,9 @@ public:
 		Editing::Tools::PaintableTools* painting = nullptr;
 		int* mouseActionButton = nullptr;
 		int* weighting = nullptr;
+		Editor::Debounce* debounce = nullptr;
 		TextureReloader reloadTexture = nullptr;
+		TiledInvalidator invalidateTiled = nullptr;
 	} shared;
 
 	CommandQueue* commands = nullptr;
@@ -287,7 +291,9 @@ public:
 		Editing::Tools::PaintableTools* painting_,
 		int* mouseActBtn,
 		int* weighting,
-		TextureReloader reloadTex
+		Editor::Debounce* debounce,
+		TextureReloader reloadTex,
+		TiledInvalidator invalidateTiled
 	) {
 		if (initialized)
 			return;
@@ -304,7 +310,11 @@ public:
 
 		shared.weighting = weighting;
 
+		shared.debounce = debounce;
+
 		shared.reloadTexture = reloadTex;
+
+		shared.invalidateTiled = invalidateTiled;
 
 		refresher = std::bind(&EditorMapAsImage::refresh, this, ws, std::placeholders::_1);
 
@@ -348,7 +358,11 @@ public:
 
 		shared.weighting = nullptr;
 
+		shared.debounce = nullptr;
+
 		shared.reloadTexture = nullptr;
+
+		shared.invalidateTiled = nullptr;
 
 		refresher = nullptr;
 
@@ -632,8 +646,25 @@ private:
 
 		return result;
 	}
-	void refresh(Workspace* /* ws */, const Command* /* cmd */) {
-		// Do nothing.
+	void refresh(Workspace* /* ws */, const Command* cmd) {
+		const bool invalidateTiledData =
+			Command::is<Commands::Map::AsImage::Pencil>(cmd) ||
+			Command::is<Commands::Map::AsImage::Line>(cmd) ||
+			Command::is<Commands::Map::AsImage::Box>(cmd) ||
+			Command::is<Commands::Map::AsImage::BoxFill>(cmd) ||
+			Command::is<Commands::Map::AsImage::Ellipse>(cmd) ||
+			Command::is<Commands::Map::AsImage::EllipseFill>(cmd) ||
+			Command::is<Commands::Map::AsImage::Fill>(cmd) ||
+			Command::is<Commands::Map::AsImage::Replace>(cmd) ||
+			Command::is<Commands::Map::AsImage::Rotate>(cmd) ||
+			Command::is<Commands::Map::AsImage::Flip>(cmd) ||
+			Command::is<Commands::Map::AsImage::Cut>(cmd) ||
+			Command::is<Commands::Map::AsImage::Paste>(cmd) ||
+			Command::is<Commands::Map::AsImage::Delete>(cmd);
+
+		if (invalidateTiledData) {
+			shared.invalidateTiled();
+		}
 	}
 
 	void handToolDown(Renderer*) {
@@ -710,6 +741,8 @@ private:
 		}
 
 		cmd->exec(shared.getObject());
+
+		refresher(cmd);
 	}
 	void paintbucketToolUp(Renderer* rnd) {
 		Math::Recti sel;
@@ -785,10 +818,12 @@ private:
 		const int x = cursor.position.x + area.xMin() + xOff;
 		const int y = cursor.position.y + area.yMin() + yOff;
 
-		enqueue<Commands::Map::AsImage::Paste>()
+		Command* cmd = enqueue<Commands::Map::AsImage::Paste>()
 			->with(binding.getPixel, binding.setPixel)
 			->with(Math::Recti::byXYWH(x, y, area.width(), area.height()), dots)
 			->exec(shared.getObject());
+
+		refresher(cmd);
 
 		destroyOverlay();
 
@@ -835,13 +870,15 @@ private:
 	template<typename T> void paintToolDown(Renderer* rnd) {
 		selection.clear();
 
-		enqueue<T>()
+		Command* cmd = enqueue<T>()
 			->with(
 				std::bind(&EditorMapAsImage::getPixel, this, rnd, std::placeholders::_1, std::placeholders::_2),
 				std::bind(&EditorMapAsImage::setPixel, this, rnd, std::placeholders::_1, std::placeholders::_2),
 				(*shared.weighting) + 1
 			)
 			->exec(shared.getObject());
+
+		refresher(cmd);
 
 		createOverlay(rnd);
 
@@ -893,11 +930,15 @@ private:
 				}
 			);
 		}
+
+		shared.debounce->modified();
 	}
 	void paintToolUp(Renderer*) {
 		if (!commands->empty()) {
 			commands->back()->redo(shared.getObject(), &shared.getTexture());
 		}
+
+		shared.debounce->modified();
 
 		destroyOverlay();
 	}

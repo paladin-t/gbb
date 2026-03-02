@@ -32,7 +32,7 @@
 */
 
 class Editor : public Editable {
-protected:
+public:
 	struct Ref {
 	public:
 		typedef std::pair<float, float> Splitter;

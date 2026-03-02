@@ -4073,6 +4073,8 @@ bool MapAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarnin
 
 	Jpath::set(doc, doc, magnification, "magnification");
 
+	Jpath::set(doc, doc, allowFlip, "allow_flip");
+
 	Jpath::set(doc, doc, optimize, "optimize");
 
 	rapidjson::Document doc0, doc1;
@@ -4195,6 +4197,9 @@ bool MapAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler 
 
 	if (!Jpath::get(doc, magnification, "magnification"))
 		magnification = -1;
+
+	if (!Jpath::get(doc, allowFlip, "allow_flip"))
+		allowFlip = false;
 
 	if (!Jpath::get(doc, optimize, "optimize"))
 		optimize = true;

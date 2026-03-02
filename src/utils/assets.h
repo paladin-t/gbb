@@ -760,6 +760,7 @@ struct MapAssets {
 		PaletteAssets::Array localPalette;
 		std::string name;
 		int magnification = -1; // Non-polluting.
+		bool allowFlip = false;
 		bool optimize = true;
 
 		TilesAssets::Getter getTiles = nullptr; // Non-serialized. Foreign.
