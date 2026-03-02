@@ -47,17 +47,19 @@ private:
 	typedef std::function<void(void)> TextureReloader;
 
 public:
+	bool initialized = false;
+
 	struct {
 		Project* project = nullptr;
 		ObjectGetter getObject = nullptr;
 		TextureGetter getTexture = nullptr;
-		CommandQueue* commands = nullptr;
 		Editing::Tools::PaintableTools* painting = nullptr;
 		int* mouseActionButton = nullptr;
 		int* weighting = nullptr;
 		TextureReloader reloadTexture = nullptr;
 	} shared;
 
+	CommandQueue* commands = nullptr;
 	Editing::Brush cursor;
 	struct {
 		bool tilewise = false;
@@ -84,6 +86,16 @@ public:
 			return area.width() * area.height();
 		}
 	} selection;
+	struct {
+		std::string text;
+		Editing::Brush cursor;
+
+		void clear(void) {
+			text.clear();
+			cursor = Editing::Brush();
+		}
+	} status;
+	std::function<void(const Command*)> refresher = nullptr;
 	Editing::Painting painting;
 	struct {
 		PixelGetter getPixel = nullptr;
@@ -262,22 +274,34 @@ public:
 	}
 
 	void initialize(
-		Renderer* rnd,
+		Renderer* rnd, Workspace* ws,
 		Project* prj,
 		ObjectGetter obj, TextureGetter tex,
-		CommandQueue* cmds,
 		Editing::Tools::PaintableTools* painting_,
 		int* mouseActBtn,
 		int* weighting,
 		TextureReloader reloadTex
 	) {
+		if (initialized)
+			return;
+		initialized = true;
+
 		shared.project = prj;
 
 		shared.getObject = obj;
 		shared.getTexture = tex;
 
-		shared.commands = cmds;
-		shared.commands
+		shared.painting = painting_;
+
+		shared.mouseActionButton = mouseActBtn;
+
+		shared.weighting = weighting;
+
+		shared.reloadTexture = reloadTex;
+
+		refresher = std::bind(&EditorMapAsImage::refresh, this, ws, std::placeholders::_1);
+
+		commands = (new CommandQueue(GBBASIC_EDITOR_MAX_COMMAND_COUNT))
 			->reg<Commands::Map::AsImage::Pencil>()
 			->reg<Commands::Map::AsImage::Line>()
 			->reg<Commands::Map::AsImage::Box>()
@@ -292,14 +316,6 @@ public:
 			->reg<Commands::Map::AsImage::Paste>()
 			->reg<Commands::Map::AsImage::Delete>();
 
-		shared.painting = painting_;
-
-		shared.mouseActionButton = mouseActBtn;
-
-		shared.weighting = weighting;
-
-		shared.reloadTexture = reloadTex;
-
 		binding.fill(
 			std::bind(&EditorMapAsImage::getPixel, this, rnd, std::placeholders::_1, std::placeholders::_2),
 			std::bind(&EditorMapAsImage::setPixel, this, rnd, std::placeholders::_1, std::placeholders::_2),
@@ -310,12 +326,14 @@ public:
 		tools.gridUnit = Math::Vec2i(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
 	}
 	void dispose(void) {
+		if (!initialized)
+			return;
+		initialized = false;
+
 		shared.project = nullptr;
 
 		shared.getObject = nullptr;
 		shared.getTexture = nullptr;
-
-		shared.commands = nullptr;
 
 		shared.painting = nullptr;
 
@@ -324,15 +342,260 @@ public:
 		shared.weighting = nullptr;
 
 		shared.reloadTexture = nullptr;
+
+		refresher = nullptr;
+
+		delete commands;
+		commands = nullptr;
 	}
 
 	void clear(void) {
 		selection.clear();
+		status.clear();
 		painting.clear();
 		binding.clear();
 		overlay.clear();
 		ref.clear();
 		tools.clear();
+	}
+
+	bool hasUnsavedChanges(void) const {
+		return commands->hasUnsavedChanges();
+	}
+	void markChangesSaved(void) {
+		commands->markChangesSaved();
+	}
+
+	void copy(bool clearSelection) {
+		auto toString = [] (const Image::Ptr obj, const Math::Recti &area, const Editing::Dots &dots) -> std::string {
+			rapidjson::Document doc;
+			Jpath::set(doc, doc, area.width(), "width");
+			Jpath::set(doc, doc, area.height(), "height");
+			Jpath::set(doc, doc, obj->paletted() ? 8 : 0, "depth");
+			int k = 0;
+			for (int j = area.yMin(); j <= area.yMax(); ++j) {
+				for (int i = area.xMin(); i <= area.xMax(); ++i) {
+					if (obj->paletted())
+						Jpath::set(doc, doc, dots.indexed[k], "data", k);
+					else
+						Jpath::set(doc, doc, dots.colored[k].toRGBA(), "data", k);
+
+					++k;
+				}
+			}
+
+			std::string buf;
+			Json::toString(doc, buf);
+
+			return buf;
+		};
+
+		if (!binding.getPixels || !binding.setPixels)
+			return;
+
+		Math::Recti sel;
+		const Math::Recti* selPtr = nullptr;
+		int size = selection.area(sel);
+		if (size == 0)
+			size = shared.getObject()->width() * shared.getObject()->height();
+		else
+			selPtr = &sel;
+
+		if (shared.getObject()->paletted()) {
+			typedef std::vector<int> Data;
+
+			Data vec(size, 0);
+			Editing::Dots dots(&vec.front());
+			binding.getPixels(selPtr, dots);
+
+			const std::string buf = toString(shared.getObject(), sel, dots);
+			const std::string osstr = Unicode::toOs(buf);
+
+			Platform::setClipboardText(osstr.c_str());
+		} else {
+			typedef std::vector<Colour> Data;
+
+			Data vec(size, Colour());
+			Editing::Dots dots(&vec.front());
+			binding.getPixels(selPtr, dots);
+
+			const std::string buf = toString(shared.getObject(), sel, dots);
+			const std::string osstr = Unicode::toOs(buf);
+
+			Platform::setClipboardText(osstr.c_str());
+		}
+
+		if (clearSelection)
+			selection.clear();
+	}
+	void cut(void) {
+		if (!binding.getPixel || !binding.setPixel)
+			return;
+
+		copy(false);
+
+		Math::Recti sel;
+		const int size = area(&sel);
+		if (size == 0)
+			return;
+
+		enqueue<Commands::Map::AsImage::Cut>()
+			->with(binding.getPixel, binding.setPixel)
+			->with(sel)
+			->exec(shared.getObject());
+
+		selection.clear();
+	}
+	bool pastable(void) const {
+		return Platform::hasClipboardText();
+	}
+	void paste(void) {
+		auto fromString = [] (const Image::Ptr obj, const std::string &buf, Math::Recti &area, Editing::Dot::Array &dots) -> bool {
+			rapidjson::Document doc;
+			if (!Json::fromString(doc, buf.c_str()))
+				return false;
+
+			int width = -1, height = -1;
+			int depth = -1;
+			if (!Jpath::get(doc, width, "width"))
+				return false;
+			if (!Jpath::get(doc, height, "height"))
+				return false;
+			if (!Jpath::get(doc, depth, "depth"))
+				return false;
+			area = Math::Recti::byXYWH(0, 0, width, height);
+			if (obj->paletted() && depth != 8)
+				return false;
+			if (!obj->paletted() && depth != 0)
+				return false;
+			int k = 0;
+			for (int j = area.yMin(); j <= area.yMax(); ++j) {
+				for (int i = area.xMin(); i <= area.xMax(); ++i) {
+					if (obj->paletted()) {
+						int idx = -1;
+						if (!Jpath::get(doc, idx, "data", k))
+							return false;
+
+						Editing::Dot dot;
+						dot.indexed = idx;
+						dots.push_back(dot);
+					} else {
+						UInt32 col = 0;
+						if (!Jpath::get(doc, col, "data", k))
+							return false;
+
+						Editing::Dot dot;
+						dot.colored.fromRGBA(col);
+						dots.push_back(dot);
+					}
+
+					++k;
+				}
+				dots.shrink_to_fit();
+			}
+
+			return true;
+		};
+
+		const std::string osstr = Platform::getClipboardText();
+		const std::string buf = Unicode::fromOs(osstr);
+		Math::Recti area;
+		Editing::Dot::Array dots;
+		if (!fromString(shared.getObject(), buf, area, dots))
+			return;
+
+		const Editing::Tools::PaintableTools prevTool = *shared.painting;
+		if (prevTool != Editing::Tools::STAMP) {
+			*shared.painting = Editing::Tools::STAMP;
+
+			processors[Editing::Tools::STAMP] = Processor{
+				nullptr,
+				nullptr,
+				std::bind(&EditorMapAsImage::stampToolUp_Paste, this, std::placeholders::_1, area, dots, prevTool),
+				std::bind(&EditorMapAsImage::stampToolHover_Paste, this, std::placeholders::_1, area, dots)
+			};
+		}
+
+		destroyOverlay();
+	}
+	void del(bool) {
+		if (!binding.getPixel || !binding.setPixel)
+			return;
+
+		Math::Recti sel;
+		const int size = area(&sel);
+		if (size == 0)
+			return;
+
+		enqueue<Commands::Map::AsImage::Delete>()
+			->with(binding.getPixel, binding.setPixel)
+			->with(sel)
+			->exec(shared.getObject());
+
+		selection.clear();
+	}
+	int area(Math::Recti* area /* nullable */) const {
+		Math::Recti sel;
+		int size = selection.area(sel);
+		if (size == 0) {
+			sel = Math::Recti::byXYWH(0, 0, shared.getObject()->width(), shared.getObject()->height());
+			size = shared.getObject()->width() * shared.getObject()->height();
+		}
+		if (area)
+			*area = sel;
+
+		return size;
+	}
+	bool selectable(void) const {
+		return true;
+	}
+
+	const char* redoable(void) const {
+		const Command* cmd = commands->redoable();
+		if (!cmd)
+			return nullptr;
+
+		return cmd->toString();
+	}
+	const char* undoable(void) const {
+		const Command* cmd = commands->undoable();
+		if (!cmd)
+			return nullptr;
+
+		return cmd->toString();
+	}
+
+	void redo(BaseAssets::Entry*) {
+		const Command* cmd = commands->redoable();
+		if (!cmd)
+			return;
+
+		const int width = shared.getObject()->width();
+		const int height = shared.getObject()->height();
+		commands->redo(shared.getObject());
+
+		if (width != shared.getObject()->width() || height != shared.getObject()->height())
+			selection.clear();
+
+		refresher(cmd);
+
+		shared.project->toPollEditor(true);
+	}
+	void undo(BaseAssets::Entry*) {
+		const Command* cmd = commands->undoable();
+		if (!cmd)
+			return;
+
+		const int width = shared.getObject()->width();
+		const int height = shared.getObject()->height();
+		commands->undo(shared.getObject());
+
+		if (width != shared.getObject()->width() || height != shared.getObject()->height())
+			selection.clear();
+
+		refresher(cmd);
+
+		shared.project->toPollEditor(true);
 	}
 
 	void update(void) {
@@ -425,11 +688,14 @@ private:
 	}
 
 	template<typename T> T* enqueue(void) {
-		T* result = shared.commands->enqueue<T>();
+		T* result = commands->enqueue<T>();
 
 		shared.project->toPollEditor(true);
 
 		return result;
+	}
+	void refresh(Workspace* /* ws */, const Command* /* cmd */) {
+		// Do nothing.
 	}
 
 	template<typename T> void paintbucketToolUp_(Renderer* rnd, const Math::Recti &sel) {
@@ -602,13 +868,13 @@ private:
 		paintToolMove<T>(rnd);
 	}
 	template<typename T, bool Clear = true> void paintToolMove(Renderer* rnd) {
-		if (shared.commands->empty())
+		if (commands->empty())
 			return;
 
 		if (Clear)
 			clearOverlay(rnd);
 
-		Command* back = shared.commands->back();
+		Command* back = commands->back();
 		GBBASIC_ASSERT(back->type() == T::TYPE());
 		T* cmd = Command::as<T>(back);
 		if (shared.getObject()->paletted()) {
@@ -655,8 +921,8 @@ private:
 		}
 	}
 	void paintToolUp(Renderer*) {
-		if (!shared.commands->empty()) {
-			shared.commands->back()->redo(shared.getObject(), &shared.getTexture());
+		if (!commands->empty()) {
+			commands->back()->redo(shared.getObject(), &shared.getTexture());
 		}
 
 		destroyOverlay();

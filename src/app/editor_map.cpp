@@ -569,7 +569,7 @@ public:
 		_tools.stopMapTesting = std::bind(&EditorMapImpl::stopMapTesting, this, wnd, rnd, ws);
 
 		_asImage.initialize(
-			rnd,
+			rnd, ws,
 			_project,
 			[&] (void) -> Image::Ptr & {
 				Image::Ptr &img = objectAsImage();
@@ -581,7 +581,6 @@ public:
 
 				return tex;
 			},
-			_commands,
 			&_tools.painting,
 			&_tools.mouseActionButton,
 			&_tools.weighting,
@@ -632,7 +631,7 @@ public:
 	}
 
 	virtual void enter(class Workspace* ws) override {
-		if (entry() && entry()->editAsImage) {
+		if (isEditingAsImage()) {
 			const int ref = entry()->ref;
 			const Project::Indices mapsRefToTheSameTiles = _project->getMapsRefToTiles(ref);
 			if (mapsRefToTheSameTiles.size() > 1) {
@@ -673,7 +672,7 @@ public:
 	virtual void leave(class Workspace* ws) override {
 		_tools.stopMapTesting();
 
-		if (entry() && entry()->editAsImage) {
+		if (isEditingAsImage()) {
 			if (!_transfer.filled) {
 				transferImageToTiled(ws);
 
@@ -697,9 +696,18 @@ public:
 	}
 
 	virtual bool hasUnsavedChanges(void) const override {
+		if (isEditingAsImage())
+			return _asImage.hasUnsavedChanges();
+
 		return _commands->hasUnsavedChanges();
 	}
 	virtual void markChangesSaved(void) override {
+		if (isEditingAsImage()) {
+			_asImage.markChangesSaved();
+
+			return;
+		}
+
 		_commands->markChangesSaved();
 	}
 
@@ -707,7 +715,11 @@ public:
 		copy(true);
 	}
 	void copy(bool clearSelection) {
-		// TODO: AS IMAGE
+		if (isEditingAsImage()) {
+			_asImage.copy(clearSelection);
+
+			return;
+		}
 
 		auto toString = [] (const Math::Recti &area, const Editing::Dots &dots) -> std::string {
 			rapidjson::Document doc;
@@ -756,7 +768,11 @@ public:
 			_selection.clear();
 	}
 	virtual void cut(void) override {
-		// TODO: AS IMAGE
+		if (isEditingAsImage()) {
+			_asImage.cut();
+
+			return;
+		}
 
 		if (!_binding.getCel || !_binding.setCel)
 			return;
@@ -777,10 +793,17 @@ public:
 		_selection.clear();
 	}
 	virtual bool pastable(void) const override {
+		if (isEditingAsImage())
+			return _asImage.pastable();
+
 		return Platform::hasClipboardText();
 	}
 	virtual void paste(void) override {
-		// TODO: AS IMAGE
+		if (isEditingAsImage()) {
+			_asImage.paste();
+
+			return;
+		}
 
 		auto fromString = [] (const std::string &buf, Math::Recti &area, Editing::Dot::Array &dots) -> bool {
 			rapidjson::Document doc;
@@ -834,8 +857,12 @@ public:
 
 		destroyOverlay();
 	}
-	virtual void del(bool) override {
-		// TODO: AS IMAGE
+	virtual void del(bool wholeLine) override {
+		if (isEditingAsImage()) {
+			_asImage.del(wholeLine);
+
+			return;
+		}
 
 		if (!_binding.getCel || !_binding.setCel)
 			return;
@@ -856,6 +883,9 @@ public:
 		_selection.clear();
 	}
 	int area(Math::Recti* area /* nullable */) const {
+		if (isEditingAsImage())
+			return _asImage.area(area);
+
 		Math::Recti sel;
 		int size = _selection.area(sel);
 		if (size == 0) {
@@ -868,6 +898,9 @@ public:
 		return size;
 	}
 	int areaOrPoint(Math::Recti* area /* nullable */) {
+		if (isEditingAsImage())
+			return 0;
+
 		Math::Recti sel;
 		int size = _selection.area(sel);
 		if (size <= 1) {
@@ -881,10 +914,16 @@ public:
 		return size;
 	}
 	virtual bool selectable(void) const override {
+		if (isEditingAsImage())
+			return _asImage.selectable();
+
 		return true;
 	}
 
 	virtual const char* redoable(void) const override {
+		if (isEditingAsImage())
+			return _asImage.redoable();
+
 		const Command* cmd = _commands->redoable();
 		if (!cmd)
 			return nullptr;
@@ -892,6 +931,9 @@ public:
 		return cmd->toString();
 	}
 	virtual const char* undoable(void) const override {
+		if (isEditingAsImage())
+			return _asImage.undoable();
+
 		const Command* cmd = _commands->undoable();
 		if (!cmd)
 			return nullptr;
@@ -899,8 +941,12 @@ public:
 		return cmd->toString();
 	}
 
-	virtual void redo(BaseAssets::Entry*) override {
-		// TODO: AS IMAGE
+	virtual void redo(BaseAssets::Entry* entry_) override {
+		if (isEditingAsImage()) {
+			_asImage.redo(entry_);
+
+			return;
+		}
 
 		auto execRedo = [this] (void) -> void {
 			const Command* cmd = _commands->redoable();
@@ -939,8 +985,12 @@ public:
 
 		entry()->increaseRevision();
 	}
-	virtual void undo(BaseAssets::Entry*) override {
-		// TODO: AS IMAGE
+	virtual void undo(BaseAssets::Entry* entry_) override {
+		if (isEditingAsImage()) {
+			_asImage.undo(entry_);
+
+			return;
+		}
 
 		auto execUndo = [this] (void) -> void {
 			const Command* cmd = _commands->undoable();
@@ -1092,7 +1142,7 @@ public:
 		if (!entry() || !object()) {
 			ImGui::BeginChild("@Blk", ImVec2(width, height - statusBarHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav);
 			ImGui::EndChild();
-			refreshStatus(wnd, rnd, ws, nullptr);
+			refreshStatus(wnd, rnd, ws);
 			renderStatus(wnd, rnd, ws, width, statusBarHeight, statusBarActived);
 
 			return;
@@ -1103,19 +1153,19 @@ public:
 			resolveRef(wnd, rnd, ws, width, height - statusBarHeight);
 			ImGui::EndChild();
 			ImGui::PopStyleColor();
-			refreshStatus(wnd, rnd, ws, nullptr);
+			refreshStatus(wnd, rnd, ws);
 			renderStatus(wnd, rnd, ws, width, statusBarHeight, statusBarActived);
 
 			return;
 		}
 		
-		const bool editAsTiled = !(_tools.layer == ASSETS_MAP_GRAPHICS_LAYER && entry()->editAsImage);
+		const bool editAsTiled = !(_tools.layer == ASSETS_MAP_GRAPHICS_LAYER && isEditingAsImage());
 		if (editAsTiled)
 			updateAsTiled(wnd, rnd, ws, width, height, splitter, statusBarHeight, statusBarActived, allowMouseOperations);
 		else
 			updateAsImage(wnd, rnd, ws, width, height, splitter, statusBarHeight, statusBarActived, allowMouseOperations);
 
-		if (entry() && entry()->editAsImage) {
+		if (isEditingAsImage()) {
 			if (_debounce.fire()) {
 				if (!_transfer.filled)
 					transferImageToTiled(ws);
@@ -1126,7 +1176,7 @@ public:
 			entry()->cleanup();
 			ws->skipFrame(); // Skip a frame to avoid glitch.
 
-			if (entry()->editAsImage) {
+			if (isEditingAsImage()) {
 				_transfer.reset();
 
 				_debounce.modified();
@@ -1559,7 +1609,7 @@ private:
 				) {
 					_asImage.cursor = cursor;
 				}
-				// TODO: refreshStatus(wnd, rnd, ws, &cursor);
+				refreshStatus(wnd, rnd, ws, &cursor);
 			} else {
 				_asImage.painting.set(false);
 			}
@@ -1583,11 +1633,10 @@ private:
 				}
 			}
 
-			// TODO
-			/*if (_binding.skipFrame) {
-				_binding.skipFrame = false;
+			if (_asImage.binding.skipFrame) {
+				_asImage.binding.skipFrame = false;
 				ws->skipFrame(); // Skip a frame to avoid glitch.
-			}*/
+			}
 
 			statusBarActived |= ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
 
@@ -1665,14 +1714,21 @@ private:
 						_tools.painting = Editing::Tools::PENCIL;
 #endif /* GBBASIC_ASSET_AUTO_SWITCH_TOOL_TO_EYEDROPPER_ENABLED */
 				}
+				activeLayerChanged(_tools.layer);
 				_ref.byteTooltip.clear();
 				_status.clear();
-				refreshStatus(wnd, rnd, ws, &_cursor);
+				if (isEditingAsImage())
+					refreshStatus(wnd, rnd, ws, &_asImage.cursor);
+				else
+					refreshStatus(wnd, rnd, ws, &_cursor);
 			}
 			if (ImGui::IsItemHovered()) {
 				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-				ImGui::SetTooltip("(Ctrl+Shift+1/2)");
+				if (editAsImage)
+					ImGui::SetTooltip(ws->theme()->tooltipMap_LayersWithEditingRecordsTips());
+				else
+					ImGui::SetTooltip(ws->theme()->tooltipMap_Layers());
 			}
 			ImGui::SameLine();
 		}
@@ -1724,7 +1780,10 @@ private:
 				if (ImGui::IsItemHovered()) {
 					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-					ImGui::SetTooltip(ws->theme()->tooltipMap_EditAsImage());
+					if (editAsImage)
+						ImGui::SetTooltip(ws->theme()->tooltipMap_EditAsImageWithEditingRecordsTips());
+					else
+						ImGui::SetTooltip(ws->theme()->tooltipMap_EditAsImage());
 				}
 				ImGui::SameLine();
 			} while (false);
@@ -1815,8 +1874,14 @@ private:
 			const float curPosX = ImGui::GetCursorPosX();
 			ImGui::Dummy(ImVec2(xOffset, 0));
 			ImGui::SameLine();
-			if (ImGui::ImageButton(ws->theme()->iconRef()->pointer(rnd), ImVec2(unitSize, unitSize), ImColor(IM_COL32_WHITE), false, ws->theme()->tooltip_JumpToRefTiles().c_str())) {
-				_ref.resolving = true;
+			if (editAsImage) {
+				ImGui::BeginDisabled();
+				ImGui::ImageButton(ws->theme()->iconRef()->pointer(rnd), ImVec2(unitSize, unitSize), ImColor(IM_COL32_WHITE), false, ws->theme()->tooltip_JumpToRefTiles().c_str());
+				ImGui::EndDisabled();
+			} else {
+				if (ImGui::ImageButton(ws->theme()->iconRef()->pointer(rnd), ImVec2(unitSize, unitSize), ImColor(IM_COL32_WHITE), false, ws->theme()->tooltip_JumpToRefTiles().c_str())) {
+					_ref.resolving = true;
+				}
 			}
 			if (ImGui::IsItemHovered()) {
 				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -2213,6 +2278,8 @@ private:
 	}
 
 	bool shortcuts(Window* wnd, Renderer* rnd, Workspace* ws) {
+		// TODO: AS IMAGE
+
 		if (_ref.resolving) {
 			const Editing::Shortcut esc(SDL_SCANCODE_ESCAPE);
 			if (esc.pressed())
@@ -2600,6 +2667,55 @@ private:
 			_estimated.filled = true;
 		}
 	}
+	void refreshStatus(Window*, Renderer*, Workspace* ws, const Editing::Brush* cursor /* nullable */) {
+		if (!_page.filled) {
+			_page.text = ws->theme()->status_Pg() + " " + Text::toPageNumber(_index);
+			_page.filled = true;
+		}
+		if (cursor && _asImage.status.cursor != *cursor) {
+			_asImage.status.cursor = *cursor;
+
+			if (_asImage.status.cursor.position.x == -1 || _asImage.status.cursor.position.y == -1) {
+				_asImage.status.text = " " + ws->theme()->status_Sz();
+				_asImage.status.text += " ";
+				_asImage.status.text += Text::toString(object()->width());
+				_asImage.status.text += "x";
+				_asImage.status.text += Text::toString(object()->height());
+
+				_asImage.status.text += " " + ws->theme()->status_Tls();
+				_asImage.status.text += " ";
+				_asImage.status.text += Text::toString(object()->width() / GBBASIC_TILE_SIZE);
+				_asImage.status.text += "x";
+				_asImage.status.text += Text::toString(object()->height() / GBBASIC_TILE_SIZE);
+			} else {
+				_asImage.status.text = " " + ws->theme()->status_Pos();
+				_asImage.status.text += " ";
+				_asImage.status.text += Text::toString(_asImage.status.cursor.position.x);
+				_asImage.status.text += ",";
+				_asImage.status.text += Text::toString(_asImage.status.cursor.position.y);
+
+				const int x = _asImage.status.cursor.position.x / GBBASIC_TILE_SIZE;
+				const int y = _asImage.status.cursor.position.y / GBBASIC_TILE_SIZE;
+				_asImage.status.text += " " + ws->theme()->status_Idx();
+				_asImage.status.text += " ";
+				_asImage.status.text += Text::toString(x + y * object()->width() / GBBASIC_TILE_SIZE);
+			}
+		}
+		if (!_estimated.filled) {
+			_estimated.text = " " + Text::toScaledBytes(entry()->estimateFinalByteCount());
+			_estimated.filled = true;
+		}
+	}
+	void refreshStatus(Window*, Renderer*, Workspace* ws) {
+		if (!_page.filled) {
+			_page.text = ws->theme()->status_Pg() + " " + Text::toPageNumber(_index);
+			_page.filled = true;
+		}
+		if (!_estimated.filled) {
+			_estimated.text = " " + Text::toScaledBytes(entry()->estimateFinalByteCount());
+			_estimated.filled = true;
+		}
+	}
 	void renderStatus(Window* wnd, Renderer* rnd, Workspace* ws, float width, float height, bool actived) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -2673,7 +2789,10 @@ private:
 			ImGui::SameLine();
 			ImGui::TextUnformatted(ws->theme()->status_RefIsMissing());
 		} else {
-			ImGui::TextUnformatted(_status.text);
+			if (isEditingAsImage())
+				ImGui::TextUnformatted(_asImage.status.text);
+			else
+				ImGui::TextUnformatted(_status.text);
 			ImGui::SameLine();
 			ImGui::TextUnformatted(_estimated.text);
 			ImGui::SameLine();
@@ -2959,7 +3078,7 @@ private:
 					ws->bubble(ws->theme()->dialogPrompt_ExportedCode(), nullptr);
 				};
 
-				if (entry() && entry()->editAsImage) {
+				if (isEditingAsImage()) {
 					do {
 						if (_transfer.filled) {
 							serialize();
@@ -3284,7 +3403,10 @@ private:
 		}
 		_ref.byteTooltip.clear();
 		_status.clear();
-		refreshStatus(wnd, rnd, ws, &_cursor);
+		if (isEditingAsImage())
+			refreshStatus(wnd, rnd, ws, &_asImage.cursor);
+		else
+			refreshStatus(wnd, rnd, ws, &_cursor);
 	}
 	void toggleLayer(Window*, Renderer*, Workspace*, int layer, bool enabled) {
 		if (layer == ASSETS_MAP_GRAPHICS_LAYER) {
@@ -3782,14 +3904,14 @@ private:
 			nullptr
 		);
 
-		if (entry()->editAsImage)
+		if (isEditingAsImage())
 			_debounce.modified();
 	}
 	void paintToolUp(Renderer*) {
 		if (!_commands->empty())
 			_commands->back()->redo(currentLayer());
 
-		if (entry()->editAsImage)
+		if (isEditingAsImage())
 			_debounce.modified();
 
 		destroyOverlay();
@@ -3810,6 +3932,11 @@ private:
 		Map::Ptr &layer = _tools.layer == ASSETS_MAP_GRAPHICS_LAYER ? object() : attributes();
 
 		return layer;
+	}
+	bool isEditingAsImage(void) const {
+		const bool result = entry() && entry()->editAsImage;
+
+		return result;
 	}
 	void touchAsImage(void) {
 		if (!entry())
@@ -4303,7 +4430,7 @@ private:
 		if (_transfer.filled)
 			return;
 
-		if (!entry()->editAsImage) {
+		if (!isEditingAsImage()) {
 			_transfer.filled = true;
 
 			return;
@@ -4329,7 +4456,7 @@ private:
 		if (!entry())
 			return false;
 
-		if (!entry()->editAsImage) {
+		if (!isEditingAsImage()) {
 			_transfer.filled = true;
 
 			return true;
@@ -4355,7 +4482,7 @@ private:
 		if (!entry())
 			return false;
 
-		if (!entry()->editAsImage) {
+		if (!isEditingAsImage()) {
 			_transfer.filled = true;
 
 			return true;
@@ -4404,6 +4531,17 @@ private:
 		);
 
 		return true;
+	}
+	void commitEditRecordsAsImage(void) {
+		// TODO: AS IMAGE
+	}
+
+	void activeLayerChanged(int layer) {
+		if (!isEditingAsImage())
+			return;
+
+		if (layer != ASSETS_MAP_GRAPHICS_LAYER)
+			commitEditRecordsAsImage();
 	}
 	void editAsImageChanged(bool editAsImage) {
 		if (!editAsImage) {
@@ -4460,7 +4598,7 @@ private:
 		};
 
 		// Compile.
-		if (entry() && entry()->editAsImage) {
+		if (isEditingAsImage()) {
 			// Async.
 			ImGui::WaitingPopupBox::TimeoutHandler timeout(
 				[ws, this, compile] (void) -> void {

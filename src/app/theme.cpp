@@ -1357,19 +1357,28 @@ bool Theme::open(class Renderer* rnd) {
 		"  * Editing by tiles\n"
 		"  * Directly accessing tiled data"
 	);
+	tooltipMap_EditAsImageWithEditingRecordsTips(
+		"Exiting this mode will merge and commit the\n"
+		"edit-as-image changes into the tile-based data"
+	);
 	tooltipMap_Info(
 		"{0} tiles\n"
 		"{1} active {2}"
 	);
 	tooltipMap_InfoLayer("layer");
 	tooltipMap_InfoLayers("layers");
+	tooltipMap_Layers("(Ctrl+Shift+1/2)");
+	tooltipMap_LayersWithEditingRecordsTips(
+		"Switching to other layers will merge and commit the\n"
+		"edit-as-image changes into the tile-based data"
+	);
 	tooltipMap_LocalPalette(
 		"Check to enable the local palette for:\n"
 		"  * Local palette data for this map asset\n"
 		"  * Palette operations for code export\n"
 		"  * Edit-time preview using the local palette\n"
 		"It doesn't compile into map resource, consider\n"
-		"using code export for it."
+		"using code export for it"
 	);
 	tooltipMap_Optimize(
 		"It is recommended to keep this option\n"
@@ -1377,7 +1386,7 @@ bool Theme::open(class Renderer* rnd) {
 		"i.e. by trimming unused tail tiles when\n"
 		"filling data for statements like\n"
 		"`IMAGE(...) = WITH MAP ...`,\n"
-		"otherwise all tiles will be filled."
+		"otherwise all tiles will be filled"
 	);
 	tooltipMap_StopTesting("Stop testing");
 	tooltipMap_TestMap("Test map");
