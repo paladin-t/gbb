@@ -448,7 +448,174 @@ public:
 
 namespace AsImage {
 
-// TODO: EDIT MAP AS IMAGE
+class Pencil : public Paintable::Pencil {
+public:
+	Pencil();
+	virtual ~Pencil() override;
+
+	GBBASIC_CLASS_TYPE('I', 'P', 'C', 'L')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Line : public Paintable::Line {
+public:
+	Line();
+	virtual ~Line() override;
+
+	GBBASIC_CLASS_TYPE('I', 'L', 'N', 'E')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Box : public Paintable::Box {
+public:
+	Box();
+	virtual ~Box() override;
+
+	GBBASIC_CLASS_TYPE('I', 'B', 'O', 'X')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class BoxFill : public Paintable::BoxFill {
+public:
+	BoxFill();
+	virtual ~BoxFill() override;
+
+	GBBASIC_CLASS_TYPE('I', 'B', 'X', 'F')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Ellipse : public Paintable::Ellipse {
+public:
+	Ellipse();
+	virtual ~Ellipse() override;
+
+	GBBASIC_CLASS_TYPE('I', 'L', 'P', 'S')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class EllipseFill : public Paintable::EllipseFill {
+public:
+	EllipseFill();
+	virtual ~EllipseFill() override;
+
+	GBBASIC_CLASS_TYPE('I', 'L', 'P', 'F')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Fill : public Paintable::Fill {
+public:
+	Fill();
+	virtual ~Fill() override;
+
+	GBBASIC_CLASS_TYPE('I', 'F', 'I', 'L')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Replace : public Paintable::Replace {
+public:
+	Replace();
+	virtual ~Replace() override;
+
+	GBBASIC_CLASS_TYPE('I', 'R', 'P', 'L')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Rotate : public Paintable::Rotate {
+public:
+	Rotate();
+	virtual ~Rotate() override;
+
+	GBBASIC_CLASS_TYPE('I', 'R', 'O', 'T')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Flip : public Paintable::Flip {
+public:
+	Flip();
+	virtual ~Flip() override;
+
+	GBBASIC_CLASS_TYPE('I', 'F', 'L', 'P')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Cut : public Paintable::Cut {
+public:
+	Cut();
+	virtual ~Cut() override;
+
+	GBBASIC_CLASS_TYPE('I', 'C', 'U', 'T')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Paste : public Paintable::Paste {
+public:
+	Paste();
+	virtual ~Paste() override;
+
+	GBBASIC_CLASS_TYPE('I', 'P', 'S', 'T')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Delete : public Paintable::Delete {
+public:
+	Delete();
+	virtual ~Delete() override;
+
+	GBBASIC_CLASS_TYPE('I', 'D', 'E', 'L')
+
+	virtual unsigned type(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
 
 }
 

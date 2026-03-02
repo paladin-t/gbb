@@ -568,6 +568,29 @@ public:
 		_tools.playMapTesting = std::bind(&EditorMapImpl::playMapTesting, this, wnd, rnd, ws);
 		_tools.stopMapTesting = std::bind(&EditorMapImpl::stopMapTesting, this, wnd, rnd, ws);
 
+		_asImage.initialize(
+			rnd,
+			_project,
+			[&] (void) -> Image::Ptr & {
+				Image::Ptr &img = objectAsImage();
+
+				return img;
+			},
+			[&] (void) -> Texture::Ptr & {
+				Texture::Ptr &tex = textureAsImage();
+
+				return tex;
+			},
+			_commands,
+			&_tools.painting,
+			&_tools.mouseActionButton,
+			&_tools.weighting,
+			[&] (void) -> void {
+				_transfer.texture = nullptr;
+				touchAsImage(); // Ensure the runtime resources are ready.
+			}
+		);
+
 		fprintf(stdout, "Map editor opened: #%d.\n", _index);
 	}
 	virtual void close(int /* index */) override {
@@ -578,6 +601,7 @@ public:
 		fprintf(stdout, "Map editor closed: #%d.\n", _index);
 
 		_asImage.clear();
+		_asImage.dispose();
 		_transfer.clear();
 
 		_project = nullptr;
@@ -1457,6 +1481,8 @@ private:
 		if (!object()->tiles(tiles) || !tiles.texture)
 			return;
 
+		_asImage.update();
+
 		ImGuiWindowFlags flags = ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav;
 		if (_tools.scaled) {
 			flags |= ImGuiWindowFlags_AlwaysVerticalScrollbar;
@@ -1513,7 +1539,7 @@ private:
 				}
 				width_ *= (float)(MAGNIFICATIONS[_tools.magnification]);
 
-				_painting.set(
+				_asImage.painting.set(
 					Editing::tiles(
 						rnd, ws,
 						img.get(), tex.get(),
@@ -1521,39 +1547,39 @@ private:
 						withCursor ? &cursor : nullptr, false,
 						_asImage.selection.brush.empty() ? nullptr : &_asImage.selection.brush,
 						_asImage.overlay.texture ? _asImage.overlay.texture.get() : nullptr,
-						&_tools.gridUnit, _tools.showGrids && _tools.gridsVisible,
+						&_asImage.tools.gridUnit, _tools.showGrids && _tools.gridsVisible,
 						_tools.transparentBackbroundVisible,
 						_tools.mouseActionButton,
 						nullptr
 					)
 				);
 				if (
-					_painting ||
+					_asImage.painting ||
 					_tools.painting == Editing::Tools::STAMP
 				) {
 					_asImage.cursor = cursor;
 				}
 				// TODO: refreshStatus(wnd, rnd, ws, &cursor);
 			} else {
-				_painting.set(false);
+				_asImage.painting.set(false);
 			}
 
 			if (allowMouseOperations) {
-				if (_painting.down()) {
-					if (_processors[_tools.painting].down)
-						_processors[_tools.painting].down(rnd);
+				if (_asImage.painting.down()) {
+					if (_asImage.processors[_tools.painting].down)
+						_asImage.processors[_tools.painting].down(rnd);
 				}
-				if (_painting && _painting.moved()) {
-					if (_processors[_tools.painting].move)
-						_processors[_tools.painting].move(rnd);
+				if (_asImage.painting && _asImage.painting.moved()) {
+					if (_asImage.processors[_tools.painting].move)
+						_asImage.processors[_tools.painting].move(rnd);
 				}
-				if (_painting.up()) {
-					if (_processors[_tools.painting].up)
-						_processors[_tools.painting].up(rnd);
+				if (_asImage.painting.up()) {
+					if (_asImage.processors[_tools.painting].up)
+						_asImage.processors[_tools.painting].up(rnd);
 				}
 				if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) {
-					if (_processors[_tools.painting].hover)
-						_processors[_tools.painting].hover(rnd);
+					if (_asImage.processors[_tools.painting].hover)
+						_asImage.processors[_tools.painting].hover(rnd);
 				}
 			}
 
@@ -1608,6 +1634,7 @@ private:
 		auto canUseShortcuts = [ws, this] (void) -> bool {
 			return !_tools.inputFieldFocused && ws->canUseShortcuts() && !ImGui::IsMouseDown(ImGuiMouseButton_Left);
 		};
+		bool editAsImage = entry()->editAsImage;
 
 		ImGui::PushID("@Lyr");
 		{
@@ -1656,7 +1683,6 @@ private:
 				ImGui::Dummy(ImVec2(xOffset, 0));
 				ImGui::SameLine();
 				ImGui::SetNextItemWidth(mwidth);
-				bool editAsImage = entry()->editAsImage;
 				if (ImGui::Checkbox(ws->theme()->windowMap_EditAsImage(), &editAsImage)) {
 					const int ref = entry()->ref;
 					const Project::Indices mapsRefToTheSameTiles = _project->getMapsRefToTiles(ref);
@@ -2080,7 +2106,10 @@ private:
 			break;
 		}
 
-		if (!_tools.post) {
+		if (
+			(!editAsImage && !_tools.post) ||
+			(editAsImage && !_asImage.tools.post)
+		) {
 			Editing::Tools::separate(rnd, ws, spwidth);
 			Editing::Tools::RotationsAndFlippings flipping = Editing::Tools::INVALID;
 			unsigned mask = 0xffffffff;
@@ -2213,75 +2242,89 @@ private:
 				_tools.post();
 				_tools.post = nullptr;
 			}
+			if (_asImage.tools.post) {
+				_asImage.tools.post();
+				_asImage.tools.post = nullptr;
+			}
 
 			return true;
 		}
 
 		const Editing::Shortcut shift(SDL_SCANCODE_UNKNOWN, false, true, false);
 		const Editing::Shortcut alt(SDL_SCANCODE_UNKNOWN, false, false, true);
+		const bool editAsImage = entry()->editAsImage;
+		PostHandler* post = nullptr;
+		Editing::Tools::PaintableTools* postType = nullptr;
+		if (editAsImage) {
+			post = &_tools.post;
+			postType = &_tools.postType;
+		} else {
+			post = &_asImage.tools.post;
+			postType = &_asImage.tools.postType;
+		}
 		if (shift.pressed(false) && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-			if (!_tools.post) {
+			if (!(*post)) {
 				const Editing::Tools::PaintableTools prevTool = _tools.painting;
 
 				_tools.painting = Editing::Tools::HAND;
 
-				_tools.post = [&, prevTool] (void) -> void {
+				*post = [&, prevTool] (void) -> void {
 					if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
 						_tools.painting = prevTool;
 				};
-				_tools.postType = Editing::Tools::HAND;
+				*postType = Editing::Tools::HAND;
 			}
 
 			return true;
 		} else if (ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {
-			if (!_tools.post) {
+			if (!(*post)) {
 				const Editing::Tools::PaintableTools prevTool = _tools.painting;
 
 				_tools.painting = Editing::Tools::HAND;
 
 				_tools.mouseActionButton = ImGuiMouseButton_Middle;
 
-				_tools.post = [&, prevTool] (void) -> void {
+				*post = [&, prevTool] (void) -> void {
 					if (!ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {
 						_tools.painting = prevTool;
 						_tools.mouseActionButton = ImGuiMouseButton_Left;
 					}
 				};
-				_tools.postType = Editing::Tools::HAND;
+				*postType = Editing::Tools::HAND;
 			}
 
 			return true;
 		} else if (ImGui::IsMouseReleased(ImGuiMouseButton_Middle)) {
-			if (_tools.post && _tools.postType == Editing::Tools::HAND) {
-				_tools.post();
-				_tools.post = nullptr;
+			if (*post && *postType == Editing::Tools::HAND) {
+				(*post)();
+				*post = nullptr;
 
 				return false;
 			}
 		} else if (shift.released()) {
-			if (_tools.post && _tools.postType == Editing::Tools::HAND) {
-				_tools.post();
-				_tools.post = nullptr;
+			if (*post && *postType == Editing::Tools::HAND) {
+				(*post)();
+				*post = nullptr;
 			}
 		}
 		if (alt.pressed(false)) {
-			if (!_tools.post) {
+			if (!(*post)) {
 				const Editing::Tools::PaintableTools prevTool = _tools.painting;
 
 				_tools.painting = Editing::Tools::EYEDROPPER;
 
-				_tools.post = [&, prevTool] (void) -> void {
+				*post = [&, prevTool] (void) -> void {
 					if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
 						_tools.painting = prevTool;
 				};
-				_tools.postType = Editing::Tools::EYEDROPPER;
+				*postType = Editing::Tools::EYEDROPPER;
 			}
 
 			return true;
 		} else if (alt.released()) {
-			if (_tools.post && _tools.postType == Editing::Tools::EYEDROPPER) {
-				_tools.post();
-				_tools.post = nullptr;
+			if (*post && *postType == Editing::Tools::EYEDROPPER) {
+				(*post)();
+				*post = nullptr;
 			}
 		}
 
