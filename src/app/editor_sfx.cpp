@@ -531,8 +531,12 @@ public:
 			}
 
 			return Variant(true);
-		case CLEAR_UNDO_REDO_RECORDS:
-			_commands->clear();
+		case CLEAR_UNDO_REDO_RECORDS: {
+				const bool deep = unpack<bool>(argc, argv, 0, true);
+				(void)deep;
+
+				_commands->clear();
+			}
 
 			return Variant(true);
 		case IMPORT:

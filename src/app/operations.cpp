@@ -529,7 +529,7 @@ promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspac
 								Editable* editor = entry->editor;
 								if (editor) {
 									editor->post(Editable::UPDATE_REF_INDEX, ws, (Variant::Int)entry->ref);
-									editor->post(Editable::CLEAR_UNDO_REDO_RECORDS);
+									editor->post(Editable::CLEAR_UNDO_REDO_RECORDS, true);
 								}
 							}
 						}
@@ -570,7 +570,7 @@ promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspac
 								Editable* editor = entry->editor;
 								if (editor) {
 									editor->post(Editable::UPDATE_REF_INDEX, ws, (Variant::Int)entry->refMap);
-									editor->post(Editable::CLEAR_UNDO_REDO_RECORDS);
+									editor->post(Editable::CLEAR_UNDO_REDO_RECORDS, true);
 								}
 							}
 						}
@@ -631,7 +631,7 @@ promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspac
 							SfxAssets::Entry* entry = prj->getSfx(i);
 							Editable* editor = entry->editor;
 							if (editor) {
-								editor->post(Editable::CLEAR_UNDO_REDO_RECORDS);
+								editor->post(Editable::CLEAR_UNDO_REDO_RECORDS, true);
 							}
 						}
 					} while (false);
@@ -686,7 +686,7 @@ promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspac
 								Editable* editor = entry->editor;
 								if (editor) {
 									editor->post(Editable::UPDATE_REF_INDEX, ws, (Variant::Int)entry->refMap);
-									editor->post(Editable::CLEAR_UNDO_REDO_RECORDS);
+									editor->post(Editable::CLEAR_UNDO_REDO_RECORDS, true);
 								}
 							}
 						}

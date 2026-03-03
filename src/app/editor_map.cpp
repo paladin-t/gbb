@@ -588,7 +588,12 @@ public:
 			&_tools.weighting,
 			&_debounce,
 			[&] (void) -> void {
+				_transfer.image = nullptr;
 				_transfer.texture = nullptr;
+			},
+			[&] (void) -> void {
+				_transfer.texture = nullptr;
+
 				touchAsImage(); // Ensure the runtime resources are ready.
 			},
 			std::bind(&EditorMapImpl::invalidateTiled, this)
@@ -634,9 +639,9 @@ public:
 		return _index;
 	}
 
-	virtual void enter(class Workspace* ws) override {
+	virtual void enter(class Workspace* /* ws */) override {
 		if (isEditingAsImage()) {
-			const int ref = entry()->ref;
+			/*const int ref = entry()->ref;
 			const Project::Indices mapsRefToTheSameTiles = _project->getMapsRefToTiles(ref);
 			if (mapsRefToTheSameTiles.size() > 1) {
 				ImGui::MessagePopupBox::ConfirmedHandler confirm(
@@ -667,7 +672,7 @@ public:
 					nullptr,
 					nullptr
 				);
-			}
+			}*/
 		} else {
 			_transfer.filled = true;
 		}
@@ -677,6 +682,17 @@ public:
 
 		if (isEditingAsImage()) {
 			if (!_transfer.filled) {
+				ws->waitingPopupBox(
+					true, ws->theme()->dialogPrompt_Transferring(),
+					true, ImGui::WaitingPopupBox::TimeoutHandler(
+						[ws] (void) -> void {
+							ws->popupBox(nullptr);
+						},
+						nullptr
+					),
+					true
+				);
+
 				transferImageToTiled(ws);
 
 				_transfer.generated.wait();
@@ -1034,6 +1050,13 @@ public:
 	}
 
 	virtual Variant post(unsigned msg, int argc, const Variant* argv) override {
+		if (isEditingAsImage()) {
+			bool continue_ = true;
+			const Variant ret = _asImage.post(msg, argc, argv, &continue_);
+			if (!continue_)
+				return ret;
+		}
+
 		switch (msg) {
 		case RESIZE: {
 				const Variant::Int width = unpack<Variant::Int>(argc, argv, 0, 0);
@@ -1105,8 +1128,12 @@ public:
 			}
 
 			return Variant(true);
-		case CLEAR_UNDO_REDO_RECORDS:
-			_commands->clear();
+		case CLEAR_UNDO_REDO_RECORDS: {
+				const bool deep = unpack<bool>(argc, argv, 0, true);
+
+				if (deep)
+					_commands->clear();
+			}
 
 			return Variant(true);
 		default: // Do nothing.
@@ -1636,7 +1663,7 @@ private:
 
 			statusBarActived |= ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
 
-			// TODO: context(wnd, rnd, ws);
+			context(wnd, rnd, ws);
 		}
 		ImGui::EndChild();
 
@@ -2225,6 +2252,8 @@ private:
 		Editing::Tools::separate(rnd, ws, spwidth);
 		const int width_ = object()->width();
 		const int height_ = object()->height();
+		if (editAsImage)
+			ImGui::BeginDisabled();
 		if (
 			Editing::Tools::resizable(
 				rnd, ws,
@@ -2243,6 +2272,8 @@ private:
 			if (_size.width != width_ || _size.height != height_)
 				post(RESIZE, _size.width, _size.height);
 		}
+		if (editAsImage)
+			ImGui::EndDisabled();
 		inputFieldFocused |= inputFieldFocused_;
 
 		Editing::Tools::separate(rnd, ws, spwidth);
@@ -2263,16 +2294,18 @@ private:
 			_refresh(cmd);
 		}
 
-		Editing::Tools::separate(rnd, ws, spwidth);
-		ImGui::Dummy(ImVec2(xOffset, 0));
-		ImGui::SameLine();
-		if (ImGui::Button(ws->theme()->windowMap_CreateScene(), ImVec2(mwidth, 0))) {
-			ws->addScenePageFrom(wnd, rnd, _index);
-		}
-		if (ImGui::IsItemHovered()) {
-			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+		if (!editAsImage) {
+			Editing::Tools::separate(rnd, ws, spwidth);
+			ImGui::Dummy(ImVec2(xOffset, 0));
+			ImGui::SameLine();
+			if (ImGui::Button(ws->theme()->windowMap_CreateScene(), ImVec2(mwidth, 0))) {
+				ws->addScenePageFrom(wnd, rnd, _index);
+			}
+			if (ImGui::IsItemHovered()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(ws->theme()->tooltipMap_CreateASceneReferencingThisMapPage());
+				ImGui::SetTooltip(ws->theme()->tooltipMap_CreateASceneReferencingThisMapPage());
+			}
 		}
 
 		_tools.inputFieldFocused = inputFieldFocused;
@@ -2281,8 +2314,6 @@ private:
 	}
 
 	bool shortcuts(Window* wnd, Renderer* rnd, Workspace* ws) {
-		// TODO: AS IMAGE
-
 		if (_ref.resolving) {
 			const Editing::Shortcut esc(SDL_SCANCODE_ESCAPE);
 			if (esc.pressed())
@@ -2440,8 +2471,6 @@ private:
 	}
 
 	void context(Window*, Renderer* rnd, Workspace* ws) {
-		// TODO: AS IMAGE
-
 		switch (_tools.layer) {
 		case ASSETS_MAP_GRAPHICS_LAYER: {
 				ImGuiStyle &style = ImGui::GetStyle();
@@ -3102,7 +3131,7 @@ private:
 							nullptr
 						);
 						ws->waitingPopupBox(
-							true, ws->theme()->dialogPrompt_Compacting(),
+							true, ws->theme()->dialogPrompt_Transferring(),
 							true, timeout,
 							true
 						);
@@ -3527,6 +3556,12 @@ private:
 	}
 
 	void flip(Editing::Tools::RotationsAndFlippings f) {
+		if (isEditingAsImage()) {
+			_asImage.flip(f);
+
+			return;
+		}
+
 		if (!_binding.getCel || !_binding.setCel)
 			return;
 
@@ -4425,7 +4460,7 @@ private:
 			nullptr
 		);
 		ws->waitingPopupBox(
-			true, ws->theme()->dialogPrompt_Compacting(),
+			true, ws->theme()->dialogPrompt_Transferring(),
 			true, timeout,
 			true
 		);
@@ -4521,19 +4556,14 @@ private:
 				std::placeholders::_1, data
 			),
 			std::bind(
-				[this] (WorkTask* /* task */, uintptr_t /* ptr */, Data* /* data */) -> void { // On main thread.
-					// TODO: EDIT MAP AS IMAGE
-					// TRANSFER
-				},
-				std::placeholders::_1, std::placeholders::_2, data
-			),
-			std::bind(
 				[this, ws] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
 					TilesAssets::Entry &tiles = *data->tiles;
 					MapAssets::Entry &map = *data->map;
 					const int ref = entry()->ref;
 
 					do {
+						VariableGuard<decltype(_asImage.shared.transferring)> guardTransferring(&_asImage.shared.transferring, _asImage.shared.transferring, true);
+
 						_refresh(enqueue<Commands::Map::BeginGroup>()
 							->with("Import")
 							->exec(object(), Variant((void*)entry()), attributes()));
@@ -4578,7 +4608,11 @@ private:
 					_transfer.filled = true;
 
 					_estimated.filled = false;
-
+				},
+				std::placeholders::_1, std::placeholders::_2, data
+			),
+			std::bind(
+				[this] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
 					delete data;
 				},
 				std::placeholders::_1, std::placeholders::_2, data
@@ -4593,18 +4627,42 @@ private:
 			return;
 
 		if (layer != ASSETS_MAP_GRAPHICS_LAYER) {
-			if (!_transfer.filled)
+			if (!_transfer.filled) {
+				ws->waitingPopupBox(
+					true, ws->theme()->dialogPrompt_Transferring(),
+					true, ImGui::WaitingPopupBox::TimeoutHandler(
+						[ws] (void) -> void {
+							ws->popupBox(nullptr);
+						},
+						nullptr
+					),
+					true
+				);
+
 				transferImageToTiled(ws);
 
-			_transfer.generated.wait();
+				_transfer.generated.wait();
+			}
 		}
 	}
 	void editAsImageChanged(Workspace* ws, bool editAsImage) {
 		if (!editAsImage) {
-			if (!_transfer.filled)
+			if (!_transfer.filled) {
+				ws->waitingPopupBox(
+					true, ws->theme()->dialogPrompt_Transferring(),
+					true, ImGui::WaitingPopupBox::TimeoutHandler(
+						[ws] (void) -> void {
+							ws->popupBox(nullptr);
+						},
+						nullptr
+					),
+					true
+				);
+
 				transferImageToTiled(ws);
 
-			_transfer.generated.wait();
+				_transfer.generated.wait();
+			}
 
 			_transfer.reset();
 
@@ -4672,10 +4730,11 @@ private:
 			// Async.
 			ImGui::WaitingPopupBox::TimeoutHandler timeout(
 				[ws, this, compile] (void) -> void {
-					if (!_transfer.filled)
+					if (!_transfer.filled) {
 						transferImageToTiled(ws);
 
-					_transfer.generated.wait();
+						_transfer.generated.wait();
+					}
 
 					compile();
 
@@ -4684,7 +4743,7 @@ private:
 				nullptr
 			);
 			ws->waitingPopupBox(
-				true, ws->theme()->dialogPrompt_Compacting(),
+				true, ws->theme()->dialogPrompt_Transferring(),
 				true, timeout,
 				true
 			);

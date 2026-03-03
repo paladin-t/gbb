@@ -728,6 +728,8 @@ public:
 		_project->toPollEditor(true);
 
 		entry()->increaseRevision();
+
+		modified();
 	}
 	virtual void undo(BaseAssets::Entry*) override {
 		const Command* cmd = _commands->undoable();
@@ -746,6 +748,8 @@ public:
 		_project->toPollEditor(true);
 
 		entry()->increaseRevision();
+
+		modified();
 	}
 
 	virtual Variant post(unsigned msg, int argc, const Variant* argv) override {
@@ -2222,6 +2226,19 @@ private:
 		}
 	}
 
+	void modified(void) {
+		const int n = _project->mapPageCount();
+		for (int i = 0; i < n; ++i) {
+			MapAssets::Entry* entry = _project->getMap(i);
+			if (entry->ref != _index)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (editor)
+				editor->post(Editable::CLEAR_UNDO_REDO_RECORDS, false);
+		}
+	}
+
 	void createOverlay(Renderer* rnd) {
 		_overlay.blank = Image::Ptr(Image::create());
 		_overlay.blank->fromBlank(object()->width(), object()->height(), 0);
@@ -2243,6 +2260,8 @@ private:
 		_project->toPollEditor(true);
 
 		entry()->increaseRevision();
+
+		modified();
 
 		return result;
 	}

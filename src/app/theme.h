@@ -472,6 +472,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Tiles)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_TilesPage)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_TooManyColors)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Transferring)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Trim)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_UninstalledKernel)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_UnsupportedOperation)

@@ -1164,6 +1164,8 @@ public:
 		_refresh(cmd);
 
 		_project->toPollEditor(true);
+
+		modified();
 	}
 	virtual void undo(BaseAssets::Entry*) override {
 		const Command* cmd = _commands->undoable();
@@ -1199,6 +1201,8 @@ public:
 		_refresh(cmd);
 
 		_project->toPollEditor(true);
+
+		modified();
 	}
 
 	virtual Variant post(unsigned msg, int argc, const Variant* argv) override {
@@ -1267,8 +1271,12 @@ public:
 			}
 
 			return Variant(true);
-		case CLEAR_UNDO_REDO_RECORDS:
-			_commands->clear();
+		case CLEAR_UNDO_REDO_RECORDS: {
+				const bool deep = unpack<bool>(argc, argv, 0, true);
+				(void)deep;
+
+				_commands->clear();
+			}
 
 			return Variant(true);
 		default: // Do nothing.
@@ -4759,6 +4767,16 @@ private:
 		}
 	}
 
+	void modified(void) {
+		const int refMap = entry()->refMap;
+		const MapAssets::Entry* mapEntry = entry()->getMap(refMap);
+		if (mapEntry) {
+			Editable* editor = mapEntry->editor;
+			if (editor)
+				editor->post(Editable::CLEAR_UNDO_REDO_RECORDS, false);
+		}
+	}
+
 	void createOverlay(void) {
 		_overlay = std::bind(&EditorSceneImpl::getOverlayCel, this, std::placeholders::_1);
 	}
@@ -4771,6 +4789,8 @@ private:
 		T* result = _commands->enqueue<T>();
 
 		_project->toPollEditor(true);
+
+		modified();
 
 		return result;
 	}

@@ -11,7 +11,7 @@
 ** Map editor as image
 */
 
-struct EditorMapAsImage {
+struct EditorMapAsImage : public Dispatchable {
 private:
 	typedef std::function<bool(const Math::Vec2i &, Editing::Dot &)> PixelGetter;
 	typedef std::function<bool(const Math::Vec2i &, const Editing::Dot &)> PixelSetter;
@@ -40,6 +40,7 @@ private:
 	typedef std::function<Image::Ptr &(void)> ObjectGetter;
 	typedef std::function<Texture::Ptr &(void)> TextureGetter;
 
+	typedef std::function<void(void)> GraphicsReloader;
 	typedef std::function<void(void)> TextureReloader;
 
 	typedef std::function<void(void)> TiledInvalidator;
@@ -55,8 +56,11 @@ public:
 		int* mouseActionButton = nullptr;
 		int* weighting = nullptr;
 		Editor::Debounce* debounce = nullptr;
+		GraphicsReloader reloadGraphics = nullptr;
 		TextureReloader reloadTexture = nullptr;
 		TiledInvalidator invalidateTiled = nullptr;
+
+		bool transferring = false;
 	} shared;
 
 	CommandQueue* commands = nullptr;
@@ -292,7 +296,7 @@ public:
 		int* mouseActBtn,
 		int* weighting,
 		Editor::Debounce* debounce,
-		TextureReloader reloadTex,
+		GraphicsReloader reloadGfx, TextureReloader reloadTex,
 		TiledInvalidator invalidateTiled
 	) {
 		if (initialized)
@@ -311,6 +315,8 @@ public:
 		shared.weighting = weighting;
 
 		shared.debounce = debounce;
+
+		shared.reloadGraphics = reloadGfx;
 
 		shared.reloadTexture = reloadTex;
 
@@ -360,9 +366,13 @@ public:
 
 		shared.debounce = nullptr;
 
+		shared.reloadGraphics = nullptr;
+
 		shared.reloadTexture = nullptr;
 
 		shared.invalidateTiled = nullptr;
+
+		shared.transferring = false;
 
 		refresher = nullptr;
 
@@ -619,8 +629,109 @@ public:
 		shared.project->toPollEditor(true);
 	}
 
+	virtual Variant post(unsigned msg, int argc, const Variant* argv) override {
+		switch (msg) {
+		case Editable::SELECT_ALL:
+			selection.brush.position = Math::Vec2i(0, 0);
+			selection.brush.size = Math::Vec2i(shared.getObject()->width(), shared.getObject()->height());
+
+			return Variant(true);
+		case Editable::CLEAR_UNDO_REDO_RECORDS: {
+				if (shared.transferring)
+					return Variant(true);
+
+				const bool deep = unpack<bool>(argc, argv, 0, true);
+
+				commands->clear();
+
+				if (!deep)
+					shared.reloadGraphics();
+			}
+
+			return Variant(true);
+		default: // Do nothing.
+			break;
+		}
+
+		return Variant(false);
+	}
+	Variant post(unsigned msg, int argc, const Variant* argv, bool* continue_) {
+		*continue_ = true;
+
+		Variant ret(false);
+		switch (msg) {
+		case Editable::SELECT_ALL:
+			ret = post(msg, argc, argv);
+
+			*continue_ = false;
+
+			break;
+		default:
+			ret = post(msg, argc, argv);
+
+			break;
+		}
+
+		return ret;
+	}
+
 	void update(void) {
 		// Do nothing.
+	}
+
+	void flip(Editing::Tools::RotationsAndFlippings f) {
+		if (!binding.getPixel || !binding.setPixel)
+			return;
+
+		Math::Recti frame;
+		const int size = area(&frame);
+		if (size == 0)
+			return;
+
+		switch (f) {
+		case Editing::Tools::ROTATE_CLOCKWISE:
+			enqueue<Commands::Map::AsImage::Rotate>()
+				->with(binding.getPixel, binding.setPixel)
+				->with(1)
+				->with(frame)
+				->exec(shared.getObject());
+
+			break;
+		case Editing::Tools::ROTATE_ANTICLOCKWISE:
+			enqueue<Commands::Map::AsImage::Rotate>()
+				->with(binding.getPixel, binding.setPixel)
+				->with(-1)
+				->with(frame)
+				->exec(shared.getObject());
+
+			break;
+		case Editing::Tools::HALF_TURN:
+			enqueue<Commands::Map::AsImage::Rotate>()
+				->with(binding.getPixel, binding.setPixel)
+				->with(2)
+				->with(frame)
+				->exec(shared.getObject());
+
+			break;
+		case Editing::Tools::FLIP_VERTICALLY:
+			enqueue<Commands::Map::AsImage::Flip>()
+				->with(binding.getPixel, binding.setPixel)
+				->with(1)
+				->with(frame)
+				->exec(shared.getObject());
+
+			break;
+		case Editing::Tools::FLIP_HORIZONTALLY:
+			enqueue<Commands::Map::AsImage::Flip>()
+				->with(binding.getPixel, binding.setPixel)
+				->with(0)
+				->with(frame)
+				->exec(shared.getObject());
+
+			break;
+		default: // Do nothing.
+			break;
+		}
 	}
 
 private:

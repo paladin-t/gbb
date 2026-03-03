@@ -695,6 +695,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Tiles("Tiles:");
 	dialogPrompt_TilesPage("Tiles page");
 	dialogPrompt_TooManyColors("Too many colors");
+	dialogPrompt_Transferring("Transferring...");
 	dialogPrompt_Trim("Trim");
 	dialogPrompt_UninstalledKernel("Uninstalled kernel \"{0}\".");
 	dialogPrompt_UnsupportedOperation("Unsupported operation.");
