@@ -4461,7 +4461,7 @@ bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets
 
 bool MapAssets::parseImage(
 	TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
-	const Image* val, bool allowFlip,
+	const Image* val, bool allowFlip, bool fillLocalPalette,
 	bool allowReuse,
 	PaletteAssets::Getter getplt,
 	TilesAssets::Getter gettls, int tilesPageCount,
@@ -4523,6 +4523,9 @@ bool MapAssets::parseImage(
 
 	// TODO: EDIT MAP AS IMAGE
 	// CALCULATE PALETTE
+	if (fillLocalPalette) {
+		// TODO
+	}
 
 	// Slice the image.
 	Slice::Array slices;
@@ -4662,6 +4665,8 @@ bool MapAssets::parseImage(
 	map_.data = Map::Ptr(Map::create(&tiles, true));
 	map_.data->resize(mw, mh);
 
+	// TODO: EDIT MAP AS IMAGE
+	// ATTRIBUTES
 	map_.hasAttributes = !!flipped;
 	map_.attributes->resize(mw, mh);
 

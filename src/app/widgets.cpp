@@ -2593,6 +2593,8 @@ MapResolverPopupBox::MapResolverPopupBox(
 	const char* browseTxt,
 	bool allowFlip,
 	const char* allowFlipTxt, const char* allowFlipTooltipTxt,
+	bool fillLocalPalette,
+	const char* fillLocalPaletteTxt, const char* fillLocalPaletteTooltipTxt,
 	const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 	const char* confirmTxt, const char* cancelTxt,
 	const SelectedHandler &selected,
@@ -2605,6 +2607,7 @@ MapResolverPopupBox::MapResolverPopupBox(
 	_filter(filter),
 	_requireExisting(requireExisting),
 	_allowFlip(allowFlip),
+	_fillLocalPalette(fillLocalPalette),
 	_confirmedHandler(confirm), _canceledHandler(cancel),
 	_selectedHandler(selected),
 	_customHandler(custom)
@@ -2628,6 +2631,11 @@ MapResolverPopupBox::MapResolverPopupBox(
 		_allowFlipText = allowFlipTxt;
 	if (allowFlipTooltipTxt)
 		_allowFlipTooltipText = allowFlipTooltipTxt;
+
+	if (fillLocalPaletteTxt)
+		_fillLocalPaletteText = fillLocalPaletteTxt;
+	if (fillLocalPaletteTooltipTxt)
+		_fillLocalPaletteTooltipText = fillLocalPaletteTooltipTxt;
 
 	if (confirmTxt)
 		_confirmText = confirmTxt;
@@ -2783,6 +2791,13 @@ void MapResolverPopupBox::update(Workspace* ws) {
 				SetTooltip(_allowFlipTooltipText);
 			}
 
+			Checkbox(_fillLocalPaletteText, &_fillLocalPalette);
+			if (!_fillLocalPaletteTooltipText.empty() && IsItemHovered()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				SetTooltip(_fillLocalPaletteTooltipText);
+			}
+
 			const float sx = style.ItemSpacing.x;
 			style.ItemSpacing.x = 0;
 			SameLine();
@@ -2843,9 +2858,9 @@ void MapResolverPopupBox::update(Workspace* ws) {
 			ws->delay([path] (void) -> void { FileMonitor::unuse(path); }, path);
 
 			if (_withTilesIndex)
-				_confirmedHandler(&_index, nullptr, false);
+				_confirmedHandler(&_index, nullptr, false, false);
 			else
-				_confirmedHandler(nullptr, _path.c_str(), _allowFlip);
+				_confirmedHandler(nullptr, _path.c_str(), _allowFlip, _fillLocalPalette);
 
 			return;
 		}

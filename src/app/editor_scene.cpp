@@ -2395,7 +2395,7 @@ public:
 							inputFieldFocused |= inputFieldFocused_;
 						}
 
-						ImGui::NewLine(1.0f);
+						ImGui::NewLine(1);
 						bits(disabled);
 
 						const char* tooltipOps[4] = {
@@ -2404,7 +2404,7 @@ public:
 							ws->theme()->tooltip_BitwiseOr().c_str(),
 							ws->theme()->tooltip_BitwiseXor().c_str()
 						};
-						ImGui::NewLine(1.0f);
+						ImGui::NewLine(1);
 						Editing::Tools::bitwise(
 							rnd, ws,
 							&_tools.bitwiseOperations,
@@ -2412,7 +2412,7 @@ public:
 							disabled,
 							ws->theme()->tooltip_BitwiseOperations().c_str(), tooltipOps
 						);
-						ImGui::NewLine(1.0f);
+						ImGui::NewLine(1);
 					}
 
 					break;
@@ -2510,7 +2510,7 @@ public:
 							inputFieldFocused |= inputFieldFocused_;
 						}
 
-						ImGui::NewLine(1.0f);
+						ImGui::NewLine(1);
 						bits(disabled);
 
 						const char* tooltipOps[4] = {
@@ -2519,7 +2519,7 @@ public:
 							ws->theme()->tooltip_BitwiseOr().c_str(),
 							ws->theme()->tooltip_BitwiseXor().c_str()
 						};
-						ImGui::NewLine(1.0f);
+						ImGui::NewLine(1);
 						Editing::Tools::bitwise(
 							rnd, ws,
 							&_tools.bitwiseOperations,
@@ -2527,7 +2527,7 @@ public:
 							disabled,
 							ws->theme()->tooltip_BitwiseOperations().c_str(), tooltipOps
 						);
-						ImGui::NewLine(1.0f);
+						ImGui::NewLine(1);
 					}
 
 					break;
@@ -4768,6 +4768,10 @@ private:
 	}
 
 	void modified(void) {
+		const bool forMap = _tools.layer == ASSETS_SCENE_GRAPHICS_LAYER || _tools.layer == ASSETS_SCENE_ATTRIBUTES_LAYER;
+		if (!forMap)
+			return;
+
 		const int refMap = entry()->refMap;
 		const MapAssets::Entry* mapEntry = entry()->getMap(refMap);
 		if (mapEntry) {

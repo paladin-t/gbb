@@ -661,7 +661,7 @@ public:
 					nullptr
 				);
 				ws->messagePopupBox(
-					ws->theme()->dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetEditingAsAnImageMayBreakOtherMapsContinueAnyway(),
+					ws->theme()->dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetContinueAnyway(),
 					confirm,
 					deny,
 					nullptr,
@@ -1200,7 +1200,7 @@ public:
 			ws->skipFrame(); // Skip a frame to avoid glitch.
 
 			if (isEditingAsImage()) {
-				_transfer.reset();
+				//_transfer.reset();
 
 				_debounce.modified();
 			} else {
@@ -1707,6 +1707,7 @@ private:
 			return !_tools.inputFieldFocused && ws->canUseShortcuts() && !ImGui::IsMouseDown(ImGuiMouseButton_Left);
 		};
 		bool editAsImage = entry()->editAsImage;
+		bool localPaletteEnabled = entry()->localPaletteEnabled;
 
 		ImGui::PushID("@Lyr");
 		{
@@ -1784,7 +1785,7 @@ private:
 							nullptr
 						);
 						ws->messagePopupBox(
-							ws->theme()->dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetEditingAsAnImageMayBreakOtherMapsContinueAnyway(),
+							ws->theme()->dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetContinueAnyway(),
 							confirm,
 							deny,
 							nullptr,
@@ -1817,7 +1818,7 @@ private:
 				ImGui::Dummy(ImVec2(xOffset, 0));
 				ImGui::SameLine();
 				ImGui::SetNextItemWidth(mwidth);
-				bool localPaletteEnabled = entry()->localPaletteEnabled;
+				localPaletteEnabled = entry()->localPaletteEnabled;
 				PaletteAssets::Array localPalette = entry()->localPalette;
 				const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
 				if ((int)localPalette.size() != n) {
@@ -1889,6 +1890,20 @@ private:
 			}
 			if (colorPicked) {
 				_asImage.ref.fromColor(pickedColor);
+			}
+
+			if (editAsImage) {
+				ImGui::NewLine();
+				ImGui::NewLine(1);
+				if (_transfer.filled) {
+					ImGui::BeginDisabled();
+					Editing::Tools::clickable(rnd, ws, spwidth, ws->theme()->dialogPrompt_Refill().c_str());
+					ImGui::EndDisabled();
+				} else {
+					if (Editing::Tools::clickable(rnd, ws, spwidth, ws->theme()->dialogPrompt_Refill().c_str()))
+						refreshImageToTiled(ws);
+				}
+				ImGui::SameLine();
 			}
 		}
 
@@ -2139,7 +2154,7 @@ private:
 				inputFieldFocused |= inputFieldFocused_;
 			}
 
-			ImGui::NewLine(1.0f);
+			ImGui::NewLine(1);
 			bits(disabled);
 
 			const char* tooltipOps[4] = {
@@ -2148,7 +2163,7 @@ private:
 				ws->theme()->tooltip_BitwiseOr().c_str(),
 				ws->theme()->tooltip_BitwiseXor().c_str()
 			};
-			ImGui::NewLine(1.0f);
+			ImGui::NewLine(1);
 			Editing::Tools::bitwise(
 				rnd, ws,
 				&_tools.bitwiseOperations,
@@ -2156,13 +2171,17 @@ private:
 				disabled,
 				ws->theme()->tooltip_BitwiseOperations().c_str(), tooltipOps
 			);
-			ImGui::NewLine(1.0f);
+			ImGui::NewLine(1);
 		}
 
 		const unsigned mask = (_tools.layer == ASSETS_MAP_ATTRIBUTES_LAYER || asImage) ?
 			0xffffffff & ~(1 << Editing::Tools::STAMP) :
 			0xffffffff;
 		Editing::Tools::separate(rnd, ws, spwidth);
+		if (editAsImage && !localPaletteEnabled) {
+			Editing::Tools::colorable(rnd, ws, _asImage.ref.real, spwidth);
+			ImGui::NewLine(1);
+		}
 		if (Editing::Tools::paintable(rnd, ws, &_tools.painting, -1.0f, canUseShortcuts(), false, mask)) {
 			if (_tools.painting == Editing::Tools::STAMP) {
 				_processors[Editing::Tools::STAMP] = Processor{
@@ -4049,7 +4068,7 @@ private:
 		return currentLayer()->set(pos.x, pos.y, dot.indexed);
 	}
 
-	bool importFromImage(Window* wnd, Renderer* rnd, Workspace* ws, Image::Ptr img, bool allowFlip, bool createNew) {
+	bool importFromImage(Window* wnd, Renderer* rnd, Workspace* ws, Image::Ptr img, bool allowFlip, bool fillLocalPalette, bool createNew) {
 		if ((img->width() % GBBASIC_TILE_SIZE) != 0 || (img->height() % GBBASIC_TILE_SIZE) != 0) {
 			ws->bubble(ws->theme()->dialogPrompt_ResourceSizeIsNotAMultipleOf8x8(), nullptr);
 
@@ -4066,7 +4085,7 @@ private:
 		std::string error;
 		const bool loaded = MapAssets::parseImage(
 			tiles, map,
-			img.get(), allowFlip,
+			img.get(), allowFlip, fillLocalPalette,
 			false,
 			_project->paletteGetter(),
 			_project->tilesGetter(), _project->tilesPageCount(),
@@ -4161,16 +4180,16 @@ private:
 		return true;
 	}
 	bool importFromImageObject(Window* wnd, Renderer* rnd, Workspace* ws) {
-		auto import = [wnd, rnd, ws, this] (Image::Ptr img, bool allowFlip, bool createNew) -> bool {
-			return importFromImage(wnd, rnd, ws, img, allowFlip, createNew);
+		auto import = [wnd, rnd, ws, this] (Image::Ptr img, bool allowFlip, bool fillLocalPalette, bool createNew) -> bool {
+			return importFromImage(wnd, rnd, ws, img, allowFlip, fillLocalPalette, createNew);
 		};
 		auto resolve = [rnd, ws, this, import] (Image::Ptr img, bool createNew) -> void {
 			const Text::Array filter = GBBASIC_IMAGE_FILE_FILTER;
 			ImGui::MapResolverPopupBox::ConfirmedHandler confirm(
-				[ws, import, img, createNew] (const int* /* index */, const char* /* path */, bool allowFlip) -> void {
+				[ws, import, img, createNew] (const int* /* index */, const char* /* path */, bool allowFlip, bool fillLocalPalette) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
-					import(img, allowFlip, createNew);
+					import(img, allowFlip, fillLocalPalette, createNew);
 				},
 				nullptr
 			);
@@ -4261,7 +4280,7 @@ private:
 		return true;
 	}
 	bool importFromImageFile(Window* wnd, Renderer* rnd, Workspace* ws) {
-		auto import = [wnd, rnd, ws, this] (const char* path, bool allowFlip, bool createNew) -> bool {
+		auto import = [wnd, rnd, ws, this] (const char* path, bool allowFlip, bool fillLocalPalette, bool createNew) -> bool {
 			if (!path)
 				return false;
 
@@ -4293,15 +4312,15 @@ private:
 				return false;
 			}
 
-			return importFromImage(wnd, rnd, ws, img, allowFlip, createNew);
+			return importFromImage(wnd, rnd, ws, img, allowFlip, fillLocalPalette, createNew);
 		};
 		auto resolve = [rnd, ws, this, import] (bool createNew) -> void {
 			const Text::Array filter = GBBASIC_IMAGE_FILE_FILTER;
 			ImGui::MapResolverPopupBox::ConfirmedHandler confirm(
-				[ws, import, createNew] (const int* /* index */, const char* path, bool allowFlip) -> void {
+				[ws, import, createNew] (const int* /* index */, const char* path, bool allowFlip, bool fillLocalPalette) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
-					import(path, allowFlip, createNew);
+					import(path, allowFlip, fillLocalPalette, createNew);
 				},
 				nullptr
 			);
@@ -4486,16 +4505,18 @@ private:
 			Project* project = nullptr;
 			Image::Ptr image = nullptr;
 			bool allowFlip = false;
+			bool fillLocalPalette = false;
 			Texture::Ptr attribtex = nullptr;
 			TilesAssets::Entry* tiles = nullptr;
 			MapAssets::Entry* map = nullptr;
 			std::string error;
 			bool loaded = false;
 
-			Data(Renderer* rnd, Project* prj, Image::Ptr img, bool allowFlip_, Texture* texByte) {
+			Data(Renderer* rnd, Project* prj, Image::Ptr img, bool allowFlip_, bool fillLocalPalette_, Texture* texByte) {
 				project = prj;
 				image = img;
 				allowFlip = allowFlip_;
+				fillLocalPalette = fillLocalPalette_;
 				attribtex = Texture::Ptr(texByte, [] (Texture*) -> void { /* Do nothing. */ });
 				tiles = new TilesAssets::Entry(rnd, prj->paletteGetter());
 				map = new MapAssets::Entry("", prj->tilesGetter(), attribtex);
@@ -4510,10 +4531,10 @@ private:
 				attribtex = nullptr;
 
 				project = nullptr;
-
-				allowFlip = false;
-
 				image = nullptr;
+				allowFlip = false;
+				fillLocalPalette = false;
+				error.clear();
 			}
 		};
 
@@ -4532,7 +4553,7 @@ private:
 		Image::Ptr &img = objectAsImage();
 		Data* data = new Data(
 			_transfer.renderer, _project,
-			img, entry()->allowFlip,
+			img, entry()->allowFlip, entry()->localPaletteEnabled,
 			ws->theme()->textureByte()
 		);
 		_transfer.generated = ws->async(
@@ -4540,7 +4561,7 @@ private:
 				[] (WorkTask* /* task */, Data* data) -> uintptr_t { // On work thread.
 					const bool loaded = MapAssets::parseImage(
 						*data->tiles, *data->map,
-						data->image.get(), data->allowFlip,
+						data->image.get(), data->allowFlip, data->fillLocalPalette,
 						false,
 						data->project->paletteGetter(),
 						data->project->tilesGetter(), data->project->tilesPageCount(),

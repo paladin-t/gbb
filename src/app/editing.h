@@ -780,6 +780,15 @@ bool colorable(
 );
 
 /**
+ * @param[in, out] color
+ */
+bool colorable(
+	Renderer* rnd, Workspace* ws,
+	float color[4],
+	float width = -1.0f
+);
+
+/**
  * @param[in, out] cursor
  */
 bool paintable(

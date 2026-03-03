@@ -830,7 +830,7 @@ struct MapAssets {
 	 */
 	static bool parseImage(
 		TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
-		const Image* val, bool allowFlip,
+		const Image* val, bool allowFlip, bool fillLocalPalette,
 		bool allowReuse,
 		PaletteAssets::Getter getplt,
 		TilesAssets::Getter gettls, int tilesPageCount,

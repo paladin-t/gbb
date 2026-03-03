@@ -512,8 +512,8 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_CannotSaveData("Cannot save data.");
 	dialogPrompt_CannotSaveProject("Cannot save project.");
 	dialogPrompt_CannotSaveProjectSeeTheConsoleForDetails(
-		"Cannot save project.\n"
-		"See the console for details."
+		"Cannot save project. See the\n"
+		"console for details."
 	);
 	dialogPrompt_CannotSaveSramState("Cannot save SRAM state.");
 	dialogPrompt_CannotSaveToReadonlyLocations("Cannot save to readonly locations.");
@@ -563,6 +563,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_ExportedCode("Exported code");
 	dialogPrompt_ExportedProject("Exported project");
 	dialogPrompt_FileNameHasNotBeenChanged("File name has not been changed.");
+	dialogPrompt_FillLocalPalette("Fill local palette");
 	dialogPrompt_Find("Find ");
 	dialogPrompt_Following("Following");
 	dialogPrompt_Frame("Frame ");
@@ -611,11 +612,12 @@ bool Theme::open(class Renderer* rnd) {
 		"source tiles asset. Create a new\n"
 		"tiles asset page for importing?"
 	);
-	dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetEditingAsAnImageMayBreakOtherMapsContinueAnyway(
+	dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetContinueAnyway(
 		"Multiple map assets reference the\n"
 		"source tiles asset. Editing as an\n"
-		"image may break other maps.\n"
-		"Continue anyway?"
+		"image may break other maps, and\n"
+		"remove unused tiles. Continue\n"
+		"anyway?"
 	);
 	dialogPrompt_Name("Name");
 	dialogPrompt_NoData("No data");
@@ -646,6 +648,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_ProjectAlreadyExists("Project already exists.");
 	dialogPrompt_Projectile("Projectile");
 	dialogPrompt_Pst("Pst.");
+	dialogPrompt_Refill("Refill");
 	dialogPrompt_RefMapSizeHasBeenChanged("Ref map size has been changed");
 	dialogPrompt_ReloadedProject("Reloaded project");
 	dialogPrompt_Reloading("Reloading");
@@ -686,9 +689,9 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_SweepTime_7("54.7ms (7/128Hz)");
 	dialogPrompt_TheProjectIsNotSavedYet("The project is not saved yet.");
 	dialogPrompt_TheRomIsEncodedInTheUrlOfTheOpenedBrowserPageMakeSureYourBrowserSupportsLongUrl(
-		"The ROM is encoded in the URL of the\n"
-		"opened browser page. Make sure your\n"
-		"browser supports long URL."
+		"The ROM is encoded in the URL of\n"
+		"the opened browser page. Make sure\n"
+		"your browser supports long URL."
 	);
 	dialogPrompt_Thresholds("Thresholds");
 	dialogPrompt_TicksPerRow("Ticks per row");
@@ -738,17 +741,19 @@ bool Theme::open(class Renderer* rnd) {
 	dialogAsk_BrowseTheExportedFile("Browser the exported file?");
 	dialogAsk_ClearAllRecentProjects("Clear all recent projects?");
 	dialogAsk_ProjectHasBeenBuiltAndIsBeingHostedAt_StopHostingAndBrowseThePackage(
-		"The project has been built and is being hosted\n"
-		"at {0}.\n"
-		"Stop hosting and browse the package?"
+		"The project has been built\n"
+		"and is being hosted at:\n"
+		"  {0}.\n"
+		"Stop hosting and browse the\n"
+		"package?"
 	);
 	dialogAsk_RemoveFromDisk("Remove from disk");
 	dialogAsk_RemoveTheCurrentAssetPage("Remove the current asset page?");
 	dialogAsk_RemoveTheCurrentProject("Remove the current project?");
 	dialogAsk_SaveTheCurrentProject("Save the current project?");
 	dialogAsk_KernelQuestion_AKernelWithIdAlreadyExistsOverwrite(
-		"A kernel with ID \"{0}\" already exists.\n"
-		"Overwrite?"
+		"A kernel with ID \"{0}\" already\n"
+		"exists. Overwrite?"
 	);
 	dialogInput_Input("Input");
 	dialogInput_ProjectName("Project name:");
@@ -1123,35 +1128,35 @@ bool Theme::open(class Renderer* rnd) {
 	);
 	tooltipActor_Bit0(
 		"Bit 0\n"
-		"(palette bit, colored only)"
+		"(Palette bit, colored only)"
 	);
 	tooltipActor_Bit1(
 		"Bit 1\n"
-		"(palette bit, colored only)"
+		"(Palette bit, colored only)"
 	);
 	tooltipActor_Bit2(
 		"Bit 2\n"
-		"(palette bit, colored only)"
+		"(Palette bit, colored only)"
 	);
 	tooltipActor_Bit3(
 		"Bit 3\n"
-		"(bank index, colored only)"
+		"(Bank index, colored only)"
 	);
 	tooltipActor_Bit4(
 		"Bit 4\n"
-		"(palette index, classic only)"
+		"(Palette index, classic only)"
 	);
 	tooltipActor_Bit5(
 		"Bit 5\n"
-		"(horizontal flip, determined automatically)"
+		"(Horizontal flip, determined automatically)"
 	);
 	tooltipActor_Bit6(
 		"Bit 6\n"
-		"(vertical flip, determined automatically)"
+		"(Vertical flip, determined automatically)"
 	);
 	tooltipActor_Bit7(
 		"Bit 7\n"
-		"(priority)"
+		"(Priority)"
 	);
 	tooltipActor_CheckToApplyToAllFrames("Check to apply to all frames");
 	tooltipActor_CheckToChangeBitToAllTiles("Check to change bit to all tiles");
@@ -1313,35 +1318,35 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipMap_Attributes("Attributes:");
 	tooltipMap_Bit0(
 		"Bit 0\n"
-		"(palette bit, colored only)"
+		"(Palette bit, colored only)"
 	);
 	tooltipMap_Bit1(
 		"Bit 1\n"
-		"(palette bit, colored only)"
+		"(Palette bit, colored only)"
 	);
 	tooltipMap_Bit2(
 		"Bit 2\n"
-		"(palette bit, colored only)"
+		"(Palette bit, colored only)"
 	);
 	tooltipMap_Bit3(
 		"Bit 3\n"
-		"(bank index, colored only)"
+		"(Bank index, colored only)"
 	);
 	tooltipMap_Bit4(
 		"Bit 4\n"
-		"(not used)"
+		"(Not used)"
 	);
 	tooltipMap_Bit5(
 		"Bit 5\n"
-		"(horizontal flip, colored only)"
+		"(Horizontal flip, colored only)"
 	);
 	tooltipMap_Bit6(
 		"Bit 6\n"
-		"(vertical flip, colored only)"
+		"(Vertical flip, colored only)"
 	);
 	tooltipMap_Bit7(
 		"Bit 7\n"
-		"(priority, colored only)"
+		"(Priority, colored only)"
 	);
 	tooltipMap_BitBank    ("      Bank: {0} (colored only)\n");
 	tooltipMap_BitHFlip   ("    H-flip: {0} (colored only)\n");
@@ -1355,13 +1360,15 @@ bool Theme::open(class Renderer* rnd) {
 		"  * Editing image by pixel by pixel\n"
 		"  * Picking colors from local palette\n"
 		"  * Transferring to tiled data\n"
+		"  * Trimming unused tiles\n"
 		"Uncheck to edit map normally with:\n"
 		"  * Editing by tiles\n"
 		"  * Directly accessing tiled data"
 	);
 	tooltipMap_EditAsImageWithEditingRecordsTips(
 		"Exiting this mode will merge and commit the\n"
-		"edit-as-image changes into the tile-based data"
+		"edit-as-image changes into the tile-based data,\n"
+		"changes may also remove unused tiles"
 	);
 	tooltipMap_Info(
 		"{0} tiles\n"
@@ -1383,12 +1390,11 @@ bool Theme::open(class Renderer* rnd) {
 		"using code export for it"
 	);
 	tooltipMap_Optimize(
-		"It is recommended to keep this option\n"
-		"checked to optimize footprint,\n"
-		"i.e. by trimming unused tail tiles when\n"
-		"filling data for statements like\n"
-		"`IMAGE(...) = WITH MAP ...`,\n"
-		"otherwise all tiles will be filled"
+		"It is recommended to keep this option checked to\n"
+		"optimize footprint, i.e. by trimming unused tail\n"
+		"tiles when filling data for statements like:\n"
+		"  `IMAGE(...) = WITH MAP ...`\n"
+		"Otherwise all tiles will be filled"
 	);
 	tooltipMap_StopTesting("Stop testing");
 	tooltipMap_TestMap("Test map");
@@ -1430,35 +1436,35 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipScene_Attributes("Attributes:");
 	tooltipScene_Bit0(
 		"Bit 0\n"
-		"(blocking left)"
+		"(Blocking left)"
 	);
 	tooltipScene_Bit1(
 		"Bit 1\n"
-		"(blocking right)"
+		"(Blocking right)"
 	);
 	tooltipScene_Bit2(
 		"Bit 2\n"
-		"(blocking up)"
+		"(Blocking up)"
 	);
 	tooltipScene_Bit3(
 		"Bit 3\n"
-		"(blocking down)"
+		"(Blocking down)"
 	);
 	tooltipScene_Bit4(
 		"Bit 4\n"
-		"(is ladder)"
+		"(Is ladder)"
 	);
 	tooltipScene_Bit5(
 		"Bit 5\n"
-		"(not used)"
+		"(Not used)"
 	);
 	tooltipScene_Bit6(
 		"Bit 6\n"
-		"(not used)"
+		"(Not used)"
 	);
 	tooltipScene_Bit7(
 		"Bit 7\n"
-		"(not used)"
+		"(Not used)"
 	);
 	tooltipScene_BitBlockingDown ("   Blocking down: {0}\n");
 	tooltipScene_BitBlockingLeft ("   Blocking left: {0}\n");

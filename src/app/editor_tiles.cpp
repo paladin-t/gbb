@@ -235,6 +235,22 @@ private:
 				latest = nullptr;
 			}
 		}
+		Colour toColor(void) const {
+			const Colour col(
+				(Byte)(real[0] * 255),
+				(Byte)(real[1] * 255),
+				(Byte)(real[2] * 255),
+				(Byte)(real[3] * 255)
+			);
+
+			return col;
+		}
+		void fromColor(const Colour &col) {
+			real[0] = Math::clamp(col.r / 255.0f, 0.0f, 1.0f);
+			real[1] = Math::clamp(col.g / 255.0f, 0.0f, 1.0f);
+			real[2] = Math::clamp(col.b / 255.0f, 0.0f, 1.0f);
+			real[3] = Math::clamp(col.a / 255.0f, 0.0f, 1.0f);
+		}
 	} _ref;
 	struct Tools {
 		Editing::Tools::PaintableTools painting = Editing::Tools::PENCIL;
@@ -1155,10 +1171,7 @@ public:
 				const bool changed = Editing::Tools::colorable(rnd, ws, _ref.latest->colored, &coloring, spwidth, canUseShortcuts());
 				if (changed) {
 					const Colour col = _ref.latest->colored[coloring];
-					_ref.real[0] = Math::clamp(col.r / 255.0f, 0.0f, 1.0f);
-					_ref.real[1] = Math::clamp(col.g / 255.0f, 0.0f, 1.0f);
-					_ref.real[2] = Math::clamp(col.b / 255.0f, 0.0f, 1.0f);
-					_ref.real[3] = Math::clamp(col.a / 255.0f, 0.0f, 1.0f);
+					_ref.fromColor(col);
 				}
 			}
 
@@ -2376,10 +2389,7 @@ private:
 		} else {
 			Colour col;
 			object()->get(_cursor.position.x, _cursor.position.y, col);
-			_ref.real[0] = Math::clamp(col.r / 255.0f, 0.0f, 1.0f);
-			_ref.real[1] = Math::clamp(col.g / 255.0f, 0.0f, 1.0f);
-			_ref.real[2] = Math::clamp(col.b / 255.0f, 0.0f, 1.0f);
-			_ref.real[3] = Math::clamp(col.a / 255.0f, 0.0f, 1.0f);
+			_ref.fromColor(col);
 		}
 	}
 	void eyedropperToolMove(Renderer*) {
@@ -2390,10 +2400,7 @@ private:
 		} else {
 			Colour col;
 			object()->get(_cursor.position.x, _cursor.position.y, col);
-			_ref.real[0] = Math::clamp(col.r / 255.0f, 0.0f, 1.0f);
-			_ref.real[1] = Math::clamp(col.g / 255.0f, 0.0f, 1.0f);
-			_ref.real[2] = Math::clamp(col.b / 255.0f, 0.0f, 1.0f);
-			_ref.real[3] = Math::clamp(col.a / 255.0f, 0.0f, 1.0f);
+			_ref.fromColor(col);
 		}
 	}
 
@@ -2414,13 +2421,7 @@ private:
 				_cursor.position, _ref.palette
 			);
 		} else {
-			const Colour col(
-				(Byte)(_ref.real[0] * 255),
-				(Byte)(_ref.real[1] * 255),
-				(Byte)(_ref.real[2] * 255),
-				(Byte)(_ref.real[3] * 255)
-			);
-
+			const Colour col = _ref.toColor();
 			cmd->with(
 				Math::Vec2i(object()->width(), object()->height()),
 				_selection.brush.empty() ? nullptr : &sel,
@@ -2596,13 +2597,7 @@ private:
 				}
 			);
 		} else {
-			const Colour col(
-				(Byte)(_ref.real[0] * 255),
-				(Byte)(_ref.real[1] * 255),
-				(Byte)(_ref.real[2] * 255),
-				(Byte)(_ref.real[3] * 255)
-			);
-
+			const Colour col = _ref.toColor();
 			cmd->with(
 				Math::Vec2i(object()->width(), object()->height()),
 				_cursor.position, col,

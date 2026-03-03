@@ -3270,6 +3270,76 @@ bool colorable(
 	return result;
 }
 
+bool colorable(
+	Renderer*, Workspace* ws,
+	float color[4],
+	float width
+) {
+	ImGuiStyle &style = ImGui::GetStyle();
+
+	Theme* theme = ws->theme();
+
+	bool result = false;
+
+	if (width <= 0)
+		width = ImGui::GetContentRegionAvail().x;
+	constexpr const int X_COUNT = EDITING_ITEM_COUNT_PER_LINE;
+	float xOffset = 0;
+	float size = width / X_COUNT;
+	const float iconSize = (float)theme->iconSize();
+	if (size > iconSize) {
+		size = iconSize * (int)(size / iconSize);
+		xOffset = (width - size * X_COUNT) * 0.5f;
+	}
+	const float width_ = size * 5;
+
+	ImGui::PushID("@Col");
+
+	ImGui::Dummy(ImVec2(xOffset, 0));
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(width_);
+	ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoSidePreview;
+	if (width_ < ImGui::ColorPickerMinWidthForInput()) {
+		flags |= ImGuiColorEditFlags_NoInputs;
+		result |= ImGui::ColorPicker4("", color, flags);
+
+		ImGui::PushID("@Alf");
+		ImGui::SetNextItemWidth(width_);
+		int alpha = (int)(color[3] * 255);
+		if (ImGui::DragInt("", &alpha, 1, 0, 255, "A: %d")) {
+			color[3] = alpha / 255.0f;
+			result |= true;
+		}
+		ImGui::PopID();
+	} else {
+		result |= ImGui::ColorPicker4("", color, flags);
+	}
+
+	const ImVec4 col4v(color[0], color[1], color[2], color[3]);
+	ImGui::Dummy(ImVec2(xOffset, 0));
+	ImGui::SameLine();
+	ImGui::ColorButton("", col4v, ImGuiColorEditFlags_NoDragDrop | ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_AlphaPreview, ImVec2(width_, 19.0f), nullptr);
+	if (ImGui::IsItemHovered() && (ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_Right))) {
+		ImGui::OpenPopup("@Pkr");
+	}
+
+	VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+
+	if (ImGui::BeginPopup("@Pkr")) {
+		VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+		if (ImGui::ColorPicker4("", color, ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoSidePreview)) {
+			result |= true;
+		}
+
+		ImGui::EndPopup();
+	}
+
+	ImGui::PopID();
+
+	return result;
+}
+
 bool paintable(
 	Renderer* rnd, Workspace* ws,
 	PaintableTools* cursor,
