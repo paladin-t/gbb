@@ -4535,7 +4535,7 @@ bool MapAssets::parseImage(
 		Image::Colours cols_ = cols;
 		if (cols_.size() < GBBASIC_PALETTE_PER_GROUP_COUNT)
 			cols_.resize(GBBASIC_PALETTE_PER_GROUP_COUNT, Colour(0, 0, 0, 255));
-		const ColourSet uniqueCols(cols_.begin(), cols_.end());
+		const ColourSet uniqueCols(cols.begin(), cols.end());
 
 		indices.clear();
 
@@ -4550,7 +4550,10 @@ bool MapAssets::parseImage(
 				uniquePalCols.insert(col);
 				colDict.insert(std::make_pair(col, j));
 			}
-			const bool matched = uniqueCols == uniquePalCols;
+			const bool matched = std::includes(
+				uniquePalCols.begin(), uniquePalCols.end(),
+				uniqueCols.begin(), uniqueCols.end()
+			);
 			if (matched) {
 				for (int j = 0; j < (int)cols_.size(); ++j) {
 					const Colour &col = cols_[j];

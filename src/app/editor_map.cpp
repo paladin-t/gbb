@@ -2196,7 +2196,12 @@ private:
 			0xffffffff;
 		Editing::Tools::separate(rnd, ws, spwidth);
 		if (editAsImage && !localPaletteEnabled) {
-			Editing::Tools::colorable(rnd, ws, _asImage.ref.real, spwidth);
+			Editing::Tools::colorable(
+				rnd, ws,
+				_asImage.ref.real,
+				false,
+				spwidth
+			);
 			ImGui::NewLine(1);
 		}
 		if (Editing::Tools::paintable(rnd, ws, &_tools.painting, -1.0f, canUseShortcuts(), false, mask)) {
@@ -4788,27 +4793,47 @@ private:
 			_asImage.ref.fromColor(col);
 		}
 	}
-	void localPaletteEnabledChanged(Workspace*) {
+	void localPaletteEnabledChanged(Workspace* ws) {
 		const bool localPaletteEnabled = entry()->localPaletteEnabled;
 		if (!(isEditingAsImage() && localPaletteEnabled))
 			return;
 
-		PaletteAssets::Array localPalette = entry()->localPalette;
-		const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
-		if ((int)localPalette.size() != n)
-			localPalette.resize(n);
+		if (_transfer.filled) {
+			PaletteAssets::Array localPalette = entry()->localPalette;
+			const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+			if ((int)localPalette.size() != n)
+				localPalette.resize(n);
 
-		const PaletteAssets &palette = _project->assets()->palette;
-		for (int i = 0; i < n; ++i) {
-			const PaletteAssets::Entry* entry = palette.get(i);
-			localPalette[i] = *entry;
+			const PaletteAssets &palette = _project->assets()->palette;
+			for (int i = 0; i < n; ++i) {
+				const PaletteAssets::Entry* entry = palette.get(i);
+				localPalette[i] = *entry;
+			}
+
+			Command* cmd = enqueue<Commands::Map::SetLocalPalette>()
+				->with(localPalette)
+				->exec(object(), Variant((void*)entry()));
+
+			_refresh(cmd);
+		} else {
+			ImGui::WaitingPopupBox::TimeoutHandler timeout(
+				[ws, this] (void) -> void {
+					if (!_transfer.filled) {
+						transferImageToTiled(ws);
+
+						_transfer.generated.wait();
+					}
+
+					ws->popupBox(nullptr);
+				},
+				nullptr
+			);
+			ws->waitingPopupBox(
+				true, ws->theme()->dialogPrompt_Transferring(),
+				true, timeout,
+				true
+			);
 		}
-
-		Command* cmd = enqueue<Commands::Map::SetLocalPalette>()
-			->with(localPalette)
-			->exec(object(), Variant((void*)entry()));
-
-		_refresh(cmd);
 	}
 
 	bool playMapTesting(Window* wnd, Renderer* rnd, Workspace* ws) {

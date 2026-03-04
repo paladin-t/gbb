@@ -3273,6 +3273,7 @@ bool colorable(
 bool colorable(
 	Renderer*, Workspace* ws,
 	float color[4],
+	bool withAlpha,
 	float width
 ) {
 	ImGuiStyle &style = ImGui::GetStyle();
@@ -3303,14 +3304,16 @@ bool colorable(
 		flags |= ImGuiColorEditFlags_NoInputs;
 		result |= ImGui::ColorPicker4("", color, flags);
 
-		ImGui::PushID("@Alf");
-		ImGui::SetNextItemWidth(width_);
-		int alpha = (int)(color[3] * 255);
-		if (ImGui::DragInt("", &alpha, 1, 0, 255, "A: %d")) {
-			color[3] = alpha / 255.0f;
-			result |= true;
+		if (withAlpha) {
+			ImGui::PushID("@Alf");
+			ImGui::SetNextItemWidth(width_);
+			int alpha = (int)(color[3] * 255);
+			if (ImGui::DragInt("", &alpha, 1, 0, 255, "A: %d")) {
+				color[3] = alpha / 255.0f;
+				result |= true;
+			}
+			ImGui::PopID();
 		}
-		ImGui::PopID();
 	} else {
 		result |= ImGui::ColorPicker4("", color, flags);
 	}

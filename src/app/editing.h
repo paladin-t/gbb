@@ -785,6 +785,7 @@ bool colorable(
 bool colorable(
 	Renderer* rnd, Workspace* ws,
 	float color[4],
+	bool withAlpha = true,
 	float width = -1.0f
 );
 
