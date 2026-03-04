@@ -4725,7 +4725,7 @@ private:
 		if (prevTool == Editing::Tools::STAMP)
 			_tools.painting = Editing::Tools::PENCIL;
 
-		PaletteAssets::Array localPalette = entry()->localPalette;
+		const PaletteAssets::Array &localPalette = entry()->localPalette;
 		if (!localPalette.empty()) {
 			const PaletteAssets::Entry &entry_ = localPalette.front();
 			const Indexed::Ptr &palette_ = entry_.data;
@@ -4734,8 +4734,27 @@ private:
 			_asImage.ref.fromColor(col);
 		}
 	}
-	void localPaletteEnabledChanged(Workspace* ws) {
-		// TODO
+	void localPaletteEnabledChanged(Workspace*) {
+		const bool localPaletteEnabled = entry()->localPaletteEnabled;
+		if (!(isEditingAsImage() && localPaletteEnabled))
+			return;
+
+		PaletteAssets::Array localPalette = entry()->localPalette;
+		const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+		if ((int)localPalette.size() != n)
+			localPalette.resize(n);
+
+		const PaletteAssets &palette = _project->assets()->palette;
+		for (int i = 0; i < n; ++i) {
+			const PaletteAssets::Entry* entry = palette.get(i);
+			localPalette[i] = *entry;
+		}
+
+		Command* cmd = enqueue<Commands::Map::SetLocalPalette>()
+			->with(localPalette)
+			->exec(object(), Variant((void*)entry()));
+
+		_refresh(cmd);
 	}
 
 	bool playMapTesting(Window* wnd, Renderer* rnd, Workspace* ws) {
