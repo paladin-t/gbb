@@ -4098,6 +4098,10 @@ private:
 		}
 		Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
 		PaletteAssets::Array palette;
+		for (int i = 0; i < _project->assets()->palette.count(); ++i) {
+			const PaletteAssets::Entry* pal = _project->assets()->palette.get(i);
+			palette.push_back(*pal);
+		}
 		TilesAssets::Entry tiles(rnd, _project->paletteGetter());
 		MapAssets::Entry map("", _project->tilesGetter(), attribtex);
 		std::string error;
@@ -4531,6 +4535,17 @@ private:
 		return true;
 	}
 	bool transferImageToTiled(Workspace* ws) {
+		struct Error {
+			typedef std::vector<Error> Array;
+
+			bool isWarning = false;
+			std::string message;
+
+			Error() {
+			}
+			Error(bool warn, const std::string &msg) : isWarning(warn), message(msg) {
+			}
+		};
 		struct Data : public NonCopyable {
 			Project* project = nullptr;
 			Image::Ptr image = nullptr;
@@ -4540,7 +4555,7 @@ private:
 			PaletteAssets::Array* palette = nullptr;
 			TilesAssets::Entry* tiles = nullptr;
 			MapAssets::Entry* map = nullptr;
-			std::string error;
+			Error::Array errors;
 			bool loaded = false;
 
 			Data(Renderer* rnd, Project* prj, Image::Ptr img, bool allowFlip_, bool fillLocalPalette_, Texture* texByte) {
@@ -4552,6 +4567,11 @@ private:
 				palette = new PaletteAssets::Array();
 				tiles = new TilesAssets::Entry(rnd, prj->paletteGetter());
 				map = new MapAssets::Entry("", prj->tilesGetter(), attribtex);
+
+				for (int i = 0; i < project->assets()->palette.count(); ++i) {
+					const PaletteAssets::Entry* pal = project->assets()->palette.get(i);
+					palette->push_back(*pal);
+				}
 			}
 			~Data() {
 				delete map;
@@ -4569,7 +4589,7 @@ private:
 				image = nullptr;
 				allowFlip = false;
 				fillLocalPalette = false;
-				error.clear();
+				errors.clear();
 			}
 		};
 
@@ -4593,8 +4613,7 @@ private:
 						data->image.get(), data->allowFlip, data->fillLocalPalette, false,
 						data->project->paletteGetter(), data->project->tilesGetter(), data->project->tilesPageCount(),
 						nullptr, [data] (const char* msg, bool isWarning) -> void {
-							if (!isWarning)
-								data->error = msg;
+							data->errors.push_back(Error(isWarning, msg));
 						}
 					);
 					data->loaded = loaded;
@@ -4676,7 +4695,18 @@ private:
 				std::placeholders::_1, std::placeholders::_2, data
 			),
 			std::bind(
-				[this] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
+				[ws, this] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
+					if (!data->errors.empty()) {
+						ws->warn("Errors during image-to-map conversion:");
+						for (const Error &err : data->errors) {
+							const std::string msg = "  " + err.message;
+							if (err.isWarning)
+								ws->warn(msg.c_str());
+							else
+								ws->error(msg.c_str());
+						}
+					}
+
 					delete data;
 				},
 				std::placeholders::_1, std::placeholders::_2, data

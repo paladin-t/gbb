@@ -826,17 +826,7 @@ struct MapAssets {
 	 */
 	static bool serializeImage(const TilesAssets::Entry &tiles_, const MapAssets::Entry &map_, Image* val);
 	/**
-	 * @param[out] tiles_
-	 * @param[out] map_
-	 */
-	static bool parseImage(
-		TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
-		const Image* val, bool allowFlip, bool allowReuse,
-		PaletteAssets::Getter getplt, TilesAssets::Getter gettls, int tilesPageCount,
-		PrintHandler onPrint = nullptr, WarningOrErrorHandler onWarningOrError = nullptr
-	);
-	/**
-	 * @param[out] palette_
+	 * @param[in, out] palette_
 	 * @param[out] tiles_
 	 * @param[out] map_
 	 */

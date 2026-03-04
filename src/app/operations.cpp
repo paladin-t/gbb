@@ -3386,6 +3386,10 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 								// Load from the image.
 								Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
 								PaletteAssets::Array palette;
+								for (int i = 0; i < prj->assets()->palette.count(); ++i) {
+									const PaletteAssets::Entry* pal = prj->assets()->palette.get(i);
+									palette.push_back(*pal);
+								}
 								TilesAssets::Entry tiles(rnd, prj->paletteGetter());
 								MapAssets::Entry map("", prj->tilesGetter(), attribtex);
 								const bool loaded = MapAssets::parseImage(
