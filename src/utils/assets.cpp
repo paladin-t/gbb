@@ -4665,8 +4665,6 @@ bool MapAssets::parseImage(
 	map_.data = Map::Ptr(Map::create(&tiles, true));
 	map_.data->resize(mw, mh);
 
-	// TODO: EDIT MAP AS IMAGE
-	// ATTRIBUTES
 	map_.hasAttributes = !!flipped;
 	map_.attributes->resize(mw, mh);
 

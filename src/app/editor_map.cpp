@@ -4169,8 +4169,9 @@ private:
 				_selection.clear();
 			}
 
+			const bool hasAttributes = entry()->hasAttributes || map.hasAttributes;
 			Command* cmd = enqueue<Commands::Map::Import>()
-				->with(map.data, map.hasAttributes, map.attributes)
+				->with(map.data, hasAttributes, map.attributes)
 				->with(_setLayer, _tools.layer)
 				->exec(object(), Variant((void*)entry()), attributes());
 
@@ -4580,8 +4581,8 @@ private:
 			),
 			std::bind(
 				[this, ws] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
-					TilesAssets::Entry &tiles = *data->tiles;
-					MapAssets::Entry &map = *data->map;
+					const TilesAssets::Entry &tiles = *data->tiles;
+					const MapAssets::Entry &map = *data->map;
 					const int ref = entry()->ref;
 
 					do {
@@ -4616,8 +4617,9 @@ private:
 								_selection.clear();
 							}
 
+							const bool hasAttributes = entry()->hasAttributes || map.hasAttributes;
 							Command* cmd = enqueue<Commands::Map::Import>()
-								->with(map.data, map.hasAttributes, map.attributes)
+								->with(map.data, hasAttributes, map.attributes)
 								->with(_setLayer, _tools.layer)
 								->exec(object(), Variant((void*)entry()), attributes());
 
