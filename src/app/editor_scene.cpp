@@ -6335,6 +6335,16 @@ private:
 			mapEntry_.ref = 0;
 			assets->maps.add(mapEntry_);
 
+			const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+			const bool localPaletteEnabled = mapEntry_.localPaletteEnabled;
+			const PaletteAssets::Array &localPalette = mapEntry_.localPalette;
+			if (localPaletteEnabled && (int)localPalette.size() == n && assets->palette.count() >= n) {
+				for (int i = 0; i < n; ++i) {
+					PaletteAssets::Entry* palEntry = assets->palette.get(i);
+					*palEntry = localPalette[i]; // Replace with local palette.
+				}
+			}
+
 			// Add the actor assets.
 			SceneAssets::Entry::UniqueRef uref;
 			const SceneAssets::Entry::Ref refActors_ = entry_->getRefActors(&uref);

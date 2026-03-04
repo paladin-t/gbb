@@ -640,42 +640,44 @@ public:
 	}
 
 	virtual void enter(class Workspace* /* ws */) override {
-		if (isEditingAsImage()) {
-			/*const int ref = entry()->ref;
-			const Project::Indices mapsRefToTheSameTiles = _project->getMapsRefToTiles(ref);
-			if (mapsRefToTheSameTiles.size() > 1) {
-				ImGui::MessagePopupBox::ConfirmedHandler confirm(
-					[ws] (void) -> void {
-						WORKSPACE_AUTO_CLOSE_POPUP(ws)
-
-						// Do nothing.
-					},
-					nullptr
-				);
-				ImGui::MessagePopupBox::DeniedHandler deny(
-					[ws, this] (void) -> void {
-						WORKSPACE_AUTO_CLOSE_POPUP(ws)
-
-						entry()->editAsImage = false;
-					},
-					nullptr
-				);
-				ws->messagePopupBox(
-					ws->theme()->dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetContinueAnyway(),
-					confirm,
-					deny,
-					nullptr,
-					nullptr,
-					nullptr,
-					nullptr,
-					nullptr,
-					nullptr,
-					nullptr
-				);
-			}*/
-		} else {
+		if (!isEditingAsImage()) {
 			_transfer.filled = true;
+
+			return;
 		}
+
+		/*const int ref = entry()->ref;
+		const Project::Indices mapsRefToTheSameTiles = _project->getMapsRefToTiles(ref);
+		if (mapsRefToTheSameTiles.size() > 1) {
+			ImGui::MessagePopupBox::ConfirmedHandler confirm(
+				[ws] (void) -> void {
+					WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+					// Do nothing.
+				},
+				nullptr
+			);
+			ImGui::MessagePopupBox::DeniedHandler deny(
+				[ws, this] (void) -> void {
+					WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+					entry()->editAsImage = false;
+				},
+				nullptr
+			);
+			ws->messagePopupBox(
+				ws->theme()->dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetContinueAnyway(),
+				confirm,
+				deny,
+				nullptr,
+				nullptr,
+				nullptr,
+				nullptr,
+				nullptr,
+				nullptr,
+				nullptr
+			);
+		}*/
 	}
 	virtual void leave(class Workspace* ws) override {
 		_tools.stopMapTesting();
@@ -4914,6 +4916,16 @@ private:
 			MapAssets::Entry mapEntry = *entry_;
 			mapEntry.ref = 0;
 			assets->maps.add(mapEntry);
+
+			const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+			const bool localPaletteEnabled = mapEntry.localPaletteEnabled;
+			const PaletteAssets::Array &localPalette = mapEntry.localPalette;
+			if (localPaletteEnabled && (int)localPalette.size() == n && assets->palette.count() >= n) {
+				for (int i = 0; i < n; ++i) {
+					PaletteAssets::Entry* palEntry = assets->palette.get(i);
+					*palEntry = localPalette[i]; // Replace with local palette.
+				}
+			}
 
 			// Add a dummy scene asset.
 			const SceneAssets::Entry sceneEntry(
