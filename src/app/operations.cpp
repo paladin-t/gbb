@@ -3431,6 +3431,8 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 								MapAssets::Entry* mapEntry = prj->getMap(prj->mapPageCount() - 1);
 								mapEntry->allowFlip = allowFlip;
 								mapEntry->localPaletteEnabled = fillLocalPalette;
+								// TODO: EDIT MAP AS IMAGE
+								// FILL LOCAL PALETTE
 
 								ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::MAP);
 

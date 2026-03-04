@@ -682,20 +682,23 @@ public:
 
 		if (isEditingAsImage()) {
 			if (!_transfer.filled) {
+				ImGui::WaitingPopupBox::TimeoutHandler timeout(
+					[ws, this] (void) -> void {
+						if (!_transfer.filled) {
+							transferImageToTiled(ws);
+
+							_transfer.generated.wait();
+						}
+
+						ws->popupBox(nullptr);
+					},
+					nullptr
+				);
 				ws->waitingPopupBox(
 					true, ws->theme()->dialogPrompt_Transferring(),
-					true, ImGui::WaitingPopupBox::TimeoutHandler(
-						[ws] (void) -> void {
-							ws->popupBox(nullptr);
-						},
-						nullptr
-					),
+					true, timeout,
 					true
 				);
-
-				transferImageToTiled(ws);
-
-				_transfer.generated.wait();
 			}
 		}
 
@@ -1772,7 +1775,7 @@ private:
 								WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
 								entry()->editAsImage = editAsImage;
-								editAsImageChanged(ws, entry()->editAsImage);
+								editAsImageChanged(ws);
 							},
 							nullptr
 						);
@@ -1798,7 +1801,7 @@ private:
 						);
 					} else {
 						entry()->editAsImage = editAsImage;
-						editAsImageChanged(ws, entry()->editAsImage);
+						editAsImageChanged(ws);
 					}
 				}
 				if (ImGui::IsItemHovered()) {
@@ -4170,6 +4173,9 @@ private:
 				->exec(object(), Variant((void*)entry()), attributes());
 
 			_refresh(cmd);
+
+			// TODO: EDIT MAP AS IMAGE
+			// FILL LOCAL PALETTE
 		}
 		_refresh(enqueue<Commands::Map::EndGroup>()
 			->with("Import")
@@ -4541,12 +4547,6 @@ private:
 		if (!entry())
 			return false;
 
-		if (!isEditingAsImage()) {
-			_transfer.filled = true;
-
-			return true;
-		}
-
 		if (_transfer.generated.working())
 			_transfer.generated.wait();
 
@@ -4620,6 +4620,9 @@ private:
 								->exec(object(), Variant((void*)entry()), attributes());
 
 							_refresh(cmd);
+
+							// TODO: EDIT MAP AS IMAGE
+							// FILL LOCAL PALETTE
 						}
 						_refresh(enqueue<Commands::Map::EndGroup>()
 							->with("Import")
@@ -4649,45 +4652,55 @@ private:
 
 		if (layer != ASSETS_MAP_GRAPHICS_LAYER) {
 			if (!_transfer.filled) {
+				ImGui::WaitingPopupBox::TimeoutHandler timeout(
+					[ws, this] (void) -> void {
+						if (!_transfer.filled) {
+							transferImageToTiled(ws);
+
+							_transfer.generated.wait();
+						}
+
+						ws->popupBox(nullptr);
+					},
+					nullptr
+				);
 				ws->waitingPopupBox(
 					true, ws->theme()->dialogPrompt_Transferring(),
-					true, ImGui::WaitingPopupBox::TimeoutHandler(
-						[ws] (void) -> void {
-							ws->popupBox(nullptr);
-						},
-						nullptr
-					),
+					true, timeout,
 					true
 				);
-
-				transferImageToTiled(ws);
-
-				_transfer.generated.wait();
 			}
 		}
 	}
-	void editAsImageChanged(Workspace* ws, bool editAsImage) {
-		if (!editAsImage) {
+	void editAsImageChanged(Workspace* ws) {
+		if (!isEditingAsImage()) {
 			if (!_transfer.filled) {
+				ImGui::WaitingPopupBox::TimeoutHandler timeout(
+					[ws, this] (void) -> void {
+						if (!_transfer.filled) {
+							transferImageToTiled(ws);
+
+							_transfer.generated.wait();
+
+							_transfer.reset();
+
+							_transfer.filled = true;
+						}
+
+						ws->popupBox(nullptr);
+					},
+					nullptr
+				);
 				ws->waitingPopupBox(
 					true, ws->theme()->dialogPrompt_Transferring(),
-					true, ImGui::WaitingPopupBox::TimeoutHandler(
-						[ws] (void) -> void {
-							ws->popupBox(nullptr);
-						},
-						nullptr
-					),
+					true, timeout,
 					true
 				);
+			} else {
+				_transfer.reset();
 
-				transferImageToTiled(ws);
-
-				_transfer.generated.wait();
+				_transfer.filled = true;
 			}
-
-			_transfer.reset();
-
-			_transfer.filled = true;
 
 			return;
 		}
