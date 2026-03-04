@@ -1827,7 +1827,17 @@ private:
 				PaletteAssets::Array localPalette = entry()->localPalette;
 				const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
 				if ((int)localPalette.size() != n) {
+					const int m = (int)localPalette.size();
 					localPalette.resize(n);
+					if (m < n) {
+						const PaletteAssets &palette = _project->assets()->palette;
+						if (palette.count() >= n) {
+							for (int i = m; i < n; ++i) {
+								const PaletteAssets::Entry* entry = palette.get(i);
+								localPalette[i] = *entry;
+							}
+						}
+					}
 				}
 				if (ImGui::Checkbox(ws->theme()->windowMap_LocalPalette(), &localPaletteEnabled)) {
 					Command* cmd = enqueue<Commands::Map::SetLocalPaletteEnabled>()
@@ -1835,6 +1845,8 @@ private:
 						->exec(object(), Variant((void*)entry()));
 
 					_refresh(cmd);
+
+					localPaletteEnabledChanged(ws);
 				}
 				if (ImGui::IsItemHovered()) {
 					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -4721,6 +4733,9 @@ private:
 			palette_->get(0, col);
 			_asImage.ref.fromColor(col);
 		}
+	}
+	void localPaletteEnabledChanged(Workspace* ws) {
+		// TODO
 	}
 
 	bool playMapTesting(Window* wnd, Renderer* rnd, Workspace* ws) {

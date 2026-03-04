@@ -4179,7 +4179,6 @@ bool MapAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler 
 
 		for (auto it = colors->Begin(); it != colors->End(); ++it) {
 			PaletteAssets::Entry p;
-
 			const rapidjson::Value &val_ = *it;
 			if (!p.fromJson(val_))
 				continue;
@@ -4187,10 +4186,18 @@ bool MapAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler 
 			localPalette.push_back(p);
 		}
 	} while (false);
-	const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+	/*const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
 	if (!localPalette.empty() && (int)localPalette.size() != n) {
+		const int m = (int)localPalette.size();
 		localPalette.resize(n);
-	}
+		if (m < n) {
+			PaletteAssets default_;
+			for (int i = m; i < n; ++i) {
+				const PaletteAssets::Entry* entry = default_.get(i);
+				localPalette[i] = *entry;
+			}
+		}
+	}*/
 
 	if (!Jpath::get(doc, name, "name"))
 		name.clear();

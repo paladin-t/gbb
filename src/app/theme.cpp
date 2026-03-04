@@ -1360,7 +1360,7 @@ bool Theme::open(class Renderer* rnd) {
 		"  * Editing image by pixel by pixel\n"
 		"  * Picking colors from local palette\n"
 		"  * Transferring to tiled data\n"
-		"  * Trimming unused tiles\n"
+		"  * Removing unused tiles\n"
 		"Uncheck to edit map normally with:\n"
 		"  * Editing by tiles\n"
 		"  * Directly accessing tiled data"
