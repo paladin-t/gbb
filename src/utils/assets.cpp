@@ -4468,10 +4468,8 @@ bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets
 
 bool MapAssets::parseImage(
 	TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
-	const Image* val, bool allowFlip, bool fillLocalPalette,
-	bool allowReuse,
-	PaletteAssets::Getter getplt,
-	TilesAssets::Getter gettls, int tilesPageCount,
+	const Image* val, bool allowFlip, bool allowReuse,
+	PaletteAssets::Getter getplt, TilesAssets::Getter gettls, int tilesPageCount,
 	PrintHandler onPrint, WarningOrErrorHandler onWarningOrError
 ) {
 	// Prepare.
@@ -4527,12 +4525,6 @@ bool MapAssets::parseImage(
 
 	// Convert the true-color image to paletted.
 	Image::Ptr paletted(val->quantized2Bpp());
-
-	// TODO: EDIT MAP AS IMAGE
-	// CALCULATE PALETTE
-	if (fillLocalPalette) {
-		// TODO
-	}
 
 	// Slice the image.
 	Slice::Array slices;
@@ -4682,6 +4674,238 @@ bool MapAssets::parseImage(
 			map_.data->set(i, j, cel.index);
 
 			int attrs = 0;
+			if (cel.hFlip) {
+				attrs |= (1 << GBBASIC_MAP_HFLIP_BIT);
+			}
+			if (cel.vFlip) {
+				attrs |= (1 << GBBASIC_MAP_VFLIP_BIT);
+			}
+			map_.attributes->set(i, j, attrs);
+		}
+	}
+
+	// Finish.
+	return true;
+}
+
+bool MapAssets::parseImage(
+	PaletteAssets::Array &palette_, TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
+	const Image* val, bool allowFlip, bool fillLocalPalette, bool allowReuse,
+	PaletteAssets::Getter getplt, TilesAssets::Getter gettls, int tilesPageCount,
+	PrintHandler onPrint, WarningOrErrorHandler onWarningOrError
+) {
+	// Prepare.
+	struct Cel {
+		typedef std::vector<Cel> Array;
+
+		int index = -1;
+		int palette = 0;
+		bool hFlip = false;
+		bool vFlip = false;
+
+		Cel() {
+		}
+		Cel(int idx, int pal, bool hFlip_, bool vFlip_) : index(idx), palette(pal), hFlip(hFlip_), vFlip(vFlip_) {
+		}
+	};
+
+	auto indexOfSlice = [] (const Slice::Array &coll, const Slice &what, bool allowFlip, bool &hFlip, bool &vFlip) -> int {
+		for (int i = 0; i < (int)coll.size(); ++i) {
+			if (coll[i] == what) // Compare the slices' images.
+				return i;
+
+			if (!allowFlip)
+				continue;
+
+			Image* ptr = nullptr;
+			what.image->clone(&ptr);
+			Image::Ptr tmp(ptr);
+			tmp->flip(true, false);
+			if (coll[i] == Slice(tmp)) {
+				hFlip = true;
+
+				return i;
+			}
+
+			tmp->flip(false, true);
+			if (coll[i] == Slice(tmp)) {
+				hFlip = true;
+				vFlip = true;
+
+				return i;
+			}
+
+			tmp->flip(true, false);
+			if (coll[i] == Slice(tmp)) {
+				vFlip = true;
+
+				return i;
+			}
+		}
+
+		return -1;
+	};
+
+	// Convert the true-color image to paletted.
+	Image::Ptr paletted(val->quantized2Bpp());
+
+	// TODO: EDIT MAP AS IMAGE
+	// CALCULATE PALETTE
+	if (fillLocalPalette) {
+		// TODO
+	}
+
+	// Slice the image.
+	Slice::Array slices;
+	Cel::Array cels;
+	int flipped = 0;
+
+	const std::div_t dx = std::div(paletted->width(), GBBASIC_TILE_SIZE);
+	const std::div_t dy = std::div(paletted->height(), GBBASIC_TILE_SIZE);
+	if (dx.rem || dy.rem) {
+		if (onWarningOrError)
+			onWarningOrError("Image size is not a multiple of 8.", true);
+	}
+	const int mw = dx.quot + (dx.rem ? 1 : 0);
+	const int mh = dy.quot + (dy.rem ? 1 : 0);
+	const int area = mw * mh;
+	if (mw > GBBASIC_MAP_MAX_WIDTH || mh > GBBASIC_MAP_MAX_HEIGHT || area > GBBASIC_MAP_MAX_AREA_SIZE) {
+		if (onWarningOrError)
+			onWarningOrError("Image size out of bounds for map.", false);
+
+		return false;
+	}
+
+	cels.resize(area);
+	for (int j = 0; j < mh; j += 2) {
+		for (int i = 0; i < mw; ++i) {
+			const int x = i;
+			for (int h = 0; h < 2; ++h) { // Import as 8x16 if possible.
+				const int y = j + h;
+				if (y >= mh)
+					continue;
+
+				Image::Ptr s(Image::create(paletted->palette()));
+				s->fromBlank(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_PALETTE_DEPTH);
+				paletted->blit(
+					s.get(),
+					0, 0,
+					GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+					x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE
+				);
+				Slice slice(s);
+
+				int index = -1;
+				bool hFlip = false;
+				bool vFlip = false;
+				const int exists = indexOfSlice(slices, slice, allowFlip, hFlip, vFlip);
+				if (exists == -1) {
+					slices.push_back(slice);
+					index = (int)slices.size() - 1;
+				} else {
+					index = exists;
+				}
+				cels[x + y * mw] = Cel(index, 0, hFlip, vFlip); // TODO
+
+				if (hFlip || vFlip)
+					++flipped;
+			}
+		}
+	}
+
+	// Determine the tiles asset size.
+	int tw = (int)std::ceil(std::sqrt(slices.size()));
+	int th = (int)std::ceil((float)slices.size() / tw);
+	const int min = tw / 3;
+	int waste = std::numeric_limits<int>::max();
+	for (int i = Math::max(min, 1); i < (int)slices.size() - min; ++i) {
+		const int tw_ = i;
+		const int th_ = (int)std::ceil((float)slices.size() / tw_);
+		const int waste_ = tw_ * th_ - (int)slices.size();
+		if (waste_ < waste) { // Less waste.
+			waste = waste_;
+			tw = tw_;
+			th = th_;
+		}
+	}
+
+	if (slices.size() > GBBASIC_TILES_MAX_AREA_SIZE || tw * th > GBBASIC_TILES_MAX_AREA_SIZE) {
+		if (onWarningOrError)
+			onWarningOrError("Image size out of bounds for tiles.", false);
+
+		return false;
+	}
+
+	// Fill the tiles asset.
+	tiles_.data->fromBlank(tw * GBBASIC_TILE_SIZE, th * GBBASIC_TILE_SIZE, GBBASIC_PALETTE_DEPTH);
+	int k = 0;
+	for (int j = 0; j < th; ++j) {
+		for (int i = 0; i < tw; ++i) {
+			if (k >= (int)slices.size())
+				break;
+
+			const Slice &slice = slices[k++];
+			slice.image->blit(
+				tiles_.data.get(),
+				i * GBBASIC_TILE_SIZE, j * GBBASIC_TILE_SIZE,
+				GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+				0, 0
+			);
+		}
+
+		if (k >= (int)slices.size())
+			break;
+	}
+
+	TilesAssets::Entry* ref__ = &tiles_;
+
+	map_.ref = tilesPageCount; // Pre-assign with the new tiles page.
+	if (allowReuse) {
+		const size_t thash = tiles_.data->hash();
+		for (int i = 0; i < tilesPageCount; ++i) {
+			TilesAssets::Entry* tilesEntry = gettls(i);
+			if (!tilesEntry || !tilesEntry->data || tilesEntry->data->hash() != thash)
+				continue;
+
+			if (tiles_.data->compare(tilesEntry->data.get()) != 0) // Compare the pixels only.
+				continue;
+
+			ref__ = tilesEntry; // Reuse the identical tiles asset.
+			tiles_.data = nullptr; // No new tiles data has been generated.
+			map_.ref = i; // Reference to the reused tiles page index.
+
+			if (onPrint) {
+				const std::string msg = Text::format("Reused tiles page {0}.", { Text::toString(i) });
+
+				onPrint(msg.c_str());
+			}
+
+			break;
+		}
+	}
+
+	ref__->refresh(); // Refresh the outdated editable resources.
+	Texture::Ptr &tex = ref__->touch(); // Ensure the runtime resources are ready.
+
+	// Fill the map asset.
+	Math::Vec2i count(tw, th);
+	Map::Tiles tiles(tex, count);
+	map_.data = Map::Ptr(Map::create(&tiles, true));
+	map_.data->resize(mw, mh);
+
+	map_.hasAttributes = !!flipped;
+	map_.attributes->resize(mw, mh);
+
+	k = 0;
+	for (int j = 0; j < mh; ++j) {
+		for (int i = 0; i < mw; ++i) {
+			const Cel &cel = cels[k++];
+			map_.data->set(i, j, cel.index);
+
+			int attrs = 0;
+			if (fillLocalPalette) {
+				attrs |= cel.palette & ((1 << GBBASIC_MAP_PALETTE_BIT2) | (1 << GBBASIC_MAP_PALETTE_BIT1) | (1 << GBBASIC_MAP_PALETTE_BIT0));
+			}
 			if (cel.hFlip) {
 				attrs |= (1 << GBBASIC_MAP_HFLIP_BIT);
 			}

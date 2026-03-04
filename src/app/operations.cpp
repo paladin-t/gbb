@@ -3385,14 +3385,13 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 
 								// Load from the image.
 								Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+								PaletteAssets::Array palette;
 								TilesAssets::Entry tiles(rnd, prj->paletteGetter());
 								MapAssets::Entry map("", prj->tilesGetter(), attribtex);
 								const bool loaded = MapAssets::parseImage(
-									tiles, map,
-									img.get(), allowFlip, fillLocalPalette,
-									true,
-									prj->paletteGetter(),
-									prj->tilesGetter(), prj->tilesPageCount(),
+									palette, tiles, map,
+									img.get(), allowFlip, fillLocalPalette, true,
+									prj->paletteGetter(), prj->tilesGetter(), prj->tilesPageCount(),
 									std::bind(operationsHandlePrint, ws, std::placeholders::_1), std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2)
 								);
 								if (!loaded) {
@@ -3431,8 +3430,8 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 								MapAssets::Entry* mapEntry = prj->getMap(prj->mapPageCount() - 1);
 								mapEntry->allowFlip = allowFlip;
 								mapEntry->localPaletteEnabled = fillLocalPalette;
-								// TODO: EDIT MAP AS IMAGE
-								// FILL LOCAL PALETTE
+								if (mapEntry->localPaletteEnabled)
+									mapEntry->localPalette = palette;
 
 								ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::MAP);
 

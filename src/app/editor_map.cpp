@@ -4097,15 +4097,14 @@ private:
 			return false;
 		}
 		Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+		PaletteAssets::Array palette;
 		TilesAssets::Entry tiles(rnd, _project->paletteGetter());
 		MapAssets::Entry map("", _project->tilesGetter(), attribtex);
 		std::string error;
 		const bool loaded = MapAssets::parseImage(
-			tiles, map,
-			img.get(), allowFlip, fillLocalPalette,
-			false,
-			_project->paletteGetter(),
-			_project->tilesGetter(), _project->tilesPageCount(),
+			palette, tiles, map,
+			img.get(), allowFlip, fillLocalPalette, false,
+			_project->paletteGetter(), _project->tilesGetter(), _project->tilesPageCount(),
 			nullptr, [&error] (const char* msg, bool isWarning) -> void {
 				if (!isWarning)
 					error = msg;
@@ -4170,6 +4169,19 @@ private:
 				->with(_project, (unsigned)AssetsBundle::Categories::TILES, ref, refCmdId)
 				->exec(object(), Variant((void*)entry()), attributes()));
 
+			if (fillLocalPalette) {
+				PaletteAssets::Array localPalette = palette;
+				const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+				if ((int)localPalette.size() != n)
+					localPalette.resize(n);
+
+				Command* cmd = enqueue<Commands::Map::SetLocalPalette>()
+					->with(localPalette)
+					->exec(object(), Variant((void*)entry()));
+
+				_refresh(cmd);
+			}
+
 			if (object()->width() != map.data->width() || object()->height() != map.data->height()) {
 				Command* cmd = enqueue<Commands::Map::Resize>()
 					->with(Math::Vec2i(map.data->width(), map.data->height()))
@@ -4188,9 +4200,6 @@ private:
 				->exec(object(), Variant((void*)entry()), attributes());
 
 			_refresh(cmd);
-
-			// TODO: EDIT MAP AS IMAGE
-			// FILL LOCAL PALETTE
 		}
 		_refresh(enqueue<Commands::Map::EndGroup>()
 			->with("Import")
@@ -4528,6 +4537,7 @@ private:
 			bool allowFlip = false;
 			bool fillLocalPalette = false;
 			Texture::Ptr attribtex = nullptr;
+			PaletteAssets::Array* palette = nullptr;
 			TilesAssets::Entry* tiles = nullptr;
 			MapAssets::Entry* map = nullptr;
 			std::string error;
@@ -4539,6 +4549,7 @@ private:
 				allowFlip = allowFlip_;
 				fillLocalPalette = fillLocalPalette_;
 				attribtex = Texture::Ptr(texByte, [] (Texture*) -> void { /* Do nothing. */ });
+				palette = new PaletteAssets::Array();
 				tiles = new TilesAssets::Entry(rnd, prj->paletteGetter());
 				map = new MapAssets::Entry("", prj->tilesGetter(), attribtex);
 			}
@@ -4548,6 +4559,9 @@ private:
 
 				delete tiles;
 				tiles = nullptr;
+
+				delete palette;
+				palette = nullptr;
 
 				attribtex = nullptr;
 
@@ -4575,11 +4589,9 @@ private:
 			std::bind(
 				[] (WorkTask* /* task */, Data* data) -> uintptr_t { // On work thread.
 					const bool loaded = MapAssets::parseImage(
-						*data->tiles, *data->map,
-						data->image.get(), data->allowFlip, data->fillLocalPalette,
-						false,
-						data->project->paletteGetter(),
-						data->project->tilesGetter(), data->project->tilesPageCount(),
+						*data->palette, *data->tiles, *data->map,
+						data->image.get(), data->allowFlip, data->fillLocalPalette, false,
+						data->project->paletteGetter(), data->project->tilesGetter(), data->project->tilesPageCount(),
 						nullptr, [data] (const char* msg, bool isWarning) -> void {
 							if (!isWarning)
 								data->error = msg;
@@ -4593,6 +4605,8 @@ private:
 			),
 			std::bind(
 				[this, ws] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
+					const bool fillLocalPalette = data->fillLocalPalette;
+					const PaletteAssets::Array &palette = *data->palette;
 					const TilesAssets::Entry &tiles = *data->tiles;
 					const MapAssets::Entry &map = *data->map;
 					const int ref = entry()->ref;
@@ -4618,6 +4632,19 @@ private:
 								->with(_project, (unsigned)AssetsBundle::Categories::TILES, ref, refCmdId)
 								->exec(object(), Variant((void*)entry()), attributes()));
 
+							if (fillLocalPalette) {
+								PaletteAssets::Array localPalette = palette;
+								const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+								if ((int)localPalette.size() != n)
+									localPalette.resize(n);
+
+								Command* cmd = enqueue<Commands::Map::SetLocalPalette>()
+									->with(localPalette)
+									->exec(object(), Variant((void*)entry()));
+
+								_refresh(cmd);
+							}
+
 							if (object()->width() != map.data->width() || object()->height() != map.data->height()) {
 								Command* cmd = enqueue<Commands::Map::Resize>()
 									->with(Math::Vec2i(map.data->width(), map.data->height()))
@@ -4636,9 +4663,6 @@ private:
 								->exec(object(), Variant((void*)entry()), attributes());
 
 							_refresh(cmd);
-
-							// TODO: EDIT MAP AS IMAGE
-							// FILL LOCAL PALETTE
 						}
 						_refresh(enqueue<Commands::Map::EndGroup>()
 							->with("Import")
