@@ -54,6 +54,10 @@ struct Colour {
 	int compare(const Colour &other) const;
 	bool equals(const Colour &other) const;
 
+	double distanceTo(const Colour &other) const;
+	double squaredDistanceTo(const Colour &other) const;
+	double hamiltonDistanceTo(const Colour &other) const;
+
 	int toGray(void) const;
 
 	/**

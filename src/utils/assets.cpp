@@ -4259,8 +4259,8 @@ bool MapAssets::Entry::fromString(const char* val, size_t len, WarningOrErrorHan
 MapAssets::Slice::Slice() {
 }
 
-MapAssets::Slice::Slice(Image::Ptr img) :
-	image(img)
+MapAssets::Slice::Slice(Image::Ptr img, int pal) :
+	image(img), palette(pal)
 {
 	GBBASIC_ASSERT(img && "Wrong data.");
 
@@ -4498,14 +4498,14 @@ bool MapAssets::parseImage(
 			what.image->clone(&ptr);
 			Image::Ptr tmp(ptr);
 			tmp->flip(true, false);
-			if (coll[i] == Slice(tmp)) {
+			if (coll[i] == Slice(tmp, 0)) {
 				hFlip = true;
 
 				return i;
 			}
 
 			tmp->flip(false, true);
-			if (coll[i] == Slice(tmp)) {
+			if (coll[i] == Slice(tmp, 0)) {
 				hFlip = true;
 				vFlip = true;
 
@@ -4513,7 +4513,7 @@ bool MapAssets::parseImage(
 			}
 
 			tmp->flip(true, false);
-			if (coll[i] == Slice(tmp)) {
+			if (coll[i] == Slice(tmp, 0)) {
 				vFlip = true;
 
 				return i;
@@ -4523,16 +4523,9 @@ bool MapAssets::parseImage(
 		return -1;
 	};
 
-	// Convert the true-color image to paletted.
-	Image::Ptr paletted(val->quantized2Bpp());
-
-	// Slice the image.
-	Slice::Array slices;
-	Cel::Array cels;
-	int flipped = 0;
-
-	const std::div_t dx = std::div(paletted->width(), GBBASIC_TILE_SIZE);
-	const std::div_t dy = std::div(paletted->height(), GBBASIC_TILE_SIZE);
+	// Prepare the image.
+	const std::div_t dx = std::div(val->width(), GBBASIC_TILE_SIZE);
+	const std::div_t dy = std::div(val->height(), GBBASIC_TILE_SIZE);
 	if (dx.rem || dy.rem) {
 		if (onWarningOrError)
 			onWarningOrError("Image size is not a multiple of 8.", true);
@@ -4546,6 +4539,13 @@ bool MapAssets::parseImage(
 
 		return false;
 	}
+
+	Image::Ptr paletted(val->quantized2Bpp()); // Convert the true-color image to paletted.
+
+	// Slice the image.
+	Slice::Array slices;
+	Cel::Array cels;
+	int flipped = 0;
 
 	cels.resize(area);
 	for (int j = 0; j < mh; j += 2) {
@@ -4564,7 +4564,7 @@ bool MapAssets::parseImage(
 					GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
 					x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE
 				);
-				Slice slice(s);
+				Slice slice(s, 0);
 
 				int index = -1;
 				bool hFlip = false;
@@ -4709,7 +4709,7 @@ bool MapAssets::parseImage(
 		}
 	};
 
-	auto indexOfSlice = [] (const Slice::Array &coll, const Slice &what, bool allowFlip, bool &hFlip, bool &vFlip) -> int {
+	auto indexOfSlice = [] (const Slice::Array &coll, const Slice &what, int pal, bool allowFlip, bool &hFlip, bool &vFlip) -> int {
 		for (int i = 0; i < (int)coll.size(); ++i) {
 			if (coll[i] == what) // Compare the slices' images.
 				return i;
@@ -4721,14 +4721,14 @@ bool MapAssets::parseImage(
 			what.image->clone(&ptr);
 			Image::Ptr tmp(ptr);
 			tmp->flip(true, false);
-			if (coll[i] == Slice(tmp)) {
+			if (coll[i] == Slice(tmp, pal)) {
 				hFlip = true;
 
 				return i;
 			}
 
 			tmp->flip(false, true);
-			if (coll[i] == Slice(tmp)) {
+			if (coll[i] == Slice(tmp, pal)) {
 				hFlip = true;
 				vFlip = true;
 
@@ -4736,7 +4736,7 @@ bool MapAssets::parseImage(
 			}
 
 			tmp->flip(true, false);
-			if (coll[i] == Slice(tmp)) {
+			if (coll[i] == Slice(tmp, pal)) {
 				vFlip = true;
 
 				return i;
@@ -4746,22 +4746,114 @@ bool MapAssets::parseImage(
 		return -1;
 	};
 
-	// Convert the true-color image to paletted.
-	Image::Ptr paletted(val->quantized2Bpp());
+	typedef std::vector<int> Indices;
 
-	// TODO: EDIT MAP AS IMAGE
-	// CALCULATE PALETTE
-	if (fillLocalPalette) {
-		// TODO
-	}
+	auto touchPalette = [] (const Image::Colours &cols, PaletteAssets::Array &palette, Indices &indices) -> int {
+		// Prepare.
+		typedef std::set<Colour> ColourSet;
+		typedef Indexed::Lookup ColourDictionary;
 
-	// Slice the image.
-	Slice::Array slices;
-	Cel::Array cels;
-	int flipped = 0;
+		int result = 0;
+		Image::Colours cols_ = cols;
+		if (cols_.size() != GBBASIC_PALETTE_PER_GROUP_COUNT)
+			cols_.resize(GBBASIC_PALETTE_PER_GROUP_COUNT, Colour(0, 0, 0, 255));
+		const ColourSet uniqueCols(cols_.begin(), cols_.end());
 
-	const std::div_t dx = std::div(paletted->width(), GBBASIC_TILE_SIZE);
-	const std::div_t dy = std::div(paletted->height(), GBBASIC_TILE_SIZE);
+		indices.clear();
+
+		// Find any precisely matched palette group.
+		for (int i = 0; i < (int)palette.size(); ++i) {
+			const PaletteAssets::Entry &pal = palette[i];
+			ColourSet uniquePalCols;
+			ColourDictionary colDict;
+			for (int j = 0; j < pal.data->count(); ++j) {
+				Colour col;
+				pal.data->get(j, col);
+				uniquePalCols.insert(col);
+				colDict.insert(std::make_pair(col, j));
+			}
+			const bool matched = uniqueCols == uniquePalCols;
+			if (matched) {
+				for (int j = 0; j < (int)cols_.size(); ++j) {
+					const Colour &col = cols_[j];
+					ColourDictionary::const_iterator it = colDict.find(col);
+					const int idx = it == colDict.end() ? 0 : it->second;
+					indices.push_back(idx);
+				}
+				result = i;
+
+				return result;
+			}
+		}
+
+		// Find a similar palette group, if the palette structure is full.
+		const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+		if ((int)palette.size() >= n) {
+			int bestPalIdx = -1;
+			double minTotalDist = std::numeric_limits<double>::max();
+			for (int i = 0; i < (int)palette.size(); ++i) {
+				const PaletteAssets::Entry &pal = palette[i];
+				double totalDist = 0.0;
+				for (int j = 0; j < (int)cols_.size(); ++j) {
+					const Colour &col = cols_[j];
+					double minDist = std::numeric_limits<double>::max();
+					for (int k = 0; k < pal.data->count(); ++k) {
+						Colour palCol;
+						pal.data->get(k, palCol);
+						const double dist = col.squaredDistanceTo(palCol);
+						if (dist < minDist)
+							minDist = dist;
+					}
+					totalDist += minDist;
+				}
+				if (totalDist < minTotalDist) {
+					minTotalDist = totalDist;
+					bestPalIdx = i;
+				}
+			}
+			if (bestPalIdx == -1)
+				bestPalIdx = 0;
+
+			const PaletteAssets::Entry &bestPal = palette[bestPalIdx];
+			for (int j = 0; j < (int)cols_.size(); ++j) {
+				const Colour &col = cols_[j];
+				int bestK = 0;
+				double bestDist = std::numeric_limits<double>::max();
+				for (int k = 0; k < bestPal.data->count(); ++k) {
+					Colour palCol;
+					bestPal.data->get(k, palCol);
+					const double dist = col.squaredDistanceTo(palCol);
+					if (dist < bestDist) {
+						bestDist = dist;
+						bestK = k;
+					}
+				}
+				indices.push_back(bestK);
+			}
+			result = bestPalIdx;
+
+			return result;
+		}
+
+		// Add a new palette group, if the palette structure is not full.
+		do {
+			PaletteAssets::Entry pal;
+			for (int j = 0; j < (int)cols_.size(); ++j) {
+				const Colour &col = cols_[j];
+				pal.data->set(j, &col);
+				indices.push_back(j);
+			}
+			palette.push_back(pal);
+			result = (int)palette.size() - 1;
+		} while (false);
+
+		// Finish.
+		return result;
+	};
+
+	// Prepare the image.
+	const std::div_t dx = std::div(val->width(), GBBASIC_TILE_SIZE);
+	const std::div_t dy = std::div(val->height(), GBBASIC_TILE_SIZE);
 	if (dx.rem || dy.rem) {
 		if (onWarningOrError)
 			onWarningOrError("Image size is not a multiple of 8.", true);
@@ -4776,6 +4868,18 @@ bool MapAssets::parseImage(
 		return false;
 	}
 
+	Image::Ptr palettedImg = nullptr;
+	if (fillLocalPalette)
+		palette_.clear();
+	else
+		palettedImg = Image::Ptr(val->quantized2Bpp()); // Convert the true-color image to paletted.
+
+	// Slice the image.
+	Slice::Array slices;
+	Cel::Array cels;
+	int paletted = 0;
+	int flipped = 0;
+
 	cels.resize(area);
 	for (int j = 0; j < mh; j += 2) {
 		for (int i = 0; i < mw; ++i) {
@@ -4785,27 +4889,59 @@ bool MapAssets::parseImage(
 				if (y >= mh)
 					continue;
 
-				Image::Ptr s(Image::create(paletted->palette()));
-				s->fromBlank(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_PALETTE_DEPTH);
-				paletted->blit(
-					s.get(),
-					0, 0,
-					GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
-					x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE
-				);
-				Slice slice(s);
+				int pal = 0;
+				Slice slice;
+				if (fillLocalPalette) {
+					Image::Ptr r(Image::create());
+					r->fromBlank(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, 0);
+					val->blit(
+						r.get(),
+						0, 0,
+						GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+						x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE
+					);
+					Image::Colours allCol = r->allColours();
+					Indices indices;
+					const int pal_ = touchPalette(allCol, palette_, indices);
+
+					Indexed::Lookup lookup;
+					for (int k = 0; k < Math::min((int)allCol.size(), (int)indices.size()); ++k) {
+						const Colour &col = allCol[k];
+						const int idx = indices[k];
+						lookup.insert(std::make_pair(col, idx));
+					}
+					Image::Ptr s(r->quantized2Bpp(lookup));
+					pal = pal_;
+					slice = Slice(s, pal);
+				} else {
+					Image::Ptr s(Image::create(palettedImg->palette()));
+					s->fromBlank(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_PALETTE_DEPTH);
+					palettedImg->blit(
+						s.get(),
+						0, 0,
+						GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+						x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE
+					);
+					pal = 0;
+					slice = Slice(s, pal);
+				}
 
 				int index = -1;
 				bool hFlip = false;
 				bool vFlip = false;
-				const int exists = indexOfSlice(slices, slice, allowFlip, hFlip, vFlip);
+				const int exists = indexOfSlice(slices, slice, pal, allowFlip, hFlip, vFlip);
 				if (exists == -1) {
 					slices.push_back(slice);
 					index = (int)slices.size() - 1;
 				} else {
 					index = exists;
 				}
-				cels[x + y * mw] = Cel(index, 0, hFlip, vFlip); // TODO
+				if (fillLocalPalette) {
+					cels[x + y * mw] = Cel(index, pal, hFlip, vFlip);
+					++paletted;
+				} else {
+					cels[x + y * mw] = Cel(index, 0, hFlip, vFlip);
+				}
 
 				if (hFlip || vFlip)
 					++flipped;
@@ -4893,7 +5029,7 @@ bool MapAssets::parseImage(
 	map_.data = Map::Ptr(Map::create(&tiles, true));
 	map_.data->resize(mw, mh);
 
-	map_.hasAttributes = !!flipped;
+	map_.hasAttributes = !!paletted || !!flipped;
 	map_.attributes->resize(mw, mh);
 
 	k = 0;

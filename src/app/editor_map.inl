@@ -444,9 +444,7 @@ public:
 
 			Platform::setClipboardText(osstr.c_str());
 		} else {
-			typedef std::vector<Colour> Data;
-
-			Data vec(size, Colour());
+			Image::Colours vec(size, Colour());
 			Editing::Dots dots(&vec.front());
 			binding.getPixels(selPtr, dots);
 

@@ -798,9 +798,10 @@ struct MapAssets {
 
 		size_t hash = 0;
 		Image::Ptr image = nullptr;
+		int palette = 0;
 
 		Slice();
-		Slice(Image::Ptr img);
+		Slice(Image::Ptr img, int pal);
 
 		bool operator == (const Slice &other) const;
 		bool operator != (const Slice &other) const;
