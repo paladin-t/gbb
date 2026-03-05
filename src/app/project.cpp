@@ -1079,7 +1079,7 @@ int Project::mapPageCount(void) const {
 	return assets_.count();
 }
 
-bool Project::addMapPage(const std::string &val, bool isNew, const char* preferedName /* nullable */) {
+bool Project::addMapPage(const std::string &val, bool isNew, const char* preferedName) {
 	MapAssets &assets_ = assets()->maps;
 	const bool result = assets_.add(MapAssets::Entry(val, tilesGetter(), attributesTexture()));
 	if (result && isNew) {

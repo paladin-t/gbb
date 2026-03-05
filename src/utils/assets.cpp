@@ -1103,7 +1103,7 @@ bool PaletteAssets::toString(std::string &val, WarningOrErrorHandler onWarningOr
 
 		rapidjson::Value val_;
 		if (!entry->toJson(val_, doc)) {
-			assetsRaiseWarningOrError("Cannot serialize palette at page {0}.", i, true, onWarningOrError);
+			assetsRaiseWarningOrError("Cannot serialize palette at {0}.", i, true, onWarningOrError);
 
 			continue;
 		}
@@ -3161,7 +3161,7 @@ bool TilesAssets::Entry::parseJson(Image::Ptr &img, const std::string &val, Pars
 	return true;
 }
 
-bool TilesAssets::Entry::serializeImage(Image* val, const Math::Recti* area) const {
+bool TilesAssets::Entry::serializeImage(Image* val, const Math::Recti* area, PaletteColorGetter getCol) const {
 	// Prepare.
 	if (!val)
 		return false;
@@ -3176,7 +3176,8 @@ bool TilesAssets::Entry::serializeImage(Image* val, const Math::Recti* area) con
 				int idx = 0;
 				data->get(i + (int)area_.xMin(), j + (int)area_.yMin(), idx);
 				Colour col;
-				palette->get(idx, col);
+				if (!getCol || !getCol(idx, col))
+					palette->get(idx, col);
 				tmp->set(i, j, col);
 			}
 		}
@@ -3192,7 +3193,20 @@ bool TilesAssets::Entry::serializeImage(Image* val, const Math::Recti* area) con
 	return true;
 }
 
-bool TilesAssets::Entry::serializeImage(Bytes* val, const char* type, const Math::Recti* area) const {
+bool TilesAssets::Entry::serializeImage(Image* val, const Math::Recti* area) const {
+	return serializeImage(
+		val, area,
+		[this] (int idx, Colour &out) -> bool {
+			Colour col;
+			palette->get(idx, col);
+			out = col;
+
+			return true;
+		}
+	);
+}
+
+bool TilesAssets::Entry::serializeImage(Bytes* val, const char* type, const Math::Recti* area, PaletteColorGetter getCol) const {
 	// Prepare.
 	if (!val)
 		return false;
@@ -3209,7 +3223,8 @@ bool TilesAssets::Entry::serializeImage(Bytes* val, const char* type, const Math
 				int idx = 0;
 				data->get(i + (int)area_.xMin(), j + (int)area_.yMin(), idx);
 				Colour col;
-				palette->get(idx, col);
+				if (!getCol || !getCol(idx, col))
+					palette->get(idx, col);
 				tmp->set(i, j, col);
 			}
 		}
@@ -3223,6 +3238,19 @@ bool TilesAssets::Entry::serializeImage(Bytes* val, const char* type, const Math
 
 	// Finish.
 	return true;
+}
+
+bool TilesAssets::Entry::serializeImage(Bytes* val, const char* type, const Math::Recti* area) const {
+	return serializeImage(
+		val, type, area,
+		[this] (int idx, Colour &out) -> bool {
+			Colour col;
+			palette->get(idx, col);
+			out = col;
+
+			return true;
+		}
+	);
 }
 
 bool TilesAssets::Entry::parseImage(Image::Ptr &img, const Image* val, ParsingStatuses &status) const {
@@ -3708,6 +3736,27 @@ bool MapAssets::Entry::serializeBasic(std::string &val, int page) const {
 	val.clear();
 
 	// Serialize the code.
+	if (localPaletteEnabled) {
+		for (int i = 0; i < (int)localPalette.size(); ++i) {
+			const PaletteAssets::Entry &entry = localPalette[i];
+			for (int j = 0; j < entry.data->count(); ++j) {
+				Colour col;
+				entry.data->get(j, col);
+
+				val += "palette ";
+				val += "MAP_LAYER, ";
+				val += Text::toString(i % 8) + ", ";
+				val += Text::toString(j) + ", ";
+				val += "rgb(";
+				val += Text::toString(col.r) + ", ";
+				val += Text::toString(col.g) + ", ";
+				val += Text::toString(col.b);
+				val += ")";
+				val += "\n";
+			}
+		}
+	}
+
 	std::string asset;
 	if (name.empty())
 		asset = "#" + Text::toString(page);
@@ -4000,9 +4049,31 @@ bool MapAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarnin
 	rapidjson::Value* attributes_ = nullptr;
 	Jpath::get(doc, attributes_, "attributes");
 
+	Jpath::set(doc, doc, editAsImage, "edit_as_image");
+
+	Jpath::set(doc, doc, localPaletteEnabled, "local_palette", "enabled");
+
+	Jpath::set(doc, doc, Jpath::ANY(), "local_palette", "colors");
+	rapidjson::Value* colors = nullptr;
+	Jpath::get(doc, colors, "local_palette", "colors");
+	for (int i = 0; i < (int)localPalette.size(); ++i) {
+		const PaletteAssets::Entry &entry = localPalette[i];
+
+		rapidjson::Value val_;
+		if (!entry.toJson(val_, doc)) {
+			assetsRaiseWarningOrError("Cannot serialize palette at {0}.", i, true, onWarningOrError);
+
+			continue;
+		}
+
+		colors->PushBack(val_, doc.GetAllocator());
+	}
+
 	Jpath::set(doc, doc, name, "name");
 
 	Jpath::set(doc, doc, magnification, "magnification");
+
+	Jpath::set(doc, doc, allowFlip, "allow_flip");
 
 	Jpath::set(doc, doc, optimize, "optimize");
 
@@ -4086,11 +4157,56 @@ bool MapAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler 
 
 	Jpath::get(doc, hasAttributes, "has_attributes");
 
+	if (!Jpath::get(doc, editAsImage, "edit_as_image"))
+		editAsImage = false;
+
+	if (!Jpath::get(doc, localPaletteEnabled, "local_palette", "enabled"))
+		localPaletteEnabled = false;
+
+	do {
+		localPalette.clear();
+		const rapidjson::Value* colors = nullptr;
+		if (!Jpath::get(doc, colors, "local_palette", "colors")) {
+			assetsRaiseWarningOrError("Cannot find \"local_palette/colors\" entry in JSON.", false, onWarningOrError);
+
+			break;
+		}
+		if (!colors || !colors->IsArray()) {
+			assetsRaiseWarningOrError("Invalid \"local_palette/colors\" entry.", false, onWarningOrError);
+
+			break;
+		}
+
+		for (auto it = colors->Begin(); it != colors->End(); ++it) {
+			PaletteAssets::Entry p;
+			const rapidjson::Value &val_ = *it;
+			if (!p.fromJson(val_))
+				continue;
+
+			localPalette.push_back(p);
+		}
+	} while (false);
+	/*const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+	if (!localPalette.empty() && (int)localPalette.size() != n) {
+		const int m = (int)localPalette.size();
+		localPalette.resize(n);
+		if (m < n) {
+			PaletteAssets default_;
+			for (int i = m; i < n; ++i) {
+				const PaletteAssets::Entry* entry = default_.get(i);
+				localPalette[i] = *entry;
+			}
+		}
+	}*/
+
 	if (!Jpath::get(doc, name, "name"))
 		name.clear();
 
 	if (!Jpath::get(doc, magnification, "magnification"))
 		magnification = -1;
+
+	if (!Jpath::get(doc, allowFlip, "allow_flip"))
+		allowFlip = false;
 
 	if (!Jpath::get(doc, optimize, "optimize"))
 		optimize = true;
@@ -4143,8 +4259,8 @@ bool MapAssets::Entry::fromString(const char* val, size_t len, WarningOrErrorHan
 MapAssets::Slice::Slice() {
 }
 
-MapAssets::Slice::Slice(Image::Ptr img) :
-	image(img)
+MapAssets::Slice::Slice(Image::Ptr img, int pal) :
+	image(img), palette(pal)
 {
 	GBBASIC_ASSERT(img && "Wrong data.");
 
@@ -4304,10 +4420,36 @@ bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets
 			const std::div_t div = std::div(cel, tiles_.data->width() / GBBASIC_TILE_SIZE);
 			const int x = div.rem;
 			const int y = div.quot;
+			const Math::Recti area = Math::Recti::byXYWH(x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
 
 			Image::Ptr tmp(Image::create());
-			const Math::Recti area = Math::Recti::byXYWH(x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
-			tiles_.serializeImage(tmp.get(), &area);
+
+			const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+			const bool localPaletteEnabled = map_.localPaletteEnabled;
+			const PaletteAssets::Array &localPalette = map_.localPalette;
+			if (localPaletteEnabled && (int)localPalette.size() == n) {
+				tiles_.serializeImage(
+					tmp.get(), &area,
+					[&] (int idx, Colour &out) -> bool {
+						const std::div_t div = std::div(idx, GBBASIC_PALETTE_PER_GROUP_COUNT);
+						const int plt = div.quot;
+						const int idx_ = div.rem;
+						if (plt < 0 || plt >= (int)localPalette.size())
+							return false;
+						if (idx_ < 0 || idx_ >= GBBASIC_PALETTE_PER_GROUP_COUNT)
+							return false;
+
+						Colour col;
+						localPalette[plt].data->get(idx_, col);
+						out = col;
+
+						return true;
+					}
+				);
+			} else {
+				tiles_.serializeImage(tmp.get(), &area);
+			}
+
 			bool hFlip = false;
 			bool vFlip = false;
 			if (map_.hasAttributes && map_.attributes) {
@@ -4315,6 +4457,7 @@ bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets
 				hFlip = !!((attrs >> GBBASIC_MAP_HFLIP_BIT) & 0x00000001);
 				vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
 			}
+
 			tmp->blit(val, i * GBBASIC_TILE_SIZE, j * GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, 0, 0, hFlip, vFlip);
 		}
 	}
@@ -4324,11 +4467,9 @@ bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets
 }
 
 bool MapAssets::parseImage(
-	TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
-	const Image* val, bool allowFlip,
-	bool allowReuse,
-	PaletteAssets::Getter getplt,
-	TilesAssets::Getter gettls, int tilesPageCount,
+	PaletteAssets::Array &palette_, TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
+	const Image* val, bool allowFlip, bool fillLocalPalette, bool allowReuse,
+	PaletteAssets::Getter getplt, TilesAssets::Getter gettls, int tilesPageCount,
 	PrintHandler onPrint, WarningOrErrorHandler onWarningOrError
 ) {
 	// Prepare.
@@ -4336,16 +4477,36 @@ bool MapAssets::parseImage(
 		typedef std::vector<Cel> Array;
 
 		int index = -1;
+		int palette = 0;
 		bool hFlip = false;
 		bool vFlip = false;
 
 		Cel() {
 		}
-		Cel(int idx, bool hFlip_, bool vFlip_) : index(idx), hFlip(hFlip_), vFlip(vFlip_) {
+		Cel(int idx, int pal, bool hFlip_, bool vFlip_) : index(idx), palette(pal), hFlip(hFlip_), vFlip(vFlip_) {
 		}
 	};
 
-	auto indexOfSlice = [] (const Slice::Array &coll, const Slice &what, bool allowFlip, bool &hFlip, bool &vFlip) -> int {
+	typedef std::vector<int> Indices;
+
+	struct TileRef {
+		typedef std::vector<TileRef> Array;
+
+		int x = 0;
+		int y = 0;
+		Image::Ptr slice = nullptr;
+		Image::Colours colors;
+
+		TileRef() {
+		}
+		TileRef(int x_, int y_, Image::Ptr s, const Image::Colours &cols) :
+			x(x_), y(y_),
+			slice(s), colors(cols)
+		{
+		}
+	};
+
+	auto indexOfSlice = [] (const Slice::Array &coll, const Slice &what, int pal, bool allowFlip, bool &hFlip, bool &vFlip) -> int {
 		for (int i = 0; i < (int)coll.size(); ++i) {
 			if (coll[i] == what) // Compare the slices' images.
 				return i;
@@ -4357,14 +4518,14 @@ bool MapAssets::parseImage(
 			what.image->clone(&ptr);
 			Image::Ptr tmp(ptr);
 			tmp->flip(true, false);
-			if (coll[i] == Slice(tmp)) {
+			if (coll[i] == Slice(tmp, pal)) {
 				hFlip = true;
 
 				return i;
 			}
 
 			tmp->flip(false, true);
-			if (coll[i] == Slice(tmp)) {
+			if (coll[i] == Slice(tmp, pal)) {
 				hFlip = true;
 				vFlip = true;
 
@@ -4372,7 +4533,7 @@ bool MapAssets::parseImage(
 			}
 
 			tmp->flip(true, false);
-			if (coll[i] == Slice(tmp)) {
+			if (coll[i] == Slice(tmp, pal)) {
 				vFlip = true;
 
 				return i;
@@ -4382,16 +4543,117 @@ bool MapAssets::parseImage(
 		return -1;
 	};
 
-	// Convert the true-color image to paletted.
-	Image::Ptr paletted(val->quantized2Bpp());
+	auto touchPalette = [] (const Image::Colours &cols, PaletteAssets::Array &palette, Indices &indices, bool &overflow) -> int {
+		// Prepare.
+		typedef std::set<Colour> ColourSet;
 
-	// Slice the image.
-	Slice::Array slices;
-	Cel::Array cels;
-	int flipped = 0;
+		int result = 0;
+		Image::Colours cols_ = cols;
+		if (cols_.size() < GBBASIC_PALETTE_PER_GROUP_COUNT)
+			cols_.resize(GBBASIC_PALETTE_PER_GROUP_COUNT, Colour(255, 255, 255, 0));
+		const ColourSet uniqueCols(cols.begin(), cols.end());
 
-	const std::div_t dx = std::div(paletted->width(), GBBASIC_TILE_SIZE);
-	const std::div_t dy = std::div(paletted->height(), GBBASIC_TILE_SIZE);
+		indices.clear();
+		overflow = false;
+
+		// Find any precisely matched palette group.
+		for (int i = 0; i < (int)palette.size(); ++i) {
+			const PaletteAssets::Entry &pal = palette[i];
+			ColourSet uniquePalCols;
+			Indexed::Lookup colDict;
+			for (int j = 0; j < pal.data->count(); ++j) {
+				Colour col;
+				pal.data->get(j, col);
+				uniquePalCols.insert(col);
+				colDict.insert(std::make_pair(col, j));
+			}
+			const bool matched = std::includes(
+				uniquePalCols.begin(), uniquePalCols.end(),
+				uniqueCols.begin(), uniqueCols.end()
+			);
+			if (matched) {
+				for (int j = 0; j < (int)cols_.size(); ++j) {
+					const Colour &col = cols_[j];
+					Indexed::Lookup::const_iterator it = colDict.find(col);
+					const int idx = it == colDict.end() ? 0 : it->second;
+					indices.push_back(idx);
+				}
+				result = i;
+
+				return result;
+			}
+		}
+
+		// Add a new palette group, if the palette structure is not full.
+		const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+		if ((int)palette.size() < n) {
+			PaletteAssets::Entry pal;
+			for (int j = 0; j < (int)cols_.size(); ++j) {
+				const Colour &col = cols_[j];
+				pal.data->set(j, &col);
+				indices.push_back(j);
+			}
+			palette.push_back(pal);
+			result = (int)palette.size() - 1;
+
+			return result;
+		}
+
+		// Find a similar palette group, if the palette structure is full.
+		do {
+			overflow = true;
+
+			int bestPalIdx = -1;
+			double minTotalDist = std::numeric_limits<double>::max();
+			for (int i = 0; i < (int)palette.size(); ++i) {
+				const PaletteAssets::Entry &pal = palette[i];
+				double totalDist = 0.0;
+				for (int j = 0; j < (int)cols_.size(); ++j) {
+					const Colour &col = cols_[j];
+					double minDist = std::numeric_limits<double>::max();
+					for (int k = 0; k < pal.data->count(); ++k) {
+						Colour palCol;
+						pal.data->get(k, palCol);
+						const double dist = col.squaredDistanceTo(palCol);
+						if (dist < minDist)
+							minDist = dist;
+					}
+					totalDist += minDist;
+				}
+				if (totalDist < minTotalDist) {
+					minTotalDist = totalDist;
+					bestPalIdx = i;
+				}
+			}
+			if (bestPalIdx == -1)
+				bestPalIdx = 0;
+
+			const PaletteAssets::Entry &bestPal = palette[bestPalIdx];
+			for (int j = 0; j < (int)cols_.size(); ++j) {
+				const Colour &col = cols_[j];
+				int bestK = 0;
+				double bestDist = std::numeric_limits<double>::max();
+				for (int k = 0; k < bestPal.data->count(); ++k) {
+					Colour palCol;
+					bestPal.data->get(k, palCol);
+					const double dist = col.squaredDistanceTo(palCol);
+					if (dist < bestDist) {
+						bestDist = dist;
+						bestK = k;
+					}
+				}
+				indices.push_back(bestK);
+			}
+			result = bestPalIdx;
+		} while (false);
+
+		// Finish.
+		return result;
+	};
+
+	// Prepare the image.
+	const std::div_t dx = std::div(val->width(), GBBASIC_TILE_SIZE);
+	const std::div_t dy = std::div(val->height(), GBBASIC_TILE_SIZE);
 	if (dx.rem || dy.rem) {
 		if (onWarningOrError)
 			onWarningOrError("Image size is not a multiple of 8.", true);
@@ -4406,40 +4668,164 @@ bool MapAssets::parseImage(
 		return false;
 	}
 
+	Image::Ptr palettedImg = nullptr;
+	const PaletteAssets::Array defaultPalette = palette_;
+	if (fillLocalPalette)
+		palette_.clear();
+	else
+		palettedImg = Image::Ptr(val->quantized2Bpp()); // Convert the true-color image to paletted.
+
+	// Slice the image.
+	Slice::Array slices;
+	Cel::Array cels;
+	int paletted = 0;
+	int flipped = 0;
 	cels.resize(area);
-	for (int j = 0; j < mh; j += 2) {
-		for (int i = 0; i < mw; ++i) {
-			const int x = i;
-			for (int h = 0; h < 2; ++h) { // Import as 8x16 if possible.
-				const int y = j + h;
-				if (y >= mh)
-					continue;
 
-				Image::Ptr s(Image::create(paletted->palette()));
-				s->fromBlank(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_PALETTE_DEPTH);
-				paletted->blit(
-					s.get(),
-					0, 0,
-					GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
-					x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE
-				);
-				Slice slice(s);
+	if (fillLocalPalette) {
+		TileRef::Array tileRefs;
+		for (int j = 0; j < mh; j += 2) {
+			for (int i = 0; i < mw; ++i) {
+				const int x = i;
+				for (int h = 0; h < 2; ++h) { // Import as 8x16 if possible.
+					const int y = j + h;
+					if (y >= mh)
+						continue;
 
-				int index = -1;
-				bool hFlip = false;
-				bool vFlip = false;
-				const int exists = indexOfSlice(slices, slice, allowFlip, hFlip, vFlip);
-				if (exists == -1) {
-					slices.push_back(slice);
-					index = (int)slices.size() - 1;
-				} else {
-					index = exists;
+					Image::Ptr r(Image::create());
+					r->fromBlank(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, 0);
+					val->blit(
+						r.get(),
+						0, 0,
+						GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+						x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE
+					);
+					const Image::Colours allCols = r->allColours();
+					const TileRef tileRef(x, y, r, allCols);
+					tileRefs.push_back(tileRef);
 				}
-				cels[x + y * mw] = Cel(index, hFlip, vFlip);
-
-				if (hFlip || vFlip)
-					++flipped;
 			}
+		}
+		std::sort(
+			tileRefs.begin(), tileRefs.end(),
+			[] (const TileRef &l, const TileRef &r) -> bool {
+				if (l.colors.size() > r.colors.size())
+					return true;
+				else if (l.colors.size() < r.colors.size())
+					return false;
+
+				if (l.y < r.y)
+					return true;
+				else if (l.y > r.y)
+					return false;
+
+				if (l.x < r.x)
+					return true;
+
+				return false;
+			}
+		);
+		for (const TileRef tileRef : tileRefs) {
+			const int x = tileRef.x;
+			const int y = tileRef.y;
+			Image::Ptr r = tileRef.slice;
+			const Image::Colours allCols = tileRef.colors;
+
+			Indices indices;
+			bool overflow = false;
+			const int pal_ = touchPalette(allCols, palette_, indices, overflow);
+			if (allCols.size() > GBBASIC_PALETTE_PER_GROUP_COUNT) {
+				const std::string msg = Text::format(
+					"Too many colors at tile {0}, {1}.",
+					{
+						Text::toString(x), Text::toString(y)
+					}
+				);
+				if (onWarningOrError)
+					onWarningOrError(msg.c_str(), true);
+			}
+			if (overflow) {
+				const std::string msg = Text::format(
+					"Cannot allocate new palette group for tile {0}, {1}.",
+					{
+						Text::toString(x), Text::toString(y)
+					}
+				);
+				if (onWarningOrError)
+					onWarningOrError(msg.c_str(), true);
+			}
+
+			Indexed::Lookup lookup;
+			for (int k = 0; k < Math::min((int)allCols.size(), (int)indices.size()); ++k) {
+				const Colour &col = allCols[k];
+				const int idx = indices[k];
+				lookup.insert(std::make_pair(col, idx));
+			}
+			Image::Ptr s(r->quantized2Bpp(lookup));
+			const int pal = pal_;
+			const Slice slice(s, pal);
+
+			int index = -1;
+			bool hFlip = false;
+			bool vFlip = false;
+			const int exists = indexOfSlice(slices, slice, pal, allowFlip, hFlip, vFlip);
+			if (exists == -1) {
+				slices.push_back(slice);
+				index = (int)slices.size() - 1;
+			} else {
+				index = exists;
+			}
+			cels[x + y * mw] = Cel(index, pal, hFlip, vFlip);
+			++paletted;
+
+			if (hFlip || vFlip)
+				++flipped;
+		}
+	} else {
+		for (int j = 0; j < mh; j += 2) {
+			for (int i = 0; i < mw; ++i) {
+				const int x = i;
+				for (int h = 0; h < 2; ++h) { // Import as 8x16 if possible.
+					const int y = j + h;
+					if (y >= mh)
+						continue;
+
+					Image::Ptr s(Image::create(palettedImg->palette()));
+					s->fromBlank(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_PALETTE_DEPTH);
+					palettedImg->blit(
+						s.get(),
+						0, 0,
+						GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+						x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE
+					);
+					const int pal = 0;
+					const Slice slice(s, pal);
+
+					int index = -1;
+					bool hFlip = false;
+					bool vFlip = false;
+					const int exists = indexOfSlice(slices, slice, pal, allowFlip, hFlip, vFlip);
+					if (exists == -1) {
+						slices.push_back(slice);
+						index = (int)slices.size() - 1;
+					} else {
+						index = exists;
+					}
+					cels[x + y * mw] = Cel(index, pal, hFlip, vFlip);
+
+					if (hFlip || vFlip)
+						++flipped;
+				}
+			}
+		}
+	}
+
+	if (fillLocalPalette) {
+		const int m = (int)palette_.size();
+		const int n = (int)defaultPalette.size();
+		for (int i = m; i < n; ++i) {
+			const PaletteAssets::Entry &pal = defaultPalette[i];
+			palette_.push_back(pal);
 		}
 	}
 
@@ -4523,7 +4909,7 @@ bool MapAssets::parseImage(
 	map_.data = Map::Ptr(Map::create(&tiles, true));
 	map_.data->resize(mw, mh);
 
-	map_.hasAttributes = !!flipped;
+	map_.hasAttributes = !!paletted || !!flipped;
 	map_.attributes->resize(mw, mh);
 
 	k = 0;
@@ -4533,6 +4919,9 @@ bool MapAssets::parseImage(
 			map_.data->set(i, j, cel.index);
 
 			int attrs = 0;
+			if (fillLocalPalette) {
+				attrs |= cel.palette & ((1 << GBBASIC_MAP_PALETTE_BIT2) | (1 << GBBASIC_MAP_PALETTE_BIT1) | (1 << GBBASIC_MAP_PALETTE_BIT0));
+			}
 			if (cel.hFlip) {
 				attrs |= (1 << GBBASIC_MAP_HFLIP_BIT);
 			}
@@ -7023,6 +7412,28 @@ bool SceneAssets::Entry::serializeBasic(std::string &val, int page, bool loading
 	val.clear();
 
 	// Serialize the code.
+	const MapAssets::Entry* mapEntry = getMap(refMap);
+	if (mapEntry && !mapEntry->localPaletteEnabled) {
+		for (int i = 0; i < (int)mapEntry->localPalette.size(); ++i) {
+			const PaletteAssets::Entry &entry = mapEntry->localPalette[i];
+			for (int j = 0; j < entry.data->count(); ++j) {
+				Colour col;
+				entry.data->get(j, col);
+
+				val += "palette ";
+				val += "MAP_LAYER, ";
+				val += Text::toString(i % 8) + ", ";
+				val += Text::toString(j) + ", ";
+				val += "rgb(";
+				val += Text::toString(col.r) + ", ";
+				val += Text::toString(col.g) + ", ";
+				val += Text::toString(col.b);
+				val += ")";
+				val += "\n";
+			}
+		}
+	}
+
 	std::string asset;
 	if (name.empty())
 		asset = "#" + Text::toString(page);

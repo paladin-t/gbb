@@ -990,7 +990,7 @@ public:
 					}
 					_tools.magnification = Math::min(m, n);
 				}
-				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS));
+				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS) - 1);
 
 				const int scale = MAGNIFICATIONS[_tools.magnification];
 				const float widgetWidth = (float)_preview.texture->width() * scale;

@@ -256,6 +256,149 @@ void Delete::destroy(Command* ptr) {
 	delete impl;
 }
 
+SetLocalPaletteEnabled::SetLocalPaletteEnabled() {
+	enabled(false);
+	old(false);
+}
+
+SetLocalPaletteEnabled::~SetLocalPaletteEnabled() {
+}
+
+unsigned SetLocalPaletteEnabled::type(void) const {
+	return TYPE();
+}
+
+const char* SetLocalPaletteEnabled::toString(void) const {
+	return "Set local palette enabled";
+}
+
+Command* SetLocalPaletteEnabled::redo(Object::Ptr obj, int argc, const Variant* argv) {
+	::Map::Ptr ptr = Object::as<::Map::Ptr>(obj);
+	(void)ptr;
+	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
+	MapAssets::Entry* entry = (MapAssets::Entry*)(arg0);
+
+	old(entry->localPaletteEnabled);
+	oldPalette(entry->localPalette);
+	entry->localPaletteEnabled = enabled();
+	entry->localPalette = palette();
+
+	return this;
+}
+
+Command* SetLocalPaletteEnabled::undo(Object::Ptr obj, int argc, const Variant* argv) {
+	::Map::Ptr ptr = Object::as<::Map::Ptr>(obj);
+	(void)ptr;
+	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
+	MapAssets::Entry* entry = (MapAssets::Entry*)(arg0);
+
+	entry->localPaletteEnabled = old();
+	entry->localPalette = oldPalette();
+
+	return this;
+}
+
+SetLocalPaletteEnabled* SetLocalPaletteEnabled::with(bool val, const PaletteAssets::Array &pal) {
+	enabled(val);
+	palette(pal);
+
+	return this;
+}
+
+Command* SetLocalPaletteEnabled::exec(Object::Ptr obj, int argc, const Variant* argv) {
+	return redo(obj, argc, argv);
+}
+
+Command* SetLocalPaletteEnabled::create(void) {
+	SetLocalPaletteEnabled* result = new SetLocalPaletteEnabled();
+
+	return result;
+}
+
+void SetLocalPaletteEnabled::destroy(Command* ptr) {
+	SetLocalPaletteEnabled* impl = static_cast<SetLocalPaletteEnabled*>(ptr);
+	delete impl;
+}
+
+SetLocalPalette::SetLocalPalette() {
+}
+
+SetLocalPalette::~SetLocalPalette() {
+}
+
+unsigned SetLocalPalette::type(void) const {
+	return TYPE();
+}
+
+const char* SetLocalPalette::toString(void) const {
+	return "Set local palette";
+}
+
+Command* SetLocalPalette::redo(Object::Ptr obj, int argc, const Variant* argv) {
+	::Map::Ptr ptr = Object::as<::Map::Ptr>(obj);
+	(void)ptr;
+	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
+	MapAssets::Entry* entry = (MapAssets::Entry*)(arg0);
+
+	old(entry->localPalette);
+	entry->localPalette = palette();
+
+	return this;
+}
+
+Command* SetLocalPalette::undo(Object::Ptr obj, int argc, const Variant* argv) {
+	::Map::Ptr ptr = Object::as<::Map::Ptr>(obj);
+	(void)ptr;
+	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
+	MapAssets::Entry* entry = (MapAssets::Entry*)(arg0);
+
+	entry->localPalette = old();
+
+	return this;
+}
+
+SetLocalPalette* SetLocalPalette::with(const PaletteAssets::Array &pal) {
+	palette(pal);
+
+	return this;
+}
+
+Command* SetLocalPalette::exec(Object::Ptr obj, int argc, const Variant* argv) {
+	return redo(obj, argc, argv);
+}
+
+bool SetLocalPalette::isSimilarTo(const Command* other) const {
+	if (other->type() != TYPE())
+		return false;
+
+	const SetLocalPalette* other_ = Command::as<SetLocalPalette>(other);
+	(void)other_;
+
+	return true;
+}
+
+bool SetLocalPalette::mergeWith(const Command* other) {
+	if (other->type() != TYPE())
+		return false;
+
+	const SetLocalPalette* other_ = Command::as<SetLocalPalette>(other);
+
+	palette(other_->palette());
+
+	return true;
+}
+
+Command* SetLocalPalette::create(void) {
+	SetLocalPalette* result = new SetLocalPalette();
+
+	return result;
+}
+
+void SetLocalPalette::destroy(Command* ptr) {
+	SetLocalPalette* impl = static_cast<SetLocalPalette*>(ptr);
+	delete impl;
+}
+
 SetName::SetName() {
 }
 
@@ -815,6 +958,283 @@ Command* Reference::create(void) {
 void Reference::destroy(Command* ptr) {
 	Reference* impl = static_cast<Reference*>(ptr);
 	delete impl;
+}
+
+namespace AsImage {
+
+Pencil::Pencil() {
+}
+
+Pencil::~Pencil() {
+}
+
+unsigned Pencil::type(void) const {
+	return TYPE();
+}
+
+Command* Pencil::create(void) {
+	Pencil* result = new Pencil();
+
+	return result;
+}
+
+void Pencil::destroy(Command* ptr) {
+	Pencil* impl = static_cast<Pencil*>(ptr);
+	delete impl;
+}
+
+Line::Line() {
+}
+
+Line::~Line() {
+}
+
+unsigned Line::type(void) const {
+	return TYPE();
+}
+
+Command* Line::create(void) {
+	Line* result = new Line();
+
+	return result;
+}
+
+void Line::destroy(Command* ptr) {
+	Line* impl = static_cast<Line*>(ptr);
+	delete impl;
+}
+
+Box::Box() {
+}
+
+Box::~Box() {
+}
+
+unsigned Box::type(void) const {
+	return TYPE();
+}
+
+Command* Box::create(void) {
+	Box* result = new Box();
+
+	return result;
+}
+
+void Box::destroy(Command* ptr) {
+	Box* impl = static_cast<Box*>(ptr);
+	delete impl;
+}
+
+BoxFill::BoxFill() {
+}
+
+BoxFill::~BoxFill() {
+}
+
+unsigned BoxFill::type(void) const {
+	return TYPE();
+}
+
+Command* BoxFill::create(void) {
+	BoxFill* result = new BoxFill();
+
+	return result;
+}
+
+void BoxFill::destroy(Command* ptr) {
+	BoxFill* impl = static_cast<BoxFill*>(ptr);
+	delete impl;
+}
+
+Ellipse::Ellipse() {
+}
+
+Ellipse::~Ellipse() {
+}
+
+unsigned Ellipse::type(void) const {
+	return TYPE();
+}
+
+Command* Ellipse::create(void) {
+	Ellipse* result = new Ellipse();
+
+	return result;
+}
+
+void Ellipse::destroy(Command* ptr) {
+	Ellipse* impl = static_cast<Ellipse*>(ptr);
+	delete impl;
+}
+
+EllipseFill::EllipseFill() {
+}
+
+EllipseFill::~EllipseFill() {
+}
+
+unsigned EllipseFill::type(void) const {
+	return TYPE();
+}
+
+Command* EllipseFill::create(void) {
+	EllipseFill* result = new EllipseFill();
+
+	return result;
+}
+
+void EllipseFill::destroy(Command* ptr) {
+	EllipseFill* impl = static_cast<EllipseFill*>(ptr);
+	delete impl;
+}
+
+Fill::Fill() {
+}
+
+Fill::~Fill() {
+}
+
+unsigned Fill::type(void) const {
+	return TYPE();
+}
+
+Command* Fill::create(void) {
+	Fill* result = new Fill();
+
+	return result;
+}
+
+void Fill::destroy(Command* ptr) {
+	Fill* impl = static_cast<Fill*>(ptr);
+	delete impl;
+}
+
+Replace::Replace() {
+}
+
+Replace::~Replace() {
+}
+
+unsigned Replace::type(void) const {
+	return TYPE();
+}
+
+Command* Replace::create(void) {
+	Replace* result = new Replace();
+
+	return result;
+}
+
+void Replace::destroy(Command* ptr) {
+	Replace* impl = static_cast<Replace*>(ptr);
+	delete impl;
+}
+
+Rotate::Rotate() {
+}
+
+Rotate::~Rotate() {
+}
+
+unsigned Rotate::type(void) const {
+	return TYPE();
+}
+
+Command* Rotate::create(void) {
+	Rotate* result = new Rotate();
+
+	return result;
+}
+
+void Rotate::destroy(Command* ptr) {
+	Rotate* impl = static_cast<Rotate*>(ptr);
+	delete impl;
+}
+
+Flip::Flip() {
+}
+
+Flip::~Flip() {
+}
+
+unsigned Flip::type(void) const {
+	return TYPE();
+}
+
+Command* Flip::create(void) {
+	Flip* result = new Flip();
+
+	return result;
+}
+
+void Flip::destroy(Command* ptr) {
+	Flip* impl = static_cast<Flip*>(ptr);
+	delete impl;
+}
+
+Cut::Cut() {
+}
+
+Cut::~Cut() {
+}
+
+unsigned Cut::type(void) const {
+	return TYPE();
+}
+
+Command* Cut::create(void) {
+	Cut* result = new Cut();
+
+	return result;
+}
+
+void Cut::destroy(Command* ptr) {
+	Cut* impl = static_cast<Cut*>(ptr);
+	delete impl;
+}
+
+Paste::Paste() {
+}
+
+Paste::~Paste() {
+}
+
+unsigned Paste::type(void) const {
+	return TYPE();
+}
+
+Command* Paste::create(void) {
+	Paste* result = new Paste();
+
+	return result;
+}
+
+void Paste::destroy(Command* ptr) {
+	Paste* impl = static_cast<Paste*>(ptr);
+	delete impl;
+}
+
+Delete::Delete() {
+}
+
+Delete::~Delete() {
+}
+
+unsigned Delete::type(void) const {
+	return TYPE();
+}
+
+Command* Delete::create(void) {
+	Delete* result = new Delete();
+
+	return result;
+}
+
+void Delete::destroy(Command* ptr) {
+	Delete* impl = static_cast<Delete*>(ptr);
+	delete impl;
+}
+
 }
 
 }

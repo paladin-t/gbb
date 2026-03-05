@@ -618,7 +618,6 @@ public:
 		const SelectedHandler &selected /* nullable */,
 		const CustomHandler &custom /* nullable */
 	);
-
 	virtual ~FontResolverPopupBox() override;
 
 	const std::string &path(void) const;
@@ -635,7 +634,7 @@ public:
 
 class MapResolverPopupBox : public PopupBox {
 public:
-	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, const int*, const char*, bool> {
+	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, const int*, const char*, bool, bool> {
 		using Handler::Handler;
 	};
 	struct CanceledHandler : public Handler<CanceledHandler, void> {
@@ -668,6 +667,9 @@ private:
 	bool _allowFlip = true;
 	std::string _allowFlipText;
 	std::string _allowFlipTooltipText;
+	bool _fillLocalPalette = true;
+	std::string _fillLocalPaletteText;
+	std::string _fillLocalPaletteTooltipText;
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;
@@ -691,12 +693,13 @@ public:
 		const char* browseTxt /* nullable */,
 		bool allowFlip,
 		const char* allowFlipTxt /* nullable */, const char* allowFlipTooltipTxt /* nullable */,
+		bool fillLocalPalette,
+		const char* fillLocalPaletteTxt /* nullable */, const char* fillLocalPaletteTooltipTxt /* nullable */,
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */,
 		const SelectedHandler &selected /* nullable */,
 		const CustomHandler &custom /* nullable */
 	);
-
 	virtual ~MapResolverPopupBox() override;
 
 	const std::string &path(void) const;
@@ -760,7 +763,6 @@ public:
 		const SelectedHandler &selected /* nullable */,
 		const CustomHandler &custom /* nullable */
 	);
-
 	virtual ~SceneResolverPopupBox() override;
 
 	int indexValue(void) const;
@@ -895,7 +897,6 @@ public:
 		const CustomHandler &custom /* nullable */,
 		const Vec2iResolver &resolveVec2i /* nullable */, const char* resolveVec2iTxt /* nullable */
 	);
-
 	virtual ~FileResolverPopupBox() override;
 
 	bool toSave(void) const;

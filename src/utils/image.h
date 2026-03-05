@@ -47,6 +47,8 @@ public:
 	typedef std::shared_ptr<Image> Ptr;
 	typedef std::weak_ptr<Image> WeakPtr;
 
+	typedef std::vector<Colour> Colours;
+
 	typedef std::vector<Math::Recti> ErrorPoints;
 
 	typedef std::function<Colour(int, int, Byte)> PaletteResolver;
@@ -108,6 +110,7 @@ public:
 	virtual bool get(int x, int y, int &index) const = 0;
 	virtual bool set(int x, int y, int index) = 0;
 
+	virtual Image* quantized2Bpp(const Indexed::Lookup &lookup) const = 0;
 	virtual Image* quantized2Bpp(void) const = 0;
 
 	virtual void weight(int r, int g, int b, int a) = 0;
@@ -115,6 +118,7 @@ public:
 	virtual bool realize(void) = 0;
 	virtual bool realize(PaletteResolver resolve) = 0;
 
+	virtual Colours allColours(void) const = 0;
 	virtual Colour findLightest(void) const = 0;
 
 	virtual bool canSliceV(int n, int idx) const = 0;

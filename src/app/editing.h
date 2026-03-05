@@ -271,6 +271,8 @@ struct TriggerIndex {
 	void clear(void);
 };
 
+typedef std::function<const PaletteAssets::Entry* (int)> PaletteColorGetter;
+
 typedef std::function<int(const Math::Vec2i &)> MapCelGetter;
 
 typedef std::function<int(const Math::Vec2i &, TriggerIndex::Array &)> SceneTriggerQuerier;
@@ -343,7 +345,7 @@ bool map(
 	bool showTransparentBackbround = true,
 	int ignoreCel = -1,
 	MapCelGetter getCel = nullptr,
-	MapCelGetter getPlt = nullptr,
+	MapCelGetter getPlt = nullptr, PaletteColorGetter getCol = nullptr,
 	MapCelGetter getFlip = nullptr,
 	int mouseActionButton = 0
 );
@@ -363,7 +365,7 @@ bool map(
 	bool showTransparentBackbround = true,
 	int ignoreCel = -1,
 	MapCelGetter getCel = nullptr,
-	MapCelGetter getPlt = nullptr,
+	MapCelGetter getPlt = nullptr, PaletteColorGetter getCol = nullptr,
 	MapCelGetter getFlip = nullptr,
 	int mouseActionButton = 0
 );
@@ -778,6 +780,16 @@ bool colorable(
 );
 
 /**
+ * @param[in, out] color
+ */
+bool colorable(
+	Renderer* rnd, Workspace* ws,
+	float color[4],
+	bool withAlpha = true,
+	float width = -1.0f
+);
+
+/**
  * @param[in, out] cursor
  */
 bool paintable(
@@ -1056,6 +1068,24 @@ bool colorable(
 	bool hasAlpha = false,
 	float width = -1.0f,
 	bool* focused = nullptr,
+	const char* prompt = nullptr
+);
+
+/**
+ * @param[in, out] newValue
+ * @param[in, out] editingColorGroup
+ * @param[in, out] editingColorIndex
+ * @param[in, out] openColorPicker
+ * @param[out] colorPicked
+ * @param[out] pickedColor
+ */
+bool palette(
+	Renderer* rnd, Workspace* ws,
+	const PaletteAssets::Array &palette,
+	Colour &newValue,
+	int* editingColorGroup, int* editingColorIndex, bool* openColorPicker,
+	bool canPickColor, bool* colorPicked, Colour* pickedColor,
+	float width = -1.0f,
 	const char* prompt = nullptr
 );
 

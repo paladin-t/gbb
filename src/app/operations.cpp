@@ -529,7 +529,7 @@ promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspac
 								Editable* editor = entry->editor;
 								if (editor) {
 									editor->post(Editable::UPDATE_REF_INDEX, ws, (Variant::Int)entry->ref);
-									editor->post(Editable::CLEAR_UNDO_REDO_RECORDS);
+									editor->post(Editable::CLEAR_UNDO_REDO_RECORDS, true);
 								}
 							}
 						}
@@ -570,7 +570,7 @@ promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspac
 								Editable* editor = entry->editor;
 								if (editor) {
 									editor->post(Editable::UPDATE_REF_INDEX, ws, (Variant::Int)entry->refMap);
-									editor->post(Editable::CLEAR_UNDO_REDO_RECORDS);
+									editor->post(Editable::CLEAR_UNDO_REDO_RECORDS, true);
 								}
 							}
 						}
@@ -631,7 +631,7 @@ promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspac
 							SfxAssets::Entry* entry = prj->getSfx(i);
 							Editable* editor = entry->editor;
 							if (editor) {
-								editor->post(Editable::CLEAR_UNDO_REDO_RECORDS);
+								editor->post(Editable::CLEAR_UNDO_REDO_RECORDS, true);
 							}
 						}
 					} while (false);
@@ -686,7 +686,7 @@ promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspac
 								Editable* editor = entry->editor;
 								if (editor) {
 									editor->post(Editable::UPDATE_REF_INDEX, ws, (Variant::Int)entry->refMap);
-									editor->post(Editable::CLEAR_UNDO_REDO_RECORDS);
+									editor->post(Editable::CLEAR_UNDO_REDO_RECORDS, true);
 								}
 							}
 						}
@@ -781,10 +781,10 @@ promise::Promise Operations::popupExternalMapResolver(Window*, Renderer* rnd, Wo
 		[&] (promise::Defer df) -> void {
 			const Text::Array filter = GBBASIC_IMAGE_FILE_FILTER;
 			ImGui::MapResolverPopupBox::ConfirmedHandler confirm(
-				[ws, df] (const int* index, const char* path, bool allowFlip) -> void {
+				[ws, df] (const int* index, const char* path, bool allowFlip, bool fillLocalPalette) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
-					df.resolve(index, path, allowFlip);
+					df.resolve(index, path, allowFlip, fillLocalPalette);
 				},
 				nullptr
 			);
@@ -3280,7 +3280,7 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 
 			popupExternalMapResolver(wnd, rnd, ws, ws->theme()->generic_Path().c_str())
 				.then(
-					[wnd, rnd, ws, df, prj] (const int* index, const char* path, bool allowFlip) -> void {
+					[wnd, rnd, ws, df, prj] (const int* index, const char* path, bool allowFlip, bool fillLocalPalette) -> void {
 						if (index) { // From tiles asset.
 							if (prj->tilesPageCount() == 0) {
 								df.reject();
@@ -3315,6 +3315,10 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 							}
 
 							prj->addMapPage(str, true, preferedName.empty() ? nullptr : preferedName.c_str());
+							MapAssets::Entry* mapEntry = prj->getMap(prj->mapPageCount() - 1);
+							mapEntry->allowFlip = allowFlip;
+							mapEntry->localPaletteEnabled = fillLocalPalette;
+
 							prj->hasDirtyAsset(true);
 
 							ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::MAP);
@@ -3339,7 +3343,7 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 
 							const std::string path_ = path;
 
-							auto next = [wnd, rnd, ws, prj, path_, allowFlip] (promise::Defer df) -> void {
+							auto next = [wnd, rnd, ws, prj, path_, allowFlip, fillLocalPalette] (promise::Defer df) -> void {
 								// Load the image.
 								if (!Path::fileExists(path_.c_str())) {
 									df.reject();
@@ -3381,14 +3385,17 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 
 								// Load from the image.
 								Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+								PaletteAssets::Array palette;
+								for (int i = 0; i < prj->assets()->palette.count(); ++i) {
+									const PaletteAssets::Entry* pal = prj->assets()->palette.get(i);
+									palette.push_back(*pal);
+								}
 								TilesAssets::Entry tiles(rnd, prj->paletteGetter());
 								MapAssets::Entry map("", prj->tilesGetter(), attribtex);
 								const bool loaded = MapAssets::parseImage(
-									tiles, map,
-									img.get(), allowFlip,
-									true,
-									prj->paletteGetter(),
-									prj->tilesGetter(), prj->tilesPageCount(),
+									palette, tiles, map,
+									img.get(), allowFlip, fillLocalPalette, true,
+									prj->paletteGetter(), prj->tilesGetter(), prj->tilesPageCount(),
 									std::bind(operationsHandlePrint, ws, std::placeholders::_1), std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2)
 								);
 								if (!loaded) {
@@ -3424,6 +3431,11 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 #endif /* Platform macro. */
 
 								prj->addMapPage(mapStr, true, preferedName.empty() ? nullptr : preferedName.c_str());
+								MapAssets::Entry* mapEntry = prj->getMap(prj->mapPageCount() - 1);
+								mapEntry->allowFlip = allowFlip;
+								mapEntry->localPaletteEnabled = fillLocalPalette;
+								if (mapEntry->localPaletteEnabled)
+									mapEntry->localPalette = palette;
 
 								ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::MAP);
 

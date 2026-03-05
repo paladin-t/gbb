@@ -164,6 +164,36 @@ bool Colour::equals(const Colour &other) const {
 	return r == other.r && g == other.g && b == other.b && a == other.a;
 }
 
+double Colour::distanceTo(const Colour &other) const {
+	const int dr = static_cast<int>(r) - static_cast<int>(other.r);
+	const int dg = static_cast<int>(g) - static_cast<int>(other.g);
+	const int db = static_cast<int>(b) - static_cast<int>(other.b);
+	const int da = static_cast<int>(a) - static_cast<int>(other.a);
+	const double dist = std::sqrt(static_cast<double>(dr * dr + dg * dg + db * db + da * da));
+
+	return dist;
+}
+
+double Colour::squaredDistanceTo(const Colour &other) const {
+	const int dr = static_cast<int>(r) - static_cast<int>(other.r);
+	const int dg = static_cast<int>(g) - static_cast<int>(other.g);
+	const int db = static_cast<int>(b) - static_cast<int>(other.b);
+	const int da = static_cast<int>(a) - static_cast<int>(other.a);
+	const double dist = static_cast<double>(dr * dr + dg * dg + db * db + da * da);
+
+	return dist;
+}
+
+double Colour::hamiltonDistanceTo(const Colour &other) const {
+	const int dr = static_cast<int>(r) - static_cast<int>(other.r);
+	const int dg = static_cast<int>(g) - static_cast<int>(other.g);
+	const int db = static_cast<int>(b) - static_cast<int>(other.b);
+	const int da = static_cast<int>(a) - static_cast<int>(other.a);
+	const double dist = static_cast<double>(std::abs(dr) + std::abs(dg) + std::abs(db) + std::abs(da));
+
+	return dist;
+}
+
 int Colour::toGray(void) const {
 	const int y = (int)(r * 0.3 + g * 0.59 + b * 0.11);
 

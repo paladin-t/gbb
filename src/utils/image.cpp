@@ -571,6 +571,28 @@ public:
 		return true;
 	}
 
+	virtual Image* quantized2Bpp(const Indexed::Lookup &lookup) const override {
+		Indexed::Ptr palette = Indexed::Ptr(Indexed::create(GBBASIC_PALETTE_PER_GROUP_COUNT));
+		GBBASIC_ASSERT(palette->count() == 4 && "Impossible.");
+
+		Image* result = Image::create(palette);
+
+		GBBASIC_ASSERT(!paletted() && "Not supported.");
+
+		result->fromBlank(width(), height(), GBBASIC_PALETTE_DEPTH);
+		for (int j = 0; j < result->height(); ++j) {
+			for (int i = 0; i < result->width(); ++i) {
+				Colour col;
+				get(i, j, col);
+				Indexed::Lookup::const_iterator it = lookup.find(col);
+				int idx = it == lookup.end() ? 0 : it->second;
+				idx = Math::clamp(idx, 0, palette->count());
+				result->set(i, j, idx);
+			}
+		}
+
+		return result;
+	}
 	virtual Image* quantized2Bpp(void) const override {
 		Indexed::Ptr palette = Indexed::Ptr(Indexed::create(GBBASIC_PALETTE_PER_GROUP_COUNT));
 		GBBASIC_ASSERT(palette->count() == 4 && "Impossible.");
@@ -590,7 +612,9 @@ public:
 			for (int i = 0; i < result->width(); ++i) {
 				Colour col;
 				get(i, j, col);
-				const int idx = lookup[col];
+				Indexed::Lookup::const_iterator it = lookup.find(col);
+				int idx = it == lookup.end() ? 0 : it->second;
+				idx = Math::clamp(idx, 0, palette->count());
 				result->set(i, j, idx);
 			}
 		}
@@ -650,6 +674,33 @@ public:
 		return true;
 	}
 
+	virtual Colours allColours(void) const override {
+		typedef std::set<Colour> ColourSet;
+
+		Colours result;
+
+		if (paletted())
+			return result;
+
+		ColourSet uniqueCols;
+		for (int j = 0; j < _height; ++j) {
+			for (int i = 0; i < _width; ++i) {
+				Colour col;
+				get(i, j, col);
+				uniqueCols.insert(col);
+			}
+		}
+
+		result.assign(uniqueCols.begin(), uniqueCols.end());
+		std::sort(
+			result.begin(), result.end(),
+			[] (const Colour &l, const Colour &r) {
+				return l.toGray() > r.toGray();
+			}
+		);
+
+		return result;
+	}
 	virtual Colour findLightest(void) const override {
 		Colour result;
 

@@ -234,7 +234,7 @@ private:
 			y = 0;
 		}
 	} _anchor;
-	struct {
+	struct { // Compacted for preview, saving, etc.
 		Renderer* renderer = nullptr; // Foreign.
 		Image::Ptr image = nullptr;
 		Texture::Ptr texture = nullptr;
@@ -1186,7 +1186,7 @@ public:
 					}
 					_tools.magnification = Math::min(m, n);
 				}
-				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS));
+				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS) - 1);
 
 				const ImVec2 content = ImGui::GetContentRegionAvail();
 				float width_ = (float)cwidth;
@@ -1986,11 +1986,6 @@ private:
 				if (index != _index)
 					ws->changePage(wnd, rnd, _project, Workspace::Categories::ACTOR, index);
 			}
-		}
-
-		const Editing::Shortcut ctrlShiftR(SDL_SCANCODE_R, true, true);
-		if (ctrlShiftR.pressed() && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-			refreshAllEntriesSlices(ws, false);
 		}
 
 		return true;
@@ -3699,7 +3694,8 @@ private:
 		// Start measuring performance.
 		const long long start = DateTime::ticks();
 
-		auto finish = [wnd, rnd, ws, this, start] (void) -> bool {
+		// The compile procedure.
+		auto compile = [wnd, rnd, ws, this, start] (void) -> bool {
 			// Compile.
 			const Bytes::Ptr rom_ = compileActor(wnd, rnd, ws, this, entry(), _tools);
 
@@ -3726,13 +3722,13 @@ private:
 
 		// Async.
 		ImGui::WaitingPopupBox::TimeoutHandler timeout(
-			[ws, this, finish] (void) -> void {
+			[ws, this, compile] (void) -> void {
 				if (!_compacted.filled)
 					compactAllEntriesSlices(ws, true);
 
 				_compacted.generated.wait();
 
-				finish();
+				compile();
 
 				ws->popupBox(nullptr);
 			},

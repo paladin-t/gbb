@@ -3344,7 +3344,7 @@ void Workspace::showPaletteEditor(
 				rnd, this,
 				theme(),
 				group, changed,
-				theme()->windowPalette(),
+				theme()->windowGlobalPalette(),
 				currentProject().get(),
 				confirm, cancel, apply,
 				theme()->generic_Ok().c_str(), theme()->generic_Cancel().c_str(), theme()->generic_Apply().c_str()
@@ -3623,7 +3623,7 @@ void Workspace::showExternalMapBrowser(
 	btnCancel = theme()->generic_Cancel().c_str();
 	if (confirm_.empty()) {
 		confirm = ImGui::MapResolverPopupBox::ConfirmedHandler(
-			[&] (const int*, const char*, bool) -> void {
+			[&] (const int*, const char*, bool, bool) -> void {
 				popupBox(nullptr);
 			},
 			nullptr
@@ -3631,8 +3631,10 @@ void Workspace::showExternalMapBrowser(
 	}
 
 	bool allowFlip = true;
+	bool fillLocalPalette = true;
 	if (!prj->cartridgeType().empty()) {
 		allowFlip = false;
+		fillLocalPalette = false;
 
 		const std::string cartType = prj->cartridgeType();
 
@@ -3640,6 +3642,7 @@ void Workspace::showExternalMapBrowser(
 		for (const std::string &part : parts) {
 			if (part == PROJECT_CARTRIDGE_TYPE_COLORED) {
 				allowFlip = true;
+				fillLocalPalette = true;
 
 				break;
 			}
@@ -3660,6 +3663,8 @@ void Workspace::showExternalMapBrowser(
 				theme()->generic_Browse().c_str(),
 				allowFlip,
 				theme()->dialogPrompt_AllowFlip().c_str(), theme()->dialogPrompt_ColoredOnly().c_str(),
+				fillLocalPalette,
+				theme()->dialogPrompt_FillLocalPalette().c_str(), theme()->dialogPrompt_ColoredOnly().c_str(),
 				confirm, cancel,
 				btnConfirm, btnCancel,
 				select,

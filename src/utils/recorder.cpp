@@ -244,7 +244,6 @@ public:
 private:
 	void save(void) {
 		// Prepare.
-		typedef std::vector<Colour> Colours;
 		typedef std::vector<Image::Ptr> ImageArray;
 
 		if (_frames.empty())
@@ -300,7 +299,7 @@ private:
 			// Get the initial.
 			const Colour DEFAULT_COLORS_ARRAY[] = INDEXED_DEFAULT_COLORS;
 			const int COLOR_COUNT = Math::min((int)GBBASIC_COUNTOF(DEFAULT_COLORS_ARRAY), 255);
-			Colours colors;
+			Image::Colours colors;
 			for (int i = 0; i < 16; ++i)
 				colors.push_back(DEFAULT_COLORS_ARRAY[i]); // Fill the color palette from the default pattern.
 

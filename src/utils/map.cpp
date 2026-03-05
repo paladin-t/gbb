@@ -386,7 +386,7 @@ public:
 
 		return at(index, area);
 	}
-	virtual Texture::Ptr sub(class Renderer* rnd, int x, int y, int width, int height, int ncolors, const Colour* colours, int colorKey) const override {
+	virtual Texture::Ptr sub(class Renderer* rnd, int x, int y, int width, int height, int ncolors, const Colour* colors, int colorKey) const override {
 		// Prepare.
 		if (!_tiles.texture)
 			return nullptr;
@@ -438,10 +438,10 @@ public:
 
 		// Get the sub texture.
 		PaletteSetter setPalette = nullptr;
-		if (ncolors && colours) {
-			setPalette = [ncolors, &colours] (int /* i */, int /* j */, ColorSetter setColor) -> void {
+		if (ncolors && colors) {
+			setPalette = [ncolors, &colors] (int /* i */, int /* j */, ColorSetter setColor) -> void {
 				for (int k = 0; k < ncolors; ++k)
-					setColor(k, colours[k]);
+					setColor(k, colors[k]);
 			};
 		}
 
@@ -468,11 +468,11 @@ public:
 		// Finish.
 		return result;
 	}
-	virtual Texture::Ptr sub(class Renderer* rnd, int x, int y, int width, int height, Indexed::Ptr colours, int colorKey) const override {
+	virtual Texture::Ptr sub(class Renderer* rnd, int x, int y, int width, int height, Indexed::Ptr colors, int colorKey) const override {
 		int n = 0;
 		const Colour* cols = nullptr;
-		if (colours)
-			cols = colours->pointer(&n);
+		if (colors)
+			cols = colors->pointer(&n);
 
 		return sub(rnd, x, y, width, height, n, cols, colorKey);
 	}

@@ -167,7 +167,6 @@ public:
 	static void destroy(Command* ptr);
 };
 
-
 class Resize : public Command {
 public:
 	GBBASIC_PROPERTY(Math::Vec2i, size)

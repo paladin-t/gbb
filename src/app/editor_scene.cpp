@@ -1164,6 +1164,8 @@ public:
 		_refresh(cmd);
 
 		_project->toPollEditor(true);
+
+		modified();
 	}
 	virtual void undo(BaseAssets::Entry*) override {
 		const Command* cmd = _commands->undoable();
@@ -1199,6 +1201,8 @@ public:
 		_refresh(cmd);
 
 		_project->toPollEditor(true);
+
+		modified();
 	}
 
 	virtual Variant post(unsigned msg, int argc, const Variant* argv) override {
@@ -1267,8 +1271,12 @@ public:
 			}
 
 			return Variant(true);
-		case CLEAR_UNDO_REDO_RECORDS:
-			_commands->clear();
+		case CLEAR_UNDO_REDO_RECORDS: {
+				const bool deep = unpack<bool>(argc, argv, 0, true);
+				(void)deep;
+
+				_commands->clear();
+			}
 
 			return Variant(true);
 		default: // Do nothing.
@@ -1367,6 +1375,28 @@ public:
 
 				return bits;
 			};
+			auto getCol = [&] (int plt) -> const PaletteAssets::Entry* {
+				const int refMap = entry()->refMap;
+				const MapAssets::Entry* mapEntry = entry()->getMap(refMap);
+				if (!mapEntry || !mapEntry->data) {
+					PaletteAssets::Entry* entry_ = _project->getPalette(plt);
+
+					return entry_;
+				}
+
+				const PaletteAssets::Entry* entry_ = nullptr;
+				const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+				const bool localPaletteEnabled = mapEntry->localPaletteEnabled;
+				const PaletteAssets::Array &localPalette = mapEntry->localPalette;
+				if (localPaletteEnabled && (int)localPalette.size() == n) {
+					plt = Math::clamp(plt, 0, (int)localPalette.size() - 1);
+					entry_ = &localPalette[plt];
+				} else {
+					entry_ = _project->getPalette(plt);
+				}
+
+				return entry_;
+			};
 			auto getFlip = [&] (const Math::Vec2i &pos) -> int {
 				if (!object()->hasAttributes())
 					return (int)Editing::Flips::NONE;
@@ -1408,7 +1438,7 @@ public:
 				}
 				_tools.magnification = Math::min(m, n);
 			}
-			_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS));
+			_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS) - 1);
 
 			const ImVec2 content = ImGui::GetContentRegionAvail();
 			float width_ = (float)(object()->width() * _tileSize.x);
@@ -1444,7 +1474,7 @@ public:
 					_tools.transparentBackbroundVisible,
 					std::numeric_limits<int>::min(),
 					nullptr,
-					getPlt,
+					getPlt, getCol,
 					getFlip,
 					_tools.mouseActionButton
 				);
@@ -1466,7 +1496,7 @@ public:
 
 						return idx;
 					},
-					nullptr,
+					nullptr, nullptr,
 					nullptr,
 					_tools.mouseActionButton
 				);
@@ -1488,7 +1518,7 @@ public:
 
 						return idx;
 					},
-					nullptr,
+					nullptr, nullptr,
 					nullptr,
 					_tools.mouseActionButton
 				);
@@ -1640,7 +1670,7 @@ public:
 								_tools.transparentBackbroundVisible,
 								std::numeric_limits<int>::min(),
 								_overlay,
-								getPlt,
+								getPlt, getCol,
 								getFlip,
 								_tools.mouseActionButton
 							)
@@ -1689,7 +1719,7 @@ public:
 								false,
 								std::numeric_limits<int>::min(),
 								_overlay,
-								nullptr,
+								nullptr, nullptr,
 								nullptr,
 								_tools.mouseActionButton
 							)
@@ -1730,7 +1760,7 @@ public:
 								false,
 								std::numeric_limits<int>::min(),
 								_overlay,
-								nullptr,
+								nullptr, nullptr,
 								nullptr,
 								_tools.mouseActionButton
 							)
@@ -2365,7 +2395,7 @@ public:
 							inputFieldFocused |= inputFieldFocused_;
 						}
 
-						ImGui::NewLine(1.0f);
+						ImGui::NewLine(1);
 						bits(disabled);
 
 						const char* tooltipOps[4] = {
@@ -2374,7 +2404,7 @@ public:
 							ws->theme()->tooltip_BitwiseOr().c_str(),
 							ws->theme()->tooltip_BitwiseXor().c_str()
 						};
-						ImGui::NewLine(1.0f);
+						ImGui::NewLine(1);
 						Editing::Tools::bitwise(
 							rnd, ws,
 							&_tools.bitwiseOperations,
@@ -2382,7 +2412,7 @@ public:
 							disabled,
 							ws->theme()->tooltip_BitwiseOperations().c_str(), tooltipOps
 						);
-						ImGui::NewLine(1.0f);
+						ImGui::NewLine(1);
 					}
 
 					break;
@@ -2480,7 +2510,7 @@ public:
 							inputFieldFocused |= inputFieldFocused_;
 						}
 
-						ImGui::NewLine(1.0f);
+						ImGui::NewLine(1);
 						bits(disabled);
 
 						const char* tooltipOps[4] = {
@@ -2489,7 +2519,7 @@ public:
 							ws->theme()->tooltip_BitwiseOr().c_str(),
 							ws->theme()->tooltip_BitwiseXor().c_str()
 						};
-						ImGui::NewLine(1.0f);
+						ImGui::NewLine(1);
 						Editing::Tools::bitwise(
 							rnd, ws,
 							&_tools.bitwiseOperations,
@@ -2497,7 +2527,7 @@ public:
 							disabled,
 							ws->theme()->tooltip_BitwiseOperations().c_str(), tooltipOps
 						);
-						ImGui::NewLine(1.0f);
+						ImGui::NewLine(1);
 					}
 
 					break;
@@ -4737,6 +4767,20 @@ private:
 		}
 	}
 
+	void modified(void) {
+		const bool forMap = _tools.layer == ASSETS_SCENE_GRAPHICS_LAYER || _tools.layer == ASSETS_SCENE_ATTRIBUTES_LAYER;
+		if (!forMap)
+			return;
+
+		const int refMap = entry()->refMap;
+		const MapAssets::Entry* mapEntry = entry()->getMap(refMap);
+		if (mapEntry) {
+			Editable* editor = mapEntry->editor;
+			if (editor)
+				editor->post(Editable::CLEAR_UNDO_REDO_RECORDS, false);
+		}
+	}
+
 	void createOverlay(void) {
 		_overlay = std::bind(&EditorSceneImpl::getOverlayCel, this, std::placeholders::_1);
 	}
@@ -4749,6 +4793,8 @@ private:
 		T* result = _commands->enqueue<T>();
 
 		_project->toPollEditor(true);
+
+		modified();
 
 		return result;
 	}
@@ -6288,6 +6334,16 @@ private:
 			MapAssets::Entry mapEntry_ = *mapEntry;
 			mapEntry_.ref = 0;
 			assets->maps.add(mapEntry_);
+
+			const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+			const bool localPaletteEnabled = mapEntry_.localPaletteEnabled;
+			const PaletteAssets::Array &localPalette = mapEntry_.localPalette;
+			if (localPaletteEnabled && (int)localPalette.size() == n && assets->palette.count() >= n) {
+				for (int i = 0; i < n; ++i) {
+					PaletteAssets::Entry* palEntry = assets->palette.get(i);
+					*palEntry = localPalette[i]; // Replace with local palette.
+				}
+			}
 
 			// Add the actor assets.
 			SceneAssets::Entry::UniqueRef uref;

@@ -683,6 +683,8 @@ struct CodeAssets {
 
 struct TilesAssets {
 	struct Entry : public BaseAssets::Entry, public BaseAssets::Versionable, public BaseAssets::Invalidatable {
+		typedef std::function<bool(int, Colour &)> PaletteColorGetter;
+
 		Image::Ptr data = nullptr;
 		int ref = 0; // To a palette.
 		std::string name;
@@ -713,7 +715,9 @@ struct TilesAssets {
 		bool serializeJson(std::string &val, bool pretty) const;
 		bool parseJson(Image::Ptr &img, const std::string &val, ParsingStatuses &status) const;
 
+		bool serializeImage(Image* val, const Math::Recti* area /* nullable */, PaletteColorGetter getCol /* nullable */) const;
 		bool serializeImage(Image* val, const Math::Recti* area /* nullable */) const;
+		bool serializeImage(Bytes* val, const char* type, const Math::Recti* area /* nullable */, PaletteColorGetter getCol /* nullable */) const;
 		bool serializeImage(Bytes* val, const char* type, const Math::Recti* area /* nullable */) const;
 		bool parseImage(Image::Ptr &img, const Image* val, ParsingStatuses &status) const;
 		bool parseImage(Image::Ptr &img, const Bytes* val, ParsingStatuses &status) const;
@@ -751,8 +755,12 @@ struct MapAssets {
 		int ref = 0; // To a tiles.
 		bool hasAttributes = false;
 		Map::Ptr attributes = nullptr;
+		bool editAsImage = false;
+		bool localPaletteEnabled = false;
+		PaletteAssets::Array localPalette;
 		std::string name;
 		int magnification = -1; // Non-polluting.
+		bool allowFlip = false;
 		bool optimize = true;
 
 		TilesAssets::Getter getTiles = nullptr; // Non-serialized. Foreign.
@@ -790,9 +798,10 @@ struct MapAssets {
 
 		size_t hash = 0;
 		Image::Ptr image = nullptr;
+		int palette = 0;
 
 		Slice();
-		Slice(Image::Ptr img);
+		Slice(Image::Ptr img, int pal);
 
 		bool operator == (const Slice &other) const;
 		bool operator != (const Slice &other) const;
@@ -817,15 +826,14 @@ struct MapAssets {
 	 */
 	static bool serializeImage(const TilesAssets::Entry &tiles_, const MapAssets::Entry &map_, Image* val);
 	/**
-	 * @param[out] tiles
-	 * @param[out] map
+	 * @param[in, out] palette_
+	 * @param[out] tiles_
+	 * @param[out] map_
 	 */
 	static bool parseImage(
-		TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
-		const Image* val, bool allowFlip,
-		bool allowReuse,
-		PaletteAssets::Getter getplt,
-		TilesAssets::Getter gettls, int tilesPageCount,
+		PaletteAssets::Array &palette_, TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
+		const Image* val, bool allowFlip, bool fillLocalPalette, bool allowReuse,
+		PaletteAssets::Getter getplt, TilesAssets::Getter gettls, int tilesPageCount,
 		PrintHandler onPrint = nullptr, WarningOrErrorHandler onWarningOrError = nullptr
 	);
 };
