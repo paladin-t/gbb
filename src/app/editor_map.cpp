@@ -2285,7 +2285,7 @@ private:
 			} else {
 				_tools.namableText = entry()->name;
 
-				warn(ws, ws->theme()->warning_MapNameIsAlreadyInUse(), true);
+				warn(ws, ws->theme()->warning_MapNameIsAlreadyInUse(), true, true);
 			}
 		}
 		inputFieldFocused |= inputFieldFocused_;
@@ -2305,7 +2305,7 @@ private:
 				&inputFieldFocused_,
 				ws->theme()->dialogPrompt_Size_InTiles().c_str(),
 				ws->theme()->warning_MapSizeOutOfBounds().c_str(),
-				std::bind(&EditorMapImpl::warn, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)
+				std::bind(&EditorMapImpl::warn, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, true)
 			)
 		) {
 			_size.width = Math::clamp(_size.width, 1, GBBASIC_MAP_MAX_WIDTH);
@@ -2757,9 +2757,9 @@ private:
 
 				_asImage.status.text += " " + ws->theme()->status_Tls();
 				_asImage.status.text += " ";
-				_asImage.status.text += Text::toString(object()->width() / GBBASIC_TILE_SIZE);
+				_asImage.status.text += Text::toString(object()->width());
 				_asImage.status.text += "x";
-				_asImage.status.text += Text::toString(object()->height() / GBBASIC_TILE_SIZE);
+				_asImage.status.text += Text::toString(object()->height());
 			} else {
 				_asImage.status.text = " " + ws->theme()->status_Pos();
 				_asImage.status.text += " ";
@@ -2769,9 +2769,11 @@ private:
 
 				const int x = _asImage.status.cursor.position.x / GBBASIC_TILE_SIZE;
 				const int y = _asImage.status.cursor.position.y / GBBASIC_TILE_SIZE;
-				_asImage.status.text += " " + ws->theme()->status_Idx();
+				_asImage.status.text += " " + ws->theme()->status_Tl();
 				_asImage.status.text += " ";
-				_asImage.status.text += Text::toString(x + y * object()->width() / GBBASIC_TILE_SIZE);
+				_asImage.status.text += Text::toString(x);
+				_asImage.status.text += ",";
+				_asImage.status.text += Text::toString(y);
 			}
 		}
 		if (!_estimated.filled) {
@@ -3489,14 +3491,17 @@ private:
 		}
 	}
 
-	void warn(Workspace* ws, const std::string &msg, bool add) {
+	void warn(Workspace* ws, const std::string &msg, bool add, bool isWarning) {
 		if (add) {
 			if (_warnings.add(msg)) {
 				std::string msg_ = "Map editor: ";
 				msg_ += msg;
 				if (msg.back() != '.')
 					msg_ += '.';
-				ws->warn(msg_.c_str());
+				if (isWarning)
+					ws->warn(msg_.c_str());
+				else
+					ws->error(msg_.c_str());
 			}
 		} else {
 			_warnings.remove(msg);
@@ -4091,6 +4096,18 @@ private:
 	}
 
 	bool importFromImage(Window* wnd, Renderer* rnd, Workspace* ws, Image::Ptr img, bool allowFlip, bool fillLocalPalette, bool createNew) {
+		struct Error {
+			typedef std::vector<Error> Array;
+
+			bool isWarning = false;
+			std::string message;
+
+			Error() {
+			}
+			Error(bool warn, const std::string &msg) : isWarning(warn), message(msg) {
+			}
+		};
+
 		if ((img->width() % GBBASIC_TILE_SIZE) != 0 || (img->height() % GBBASIC_TILE_SIZE) != 0) {
 			ws->bubble(ws->theme()->dialogPrompt_ResourceSizeIsNotAMultipleOf8x8(), nullptr);
 
@@ -4109,21 +4126,23 @@ private:
 		}
 		TilesAssets::Entry tiles(rnd, _project->paletteGetter());
 		MapAssets::Entry map("", _project->tilesGetter(), attribtex);
-		std::string error;
+		Error::Array errors;
 		const bool loaded = MapAssets::parseImage(
 			palette, tiles, map,
 			img.get(), allowFlip, fillLocalPalette, false,
 			_project->paletteGetter(), _project->tilesGetter(), _project->tilesPageCount(),
-			nullptr, [&error] (const char* msg, bool isWarning) -> void {
-				if (!isWarning)
-					error = msg;
+			nullptr, [&errors] (const char* msg, bool isWarning) -> void {
+				errors.push_back(Error(isWarning, msg));
 			}
 		);
+		_warnings.clear();
 		if (!loaded) {
-			if (error.empty())
-				ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
-			else
-				ws->bubble(error, nullptr);
+			if (!errors.empty()) {
+				for (const Error &err : errors) {
+					const std::string &msg = err.message;
+					warn(ws, msg, true, err.isWarning);
+				}
+			}
 
 			return false;
 		}
@@ -4701,14 +4720,12 @@ private:
 			),
 			std::bind(
 				[ws, this] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
+					_warnings.clear();
+
 					if (!data->errors.empty()) {
-						ws->warn("Errors during image-to-map conversion:");
 						for (const Error &err : data->errors) {
-							const std::string msg = "  " + err.message;
-							if (err.isWarning)
-								ws->warn(msg.c_str());
-							else
-								ws->error(msg.c_str());
+							const std::string &msg = err.message;
+							warn(ws, msg, true, err.isWarning);
 						}
 					}
 
@@ -4798,7 +4815,7 @@ private:
 		if (!(isEditingAsImage() && localPaletteEnabled))
 			return;
 
-		if (_transfer.filled) {
+		/*if (_transfer.filled) {
 			PaletteAssets::Array localPalette = entry()->localPalette;
 			const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
 			if ((int)localPalette.size() != n)
@@ -4815,25 +4832,27 @@ private:
 				->exec(object(), Variant((void*)entry()));
 
 			_refresh(cmd);
-		} else {
-			ImGui::WaitingPopupBox::TimeoutHandler timeout(
-				[ws, this] (void) -> void {
-					if (!_transfer.filled) {
-						transferImageToTiled(ws);
 
-						_transfer.generated.wait();
-					}
+			return;
+		}*/
 
-					ws->popupBox(nullptr);
-				},
-				nullptr
-			);
-			ws->waitingPopupBox(
-				true, ws->theme()->dialogPrompt_Transferring(),
-				true, timeout,
-				true
-			);
-		}
+		ImGui::WaitingPopupBox::TimeoutHandler timeout(
+			[ws, this] (void) -> void {
+				if (!_transfer.filled) {
+					transferImageToTiled(ws);
+
+					_transfer.generated.wait();
+				}
+
+				ws->popupBox(nullptr);
+			},
+			nullptr
+		);
+		ws->waitingPopupBox(
+			true, ws->theme()->dialogPrompt_Transferring(),
+			true, timeout,
+			true
+		);
 	}
 
 	bool playMapTesting(Window* wnd, Renderer* rnd, Workspace* ws) {
@@ -4943,14 +4962,14 @@ private:
 
 		// Get the kernel.
 		if (ws->kernels().empty()) {
-			self->warn(ws, "No valid map player.", true);
+			self->warn(ws, "No valid map player.", true, true);
 
 			return nullptr;
 		}
 
 		const GBBASIC::Kernel::Ptr &krnl = ws->kernels().front();
 		if (!krnl) {
-			self->warn(ws, "No valid kernel.", true);
+			self->warn(ws, "No valid kernel.", true, true);
 
 			return nullptr;
 		}
@@ -4968,14 +4987,14 @@ private:
 			std::string configTxt;
 			File::Ptr file(File::create());
 			if (!file->open(config.c_str(), Stream::READ)) {
-				self->warn(ws, "No valid config.", true);
+				self->warn(ws, "No valid config.", true, true);
 
 				return nullptr;
 			}
 			if (!file->readString(configTxt)) {
 				file->close();
 
-				self->warn(ws, "No valid config.", true);
+				self->warn(ws, "No valid config.", true, true);
 
 				return nullptr;
 			}
@@ -4990,11 +5009,11 @@ private:
 				sym, symTxt,
 				aliases, aliasesTxt,
 				[self, ws] (const char* msg) -> void {
-					self->warn(ws, msg, true);
+					self->warn(ws, msg, true, true);
 				}
 			);
 			if (!loaded) {
-				self->warn(ws, "No valid symbol.", true);
+				self->warn(ws, "No valid symbol.", true, true);
 
 				return nullptr;
 			}

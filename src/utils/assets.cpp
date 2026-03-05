@@ -4487,6 +4487,25 @@ bool MapAssets::parseImage(
 		}
 	};
 
+	typedef std::vector<int> Indices;
+
+	struct TileRef {
+		typedef std::vector<TileRef> Array;
+
+		int x = 0;
+		int y = 0;
+		Image::Ptr slice = nullptr;
+		Image::Colours colors;
+
+		TileRef() {
+		}
+		TileRef(int x_, int y_, Image::Ptr s, const Image::Colours &cols) :
+			x(x_), y(y_),
+			slice(s), colors(cols)
+		{
+		}
+	};
+
 	auto indexOfSlice = [] (const Slice::Array &coll, const Slice &what, int pal, bool allowFlip, bool &hFlip, bool &vFlip) -> int {
 		for (int i = 0; i < (int)coll.size(); ++i) {
 			if (coll[i] == what) // Compare the slices' images.
@@ -4524,26 +4543,24 @@ bool MapAssets::parseImage(
 		return -1;
 	};
 
-	typedef std::vector<int> Indices;
-
-	auto touchPalette = [] (const Image::Colours &cols, PaletteAssets::Array &palette, Indices &indices) -> int {
+	auto touchPalette = [] (const Image::Colours &cols, PaletteAssets::Array &palette, Indices &indices, bool &overflow) -> int {
 		// Prepare.
 		typedef std::set<Colour> ColourSet;
-		typedef Indexed::Lookup ColourDictionary;
 
 		int result = 0;
 		Image::Colours cols_ = cols;
 		if (cols_.size() < GBBASIC_PALETTE_PER_GROUP_COUNT)
-			cols_.resize(GBBASIC_PALETTE_PER_GROUP_COUNT, Colour(0, 0, 0, 255));
+			cols_.resize(GBBASIC_PALETTE_PER_GROUP_COUNT, Colour(255, 255, 255, 0));
 		const ColourSet uniqueCols(cols.begin(), cols.end());
 
 		indices.clear();
+		overflow = false;
 
 		// Find any precisely matched palette group.
 		for (int i = 0; i < (int)palette.size(); ++i) {
 			const PaletteAssets::Entry &pal = palette[i];
 			ColourSet uniquePalCols;
-			ColourDictionary colDict;
+			Indexed::Lookup colDict;
 			for (int j = 0; j < pal.data->count(); ++j) {
 				Colour col;
 				pal.data->get(j, col);
@@ -4557,7 +4574,7 @@ bool MapAssets::parseImage(
 			if (matched) {
 				for (int j = 0; j < (int)cols_.size(); ++j) {
 					const Colour &col = cols_[j];
-					ColourDictionary::const_iterator it = colDict.find(col);
+					Indexed::Lookup::const_iterator it = colDict.find(col);
 					const int idx = it == colDict.end() ? 0 : it->second;
 					indices.push_back(idx);
 				}
@@ -4567,9 +4584,25 @@ bool MapAssets::parseImage(
 			}
 		}
 
-		// Find a similar palette group, if the palette structure is full.
+		// Add a new palette group, if the palette structure is not full.
 		const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
-		if ((int)palette.size() >= n) {
+		if ((int)palette.size() < n) {
+			PaletteAssets::Entry pal;
+			for (int j = 0; j < (int)cols_.size(); ++j) {
+				const Colour &col = cols_[j];
+				pal.data->set(j, &col);
+				indices.push_back(j);
+			}
+			palette.push_back(pal);
+			result = (int)palette.size() - 1;
+
+			return result;
+		}
+
+		// Find a similar palette group, if the palette structure is full.
+		do {
+			overflow = true;
+
 			int bestPalIdx = -1;
 			double minTotalDist = std::numeric_limits<double>::max();
 			for (int i = 0; i < (int)palette.size(); ++i) {
@@ -4612,20 +4645,6 @@ bool MapAssets::parseImage(
 				indices.push_back(bestK);
 			}
 			result = bestPalIdx;
-
-			return result;
-		}
-
-		// Add a new palette group, if the palette structure is not full.
-		do {
-			PaletteAssets::Entry pal;
-			for (int j = 0; j < (int)cols_.size(); ++j) {
-				const Colour &col = cols_[j];
-				pal.data->set(j, &col);
-				indices.push_back(j);
-			}
-			palette.push_back(pal);
-			result = (int)palette.size() - 1;
 		} while (false);
 
 		// Finish.
@@ -4661,19 +4680,18 @@ bool MapAssets::parseImage(
 	Cel::Array cels;
 	int paletted = 0;
 	int flipped = 0;
-
 	cels.resize(area);
-	for (int j = 0; j < mh; j += 2) {
-		for (int i = 0; i < mw; ++i) {
-			const int x = i;
-			for (int h = 0; h < 2; ++h) { // Import as 8x16 if possible.
-				const int y = j + h;
-				if (y >= mh)
-					continue;
 
-				int pal = 0;
-				Slice slice;
-				if (fillLocalPalette) {
+	if (fillLocalPalette) {
+		TileRef::Array tileRefs;
+		for (int j = 0; j < mh; j += 2) {
+			for (int i = 0; i < mw; ++i) {
+				const int x = i;
+				for (int h = 0; h < 2; ++h) { // Import as 8x16 if possible.
+					const int y = j + h;
+					if (y >= mh)
+						continue;
+
 					Image::Ptr r(Image::create());
 					r->fromBlank(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, 0);
 					val->blit(
@@ -4682,30 +4700,96 @@ bool MapAssets::parseImage(
 						GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
 						x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE
 					);
-					const Image::Colours allCol = r->allColours();
-					Indices indices;
-					const int pal_ = touchPalette(allCol, palette_, indices);
-					if (allCol.size() > GBBASIC_PALETTE_PER_GROUP_COUNT) {
-						const std::string msg = Text::format(
-							"Too many colors at tile {0}, {1}.",
-							{
-								Text::toString(x), Text::toString(y)
-							}
-						);
-						if (onWarningOrError)
-							onWarningOrError(msg.c_str(), true);
-					}
+					const Image::Colours allCols = r->allColours();
+					const TileRef tileRef(x, y, r, allCols);
+					tileRefs.push_back(tileRef);
+				}
+			}
+		}
+		std::sort(
+			tileRefs.begin(), tileRefs.end(),
+			[] (const TileRef &l, const TileRef &r) -> bool {
+				if (l.colors.size() > r.colors.size())
+					return true;
+				else if (l.colors.size() < r.colors.size())
+					return false;
 
-					Indexed::Lookup lookup;
-					for (int k = 0; k < Math::min((int)allCol.size(), (int)indices.size()); ++k) {
-						const Colour &col = allCol[k];
-						const int idx = indices[k];
-						lookup.insert(std::make_pair(col, idx));
+				if (l.y < r.y)
+					return true;
+				else if (l.y > r.y)
+					return false;
+
+				if (l.x < r.x)
+					return true;
+
+				return false;
+			}
+		);
+		for (const TileRef tileRef : tileRefs) {
+			const int x = tileRef.x;
+			const int y = tileRef.y;
+			Image::Ptr r = tileRef.slice;
+			const Image::Colours allCols = tileRef.colors;
+
+			Indices indices;
+			bool overflow = false;
+			const int pal_ = touchPalette(allCols, palette_, indices, overflow);
+			if (allCols.size() > GBBASIC_PALETTE_PER_GROUP_COUNT) {
+				const std::string msg = Text::format(
+					"Too many colors at tile {0}, {1}.",
+					{
+						Text::toString(x), Text::toString(y)
 					}
-					Image::Ptr s(r->quantized2Bpp(lookup));
-					pal = pal_;
-					slice = Slice(s, pal);
-				} else {
+				);
+				if (onWarningOrError)
+					onWarningOrError(msg.c_str(), true);
+			}
+			if (overflow) {
+				const std::string msg = Text::format(
+					"Cannot allocate new palette group for tile {0}, {1}.",
+					{
+						Text::toString(x), Text::toString(y)
+					}
+				);
+				if (onWarningOrError)
+					onWarningOrError(msg.c_str(), true);
+			}
+
+			Indexed::Lookup lookup;
+			for (int k = 0; k < Math::min((int)allCols.size(), (int)indices.size()); ++k) {
+				const Colour &col = allCols[k];
+				const int idx = indices[k];
+				lookup.insert(std::make_pair(col, idx));
+			}
+			Image::Ptr s(r->quantized2Bpp(lookup));
+			const int pal = pal_;
+			const Slice slice(s, pal);
+
+			int index = -1;
+			bool hFlip = false;
+			bool vFlip = false;
+			const int exists = indexOfSlice(slices, slice, pal, allowFlip, hFlip, vFlip);
+			if (exists == -1) {
+				slices.push_back(slice);
+				index = (int)slices.size() - 1;
+			} else {
+				index = exists;
+			}
+			cels[x + y * mw] = Cel(index, pal, hFlip, vFlip);
+			++paletted;
+
+			if (hFlip || vFlip)
+				++flipped;
+		}
+	} else {
+		for (int j = 0; j < mh; j += 2) {
+			for (int i = 0; i < mw; ++i) {
+				const int x = i;
+				for (int h = 0; h < 2; ++h) { // Import as 8x16 if possible.
+					const int y = j + h;
+					if (y >= mh)
+						continue;
+
 					Image::Ptr s(Image::create(palettedImg->palette()));
 					s->fromBlank(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_PALETTE_DEPTH);
 					palettedImg->blit(
@@ -4714,29 +4798,24 @@ bool MapAssets::parseImage(
 						GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
 						x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE
 					);
-					pal = 0;
-					slice = Slice(s, pal);
-				}
+					const int pal = 0;
+					const Slice slice(s, pal);
 
-				int index = -1;
-				bool hFlip = false;
-				bool vFlip = false;
-				const int exists = indexOfSlice(slices, slice, pal, allowFlip, hFlip, vFlip);
-				if (exists == -1) {
-					slices.push_back(slice);
-					index = (int)slices.size() - 1;
-				} else {
-					index = exists;
-				}
-				if (fillLocalPalette) {
+					int index = -1;
+					bool hFlip = false;
+					bool vFlip = false;
+					const int exists = indexOfSlice(slices, slice, pal, allowFlip, hFlip, vFlip);
+					if (exists == -1) {
+						slices.push_back(slice);
+						index = (int)slices.size() - 1;
+					} else {
+						index = exists;
+					}
 					cels[x + y * mw] = Cel(index, pal, hFlip, vFlip);
-					++paletted;
-				} else {
-					cels[x + y * mw] = Cel(index, 0, hFlip, vFlip);
-				}
 
-				if (hFlip || vFlip)
-					++flipped;
+					if (hFlip || vFlip)
+						++flipped;
+				}
 			}
 		}
 	}

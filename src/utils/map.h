@@ -118,21 +118,21 @@ public:
 	 * @brief Gets sub renderable data at a specific area.
 	 *
 	 * @param[in] ncolors The count of the palette colors to be used to generate sub texture.
-	 * @param[in] colours The colors of the palette to be used to generate sub texture.
+	 * @param[in] colors The colors of the palette to be used to generate sub texture.
 	 *   These palette colors are not used as the basis for key calculation, and won't re-trigger generation.
 	 * @param[in] colorKey Optional key of the palette. Only used as the basis for key calculation.
 	 * @return The sub tiled texture or `nullptr`.
 	 */
-	virtual Texture::Ptr sub(class Renderer* rnd, int x, int y, int width, int height, int ncolors, const Colour* colours /* nullable */, int colorKey) const = 0;
+	virtual Texture::Ptr sub(class Renderer* rnd, int x, int y, int width, int height, int ncolors, const Colour* colors /* nullable */, int colorKey) const = 0;
 	/**
 	 * @brief Gets sub renderable data at a specific area.
 	 *
-	 * @param[in] colours The palette to be used to generate sub texture.
+	 * @param[in] colors The palette to be used to generate sub texture.
 	 *   These palette colors are not used as the basis for key calculation, and won't re-trigger generation.
 	 * @param[in] colorKey Optional key of the palette. Only used as the basis for key calculation.
 	 * @return The sub tiled texture or `nullptr`.
 	 */
-	virtual Texture::Ptr sub(class Renderer* rnd, int x, int y, int width, int height, Indexed::Ptr colours /* nullable */, int colorKey) const = 0;
+	virtual Texture::Ptr sub(class Renderer* rnd, int x, int y, int width, int height, Indexed::Ptr colors /* nullable */, int colorKey) const = 0;
 	/**
 	 * @brief Gets the cache size of sub map.
 	 */
