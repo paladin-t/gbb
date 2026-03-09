@@ -5387,9 +5387,20 @@ void Workspace::upgrade(
 		prj->preferencesSceneShowAttributes(false);
 		prj->preferencesSceneUseGravity(false);
 
+		MapAssets &maps = prj->assets()->maps;
+		const int n = maps.count();
+		for (int i = 0; i < (int)n; ++i) {
+			MapAssets::Entry* entry = maps.get(i);
+			entry->editAsImage = false;
+			entry->editedAsImage = false;
+			if (!entry->localPaletteEnabled)
+				entry->localPalette.clear();
+		}
+
 		// Save.
 		const std::string &path = prj->path();
 		prj->hasDirtyInformation(true);
+		prj->hasDirtyAsset(true);
 		prj->save(path.c_str(), false, onError);
 	}
 
