@@ -508,7 +508,7 @@
 #endif /* GBBASIC_ACTOR_DEFAULT_HEIGHT */
 // The maximum frame count of actor asset.
 #ifndef GBBASIC_ACTOR_FRAME_MAX_COUNT
-#	define GBBASIC_ACTOR_FRAME_MAX_COUNT 1024
+#	define GBBASIC_ACTOR_FRAME_MAX_COUNT 256
 #endif /* GBBASIC_ACTOR_FRAME_MAX_COUNT */
 // The palette bit 0 of actor.
 #ifndef GBBASIC_ACTOR_PALETTE_BIT0

@@ -6603,9 +6603,15 @@ bool ActorAssets::Entry::parseSpriteSheet(Actor::Ptr &actor, const Bytes* val, c
 		return false;
 	}
 
+	if (n.x * n.y > GBBASIC_ACTOR_FRAME_MAX_COUNT) {
+		status = ParsingStatuses::OUT_OF_BOUNDS;
+
+		return false;
+	}
+
 	const int tw = tmp->width() / GBBASIC_TILE_SIZE;
 	const int th = tmp->height() / GBBASIC_ACTOR_MAX_HEIGHT;
-	if (tw / n.x > GBBASIC_ACTOR_MAX_WIDTH || th / n.y> GBBASIC_ACTOR_MAX_HEIGHT) {
+	if (tw / n.x > GBBASIC_ACTOR_MAX_WIDTH || th / n.y > GBBASIC_ACTOR_MAX_HEIGHT) {
 		status = ParsingStatuses::OUT_OF_BOUNDS;
 
 		return false;

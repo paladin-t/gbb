@@ -1807,11 +1807,11 @@ private:
 					if (!entry()->parseJson(newObj, txt, status)) {
 						switch (status) {
 						case BaseAssets::Entry::ParsingStatuses::NOT_A_MULTIPLE_OF_8x8:
-							ws->bubble(ws->theme()->dialogPrompt_ResourceSizeIsNotAMultipleOf8x8(), nullptr);
+							ws->messagePopupBox(ws->theme()->dialogPrompt_ResourceSizeIsNotAMultipleOf8x8(), nullptr, nullptr, nullptr);
 
 							break;
 						case BaseAssets::Entry::ParsingStatuses::OUT_OF_BOUNDS:
-							ws->bubble(ws->theme()->dialogPrompt_ResourceSizeOutOfBounds(), nullptr);
+							ws->messagePopupBox(ws->theme()->dialogPrompt_ResourceSizeOutOfBounds(), nullptr, nullptr, nullptr);
 
 							break;
 						default:
@@ -1873,11 +1873,11 @@ private:
 					if (!entry()->parseJson(newObj, txt, status)) {
 						switch (status) {
 						case BaseAssets::Entry::ParsingStatuses::NOT_A_MULTIPLE_OF_8x8:
-							ws->bubble(ws->theme()->dialogPrompt_ResourceSizeIsNotAMultipleOf8x8(), nullptr);
+							ws->messagePopupBox(ws->theme()->dialogPrompt_ResourceSizeIsNotAMultipleOf8x8(), nullptr, nullptr, nullptr);
 
 							break;
 						case BaseAssets::Entry::ParsingStatuses::OUT_OF_BOUNDS:
-							ws->bubble(ws->theme()->dialogPrompt_ResourceSizeOutOfBounds(), nullptr);
+							ws->messagePopupBox(ws->theme()->dialogPrompt_ResourceSizeOutOfBounds(), nullptr, nullptr, nullptr);
 
 							break;
 						default:
@@ -1919,11 +1919,11 @@ private:
 						if (!entry()->parseImage(newObj, img.get(), status)) {
 							switch (status) {
 							case BaseAssets::Entry::ParsingStatuses::NOT_A_MULTIPLE_OF_8x8:
-								ws->bubble(ws->theme()->dialogPrompt_ResourceSizeIsNotAMultipleOf8x8(), nullptr);
+								ws->messagePopupBox(ws->theme()->dialogPrompt_ResourceSizeIsNotAMultipleOf8x8(), nullptr, nullptr, nullptr);
 
 								break;
 							case BaseAssets::Entry::ParsingStatuses::OUT_OF_BOUNDS:
-								ws->bubble(ws->theme()->dialogPrompt_ResourceSizeOutOfBounds(), nullptr);
+								ws->messagePopupBox(ws->theme()->dialogPrompt_ResourceSizeOutOfBounds(), nullptr, nullptr, nullptr);
 
 								break;
 							default:
@@ -1986,11 +1986,11 @@ private:
 					if (!entry()->parseImage(newObj, bytes.get(), status)) {
 						switch (status) {
 						case BaseAssets::Entry::ParsingStatuses::NOT_A_MULTIPLE_OF_8x8:
-							ws->bubble(ws->theme()->dialogPrompt_ResourceSizeIsNotAMultipleOf8x8(), nullptr);
+							ws->messagePopupBox(ws->theme()->dialogPrompt_ResourceSizeIsNotAMultipleOf8x8(), nullptr, nullptr, nullptr);
 
 							break;
 						case BaseAssets::Entry::ParsingStatuses::OUT_OF_BOUNDS:
-							ws->bubble(ws->theme()->dialogPrompt_ResourceSizeOutOfBounds(), nullptr);
+							ws->messagePopupBox(ws->theme()->dialogPrompt_ResourceSizeOutOfBounds(), nullptr, nullptr, nullptr);
 
 							break;
 						default:

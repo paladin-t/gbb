@@ -64,7 +64,7 @@ GB BASIC is programmable in a brand new BASIC dialect. The integrated assets edi
 - **Map**: up to 255 tiles in one dimension per page; two layers (graphics, attributes)
 - **Sprite**: supports 8x8 and 8x16 sprites
 - **Scene**: up to 255 tiles in one dimension per page; four layers (map, attributes, properties, actors)
-- **Actor**: up to 8x8 tiles per frame; up to 1024 frames per page
+- **Actor**: up to 8x8 tiles per frame; up to 256 frames per page
 - **Font**: supports TrueType (.ttf) and bitmap-based (.png .jpg .bmp .tga); up to 16px; 1bpp or 2bpp
 - **Audio**: 4 channels; supports importing from JSON, VGM, WAV, FxHammer
 - **Palette**: 2bit (4 colors) per tile, palette of map and actor is configurable for colored device
