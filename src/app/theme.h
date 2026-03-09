@@ -352,6 +352,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Duty_25_0)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Duty_50_0)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Duty_75_0)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_EditingAsAnImageMayRemvoeUnusedTilesContinueAnyway)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_EditProps)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Effect)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_EjectedSourceCode)

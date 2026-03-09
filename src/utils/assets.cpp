@@ -4051,6 +4051,8 @@ bool MapAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarnin
 
 	Jpath::set(doc, doc, editAsImage, "edit_as_image");
 
+	Jpath::set(doc, doc, editedAsImage, "edited_as_image");
+
 	Jpath::set(doc, doc, localPaletteEnabled, "local_palette", "enabled");
 
 	Jpath::set(doc, doc, Jpath::ANY(), "local_palette", "colors");
@@ -4159,6 +4161,9 @@ bool MapAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler 
 
 	if (!Jpath::get(doc, editAsImage, "edit_as_image"))
 		editAsImage = false;
+
+	if (!Jpath::get(doc, editedAsImage, "edited_as_image"))
+		editedAsImage = false;
 
 	if (!Jpath::get(doc, localPaletteEnabled, "local_palette", "enabled"))
 		localPaletteEnabled = false;

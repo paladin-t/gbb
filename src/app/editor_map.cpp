@@ -1711,6 +1711,7 @@ private:
 		auto canUseShortcuts = [ws, this] (void) -> bool {
 			return !_tools.inputFieldFocused && ws->canUseShortcuts() && !ImGui::IsMouseDown(ImGuiMouseButton_Left);
 		};
+		const bool editedAsImage = entry()->editedAsImage;
 		bool editAsImage = entry()->editAsImage;
 		bool localPaletteEnabled = entry()->localPaletteEnabled;
 
@@ -1777,6 +1778,7 @@ private:
 								WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
 								entry()->editAsImage = editAsImage;
+								entry()->editedAsImage = true;
 								editAsImageChanged(ws);
 							},
 							nullptr
@@ -1791,6 +1793,37 @@ private:
 						);
 						ws->messagePopupBox(
 							ws->theme()->dialogPrompt_MultipleMapAssetsReferenceTheSourceTilesAssetContinueAnyway(),
+							confirm,
+							deny,
+							nullptr,
+							nullptr,
+							nullptr,
+							nullptr,
+							nullptr,
+							nullptr,
+							nullptr
+						);
+					} else if (editAsImage && !editedAsImage) {
+						ImGui::MessagePopupBox::ConfirmedHandler confirm(
+							[ws, this, editAsImage] (void) -> void {
+								WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+								entry()->editAsImage = editAsImage;
+								entry()->editedAsImage = true;
+								editAsImageChanged(ws);
+							},
+							nullptr
+						);
+						ImGui::MessagePopupBox::DeniedHandler deny(
+							[ws] (void) -> void {
+								WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+								// Do nothing.
+							},
+							nullptr
+						);
+						ws->messagePopupBox(
+							ws->theme()->dialogPrompt_EditingAsAnImageMayRemvoeUnusedTilesContinueAnyway(),
 							confirm,
 							deny,
 							nullptr,

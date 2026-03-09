@@ -555,6 +555,10 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Duty_25_0("25.0%");
 	dialogPrompt_Duty_50_0("50.0% (Square)");
 	dialogPrompt_Duty_75_0("75.0%");
+	dialogPrompt_EditingAsAnImageMayRemvoeUnusedTilesContinueAnyway(
+		"Editing as an image may remove\n"
+		"unused tiles. Continue anyway?"
+	);
 	dialogPrompt_EditProps("Edit props.");
 	dialogPrompt_Effect("Effect");
 	dialogPrompt_EjectedSourceCode("Ejected source code");
