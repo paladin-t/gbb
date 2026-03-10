@@ -149,9 +149,9 @@ public:
 	GBBASIC_PROPERTY             (Texture::Ptr,                  actorsTexture                                    ) // Non-serialized.
 	GBBASIC_PROPERTY             (active_t::BehaviourSerializer, behaviourSerializer                              ) // Non-serialized.
 	GBBASIC_PROPERTY             (active_t::BehaviourParser,     behaviourParser                                  ) // Non-serialized.
-	GBBASIC_PROPERTY             (bool,                          hasDirtyInformation                              ) // Non-serialized.
-	GBBASIC_PROPERTY             (bool,                          hasDirtyAsset                                    ) // Non-serialized.
-	GBBASIC_PROPERTY             (bool,                          hasDirtyEditor                                   ) // Non-serialized.
+	GBBASIC_FIELD_READONLY       (bool,                          hasDirtyInformation                              ) // Non-serialized.
+	GBBASIC_FIELD_READONLY       (bool,                          hasDirtyAsset                                    ) // Non-serialized.
+	GBBASIC_FIELD_READONLY       (bool,                          hasDirtyEditor                                   ) // Non-serialized.
 	GBBASIC_PROPERTY             (bool,                          toPollEditor                                     ) // Non-serialized.
 	GBBASIC_PROPERTY             (bool,                          isPlain                                          ) // Non-serialized.
 	GBBASIC_PROPERTY             (bool,                          preferPlain                                      ) // Non-serialized.
@@ -304,6 +304,9 @@ public:
 
 	bool editable(void) const;
 	bool dirty(void);
+	void hasDirtyInformation(bool val);
+	void hasDirtyAsset(bool val);
+	void hasDirtyEditor(bool val);
 
 	bool open(const char* path);
 	bool close(bool deep);

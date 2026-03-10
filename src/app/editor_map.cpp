@@ -203,7 +203,7 @@ private:
 		Renderer* renderer = nullptr; // Foreign.
 		Image::Ptr image = nullptr;
 		Texture::Ptr texture = nullptr;
-		bool filled = false;
+		bool filled = true; // Defaults to filled.
 		Semaphore generated;
 
 		void reset(void) {

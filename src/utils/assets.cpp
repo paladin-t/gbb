@@ -4049,9 +4049,9 @@ bool MapAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarnin
 	rapidjson::Value* attributes_ = nullptr;
 	Jpath::get(doc, attributes_, "attributes");
 
-	Jpath::set(doc, doc, editAsImage, "edit_as_image");
+	Jpath::set(doc, doc, editAsImage, "edit_as_image", "enabled");
 
-	Jpath::set(doc, doc, editedAsImage, "edited_as_image");
+	Jpath::set(doc, doc, editedAsImage, "edit_as_image", "edited");
 
 	Jpath::set(doc, doc, localPaletteEnabled, "local_palette", "enabled");
 
@@ -4159,10 +4159,10 @@ bool MapAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler 
 
 	Jpath::get(doc, hasAttributes, "has_attributes");
 
-	if (!Jpath::get(doc, editAsImage, "edit_as_image"))
+	if (!Jpath::get(doc, editAsImage, "edit_as_image", "enabled"))
 		editAsImage = false;
 
-	if (!Jpath::get(doc, editedAsImage, "edited_as_image"))
+	if (!Jpath::get(doc, editedAsImage, "edit_as_image", "edited"))
 		editedAsImage = false;
 
 	if (!Jpath::get(doc, localPaletteEnabled, "local_palette", "enabled"))
@@ -4730,11 +4730,11 @@ bool MapAssets::parseImage(
 				return false;
 			}
 		);
-		for (const TileRef tileRef : tileRefs) {
+		for (const TileRef &tileRef : tileRefs) {
 			const int x = tileRef.x;
 			const int y = tileRef.y;
-			Image::Ptr r = tileRef.slice;
-			const Image::Colours allCols = tileRef.colors;
+			const Image::Ptr &r = tileRef.slice;
+			const Image::Colours &allCols = tileRef.colors;
 
 			Indices indices;
 			bool overflow = false;

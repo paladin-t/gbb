@@ -1871,6 +1871,18 @@ bool Project::dirty(void) {
 	return false;
 }
 
+void Project::hasDirtyInformation(bool val) {
+	_hasDirtyInformation = val;
+}
+
+void Project::hasDirtyAsset(bool val) {
+	_hasDirtyAsset = val;
+}
+
+void Project::hasDirtyEditor(bool val) {
+	_hasDirtyEditor = val;
+}
+
 bool Project::open(const char* path_) {
 	// Prepare.
 	path(path_);
