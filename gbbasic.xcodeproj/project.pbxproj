@@ -44,7 +44,6 @@
 		038E776E2582133D00A94374 /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = 038E775B2582133B00A94374 /* crc32.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		038E77702582133D00A94374 /* gzclose.c in Sources */ = {isa = PBXBuildFile; fileRef = 038E775D2582133C00A94374 /* gzclose.c */; };
 		03FEADAF25C94ED3006A5EF0 /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 03FEADAE25C94ED3006A5EF0 /* imgui_tables.cpp */; };
-		68913EE62F542A5800B15C51 /* editor_map.inl in Resources */ = {isa = PBXBuildFile; fileRef = 68913EE52F542A5800B15C51 /* editor_map.inl */; };
 		689DD3FA2E2F37C5001D2B86 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD3F72E2F37C5001D2B86 /* main.cpp */; };
 		689DD4282E2F3A36001D2B86 /* stb_vorbis.c in Sources */ = {isa = PBXBuildFile; fileRef = 689DD4142E2F3A34001D2B86 /* stb_vorbis.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		689DD4322E2F3AB6001D2B86 /* promise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD4312E2F3AB6001D2B86 /* promise.cpp */; };
@@ -1685,7 +1684,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				68F811002E2F70C800A859D1 /* Assets.xcassets in Resources */,
-				68913EE62F542A5800B15C51 /* editor_map.inl in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
