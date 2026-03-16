@@ -279,7 +279,7 @@ typedef std::function<int(const Math::Vec2i &, TriggerIndex::Array &)> SceneTrig
 
 typedef std::function<void(int, Operations)> IndexedOperationHandler;
 
-typedef std::function<void(void)> PostHandler;
+typedef std::function<void(const Math::Vec2f &, const Math::Vec2f &, float)> TilesPostHandler;
 
 /**< Utilities for editing area. */
 
@@ -310,7 +310,7 @@ bool tiles(
 	const Math::Vec2i* gridSize = nullptr, bool showGrids = false,
 	bool showTransparentBackbround = true,
 	int mouseActionButton = 0,
-	PostHandler post = nullptr
+	TilesPostHandler post = nullptr
 );
 
 /**
@@ -326,7 +326,7 @@ bool tiles(
 	const Math::Vec2i* gridSize = nullptr, bool showGrids = false,
 	bool showTransparentBackbround = true,
 	int mouseActionButton = 0,
-	PostHandler post = nullptr
+	TilesPostHandler post = nullptr
 );
 
 /**

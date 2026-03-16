@@ -1647,7 +1647,35 @@ private:
 						&_asImage.tools.gridUnit, _tools.showGrids && _tools.gridsVisible,
 						_tools.transparentBackbroundVisible,
 						_tools.mouseActionButton,
-						nullptr
+						[&] (const Math::Vec2f &curPos, const Math::Vec2f &/* widgetSize */, float scale) -> void {
+							ImGuiStyle &style = ImGui::GetStyle();
+							ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+							for (const TileIssue &tileIssue : _tileIssues) {
+								if (tileIssue.x == -1 || tileIssue.y == -1 || tileIssue.message.empty())
+									continue;
+
+								const ImVec2 minPos(
+									(float)(curPos.x + tileIssue.x * GBBASIC_TILE_SIZE * scale),
+									(float)(curPos.y + tileIssue.y * GBBASIC_TILE_SIZE * scale)
+								);
+								const ImVec2 maxPos(
+									(float)(curPos.x + (tileIssue.x + 1) * GBBASIC_TILE_SIZE * scale + 1),
+									(float)(curPos.y + (tileIssue.y + 1) * GBBASIC_TILE_SIZE * scale + 1)
+								);
+								drawList->AddRect(minPos, maxPos, 0xff0000ff);
+
+								if (ImGui::IsItemHovered()) {
+									const ImVec2 mousePos = ImGui::GetMousePos();
+									const bool hovering = Math::intersects(Math::Recti((int)minPos.x, (int)minPos.y, (int)(minPos.x + maxPos.x), (int)(minPos.y + maxPos.y)), Math::Vec2i((int)mousePos.x, (int)mousePos.y));
+									if (hovering) {
+										VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+										ImGui::SetTooltip(tileIssue.message);
+									}
+								}
+							}
+						}
 					)
 				);
 				if (
@@ -2930,7 +2958,7 @@ private:
 				const float wndWidth = ImGui::GetWindowWidth();
 				ImGui::SetCursorPosX(wndWidth - _statusWidth);
 				if (wndWidth >= 430) {
-					/*if (transferring.first) {
+					if (transferring.first) {
 						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_Button));
 						ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_Button));
 						ImGui::ImageButton(ws->theme()->iconWorking()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_Compacting().c_str());
@@ -2943,7 +2971,7 @@ private:
 						}
 						width_ += ImGui::GetItemRectSize().x;
 						ImGui::SameLine();
-					} else*/ {
+					} else {
 						if (_status.info.empty()) {
 							const int w = object()->width() / GBBASIC_TILE_SIZE;
 							const int h = object()->height() / GBBASIC_TILE_SIZE;
@@ -4611,6 +4639,8 @@ private:
 		_transfer.filled = false;
 
 		_debounce.modified();
+
+		_tileIssues.clear();
 
 		return true;
 	}
