@@ -55,6 +55,23 @@ private:
 
 	typedef std::function<void(void)> PostHandler;
 
+	struct TileIssue {
+		typedef std::vector<TileIssue> Array;
+
+		int x = -1;
+		int y = -1;
+		std::string message;
+
+		TileIssue() {
+		}
+		TileIssue(int x_, int y_, const char* msg) :
+			x(x_), y(y_)
+		{
+			if (msg)
+				message = msg;
+		}
+	};
+
 	struct Processor {
 		typedef std::function<void(Renderer*)> Handler;
 
@@ -134,6 +151,7 @@ private:
 		}
 	} _status;
 	mutable float _statusWidth = 0.0f;
+	TileIssue::Array _tileIssues;
 	struct {
 		Text::Array warnings;
 		std::string text;
@@ -620,6 +638,7 @@ public:
 		_page.clear();
 		_status.clear();
 		_statusWidth = 0.0f;
+		_tileIssues.clear();
 		_warnings.clear();
 		_refresh = nullptr;
 		_estimated.clear();
@@ -1628,7 +1647,35 @@ private:
 						&_asImage.tools.gridUnit, _tools.showGrids && _tools.gridsVisible,
 						_tools.transparentBackbroundVisible,
 						_tools.mouseActionButton,
-						nullptr
+						[&] (const Math::Vec2f &curPos, const Math::Vec2f &/* widgetSize */, float scale) -> void {
+							ImGuiStyle &style = ImGui::GetStyle();
+							ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+							for (const TileIssue &tileIssue : _tileIssues) {
+								if (tileIssue.x == -1 || tileIssue.y == -1 || tileIssue.message.empty())
+									continue;
+
+								const ImVec2 minPos(
+									(float)(curPos.x + tileIssue.x * GBBASIC_TILE_SIZE * scale),
+									(float)(curPos.y + tileIssue.y * GBBASIC_TILE_SIZE * scale)
+								);
+								const ImVec2 maxPos(
+									(float)(curPos.x + (tileIssue.x + 1) * GBBASIC_TILE_SIZE * scale + 1),
+									(float)(curPos.y + (tileIssue.y + 1) * GBBASIC_TILE_SIZE * scale + 1)
+								);
+								drawList->AddRect(minPos, maxPos, 0xff0000ff);
+
+								if (ImGui::IsItemHovered()) {
+									const ImVec2 mousePos = ImGui::GetMousePos();
+									const bool hovering = Math::intersects(Math::Recti((int)minPos.x, (int)minPos.y, (int)(minPos.x + maxPos.x), (int)(minPos.y + maxPos.y)), Math::Vec2i((int)mousePos.x, (int)mousePos.y));
+									if (hovering) {
+										VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+										ImGui::SetTooltip(tileIssue.message);
+									}
+								}
+							}
+						}
 					)
 				);
 				if (
@@ -2911,7 +2958,7 @@ private:
 				const float wndWidth = ImGui::GetWindowWidth();
 				ImGui::SetCursorPosX(wndWidth - _statusWidth);
 				if (wndWidth >= 430) {
-					/*if (transferring.first) {
+					if (transferring.first) {
 						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_Button));
 						ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_Button));
 						ImGui::ImageButton(ws->theme()->iconWorking()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_Compacting().c_str());
@@ -2924,7 +2971,7 @@ private:
 						}
 						width_ += ImGui::GetItemRectSize().x;
 						ImGui::SameLine();
-					} else*/ {
+					} else {
 						if (_status.info.empty()) {
 							const int w = object()->width() / GBBASIC_TILE_SIZE;
 							const int h = object()->height() / GBBASIC_TILE_SIZE;
@@ -2956,8 +3003,10 @@ private:
 					if (ImGui::ImageButton(ws->theme()->iconWarning()->pointer(rnd), ImVec2(13, 13), col, false, ws->theme()->tooltip_Warning().c_str())) {
 						ImGui::OpenPopupTooltip("Wrn");
 					}
-					if (ImGui::PopupTooltip("Wrn", _warnings.text, ws->theme()->generic_Dismiss().c_str()))
+					if (ImGui::PopupTooltip("Wrn", _warnings.text, ws->theme()->generic_Dismiss().c_str())) {
+						_tileIssues.clear();
 						_warnings.clear();
+					}
 					width_ += ImGui::GetItemRectSize().x;
 					ImGui::SameLine();
 
@@ -4164,10 +4213,12 @@ private:
 			palette, tiles, map,
 			img.get(), allowFlip, fillLocalPalette, false,
 			_project->paletteGetter(), _project->tilesGetter(), _project->tilesPageCount(),
+			nullptr,
 			nullptr, [&errors] (const char* msg, bool isWarning) -> void {
 				errors.push_back(Error(isWarning, msg));
 			}
 		);
+		_tileIssues.clear();
 		_warnings.clear();
 		if (!loaded) {
 			if (!errors.empty()) {
@@ -4589,6 +4640,8 @@ private:
 
 		_debounce.modified();
 
+		_tileIssues.clear();
+
 		return true;
 	}
 	bool transferImageToTiled(Workspace* ws) {
@@ -4612,6 +4665,7 @@ private:
 			PaletteAssets::Array* palette = nullptr;
 			TilesAssets::Entry* tiles = nullptr;
 			MapAssets::Entry* map = nullptr;
+			TileIssue::Array tileIssues;
 			Error::Array errors;
 			bool loaded = false;
 
@@ -4646,6 +4700,7 @@ private:
 				image = nullptr;
 				allowFlip = false;
 				fillLocalPalette = false;
+				tileIssues.clear();
 				errors.clear();
 			}
 		};
@@ -4669,6 +4724,9 @@ private:
 						*data->palette, *data->tiles, *data->map,
 						data->image.get(), data->allowFlip, data->fillLocalPalette, false,
 						data->project->paletteGetter(), data->project->tilesGetter(), data->project->tilesPageCount(),
+						[data] (int x, int y, const char* msg) -> void {
+							data->tileIssues.push_back(TileIssue(x, y, msg));
+						},
 						nullptr, [data] (const char* msg, bool isWarning) -> void {
 							data->errors.push_back(Error(isWarning, msg));
 						}
@@ -4753,7 +4811,26 @@ private:
 			),
 			std::bind(
 				[ws, this] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
+					_tileIssues.clear();
 					_warnings.clear();
+
+					_tileIssues = data->tileIssues;
+					std::sort(
+						_tileIssues.begin(), _tileIssues.end(),
+						[] (const TileIssue &l, const TileIssue &r) -> bool {
+							if (l.y < r.y)
+								return true;
+							else if (l.y > r.y)
+								return false;
+
+							if (l.x < r.x)
+								return true;
+							else if (l.x > r.x)
+								return false;
+
+							return l.message < r.message;
+						}
+					);
 
 					if (!data->errors.empty()) {
 						for (const Error &err : data->errors) {

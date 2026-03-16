@@ -168,7 +168,7 @@ public:
 						&gsize, false,
 						true,
 						ImGuiMouseButton_Left,
-						[&] (void) -> void {
+						[&] (const Math::Vec2f &, const Math::Vec2f &, float) -> void {
 							ImGui::SetCursorPos(pos);
 							const bool clicked = Editing::map(
 								_renderer, _workspace,

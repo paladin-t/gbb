@@ -817,7 +817,7 @@ bool tiles(
 	const Math::Vec2i* gridSize, bool showGrids,
 	bool showTransparentBackbround,
 	int mouseActionButton,
-	PostHandler post
+	TilesPostHandler post
 ) {
 	ImDrawList* drawList = ImGui::GetWindowDrawList();
 
@@ -1006,8 +1006,11 @@ bool tiles(
 		}
 	}
 
-	if (post)
-		post();
+	if (post) {
+		const Math::Vec2f curPos_(curPos.x, curPos.y);
+		const Math::Vec2f widgetSize_(widgetSize.x, widgetSize.y);
+		post(curPos_, curPos_ + widgetSize_, scale);
+	}
 
 	return result;
 }
@@ -1022,7 +1025,7 @@ bool tiles(
 	const Math::Vec2i* gridSize, bool showGrids,
 	bool showTransparentBackbround,
 	int mouseActionButton,
-	PostHandler post
+	TilesPostHandler post
 ) {
 	return tiles(
 		rnd, ws,
@@ -1521,15 +1524,12 @@ bool frame(
 		gridSize, showGrids,
 		showTransparentBackbround,
 		mouseActionButton,
-		[&] (void) -> void {
+		[&] (const Math::Vec2f &, const Math::Vec2f &, float scale) -> void {
 			ImDrawList* drawList = ImGui::GetWindowDrawList();
 
 			if ((!anchor_ || !showAnchor) && (!boundingBox_ || !showBoundingBox))
 				return;
 
-			float scale = 1;
-			if (width > 0 && std::abs((float)img->width() - width) >= Math::EPSILON<float>())
-				scale = width / (float)img->width();
 			const float w = img->width() * scale;
 			const float h = img->height() * scale;
 

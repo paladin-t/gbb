@@ -3396,6 +3396,7 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 									palette, tiles, map,
 									img.get(), allowFlip, fillLocalPalette, true,
 									prj->paletteGetter(), prj->tilesGetter(), prj->tilesPageCount(),
+									nullptr,
 									std::bind(operationsHandlePrint, ws, std::placeholders::_1), std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2)
 								);
 								if (!loaded) {
