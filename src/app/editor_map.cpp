@@ -4211,7 +4211,7 @@ private:
 		Error::Array errors;
 		const bool loaded = MapAssets::parseImage(
 			palette, tiles, map,
-			img.get(), allowFlip, fillLocalPalette, false,
+			img.get(), allowFlip, fillLocalPalette, false, false,
 			_project->paletteGetter(), _project->tilesGetter(), _project->tilesPageCount(),
 			nullptr,
 			nullptr, [&errors] (const char* msg, bool isWarning) -> void {
@@ -4722,7 +4722,7 @@ private:
 				[] (WorkTask* /* task */, Data* data) -> uintptr_t { // On work thread.
 					const bool loaded = MapAssets::parseImage(
 						*data->palette, *data->tiles, *data->map,
-						data->image.get(), data->allowFlip, data->fillLocalPalette, false,
+						data->image.get(), data->allowFlip, data->fillLocalPalette, false, false,
 						data->project->paletteGetter(), data->project->tilesGetter(), data->project->tilesPageCount(),
 						[data] (int x, int y, const char* msg) -> void {
 							data->tileIssues.push_back(TileIssue(x, y, msg));

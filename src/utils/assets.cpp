@@ -4473,7 +4473,7 @@ bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets
 
 bool MapAssets::parseImage(
 	PaletteAssets::Array &palette_, TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
-	const Image* val, bool allowFlip, bool fillLocalPalette, bool allowReuse,
+	const Image* val, bool allowFlip, bool fillLocalPalette, bool allowSimpleQuantized, bool allowReuse,
 	PaletteAssets::Getter getplt, TilesAssets::Getter gettls, int tilesPageCount,
 	TileIssueReportHandler onReportTileIssue,
 	PrintHandler onPrint, WarningOrErrorHandler onWarningOrError
@@ -4678,8 +4678,8 @@ bool MapAssets::parseImage(
 	const PaletteAssets::Array defaultPalette = palette_;
 	if (fillLocalPalette)
 		palette_.clear();
-	else
-		palettedImg = Image::Ptr(val->quantized2Bpp()); // Convert the true-color image to paletted.
+	else if (allowSimpleQuantized)
+		palettedImg = Image::Ptr(val->quantized2Bpp()); // Quantize the true-color image to paletted.
 
 	// Slice the image.
 	Slice::Array slices;
@@ -4688,7 +4688,12 @@ bool MapAssets::parseImage(
 	int flipped = 0;
 	cels.resize(area);
 
-	if (fillLocalPalette) {
+	auto sliceImage = [indexOfSlice, touchPalette, onReportTileIssue, onWarningOrError] (
+		const Image* val, bool allowFlip, bool fillLocalPalette,
+		int mw, int mh,
+		PaletteAssets::Array &palette,
+		Slice::Array &slices, Cel::Array &cels, int &paletted, int &flipped
+	) -> void {
 		TileRef::Array tileRefs;
 		for (int j = 0; j < mh; j += 2) {
 			for (int i = 0; i < mw; ++i) {
@@ -4739,7 +4744,7 @@ bool MapAssets::parseImage(
 
 			Indices indices;
 			bool overflow = false;
-			const int pal_ = touchPalette(allCols, palette_, indices, overflow);
+			const int pal_ = touchPalette(allCols, palette, indices, overflow);
 			if (allCols.size() > GBBASIC_PALETTE_PER_GROUP_COUNT) {
 				std::string msg = Text::format(
 					"Too many colors at tile {0}, {1}",
@@ -4753,7 +4758,7 @@ bool MapAssets::parseImage(
 				if (onWarningOrError)
 					onWarningOrError(msg.c_str(), true);
 			}
-			if (overflow) {
+			if (overflow && fillLocalPalette) {
 				std::string msg = Text::format(
 					"Cannot allocate new palette group for tile {0}, {1}",
 					{
@@ -4793,7 +4798,12 @@ bool MapAssets::parseImage(
 			if (hFlip || vFlip)
 				++flipped;
 		}
-	} else {
+	};
+	auto sliceSimpleQuantizedImage = [indexOfSlice] (
+		const Image::Ptr &palettedImg, bool allowFlip,
+		int mw, int mh,
+		Slice::Array &slices, Cel::Array &cels, int &/* paletted */, int &flipped
+	) -> void {
 		for (int j = 0; j < mh; j += 2) {
 			for (int i = 0; i < mw; ++i) {
 				const int x = i;
@@ -4829,6 +4839,30 @@ bool MapAssets::parseImage(
 						++flipped;
 				}
 			}
+		}
+	};
+
+	if (fillLocalPalette) {
+		sliceImage(
+			val, allowFlip, fillLocalPalette,
+			mw, mh,
+			palette_,
+			slices, cels, paletted, flipped
+		);
+	} else {
+		if (allowSimpleQuantized) {
+			sliceSimpleQuantizedImage(
+				palettedImg, allowFlip,
+				mw, mh,
+				slices, cels, paletted, flipped
+			);
+		} else {
+			sliceImage(
+				val, allowFlip, fillLocalPalette,
+				mw, mh,
+				palette_,
+				slices, cels, paletted, flipped
+			);
 		}
 	}
 
