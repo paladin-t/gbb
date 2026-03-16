@@ -4475,6 +4475,7 @@ bool MapAssets::parseImage(
 	PaletteAssets::Array &palette_, TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
 	const Image* val, bool allowFlip, bool fillLocalPalette, bool allowReuse,
 	PaletteAssets::Getter getplt, TilesAssets::Getter gettls, int tilesPageCount,
+	TileIssueReportHandler onReportTileIssue,
 	PrintHandler onPrint, WarningOrErrorHandler onWarningOrError
 ) {
 	// Prepare.
@@ -4746,6 +4747,8 @@ bool MapAssets::parseImage(
 						Text::toString(x), Text::toString(y)
 					}
 				);
+				if (onReportTileIssue)
+					onReportTileIssue(x, y, msg.c_str());
 				if (onWarningOrError)
 					onWarningOrError(msg.c_str(), true);
 			}
@@ -4756,6 +4759,8 @@ bool MapAssets::parseImage(
 						Text::toString(x), Text::toString(y)
 					}
 				);
+				if (onReportTileIssue)
+					onReportTileIssue(x, y, msg.c_str());
 				if (onWarningOrError)
 					onWarningOrError(msg.c_str(), true);
 			}

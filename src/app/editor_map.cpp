@@ -55,6 +55,23 @@ private:
 
 	typedef std::function<void(void)> PostHandler;
 
+	struct TileIssue {
+		typedef std::vector<TileIssue> Array;
+
+		int x = -1;
+		int y = -1;
+		std::string message;
+
+		TileIssue() {
+		}
+		TileIssue(int x_, int y_, const char* msg) :
+			x(x_), y(y_)
+		{
+			if (msg)
+				message = msg;
+		}
+	};
+
 	struct Processor {
 		typedef std::function<void(Renderer*)> Handler;
 
@@ -134,6 +151,7 @@ private:
 		}
 	} _status;
 	mutable float _statusWidth = 0.0f;
+	TileIssue::Array _tileIssues;
 	struct {
 		Text::Array warnings;
 		std::string text;
@@ -620,6 +638,7 @@ public:
 		_page.clear();
 		_status.clear();
 		_statusWidth = 0.0f;
+		_tileIssues.clear();
 		_warnings.clear();
 		_refresh = nullptr;
 		_estimated.clear();
@@ -2956,8 +2975,10 @@ private:
 					if (ImGui::ImageButton(ws->theme()->iconWarning()->pointer(rnd), ImVec2(13, 13), col, false, ws->theme()->tooltip_Warning().c_str())) {
 						ImGui::OpenPopupTooltip("Wrn");
 					}
-					if (ImGui::PopupTooltip("Wrn", _warnings.text, ws->theme()->generic_Dismiss().c_str()))
+					if (ImGui::PopupTooltip("Wrn", _warnings.text, ws->theme()->generic_Dismiss().c_str())) {
+						_tileIssues.clear();
 						_warnings.clear();
+					}
 					width_ += ImGui::GetItemRectSize().x;
 					ImGui::SameLine();
 
@@ -4164,10 +4185,12 @@ private:
 			palette, tiles, map,
 			img.get(), allowFlip, fillLocalPalette, false,
 			_project->paletteGetter(), _project->tilesGetter(), _project->tilesPageCount(),
+			nullptr,
 			nullptr, [&errors] (const char* msg, bool isWarning) -> void {
 				errors.push_back(Error(isWarning, msg));
 			}
 		);
+		_tileIssues.clear();
 		_warnings.clear();
 		if (!loaded) {
 			if (!errors.empty()) {
@@ -4612,6 +4635,7 @@ private:
 			PaletteAssets::Array* palette = nullptr;
 			TilesAssets::Entry* tiles = nullptr;
 			MapAssets::Entry* map = nullptr;
+			TileIssue::Array tileIssues;
 			Error::Array errors;
 			bool loaded = false;
 
@@ -4646,6 +4670,7 @@ private:
 				image = nullptr;
 				allowFlip = false;
 				fillLocalPalette = false;
+				tileIssues.clear();
 				errors.clear();
 			}
 		};
@@ -4669,6 +4694,9 @@ private:
 						*data->palette, *data->tiles, *data->map,
 						data->image.get(), data->allowFlip, data->fillLocalPalette, false,
 						data->project->paletteGetter(), data->project->tilesGetter(), data->project->tilesPageCount(),
+						[data] (int x, int y, const char* msg) -> void {
+							data->tileIssues.push_back(TileIssue(x, y, msg));
+						},
 						nullptr, [data] (const char* msg, bool isWarning) -> void {
 							data->errors.push_back(Error(isWarning, msg));
 						}
@@ -4753,7 +4781,26 @@ private:
 			),
 			std::bind(
 				[ws, this] (WorkTask* /* task */, uintptr_t /* ptr */, Data* data) -> void { // On main thread.
+					_tileIssues.clear();
 					_warnings.clear();
+
+					_tileIssues = data->tileIssues;
+					std::sort(
+						_tileIssues.begin(), _tileIssues.end(),
+						[] (const TileIssue &l, const TileIssue &r) -> bool {
+							if (l.y < r.y)
+								return true;
+							else if (l.y > r.y)
+								return false;
+
+							if (l.x < r.x)
+								return true;
+							else if (l.x > r.x)
+								return false;
+
+							return l.message < r.message;
+						}
+					);
 
 					if (!data->errors.empty()) {
 						for (const Error &err : data->errors) {

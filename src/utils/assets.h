@@ -448,6 +448,7 @@ struct BaseAssets {
 
 typedef std::function<void(const char*)> PrintHandler;
 typedef std::function<void(const char*, bool)> WarningOrErrorHandler;
+typedef std::function<void(int, int, const char*)> TileIssueReportHandler;
 
 /* ===========================================================================} */
 
@@ -835,6 +836,7 @@ struct MapAssets {
 		PaletteAssets::Array &palette_, TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
 		const Image* val, bool allowFlip, bool fillLocalPalette, bool allowReuse,
 		PaletteAssets::Getter getplt, TilesAssets::Getter gettls, int tilesPageCount,
+		TileIssueReportHandler onReportTileIssue = nullptr,
 		PrintHandler onPrint = nullptr, WarningOrErrorHandler onWarningOrError = nullptr
 	);
 };
