@@ -4473,7 +4473,8 @@ bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets
 
 bool MapAssets::parseImage(
 	PaletteAssets::Array &palette_, TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
-	const Image* val, bool allowFlip, bool fillLocalPalette, bool allowSimpleQuantized, bool allowReuse,
+	const Image* val,
+	bool allowFlip, bool fillLocalPalette, bool allowSimpleQuantized, bool allowReuse, bool allowTilesOverflow,
 	PaletteAssets::Getter getplt, TilesAssets::Getter gettls, int tilesPageCount,
 	TileIssueReportHandler onReportTileIssue,
 	PrintHandler onPrint, WarningOrErrorHandler onWarningOrError
@@ -4895,7 +4896,8 @@ bool MapAssets::parseImage(
 		if (onWarningOrError)
 			onWarningOrError("Image size out of bounds for tiles.", false);
 
-		return false;
+		if (!allowTilesOverflow)
+			return false;
 	}
 
 	// Fill the tiles asset.

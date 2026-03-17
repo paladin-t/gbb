@@ -834,7 +834,8 @@ struct MapAssets {
 	 */
 	static bool parseImage(
 		PaletteAssets::Array &palette_, TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
-		const Image* val, bool allowFlip, bool fillLocalPalette, bool allowSimpleQuantized, bool allowReuse,
+		const Image* val,
+		bool allowFlip, bool fillLocalPalette, bool allowSimpleQuantized, bool allowReuse, bool allowTilesOverflow,
 		PaletteAssets::Getter getplt, TilesAssets::Getter gettls, int tilesPageCount,
 		TileIssueReportHandler onReportTileIssue = nullptr,
 		PrintHandler onPrint = nullptr, WarningOrErrorHandler onWarningOrError = nullptr

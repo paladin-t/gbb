@@ -3394,7 +3394,8 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 								MapAssets::Entry map("", prj->tilesGetter(), attribtex);
 								const bool loaded = MapAssets::parseImage(
 									palette, tiles, map,
-									img.get(), allowFlip, fillLocalPalette, false, true,
+									img.get(),
+									allowFlip, fillLocalPalette, false, true, false,
 									prj->paletteGetter(), prj->tilesGetter(), prj->tilesPageCount(),
 									nullptr,
 									std::bind(operationsHandlePrint, ws, std::placeholders::_1), std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2)
