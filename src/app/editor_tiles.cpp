@@ -1314,7 +1314,7 @@ public:
 			ImGui::Dummy(ImVec2(xOffset, 0));
 			ImGui::SameLine();
 			if (ImGui::Button(ws->theme()->windowTiles_Analize(), ImVec2(mwidth, 0))) {
-				// TODO: ANALYZE
+				analyzeAsset(ws);
 			}
 			if (ImGui::IsItemHovered()) {
 				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -2253,6 +2253,8 @@ private:
 	}
 
 	void modified(void) {
+		_warnings.clear();
+
 		const int n = _project->mapPageCount();
 		for (int i = 0; i < n; ++i) {
 			MapAssets::Entry* entry = _project->getMap(i);
@@ -2755,6 +2757,28 @@ private:
 		}
 
 		return true;
+	}
+
+	void analyzeAsset(Workspace* ws) {
+		auto analyze = [ws] (void) -> void {
+			// TODO: ANALYZE
+
+			ws->bubble(ws->theme()->dialogPrompt_NoIssuesFound(), nullptr);
+		};
+
+		ImGui::WaitingPopupBox::TimeoutHandler timeout(
+			[ws, analyze] (void) -> void {
+				analyze();
+
+				ws->popupBox(nullptr);
+			},
+			nullptr
+		);
+		ws->waitingPopupBox(
+			true, ws->theme()->dialogPrompt_Analyzing(),
+			true, timeout,
+			true
+		);
 	}
 };
 

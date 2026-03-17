@@ -1807,7 +1807,7 @@ public:
 			ImGui::Dummy(ImVec2(xOffset, 0));
 			ImGui::SameLine();
 			if (ImGui::Button(ws->theme()->windowActor_Analize(), ImVec2(mwidth, 0))) {
-				// TODO: ANALYZE
+				analyzeAsset(ws);
 			}
 			if (ImGui::IsItemHovered()) {
 				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -3500,6 +3500,26 @@ private:
 		_frame.fill(object()->count(), entry()->figure);
 	}
 
+	void bindActorCallback(int index, const std::initializer_list<Variant> &args) {
+		const Variant &arg = *args.begin();
+		const std::string idx = (std::string)arg;
+		const bool changed =
+			(index == 0 && idx != object()->updateRoutine()) ||
+			(index == 1 && idx != object()->onHitsRoutine());
+		if (!changed)
+			return;
+
+		_routine.filled = false;
+		Commands::Actor::SetRoutines* cmd = (Commands::Actor::SetRoutines*)enqueue<Commands::Actor::SetRoutines>()
+			->with(
+				index == 0 ? idx : object()->updateRoutine(),
+				index == 1 ? idx : object()->onHitsRoutine()
+			)
+			->exec(object(), Variant((void*)entry()));
+
+		_refresh(cmd);
+	}
+
 	void refreshAllEntriesSlices(Workspace* ws, bool fast) {
 		if (_compacted.filled)
 			return;
@@ -3683,24 +3703,71 @@ private:
 		return true;
 	}
 
-	void bindActorCallback(int index, const std::initializer_list<Variant> &args) {
-		const Variant &arg = *args.begin();
-		const std::string idx = (std::string)arg;
-		const bool changed =
-			(index == 0 && idx != object()->updateRoutine()) ||
-			(index == 1 && idx != object()->onHitsRoutine());
-		if (!changed)
-			return;
+	void analyzeAsset(Workspace* ws) {
+		auto analyze = [ws, this] (void) -> void {
+			typedef std::map<int, int> FrameUsages;
+			typedef std::set<int> UnusedFrames;
 
-		_routine.filled = false;
-		Commands::Actor::SetRoutines* cmd = (Commands::Actor::SetRoutines*)enqueue<Commands::Actor::SetRoutines>()
-			->with(
-				index == 0 ? idx : object()->updateRoutine(),
-				index == 1 ? idx : object()->onHitsRoutine()
-			)
-			->exec(object(), Variant((void*)entry()));
+			FrameUsages frameUsages;
+			const active_t &def = entry()->definition;
+			for (int i = 0; i < ASSETS_ACTOR_MAX_ANIMATIONS; ++i) {
+				const animation_t &anim = def.animations[i];
+				const UInt8 begin = anim.begin;
+				const UInt8 end = anim.end;
+				for (int j = begin; j <= end; ++j)
+					++frameUsages[j];
+			}
 
-		_refresh(cmd);
+			UnusedFrames unusedFrames;
+			const int n = object()->count();
+			for (int i = 0; i < n; ++i) {
+				FrameUsages::const_iterator it = frameUsages.find(i);
+				if (it == frameUsages.end() || it->second == 0)
+					unusedFrames.insert(i);
+			}
+
+			if (unusedFrames.empty()) {
+				ws->delay(
+					[ws] (void) -> void {
+						ws->messagePopupBox(ws->theme()->dialogPrompt_NoIssuesFound(), nullptr, nullptr, nullptr);
+					},
+					"ANALYZING ACTOR"
+				);
+
+				return;
+			}
+
+			_warnings.clear();
+			for (int f : unusedFrames) {
+				const std::string msg = Text::format(
+					"Unused frame {0}.",
+					{
+						Text::toString(f)
+					}
+				);
+				_warnings.add(msg);
+			}
+			ws->delay(
+				[ws] (void) -> void {
+					ws->messagePopupBox(ws->theme()->dialogPrompt_SomeUnusedFramesWereFoundClickTheWarningIconForDetails(), nullptr, nullptr, nullptr);
+				},
+				"ANALYZING ACTOR"
+			);
+		};
+
+		ImGui::WaitingPopupBox::TimeoutHandler timeout(
+			[ws, analyze] (void) -> void {
+				analyze();
+
+				ws->popupBox(nullptr);
+			},
+			nullptr
+		);
+		ws->waitingPopupBox(
+			true, ws->theme()->dialogPrompt_Analyzing(),
+			true, timeout,
+			true
+		);
 	}
 
 	bool playActorTesting(Window* wnd, Renderer* rnd, Workspace* ws) {
