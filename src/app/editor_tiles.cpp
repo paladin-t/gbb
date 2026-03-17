@@ -512,6 +512,9 @@ public:
 	virtual void markChangesSaved(void) override {
 		_commands->markChangesSaved();
 	}
+	virtual void prepareForSaving(class Workspace*) override {
+		// Do nothing.
+	}
 
 	virtual void copy(void) override {
 		copy(true);
@@ -1305,6 +1308,18 @@ public:
 				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 				ImGui::SetTooltip(ws->theme()->tooltipTiles_CreateAMapReferencingThisTilesPage());
+			}
+
+			Editing::Tools::separate(rnd, ws, spwidth);
+			ImGui::Dummy(ImVec2(xOffset, 0));
+			ImGui::SameLine();
+			if (ImGui::Button(ws->theme()->windowTiles_Analize(), ImVec2(mwidth, 0))) {
+				// TODO: ANALYZE
+			}
+			if (ImGui::IsItemHovered()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip(ws->theme()->tooltipTiles_AnalyzeUnreferencedOrDuplicateTiles());
 			}
 
 			_tools.inputFieldFocused = inputFieldFocused;

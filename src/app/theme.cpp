@@ -900,6 +900,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_VramDebugger_StatusReadonly_WinOn("WIN on");
 	windowEmulator_VramDebugger_Tiles("Tiles");
 
+	windowTiles_Analize("Analyze");
 	windowTiles_CreateMap("Create map");
 
 	windowMap("Map");
@@ -926,6 +927,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowFont_Shadow("Shadow");
 
 	windowActor("Actor");
+	windowActor_Analize("Analyze");
 	windowActor_Properties("Properties");
 
 	windowScene("Scene");
@@ -1126,6 +1128,7 @@ bool Theme::open(class Renderer* rnd) {
 		"Add frame\n"
 		"Hold Shift to copy"
 	);
+	tooltipActor_AnalyzeUnreferencedFrames("Analyze unreferenced frames");
 	tooltipActor_AppendFrame(
 		"Append frame\n"
 		"Hold Shift to copy"
@@ -1492,6 +1495,7 @@ bool Theme::open(class Renderer* rnd) {
 		" Size: {3}x{4}"
 	);
 
+	tooltipTiles_AnalyzeUnreferencedOrDuplicateTiles("Analyze unreferenced or duplicate tiles");
 	tooltipTiles_CreateAMapReferencingThisTilesPage("Create a map referencing this tiles page");
 	tooltipTiles_Info("{0} tiles");
 

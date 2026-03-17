@@ -758,6 +758,7 @@ struct MapAssets {
 		Map::Ptr attributes = nullptr;
 		bool editAsImage = false;
 		bool editedAsImage = false;
+		Image::Ptr image = nullptr;
 		bool localPaletteEnabled = false;
 		PaletteAssets::Array localPalette;
 		std::string name;

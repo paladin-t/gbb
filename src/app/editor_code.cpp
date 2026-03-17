@@ -356,6 +356,9 @@ public:
 	virtual void markChangesSaved(void) override {
 		SetChangesSaved();
 	}
+	virtual void prepareForSaving(class Workspace*) override {
+		// Do nothing.
+	}
 
 	virtual void copy(void) override {
 		if (_tools.focused)

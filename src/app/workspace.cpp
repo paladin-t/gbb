@@ -2890,6 +2890,101 @@ class EditorScene* Workspace::touchSceneEditor(Window* wnd, Renderer* rnd, Proje
 	return editor;
 }
 
+void Workspace::prepareEditorsForSaving(Window*, Renderer*, Project* prj) {
+	if (!prj || !prj->assets())
+		return;
+
+	PaletteAssets &palette = prj->assets()->palette;
+	for (int i = 0; i < palette.count(); ++i) {
+		PaletteAssets::Entry* entry = palette.get(i);
+		Editable* editor = entry->editor;
+		if (!editor)
+			continue;
+
+		editor->prepareForSaving(this);
+	}
+
+	FontAssets &fonts = prj->assets()->fonts;
+	for (int i = 0; i < fonts.count(); ++i) {
+		FontAssets::Entry* entry = fonts.get(i);
+		Editable* editor = entry->editor;
+		if (!editor)
+			continue;
+
+		editor->prepareForSaving(this);
+	}
+
+	CodeAssets &codes = prj->assets()->code;
+	for (int i = 0; i < codes.count(); ++i) {
+		CodeAssets::Entry* entry = codes.get(i);
+		Editable* editor = entry->editor;
+		if (!editor)
+			continue;
+
+		editor->prepareForSaving(this);
+	}
+
+	TilesAssets &tiles = prj->assets()->tiles;
+	for (int i = 0; i < tiles.count(); ++i) {
+		TilesAssets::Entry* entry = tiles.get(i);
+		Editable* editor = entry->editor;
+		if (!editor)
+			continue;
+
+		editor->prepareForSaving(this);
+	}
+
+	MapAssets &maps = prj->assets()->maps;
+	for (int i = 0; i < maps.count(); ++i) {
+		MapAssets::Entry* entry = maps.get(i);
+		Editable* editor = entry->editor;
+		if (!editor)
+			continue;
+
+		editor->prepareForSaving(this);
+	}
+
+	MusicAssets &music = prj->assets()->music;
+	for (int i = 0; i < music.count(); ++i) {
+		MusicAssets::Entry* entry = music.get(i);
+		Editable* editor = entry->editor;
+		if (!editor)
+			continue;
+
+		editor->prepareForSaving(this);
+	}
+
+	SfxAssets &sfx = prj->assets()->sfx;
+	for (int i = 0; i < sfx.count(); ++i) {
+		SfxAssets::Entry* entry = sfx.get(i);
+		Editable* editor = entry->editor;
+		if (!editor)
+			continue;
+
+		editor->prepareForSaving(this);
+	}
+
+	ActorAssets &actors = prj->assets()->actors;
+	for (int i = 0; i < actors.count(); ++i) {
+		ActorAssets::Entry* entry = actors.get(i);
+		Editable* editor = entry->editor;
+		if (!editor)
+			continue;
+
+		editor->prepareForSaving(this);
+	}
+
+	SceneAssets &scenes = prj->assets()->scenes;
+	for (int i = 0; i < scenes.count(); ++i) {
+		SceneAssets::Entry* entry = scenes.get(i);
+		Editable* editor = entry->editor;
+		if (!editor)
+			continue;
+
+		editor->prepareForSaving(this);
+	}
+}
+
 void Workspace::bubble(const ImGui::Bubble::Ptr &ptr) {
 	if (ptr && _bubble && _bubble->exclusive())
 		return;
@@ -4014,6 +4109,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 
 		prj->hasDirtyInformation(true);
 
+		prepareEditorsForSaving(wnd, rnd, prj.get());
 		prj->save(path.c_str(), false, onError);
 
 		// Dispose the project.
@@ -5393,6 +5489,7 @@ void Workspace::upgrade(
 			MapAssets::Entry* entry = maps.get(i);
 			entry->editAsImage = false;
 			entry->editedAsImage = false;
+			entry->image = nullptr;
 			if (!entry->localPaletteEnabled)
 				entry->localPalette.clear();
 		}
@@ -5401,6 +5498,7 @@ void Workspace::upgrade(
 		const std::string &path = prj->path();
 		prj->hasDirtyInformation(true);
 		prj->hasDirtyAsset(true);
+		prepareEditorsForSaving(wnd, rnd, prj.get());
 		prj->save(path.c_str(), false, onError);
 	}
 

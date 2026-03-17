@@ -97,6 +97,7 @@ public:
 
 	virtual bool hasUnsavedChanges(void) const = 0;
 	virtual void markChangesSaved(void) = 0;
+	virtual void prepareForSaving(class Workspace* ws) = 0;
 
 	virtual void copy(void) = 0;
 	virtual void cut(void) = 0;

@@ -669,6 +669,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_StatusReadonly_WinOn)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_Tiles)
 
+	GBBASIC_PROPERTY_READONLY(std::string, windowTiles_Analize)
 	GBBASIC_PROPERTY_READONLY(std::string, windowTiles_CreateMap)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowMap)
@@ -695,6 +696,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowFont_Shadow)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowActor)
+	GBBASIC_PROPERTY_READONLY(std::string, windowActor_Analize)
 	GBBASIC_PROPERTY_READONLY(std::string, windowActor_Properties)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowScene)
@@ -847,6 +849,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipProject_Stop)
 
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipActor_AddFrame)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipActor_AnalyzeUnreferencedFrames)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipActor_AppendFrame)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipActor_Bit0)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipActor_Bit1)
@@ -987,6 +990,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_TestScene)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_TriggerDetails)
 
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipTiles_AnalyzeUnreferencedOrDuplicateTiles)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipTiles_CreateAMapReferencingThisTilesPage)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipTiles_Info)
 
