@@ -1410,6 +1410,7 @@ promise::Promise Operations::fileSave(Window* wnd, Renderer* rnd, Workspace* ws,
 #endif /* OPERATIONS_GBBASIC_TIME_STAT_ENABLED */
 
 				Project::Ptr &prj = ws->currentProject();
+				ws->prepareEditorsForSaving(wnd, rnd, prj.get());
 				if (!prj->save(path.c_str(), true, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
 					df.reject();
 
@@ -1488,6 +1489,7 @@ promise::Promise Operations::fileSaveForNotepad(Window* wnd, Renderer* rnd, Work
 #endif /* OPERATIONS_GBBASIC_TIME_STAT_ENABLED */
 
 				Project::Ptr &prj = ws->currentProject();
+				ws->prepareEditorsForSaving(wnd, rnd, prj.get());
 				if (!prj->save(path.c_str(), true, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
 					df.reject();
 
@@ -1614,6 +1616,7 @@ promise::Promise Operations::fileRename(Window* wnd, Renderer* rnd, Workspace* w
 						prj->behaviourParser(nullptr);
 
 						prj->title(title__);
+						ws->prepareEditorsForSaving(wnd, rnd, prj.get());
 						if (!prj->save(nullptr, false, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
 							df.reject();
 
@@ -2599,6 +2602,7 @@ promise::Promise Operations::fileExportForNotepad(Window* wnd, Renderer* rnd, Wo
 		Project::Ptr prj_(new Project(wnd, rnd, ws));
 		*prj_ = *prj;
 
+		ws->prepareEditorsForSaving(wnd, rnd, prj_.get());
 		prj_->save(path.c_str(), true, nullptr);
 
 		df.resolve(prj_);
@@ -2707,6 +2711,7 @@ promise::Promise Operations::fileDuplicate(Window* wnd, Renderer* rnd, Workspace
 		prj_->title(name);
 		prj_->order(PROJECT_DEFAULT_ORDER);
 		prj_->hasDirtyInformation(true);
+		ws->prepareEditorsForSaving(wnd, rnd, prj_.get());
 		prj_->save(path.c_str(), true, std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2));
 		prj_->unload();
 
@@ -3394,7 +3399,8 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 								MapAssets::Entry map("", prj->tilesGetter(), attribtex);
 								const bool loaded = MapAssets::parseImage(
 									palette, tiles, map,
-									img.get(), allowFlip, fillLocalPalette, false, true,
+									img.get(),
+									allowFlip, fillLocalPalette, false, true, false,
 									prj->paletteGetter(), prj->tilesGetter(), prj->tilesPageCount(),
 									nullptr,
 									std::bind(operationsHandlePrint, ws, std::placeholders::_1), std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2)

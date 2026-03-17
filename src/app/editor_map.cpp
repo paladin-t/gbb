@@ -575,6 +575,8 @@ public:
 
 		_transfer.window = wnd;
 		_transfer.renderer = rnd;
+		if (entry()->image)
+			_transfer.image = entry()->image;
 
 		_setLayer = std::bind(&EditorMapImpl::changeLayer, this, wnd, rnd, ws, std::placeholders::_1);
 		_setLayerEnabled = std::bind(&EditorMapImpl::toggleLayer, this, wnd, rnd, ws, std::placeholders::_1, std::placeholders::_2);
@@ -752,6 +754,13 @@ public:
 		}
 
 		_commands->markChangesSaved();
+	}
+	virtual void prepareForSaving(class Workspace* ws) override {
+		if (!_transfer.filled) {
+			transferImageToTiled(ws);
+
+			_transfer.generated.wait();
+		}
 	}
 
 	virtual void copy(void) override {
@@ -1027,6 +1036,8 @@ public:
 		_project->toPollEditor(true);
 
 		entry()->increaseRevision();
+
+		modified();
 	}
 	virtual void undo(BaseAssets::Entry* entry_) override {
 		if (isEditingAsImage()) {
@@ -1071,6 +1082,8 @@ public:
 		_project->toPollEditor(true);
 
 		entry()->increaseRevision();
+
+		modified();
 	}
 
 	virtual Variant post(unsigned msg, int argc, const Variant* argv) override {
@@ -3590,6 +3603,12 @@ private:
 		}
 	}
 
+	void modified(void) {
+		const bool editAsImage = entry()->editAsImage;
+		if (!editAsImage)
+			entry()->image = nullptr; // Invalidate that image.
+	}
+
 	void createOverlay(void) {
 		_overlay = std::bind(&EditorMapImpl::getOverlayCel, this, std::placeholders::_1);
 	}
@@ -3604,6 +3623,8 @@ private:
 		_project->toPollEditor(true);
 
 		entry()->increaseRevision();
+
+		modified();
 
 		return result;
 	}
@@ -4211,7 +4232,8 @@ private:
 		Error::Array errors;
 		const bool loaded = MapAssets::parseImage(
 			palette, tiles, map,
-			img.get(), allowFlip, fillLocalPalette, false, false,
+			img.get(),
+			allowFlip, fillLocalPalette, false, false, false,
 			_project->paletteGetter(), _project->tilesGetter(), _project->tilesPageCount(),
 			nullptr,
 			nullptr, [&errors] (const char* msg, bool isWarning) -> void {
@@ -4722,7 +4744,8 @@ private:
 				[] (WorkTask* /* task */, Data* data) -> uintptr_t { // On work thread.
 					const bool loaded = MapAssets::parseImage(
 						*data->palette, *data->tiles, *data->map,
-						data->image.get(), data->allowFlip, data->fillLocalPalette, false, false,
+						data->image.get(),
+						data->allowFlip, data->fillLocalPalette, false, false, true,
 						data->project->paletteGetter(), data->project->tilesGetter(), data->project->tilesPageCount(),
 						[data] (int x, int y, const char* msg) -> void {
 							data->tileIssues.push_back(TileIssue(x, y, msg));
@@ -4802,6 +4825,8 @@ private:
 							->with("Import")
 							->exec(object(), Variant((void*)entry()), attributes()));
 					} while (false);
+
+					entry()->image = data->image;
 
 					_transfer.filled = true;
 
@@ -4904,6 +4929,8 @@ private:
 				_transfer.filled = true;
 			}
 
+			ws->skipFrame(); // Skip a frame to avoid glitch.
+
 			return;
 		}
 
@@ -4919,6 +4946,9 @@ private:
 			palette_->get(0, col);
 			_asImage.ref.fromColor(col);
 		}
+
+		if (entry()->image)
+			_transfer.image = entry()->image;
 	}
 	void localPaletteEnabledChanged(Workspace* ws) {
 		const bool localPaletteEnabled = entry()->localPaletteEnabled;

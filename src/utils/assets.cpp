@@ -4053,6 +4053,19 @@ bool MapAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarnin
 
 	Jpath::set(doc, doc, editedAsImage, "edit_as_image", "edited");
 
+	rapidjson::Document doc_;
+	if (image) {
+		Jpath::set(doc, doc, Jpath::ANY(), "edit_as_image", "pixels");
+		rapidjson::Value* pixels = nullptr;
+		Jpath::get(doc, pixels, "edit_as_image", "pixels");
+		if (image->toJson(doc_))
+			pixels->Set(doc_.GetObject());
+		else
+			Jpath::set(doc, doc, nullptr, "image");
+	} else {
+		Jpath::set(doc, doc, nullptr, "image");
+	}
+
 	Jpath::set(doc, doc, localPaletteEnabled, "local_palette", "enabled");
 
 	Jpath::set(doc, doc, Jpath::ANY(), "local_palette", "colors");
@@ -4164,6 +4177,30 @@ bool MapAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler 
 
 	if (!Jpath::get(doc, editedAsImage, "edit_as_image", "edited"))
 		editedAsImage = false;
+
+	do {
+		const rapidjson::Value* pixels = nullptr;
+		if (!Jpath::get(doc, pixels, "edit_as_image", "pixels"))
+			break;
+		if (!pixels || !pixels->IsObject())
+			break;
+
+		int w = 0;
+		int h = 0;
+		Jpath::get(*pixels, w, "width");
+		Jpath::get(*pixels, h, "height");
+		if ((w % GBBASIC_TILE_SIZE) != 0 || (h % GBBASIC_TILE_SIZE) != 0)
+			break;
+		if (w > GBBASIC_MAP_MAX_WIDTH || h > GBBASIC_MAP_MAX_HEIGHT)
+			break;
+		if (w * h > GBBASIC_TILE_SIZE * GBBASIC_TILE_SIZE * GBBASIC_MAP_MAX_AREA_SIZE)
+			break;
+
+		Image::Ptr img(Image::create());
+		if (!img->fromJson(*pixels))
+			break;
+		image = img;
+	} while (false);
 
 	if (!Jpath::get(doc, localPaletteEnabled, "local_palette", "enabled"))
 		localPaletteEnabled = false;
@@ -4473,7 +4510,8 @@ bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets
 
 bool MapAssets::parseImage(
 	PaletteAssets::Array &palette_, TilesAssets::Entry &tiles_, MapAssets::Entry &map_,
-	const Image* val, bool allowFlip, bool fillLocalPalette, bool allowSimpleQuantized, bool allowReuse,
+	const Image* val,
+	bool allowFlip, bool fillLocalPalette, bool allowSimpleQuantized, bool allowReuse, bool allowTilesOverflow,
 	PaletteAssets::Getter getplt, TilesAssets::Getter gettls, int tilesPageCount,
 	TileIssueReportHandler onReportTileIssue,
 	PrintHandler onPrint, WarningOrErrorHandler onWarningOrError
@@ -4895,7 +4933,8 @@ bool MapAssets::parseImage(
 		if (onWarningOrError)
 			onWarningOrError("Image size out of bounds for tiles.", false);
 
-		return false;
+		if (!allowTilesOverflow)
+			return false;
 	}
 
 	// Fill the tiles asset.

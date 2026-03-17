@@ -746,6 +746,7 @@ public:
 	class EditorSfx* touchSfxEditor(Window* wnd, Renderer* rnd, Project* prj, int idx, SfxAssets::Entry* entry /* nullable */);
 	class EditorActor* touchActorEditor(Window* wnd, Renderer* rnd, Project* prj, int idx, ActorAssets::Entry* entry /* nullable */);
 	class EditorScene* touchSceneEditor(Window* wnd, Renderer* rnd, Project* prj, int idx, unsigned refCategory, int refIndex, SceneAssets::Entry* entry /* nullable */);
+	void prepareEditorsForSaving(Window* wnd, Renderer* rnd, Project* prj);
 
 	void bubble(const ImGui::Bubble::Ptr &ptr);
 	void bubble(

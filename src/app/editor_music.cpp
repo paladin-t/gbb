@@ -532,6 +532,9 @@ public:
 	virtual void markChangesSaved(void) override {
 		_commands->markChangesSaved();
 	}
+	virtual void prepareForSaving(class Workspace*) override {
+		// Do nothing.
+	}
 
 	virtual void copy(void) override {
 		switch (_view.index) {

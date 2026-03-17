@@ -642,6 +642,9 @@ public:
 	virtual void markChangesSaved(void) override {
 		_commands->markChangesSaved();
 	}
+	virtual void prepareForSaving(class Workspace*) override {
+		// Do nothing.
+	}
 
 	virtual void copy(void) override {
 		copy(true);
@@ -1270,6 +1273,14 @@ public:
 		ImGui::SetCursorPos(ImVec2(splitter.first, posY));
 		ImGui::BeginChild("@Tls", ImVec2(splitter.second, height_), true, _ref.windowFlags());
 		if (currentFrame()) {
+			float xOffset = 0;
+			const float mwidth = Editing::Tools::measure(
+				rnd, ws,
+				&xOffset,
+				nullptr,
+				-1.0f
+			);
+
 			const float spwidth = _ref.windowWidth(splitter.second);
 
 			do {
@@ -1790,6 +1801,18 @@ public:
 					->exec(object(), Variant((void*)entry()));
 
 				_refresh(cmd);
+			}
+
+			Editing::Tools::separate(rnd, ws, spwidth);
+			ImGui::Dummy(ImVec2(xOffset, 0));
+			ImGui::SameLine();
+			if (ImGui::Button(ws->theme()->windowActor_Analize(), ImVec2(mwidth, 0))) {
+				// TODO: ANALYZE
+			}
+			if (ImGui::IsItemHovered()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip(ws->theme()->tooltipActor_AnalyzeUnreferencedFrames());
 			}
 
 			bool toSave = false;
