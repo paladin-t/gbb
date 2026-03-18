@@ -827,7 +827,10 @@ struct MapAssets {
 	/**
 	 * @param[out] val
 	 */
-	static bool serializeImage(const TilesAssets::Entry &tiles_, const MapAssets::Entry &map_, Image* val);
+	static bool serializeImage(
+		const PaletteAssets::Array* palette_ /* nullable */, const TilesAssets::Entry &tiles_, const MapAssets::Entry &map_,
+		Image* val
+	);
 	/**
 	 * @param[in, out] palette_
 	 * @param[out] tiles_

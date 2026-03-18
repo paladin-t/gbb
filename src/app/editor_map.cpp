@@ -4112,8 +4112,16 @@ private:
 			const int ref = entry()->ref;
 			const TilesAssets::Entry* entry_ = _project->getTiles(ref);
 			Image::Ptr img(Image::create());
-			if (!MapAssets::serializeImage(*entry_, *entry(), img.get()))
-				return;
+
+			if (_project->preferencesPreviewPaletteBits()) {
+				PaletteAssets::Array palette;
+				touchLocalPalette(palette);
+				if (!MapAssets::serializeImage(&palette, *entry_, *entry(), img.get()))
+					return;
+			} else {
+				if (!MapAssets::serializeImage(nullptr, *entry_, *entry(), img.get()))
+					return;
+			}
 
 			_transfer.image = img;
 		}
@@ -4569,8 +4577,15 @@ private:
 		const int ref = entry()->ref;
 		const TilesAssets::Entry* entry_ = _project->getTiles(ref);
 		Image::Ptr img(Image::create());
-		if (!MapAssets::serializeImage(*entry_, *entry(), img.get()))
-			return false;
+		if (_project->preferencesPreviewPaletteBits()) {
+			PaletteAssets::Array palette;
+			touchLocalPalette(palette);
+			if (!MapAssets::serializeImage(&palette, *entry_, *entry(), img.get()))
+				return false;
+		} else {
+			if (!MapAssets::serializeImage(nullptr, *entry_, *entry(), img.get()))
+				return false;
+		}
 
 		Platform::setClipboardImage(img.get());
 
@@ -4601,8 +4616,15 @@ private:
 		const int ref = entry()->ref;
 		const TilesAssets::Entry* entry_ = _project->getTiles(ref);
 		Image::Ptr img(Image::create());
-		if (!MapAssets::serializeImage(*entry_, *entry(), img.get()))
-			return false;
+		if (_project->preferencesPreviewPaletteBits()) {
+			PaletteAssets::Array palette;
+			touchLocalPalette(palette);
+			if (!MapAssets::serializeImage(&palette, *entry_, *entry(), img.get()))
+				return false;
+		} else {
+			if (!MapAssets::serializeImage(nullptr, *entry_, *entry(), img.get()))
+				return false;
+		}
 
 		Bytes::Ptr bytes(Bytes::create());
 		if (!img->toBytes(bytes.get(), y))
@@ -4998,7 +5020,7 @@ private:
 			true
 		);
 	}
-	void touchLocalPalette(PaletteAssets::Array &localPalette) {
+	void touchLocalPalette(PaletteAssets::Array &localPalette) const {
 		const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
 		if ((int)localPalette.size() != n) {
 			const int m = (int)localPalette.size();
