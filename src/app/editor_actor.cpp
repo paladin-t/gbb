@@ -3704,10 +3704,13 @@ private:
 	}
 
 	void analyzeAsset(Workspace* ws) {
+		// The analyzer.
 		auto analyze = [ws, this] (void) -> void {
+			// Prepare.
 			typedef std::map<int, int> FrameUsages;
 			typedef std::set<int> UnusedFrames;
 
+			// Analyze unused.
 			FrameUsages frameUsages;
 			const active_t &def = entry()->definition;
 			for (int i = 0; i < ASSETS_ACTOR_MAX_ANIMATIONS; ++i) {
@@ -3726,10 +3729,21 @@ private:
 					unusedFrames.insert(i);
 			}
 
-			if (unusedFrames.empty()) {
+			// Warn unused.
+			if (!unusedFrames.empty()) {
+				_warnings.clear();
+				for (int f : unusedFrames) {
+					const std::string msg = Text::format(
+						"Unused frame {0}.",
+						{
+							Text::toString(f)
+						}
+					);
+					_warnings.add(msg);
+				}
 				ws->delay(
 					[ws] (void) -> void {
-						ws->messagePopupBox(ws->theme()->dialogPrompt_NoIssuesFound(), nullptr, nullptr, nullptr);
+						ws->messagePopupBox(ws->theme()->dialogPrompt_SomeUnusedFramesWereFoundClickTheWarningIconForDetails(), nullptr, nullptr, nullptr);
 					},
 					"ANALYZING ACTOR"
 				);
@@ -3737,24 +3751,16 @@ private:
 				return;
 			}
 
-			_warnings.clear();
-			for (int f : unusedFrames) {
-				const std::string msg = Text::format(
-					"Unused frame {0}.",
-					{
-						Text::toString(f)
-					}
-				);
-				_warnings.add(msg);
-			}
+			// Prompt no issue found.
 			ws->delay(
 				[ws] (void) -> void {
-					ws->messagePopupBox(ws->theme()->dialogPrompt_SomeUnusedFramesWereFoundClickTheWarningIconForDetails(), nullptr, nullptr, nullptr);
+					ws->messagePopupBox(ws->theme()->dialogPrompt_NoIssuesFound(), nullptr, nullptr, nullptr);
 				},
 				"ANALYZING ACTOR"
 			);
 		};
 
+		// Wait and analyze.
 		ImGui::WaitingPopupBox::TimeoutHandler timeout(
 			[ws, analyze] (void) -> void {
 				analyze();

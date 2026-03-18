@@ -678,6 +678,10 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Size_InPixels("Size (in pixels)");
 	dialogPrompt_Size_InTiles("Size (in tiles)");
 	dialogPrompt_SizeOfLayersDoNotMatch("Size of layers do not match");
+	dialogPrompt_SomeIssuesWereFoundClickTheWarningIconForDetails(
+		"Some issues were found. Click the\n"
+		"warning icon for details."
+	);
 	dialogPrompt_SomeUnusedFramesWereFoundClickTheWarningIconForDetails(
 		"Some unused frames were found.\n"
 		"Click the warning icon for\n"

@@ -4992,7 +4992,6 @@ bool MapAssets::parseImage(
 			TilesAssets::Entry* tilesEntry = gettls(i);
 			if (!tilesEntry || !tilesEntry->data || tilesEntry->data->hash() != thash)
 				continue;
-
 			if (tiles_.data->compare(tilesEntry->data.get()) != 0) // Compare the pixels only.
 				continue;
 

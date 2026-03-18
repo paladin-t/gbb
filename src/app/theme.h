@@ -455,6 +455,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Size_InPixels)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Size_InTiles)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_SizeOfLayersDoNotMatch)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_SomeIssuesWereFoundClickTheWarningIconForDetails)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_SomeUnusedFramesWereFoundClickTheWarningIconForDetails)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Split)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Strength)
