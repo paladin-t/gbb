@@ -1840,6 +1840,8 @@ private:
 								entry()->editAsImage = editAsImage;
 								entry()->editedAsImage = true;
 								editAsImageChanged(ws);
+
+								_project->hasDirtyAsset(true);
 							},
 							nullptr
 						);
@@ -1871,6 +1873,17 @@ private:
 								entry()->editAsImage = editAsImage;
 								entry()->editedAsImage = true;
 								editAsImageChanged(ws);
+
+								PaletteAssets::Array localPalette = entry()->localPalette;
+								touchLocalPalette(localPalette);
+								Command* cmd = enqueue<Commands::Map::SetLocalPaletteEnabled>()
+									->with(true, localPalette)
+									->exec(object(), Variant((void*)entry()));
+								_project->hasDirtyAsset(true);
+
+								_refresh(cmd);
+
+								localPaletteEnabledChanged(ws);
 							},
 							nullptr
 						);
@@ -1897,6 +1910,8 @@ private:
 					} else {
 						entry()->editAsImage = editAsImage;
 						editAsImageChanged(ws);
+
+						_project->hasDirtyAsset(true);
 					}
 				}
 				if (ImGui::IsItemHovered()) {
@@ -1917,22 +1932,9 @@ private:
 				ImGui::SameLine();
 				ImGui::SetNextItemWidth(mwidth);
 				localPaletteEnabled = entry()->localPaletteEnabled;
-				PaletteAssets::Array localPalette = entry()->localPalette;
-				const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
-				if ((int)localPalette.size() != n) {
-					const int m = (int)localPalette.size();
-					localPalette.resize(n);
-					if (m < n) {
-						const PaletteAssets &palette = _project->assets()->palette;
-						if (palette.count() >= n) {
-							for (int i = m; i < n; ++i) {
-								const PaletteAssets::Entry* entry = palette.get(i);
-								localPalette[i] = *entry;
-							}
-						}
-					}
-				}
 				if (ImGui::Checkbox(ws->theme()->windowMap_LocalPalette(), &localPaletteEnabled)) {
+					PaletteAssets::Array localPalette = entry()->localPalette;
+					touchLocalPalette(localPalette);
 					Command* cmd = enqueue<Commands::Map::SetLocalPaletteEnabled>()
 						->with(localPaletteEnabled, localPalette)
 						->exec(object(), Variant((void*)entry()));
@@ -1940,6 +1942,8 @@ private:
 					_refresh(cmd);
 
 					localPaletteEnabledChanged(ws);
+
+					_project->hasDirtyAsset(true);
 				}
 				if (ImGui::IsItemHovered()) {
 					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -4108,8 +4112,16 @@ private:
 			const int ref = entry()->ref;
 			const TilesAssets::Entry* entry_ = _project->getTiles(ref);
 			Image::Ptr img(Image::create());
-			if (!MapAssets::serializeImage(*entry_, *entry(), img.get()))
-				return;
+
+			if (_project->preferencesPreviewPaletteBits()) {
+				PaletteAssets::Array palette;
+				touchLocalPalette(palette);
+				if (!MapAssets::serializeImage(&palette, *entry_, *entry(), img.get()))
+					return;
+			} else {
+				if (!MapAssets::serializeImage(nullptr, *entry_, *entry(), img.get()))
+					return;
+			}
 
 			_transfer.image = img;
 		}
@@ -4565,8 +4577,15 @@ private:
 		const int ref = entry()->ref;
 		const TilesAssets::Entry* entry_ = _project->getTiles(ref);
 		Image::Ptr img(Image::create());
-		if (!MapAssets::serializeImage(*entry_, *entry(), img.get()))
-			return false;
+		if (_project->preferencesPreviewPaletteBits()) {
+			PaletteAssets::Array palette;
+			touchLocalPalette(palette);
+			if (!MapAssets::serializeImage(&palette, *entry_, *entry(), img.get()))
+				return false;
+		} else {
+			if (!MapAssets::serializeImage(nullptr, *entry_, *entry(), img.get()))
+				return false;
+		}
 
 		Platform::setClipboardImage(img.get());
 
@@ -4597,8 +4616,15 @@ private:
 		const int ref = entry()->ref;
 		const TilesAssets::Entry* entry_ = _project->getTiles(ref);
 		Image::Ptr img(Image::create());
-		if (!MapAssets::serializeImage(*entry_, *entry(), img.get()))
-			return false;
+		if (_project->preferencesPreviewPaletteBits()) {
+			PaletteAssets::Array palette;
+			touchLocalPalette(palette);
+			if (!MapAssets::serializeImage(&palette, *entry_, *entry(), img.get()))
+				return false;
+		} else {
+			if (!MapAssets::serializeImage(nullptr, *entry_, *entry(), img.get()))
+				return false;
+		}
 
 		Bytes::Ptr bytes(Bytes::create());
 		if (!img->toBytes(bytes.get(), y))
@@ -4993,6 +5019,22 @@ private:
 			true, timeout,
 			true
 		);
+	}
+	void touchLocalPalette(PaletteAssets::Array &localPalette) const {
+		const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
+		if ((int)localPalette.size() != n) {
+			const int m = (int)localPalette.size();
+			localPalette.resize(n);
+			if (m < n) {
+				const PaletteAssets &palette = _project->assets()->palette;
+				if (palette.count() >= n) {
+					for (int i = m; i < n; ++i) {
+						const PaletteAssets::Entry* entry = palette.get(i);
+						localPalette[i] = *entry;
+					}
+				}
+			}
+		}
 	}
 
 	bool playMapTesting(Window* wnd, Renderer* rnd, Workspace* ws) {

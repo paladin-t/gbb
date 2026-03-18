@@ -38,6 +38,23 @@ private:
 
 	typedef std::function<void(void)> PostHandler;
 
+	struct TileIssue {
+		typedef std::vector<TileIssue> Array;
+
+		int x = -1;
+		int y = -1;
+		std::string message;
+
+		TileIssue() {
+		}
+		TileIssue(int x_, int y_, const char* msg) :
+			x(x_), y(y_)
+		{
+			if (msg)
+				message = msg;
+		}
+	};
+
 	struct Processor {
 		typedef std::function<void(Renderer*)> Handler;
 
@@ -108,6 +125,7 @@ private:
 		}
 	} _status;
 	float _statusWidth = 0.0f;
+	TileIssue::Array _tileIssues;
 	struct {
 		Text::Array warnings;
 		std::string text;
@@ -470,6 +488,7 @@ public:
 		_page.clear();
 		_status.clear();
 		_statusWidth = 0.0f;
+		_tileIssues.clear();
 		_warnings.clear();
 		_refresh = nullptr;
 		_estimated.clear();
@@ -980,7 +999,35 @@ public:
 						&_tools.gridUnit, _tools.showGrids && _tools.gridsVisible,
 						_tools.transparentBackbroundVisible,
 						_tools.mouseActionButton,
-						nullptr
+						[&] (const Math::Vec2f &curPos, const Math::Vec2f &/* widgetSize */, float scale) -> void {
+							ImGuiStyle &style = ImGui::GetStyle();
+							ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+							for (const TileIssue &tileIssue : _tileIssues) {
+								if (tileIssue.x == -1 || tileIssue.y == -1 || tileIssue.message.empty())
+									continue;
+
+								const ImVec2 minPos(
+									(float)(curPos.x + tileIssue.x * GBBASIC_TILE_SIZE * scale),
+									(float)(curPos.y + tileIssue.y * GBBASIC_TILE_SIZE * scale)
+								);
+								const ImVec2 maxPos(
+									(float)(curPos.x + (tileIssue.x + 1) * GBBASIC_TILE_SIZE * scale + 1),
+									(float)(curPos.y + (tileIssue.y + 1) * GBBASIC_TILE_SIZE * scale + 1)
+								);
+								drawList->AddRect(minPos, maxPos, 0xff0000ff);
+
+								if (ImGui::IsItemHovered()) {
+									const ImVec2 mousePos = ImGui::GetMousePos();
+									const bool hovering = Math::intersects(Math::Recti((int)minPos.x, (int)minPos.y, (int)(minPos.x + maxPos.x), (int)(minPos.y + maxPos.y)), Math::Vec2i((int)mousePos.x, (int)mousePos.y));
+									if (hovering) {
+										VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+										ImGui::SetTooltip(tileIssue.message);
+									}
+								}
+							}
+						}
 					)
 				);
 				if (
@@ -1314,7 +1361,7 @@ public:
 			ImGui::Dummy(ImVec2(xOffset, 0));
 			ImGui::SameLine();
 			if (ImGui::Button(ws->theme()->windowTiles_Analize(), ImVec2(mwidth, 0))) {
-				// TODO: ANALYZE
+				analyzeAsset(ws);
 			}
 			if (ImGui::IsItemHovered()) {
 				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -1688,8 +1735,10 @@ private:
 				if (ImGui::ImageButton(ws->theme()->iconWarning()->pointer(rnd), ImVec2(13, 13), col, false, ws->theme()->tooltip_Warning().c_str())) {
 					ImGui::OpenPopupTooltip("Wrn");
 				}
-				if (ImGui::PopupTooltip("Wrn", _warnings.text, ws->theme()->generic_Dismiss().c_str()))
+				if (ImGui::PopupTooltip("Wrn", _warnings.text, ws->theme()->generic_Dismiss().c_str())) {
+					_tileIssues.clear();
 					_warnings.clear();
+				}
 				width_ += ImGui::GetItemRectSize().x;
 				ImGui::SameLine();
 
@@ -2253,6 +2302,9 @@ private:
 	}
 
 	void modified(void) {
+		_tileIssues.clear();
+		_warnings.clear();
+
 		const int n = _project->mapPageCount();
 		for (int i = 0; i < n; ++i) {
 			MapAssets::Entry* entry = _project->getMap(i);
@@ -2755,6 +2807,207 @@ private:
 		}
 
 		return true;
+	}
+
+	void analyzeAsset(Workspace* ws) {
+		// Prepare.
+		struct TileRef {
+			typedef std::vector<TileRef> Array;
+
+			int x = 0;
+			int y = 0;
+			Image::Ptr slice = nullptr;
+			size_t hash = 0;
+
+			TileRef() {
+			}
+			TileRef(int x_, int y_, Image::Ptr s) : x(x_), y(y_), slice(s) {
+				hash = slice->hash();
+			}
+		};
+
+		// The analyzer.
+		auto analyze = [ws, this] (void) -> void {
+			// Prepare.
+			typedef std::map<Math::Vec2i, Math::Vec2i> DuplicateTiles;
+			typedef std::map<int, Math::Vec2i> UnusedTiles;
+
+			bool isMultipleOf8 = true;
+			const std::div_t dx = std::div(object()->width(), GBBASIC_TILE_SIZE);
+			const std::div_t dy = std::div(object()->height(), GBBASIC_TILE_SIZE);
+			if (dx.rem || dy.rem)
+				isMultipleOf8 = false;
+			const int mw = dx.quot + (dx.rem ? 1 : 0);
+			const int mh = dy.quot + (dy.rem ? 1 : 0);
+
+			// Slice into tiles.
+			TileRef::Array tileRefs;
+			for (int j = 0; j < mh; j += 2) {
+				for (int i = 0; i < mw; ++i) {
+					const int x = i;
+					for (int h = 0; h < 2; ++h) { // Prefer 8x16 if possible.
+						const int y = j + h;
+						if (y >= mh)
+							continue;
+
+						Indexed::Ptr palette(Indexed::create(GBBASIC_PALETTE_PER_GROUP_COUNT));
+						Image::Ptr r(Image::create(palette));
+						r->fromBlank(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE, GBBASIC_PALETTE_DEPTH);
+						object()->blit(
+							r.get(),
+							0, 0,
+							GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE,
+							x * GBBASIC_TILE_SIZE, y * GBBASIC_TILE_SIZE
+						);
+						const TileRef tileRef(x, y, r);
+						tileRefs.push_back(tileRef);
+					}
+				}
+			}
+
+			// Analyze for duplicate.
+			DuplicateTiles duplicateTiles;
+			for (int i = 0; i < (int)tileRefs.size(); ++i) {
+				const TileRef &tileRefL = tileRefs[i];
+				for (int j = i + 1; j < (int)tileRefs.size(); ++j) {
+					const TileRef &tileRefR = tileRefs[j];
+					if (tileRefL.hash != tileRefR.hash)
+						continue;
+					if (tileRefL.slice->compare(tileRefR.slice.get()) != 0)
+						continue;
+
+					duplicateTiles[Math::Vec2i(tileRefR.x, tileRefR.y)] = Math::Vec2i(tileRefL.x, tileRefL.y);
+				}
+			}
+
+			// Analyze for unused.
+			UnusedTiles unusedTiles;
+			for (int j = 0; j < mh; j += 2) {
+				for (int i = 0; i < mw; ++i) {
+					const int x = i;
+					for (int h = 0; h < 2; ++h) { // Prefer 8x16 if possible.
+						const int y = j + h;
+						if (y >= mh)
+							continue;
+
+						const int cel = x + y * mw;
+						unusedTiles[cel] = Math::Vec2i(x, y);
+					}
+				}
+			}
+
+			const int n = _project->mapPageCount();
+			for (int i = 0; i < n; ++i) {
+				const MapAssets::Entry* entry = _project->getMap(i);
+				if (entry->ref != _index)
+					continue;
+				const Map::Ptr &map = entry->data;
+				if (!map)
+					continue;
+
+				for (int y = 0; y < map->height(); ++y) {
+					for (int x = 0; x < map->width(); ++x) {
+						const int cel = map->get(x, y);
+						UnusedTiles::const_iterator it = unusedTiles.find(cel);
+						if (it == unusedTiles.end())
+							continue;
+
+						unusedTiles.erase(it);
+					}
+				}
+			}
+
+			// Warn multiple of 8, duplicate and unused.
+			if (!isMultipleOf8 || !duplicateTiles.empty() || !unusedTiles.empty()) {
+				_tileIssues.clear();
+				_warnings.clear();
+
+				if (!isMultipleOf8) {
+					const std::string msg = "Tiles asset size is not a multiple of 8.";
+					_warnings.add(msg);
+				}
+
+				if (!duplicateTiles.empty()) {
+					for (DuplicateTiles::value_type kv : duplicateTiles) {
+						std::string msg = Text::format(
+							"Tile {0} ({1}, {2}) is a duplicate of {3} ({4}, {5})",
+							{
+								Text::toString(kv.first.x + kv.first.y * mw),
+								Text::toString(kv.first.x), Text::toString(kv.first.y),
+								Text::toString(kv.second.x + kv.second.y * mw),
+								Text::toString(kv.second.x), Text::toString(kv.second.y)
+							}
+						);
+						_tileIssues.push_back(TileIssue(kv.first.x, kv.first.y, msg.c_str()));
+						msg += ".";
+						_warnings.add(msg);
+					}
+				}
+
+				if (!unusedTiles.empty()) {
+					for (UnusedTiles::value_type kv : unusedTiles) {
+						std::string msg = Text::format(
+							"Unused tile {0} ({1}, {2})",
+							{
+								Text::toString(kv.first),
+								Text::toString(kv.second.x), Text::toString(kv.second.y)
+							}
+						);
+						_tileIssues.push_back(TileIssue(kv.second.x, kv.second.y, msg.c_str()));
+						msg += ".";
+						_warnings.add(msg);
+					}
+				}
+				std::sort(
+					_tileIssues.begin(), _tileIssues.end(),
+					[] (const TileIssue &l, const TileIssue &r) -> bool {
+						if (l.y < r.y)
+							return true;
+						else if (l.y > r.y)
+							return false;
+
+						if (l.x < r.x)
+							return true;
+						else if (l.x > r.x)
+							return false;
+
+						return l.message < r.message;
+					}
+				);
+
+				ws->delay(
+					[ws] (void) -> void {
+						ws->messagePopupBox(ws->theme()->dialogPrompt_SomeIssuesWereFoundClickTheWarningIconForDetails(), nullptr, nullptr, nullptr);
+					},
+					"ANALYZING ACTOR"
+				);
+
+				return;
+			}
+
+			// Prompt no issue found.
+			ws->delay(
+				[ws] (void) -> void {
+					ws->messagePopupBox(ws->theme()->dialogPrompt_NoIssuesFound(), nullptr, nullptr, nullptr);
+				},
+				"ANALYZING TILES"
+			);
+		};
+
+		// Wait and analyze.
+		ImGui::WaitingPopupBox::TimeoutHandler timeout(
+			[ws, analyze] (void) -> void {
+				analyze();
+
+				ws->popupBox(nullptr);
+			},
+			nullptr
+		);
+		ws->waitingPopupBox(
+			true, ws->theme()->dialogPrompt_Analyzing(),
+			true, timeout,
+			true
+		);
 	}
 };
 

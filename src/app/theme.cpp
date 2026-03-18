@@ -626,6 +626,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Name("Name");
 	dialogPrompt_NoData("No data");
 	dialogPrompt_NoInit("No init");
+	dialogPrompt_NoIssuesFound("No issues found.");
 	dialogPrompt_NoNeedToBuildRom("No need to build ROM");
 	dialogPrompt_NoNr1x("No NR1x");
 	dialogPrompt_NoNr2x("No NR2x");
@@ -677,6 +678,15 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Size_InPixels("Size (in pixels)");
 	dialogPrompt_Size_InTiles("Size (in tiles)");
 	dialogPrompt_SizeOfLayersDoNotMatch("Size of layers do not match");
+	dialogPrompt_SomeIssuesWereFoundClickTheWarningIconForDetails(
+		"Some issues were found. Click the\n"
+		"warning icon for details."
+	);
+	dialogPrompt_SomeUnusedFramesWereFoundClickTheWarningIconForDetails(
+		"Some unused frames were found.\n"
+		"Click the warning icon for\n"
+		"details."
+	);
 	dialogPrompt_Split("Split");
 	dialogPrompt_Strength("Strength");
 	dialogPrompt_Stroke("Stroke");

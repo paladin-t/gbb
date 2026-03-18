@@ -4440,7 +4440,10 @@ int MapAssets::indexOf(const std::string &name) const {
 	return -1;
 }
 
-bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets::Entry &map_, Image* val) {
+bool MapAssets::serializeImage(
+	const PaletteAssets::Array* palette_, const TilesAssets::Entry &tiles_, const MapAssets::Entry &map_,
+	Image* val
+) {
 	// Prepare.
 	if (!val)
 		return false;
@@ -4469,7 +4472,29 @@ bool MapAssets::serializeImage(const TilesAssets::Entry &tiles_, const MapAssets
 			const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
 			const bool localPaletteEnabled = map_.localPaletteEnabled;
 			const PaletteAssets::Array &localPalette = map_.localPalette;
-			if (localPaletteEnabled && (int)localPalette.size() == n) {
+			if (palette_ && (int)palette_->size() == n && map_.attributes) {
+				const int attrs = map_.attributes->get(i, j);
+				const int bits = attrs & ((0x00000001 << GBBASIC_MAP_PALETTE_BIT0) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT1) | (0x00000001 << GBBASIC_MAP_PALETTE_BIT2));
+
+				tiles_.serializeImage(
+					tmp.get(), &area,
+					[&] (int idx, Colour &out) -> bool {
+						const std::div_t div = std::div(idx, GBBASIC_PALETTE_PER_GROUP_COUNT);
+						const int plt = bits;
+						const int idx_ = div.rem;
+						if (plt < 0 || plt >= (int)palette_->size())
+							return false;
+						if (idx_ < 0 || idx_ >= GBBASIC_PALETTE_PER_GROUP_COUNT)
+							return false;
+
+						Colour col;
+						(*palette_)[plt].data->get(idx_, col);
+						out = col;
+
+						return true;
+					}
+				);
+			} else if (localPaletteEnabled && (int)localPalette.size() == n) {
 				tiles_.serializeImage(
 					tmp.get(), &area,
 					[&] (int idx, Colour &out) -> bool {
@@ -4967,7 +4992,6 @@ bool MapAssets::parseImage(
 			TilesAssets::Entry* tilesEntry = gettls(i);
 			if (!tilesEntry || !tilesEntry->data || tilesEntry->data->hash() != thash)
 				continue;
-
 			if (tiles_.data->compare(tilesEntry->data.get()) != 0) // Compare the pixels only.
 				continue;
 
