@@ -1333,7 +1333,7 @@ private:
 				const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
 				const bool localPaletteEnabled = entry()->localPaletteEnabled;
 				const PaletteAssets::Array &localPalette = entry()->localPalette;
-				if (localPaletteEnabled && (int)localPalette.size() == n) {
+				if (localPaletteEnabled && (int)localPalette.size() >= n) {
 					plt = Math::clamp(plt, 0, (int)localPalette.size() - 1);
 					entry_ = &localPalette[plt];
 				} else {
@@ -5236,7 +5236,7 @@ private:
 			const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
 			const bool localPaletteEnabled = mapEntry.localPaletteEnabled;
 			const PaletteAssets::Array &localPalette = mapEntry.localPalette;
-			if (localPaletteEnabled && (int)localPalette.size() == n && assets->palette.count() >= n) {
+			if (localPaletteEnabled && (int)localPalette.size() >= n && assets->palette.count() >= n) {
 				for (int i = 0; i < n; ++i) {
 					PaletteAssets::Entry* palEntry = assets->palette.get(i);
 					*palEntry = localPalette[i]; // Replace with local palette.

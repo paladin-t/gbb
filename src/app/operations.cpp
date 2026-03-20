@@ -3390,11 +3390,14 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 
 								// Load from the image.
 								Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
+								const int n = Math::pow(2, GBBASIC_PALETTE_COLOR_DEPTH) / GBBASIC_PALETTE_PER_GROUP_COUNT / 2;
 								PaletteAssets::Array palette;
-								for (int i = 0; i < prj->assets()->palette.count(); ++i) {
+								for (int i = 0; i < prj->assets()->palette.count() && i < n; ++i) {
 									const PaletteAssets::Entry* pal = prj->assets()->palette.get(i);
 									palette.push_back(*pal);
 								}
+								if ((int)palette.size() != n)
+									palette.resize(n);
 								TilesAssets::Entry tiles(rnd, prj->paletteGetter());
 								MapAssets::Entry map("", prj->tilesGetter(), attribtex);
 								const bool loaded = MapAssets::parseImage(
