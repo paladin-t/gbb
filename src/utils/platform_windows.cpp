@@ -9,6 +9,7 @@
 #include "bytes.h"
 #include "encoding.h"
 #include "file_sandbox.h"
+#include "filesystem.h"
 #include "image.h"
 #include "platform.h"
 #include "window.h"
@@ -288,7 +289,12 @@ std::string Platform::documentDirectory(void) {
 
 		return osstr;
 	} else {
-		return "ERROR";
+		std::string dir = getenv("APPDATA");
+		dir = Path::combine(dir.c_str(), "bitty3d", "data");
+
+		const std::string osstr = Unicode::toOs(dir);
+
+		return osstr;
 	}
 }
 
@@ -309,10 +315,16 @@ std::string Platform::savedGamesDirectory(void) {
 
 	if (ret == S_OK) {
 		const std::string osstr = Unicode::toOs(Unicode::fromWide(savedGames));
+		::CoTaskMemFree(savedGames);
 
 		return osstr;
 	} else {
-		return "ERROR";
+		std::string dir = getenv("APPDATA");
+		dir = Path::combine(dir.c_str(), "bitty3d", "data");
+
+		const std::string osstr = Unicode::toOs(dir);
+
+		return osstr;
 	}
 }
 
