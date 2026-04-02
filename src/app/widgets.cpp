@@ -282,6 +282,10 @@ void WaitingPopupBox::update(Workspace*) {
 			}
 
 			EndPopup();
+		} else if (isOpen) {
+			toClose = true;
+
+			CloseCurrentPopup();
 		}
 		PopStyleColor();
 	} else {
@@ -295,6 +299,10 @@ void WaitingPopupBox::update(Workspace*) {
 			}
 
 			EndPopup();
+		} else if (isOpen) {
+			toClose = true;
+
+			CloseCurrentPopup();
 		}
 	}
 

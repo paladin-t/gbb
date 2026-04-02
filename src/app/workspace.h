@@ -1137,7 +1137,7 @@ private:
 		bool toRun_, int toExport_
 	);
 	void runProject(Window* wnd, Renderer* rnd, Bytes::Ptr rom);
-	void stopProject(Window* wnd, Renderer* rnd);
+	void stopProject(Window* wnd, Renderer* rnd, bool immediate);
 	void exportProject(Window* wnd, Renderer* rnd, int toExport);
 };
 

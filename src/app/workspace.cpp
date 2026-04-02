@@ -2208,7 +2208,7 @@ bool Workspace::quit(Window* wnd, Renderer* rnd) {
 
 		closeFilter();
 
-		stopProject(wnd, rnd);
+		stopProject(wnd, rnd, false);
 
 		destroyAudioDevice();
 
@@ -7408,7 +7408,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 		if (showRecentProjects()) {
 			closeFilter();
 
-			stopProject(wnd, rnd);
+			stopProject(wnd, rnd, false);
 
 			Operations::fileNew(wnd, rnd, this, fontConfig().empty() ? nullptr : fontConfig().c_str())
 				.then(
@@ -7434,7 +7434,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 
 			recentProjectSelectedIndex(-1);
 		} else {
-			stopProject(wnd, rnd);
+			stopProject(wnd, rnd, false);
 
 			Operations::fileNew(wnd, rnd, this, fontConfig().empty() ? nullptr : fontConfig().c_str())
 				.then(
@@ -7461,7 +7461,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 		if (showRecentProjects()) {
 			closeFilter();
 
-			stopProject(wnd, rnd);
+			stopProject(wnd, rnd, false);
 
 			Operations::fileImport(wnd, rnd, this)
 				.then(
@@ -7494,7 +7494,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 					}
 				);
 		} else {
-			stopProject(wnd, rnd);
+			stopProject(wnd, rnd, false);
 
 			Operations::fileImportForNotepad(wnd, rnd, this)
 				.then(
@@ -7648,7 +7648,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 #endif /* GBBASIC_OS_HTML */
 			modifier && !io.KeyShift && !io.KeyAlt
 		) {
-			stopProject(wnd, rnd);
+			stopProject(wnd, rnd, false);
 
 			destroyAudioDevice();
 
@@ -7659,7 +7659,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 #if !defined GBBASIC_OS_HTML
 			Project::Ptr &prj = currentProject();
 
-			stopProject(wnd, rnd);
+			stopProject(wnd, rnd, true);
 
 			Operations::projectReload(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str());
 #endif /* Platform macro. */
@@ -7680,7 +7680,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 			}
 		} else if ((f5 && !modifier && io.KeyShift && !io.KeyAlt) || (period && modifier && !io.KeyShift && !io.KeyAlt)) {
 			if (canvasDevice()) {
-				stopProject(wnd, rnd);
+				stopProject(wnd, rnd, false);
 			}
 		} else if (b && modifier && io.KeyShift && !io.KeyAlt) {
 			int toExport_ = -1;
@@ -8068,7 +8068,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					}
 				} else {
 					if (ImGui::MenuItem(theme()->menu_StopRunning(), "Shift+F5")) {
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 					}
 					if (ImGui::MenuItem(theme()->menu_Restart())) {
 						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
@@ -8083,7 +8083,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					}
 				} else {
 					if (ImGui::MenuItem(theme()->menu_StopRunning(), "Shift+F5")) {
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 					}
 					if (ImGui::MenuItem(theme()->menu_Restart())) {
 						launchProject(wnd, rnd, nullptr, nullptr, nullptr, true, -1);
@@ -8126,7 +8126,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 				if (ImGui::MenuItem(theme()->menu_New(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+N" : GBBASIC_MODIFIER_KEY_NAME "+N")) {
 					closeFilter();
 
-					stopProject(wnd, rnd);
+					stopProject(wnd, rnd, false);
 
 					Operations::fileNew(wnd, rnd, this, fontConfig().empty() ? nullptr : fontConfig().c_str())
 						.then(
@@ -8159,7 +8159,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 				if (ImGui::MenuItem(theme()->menu_Import(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+O" : GBBASIC_MODIFIER_KEY_NAME "+O")) {
 					closeFilter();
 
-					stopProject(wnd, rnd);
+					stopProject(wnd, rnd, false);
 
 					Operations::fileImport(wnd, rnd, this)
 						.then(
@@ -8200,7 +8200,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuItem(theme()->menu_ClearRecent(), nullptr, nullptr, !projects().empty())) {
 						closeFilter();
 
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 
 						Operations::fileClear(wnd, rnd, this);
 
@@ -8215,7 +8215,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 				}
 			} else {
 				if (ImGui::MenuItem(theme()->menu_New(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+N" : GBBASIC_MODIFIER_KEY_NAME "+N")) {
-					stopProject(wnd, rnd);
+					stopProject(wnd, rnd, false);
 
 					Operations::fileNew(wnd, rnd, this, fontConfig().empty() ? nullptr : fontConfig().c_str())
 						.then(
@@ -8242,7 +8242,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					return true;
 				}
 				if (ImGui::MenuItem(theme()->menu_Open(), !!prj ? GBBASIC_MODIFIER_KEY_NAME "+Shift+O" : GBBASIC_MODIFIER_KEY_NAME "+O")) {
-					stopProject(wnd, rnd);
+					stopProject(wnd, rnd, false);
 
 					Operations::fileImportForNotepad(wnd, rnd, this)
 						.then(
@@ -8398,9 +8398,11 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			if (ImGui::MenuItem(theme()->menu_Reload(), GBBASIC_MODIFIER_KEY_NAME "+Shift+R")) {
 				Project::Ptr &prj = currentProject();
 
-				stopProject(wnd, rnd);
+				if (prj) {
+					stopProject(wnd, rnd, true);
 
-				Operations::projectReload(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str());
+					Operations::projectReload(wnd, rnd, this, prj, fontConfig().empty() ? nullptr : fontConfig().c_str());
+				}
 			}
 #endif /* Platform macro. */
 			if (
@@ -8413,7 +8415,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 #endif /* GBBASIC_OS_HTML */
 				)
 			) {
-				stopProject(wnd, rnd);
+				stopProject(wnd, rnd, false);
 
 				destroyAudioDevice();
 
@@ -8478,7 +8480,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					if (ImGui::ExampleMenu(examples(), path)) {
 						closeFilter();
 
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 
 						Operations::fileImportExamples(wnd, rnd, this, path.c_str())
 							.then(
@@ -8522,7 +8524,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuItem(theme()->menu_ImportExamples())) {
 						closeFilter();
 
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 
 						Operations::fileImportExamples(wnd, rnd, this, nullptr)
 							.then(
@@ -8558,7 +8560,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 				} else {
 #	if !defined GBBASIC_OS_HTML
 					if (ImGui::MenuItem(theme()->menu_OpenExample())) {
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 
 						Operations::fileImportExampleForNotepad(wnd, rnd, this)
 							.then(
@@ -9240,7 +9242,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			if (ImGui::MenuBarImageButton(theme()->iconOpen()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipFile_Import().c_str())) {
 				closeFilter();
 
-				stopProject(wnd, rnd);
+				stopProject(wnd, rnd, false);
 
 				Operations::fileImport(wnd, rnd, this)
 					.then(
@@ -9368,7 +9370,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			}
 		} else {
 			if (ImGui::MenuBarImageButton(theme()->iconOpen()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipFile_Open().c_str())) {
-				stopProject(wnd, rnd);
+				stopProject(wnd, rnd, false);
 
 				Operations::fileImportForNotepad(wnd, rnd, this)
 					.then(
@@ -9420,7 +9422,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			} else {
 				if (canvasDevice()) {
 					if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
@@ -9454,7 +9456,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			} else {
 				if (canvasDevice()) {
 					if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 					}
 				} else {
 					if (analyzing()) {
@@ -9492,7 +9494,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			} else {
 				if (canvasDevice()) {
 					if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
@@ -9526,7 +9528,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			} else {
 				if (canvasDevice()) {
 					if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
@@ -9560,7 +9562,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			} else {
 				if (canvasDevice()) {
 					if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
@@ -9594,7 +9596,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			} else {
 				if (canvasDevice()) {
 					if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
@@ -9628,7 +9630,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			} else {
 				if (canvasDevice()) {
 					if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
@@ -9658,7 +9660,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			} else {
 				if (canvasDevice()) {
 					if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
@@ -9678,7 +9680,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			if (_state == States::IDLE) {
 				if (canvasDevice()) {
 					if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
-						stopProject(wnd, rnd);
+						stopProject(wnd, rnd, false);
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
@@ -9716,7 +9718,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 				}
 			}
 			if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
-				stopProject(wnd, rnd);
+				stopProject(wnd, rnd, false);
 			}
 			download();
 		}
@@ -10993,7 +10995,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 		if (clicked) {
 			closeFilter();
 
-			stopProject(wnd, rnd);
+			stopProject(wnd, rnd, false);
 
 			Operations::fileNew(wnd, rnd, this, fontConfig().empty() ? nullptr : fontConfig().c_str())
 				.then(
@@ -12895,7 +12897,7 @@ void Workspace::runProject(Window* wnd, Renderer* rnd, Bytes::Ptr rom) {
 		);
 }
 
-void Workspace::stopProject(Window* wnd, Renderer* rnd) {
+void Workspace::stopProject(Window* wnd, Renderer* rnd, bool immediate) {
 	// Reset the debug information.
 	debug();
 
@@ -12903,11 +12905,11 @@ void Workspace::stopProject(Window* wnd, Renderer* rnd) {
 	const bool traceless = canvasDevice() && canvasDevice()->traceless();
 	Operations::projectStop(wnd, rnd, this)
 		.then(
-			[wnd, rnd, this, traceless] (bool ok, const Bytes::Ptr sram) -> void {
+			[wnd, rnd, this, immediate, traceless] (bool ok, const Bytes::Ptr sram) -> void {
 				if (!traceless && ok && settings().deviceSaveSramOnStop) {
 					const Project::Ptr &prj = currentProject();
 
-					Operations::projectSaveSram(wnd, rnd, this, prj, sram, false);
+					Operations::projectSaveSram(wnd, rnd, this, prj, sram, immediate);
 				}
 			}
 		);
