@@ -397,10 +397,12 @@ public:
 		}
 
 		// Finish.
-		_width = expWidth;
-		_height = expHeight;
+		if (_texture) {
+			_width = expWidth;
+			_height = expHeight;
+		}
 
-		return true;
+		return !!_texture;
 	}
 
 	virtual bool set(int x, int y, const Colour &col) override {
@@ -595,16 +597,16 @@ public:
 		int access = 0;
 		SDL_QueryTexture(tex, &format, &access, nullptr, nullptr);
 		_texture = tex;
-		if (!tex)
-			return false;
 
 		// Finish.
-		_usage = (Usages)access;
-		_width = img->width();
-		_height = img->height();
-		_paletted = img->paletted();
+		if (_texture) {
+			_usage = (Usages)access;
+			_width = img->width();
+			_height = img->height();
+			_paletted = img->paletted();
+		}
 
-		return true;
+		return !!_texture;
 	}
 
 	virtual int toBytes(class Renderer* rnd, Byte* pixels) override {
@@ -695,7 +697,7 @@ public:
 			SDL_SetTextureScaleMode(tex, (SDL_ScaleMode)scaleMode);
 #endif /* SDL_VERSION_ATLEAST(2, 0, 12) */
 		_texture = tex;
-		if (!tex)
+		if (!_texture)
 			return false;
 
 		// Fill.
@@ -826,12 +828,12 @@ private:
 		int access = 0;
 		SDL_QueryTexture(tex, &format, &access, nullptr, nullptr);
 		_texture = tex;
-		if (!tex)
-			return;
 
-		_usage = (Usages)access;
+		if (_texture) {
+			_usage = (Usages)access;
 
-		_palettedVersion = ver;
+			_palettedVersion = ver;
+		}
 	}
 };
 
