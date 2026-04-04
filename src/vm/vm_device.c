@@ -74,6 +74,29 @@ UINT8 device_type;
 UINT8 device_object_sprite_base;
 
 void device_init(void) BANKED {
+#if defined __SDCC && defined NINTENDO
+__asm
+        ;; Declare the symbols of the extension registers.
+
+        EXTF = 0xFEA0   ; EXTENSION_STATUS_REG
+        PLTF = 0xFEA1   ; PLATFORM_FLAGS_REG
+        LOCF = 0xFEA2   ; LOCALIZATION_FLAGS_REG
+        TCHX = 0xFEA4   ; TOUCH_X_REG
+        TCHY = 0xFEA5   ; TOUCH_Y_REG
+        TCHF = 0xFEA6   ; TOUCH_PRESSED_REG
+        KEYM = 0xFEA8   ; KEY_MODIFIER_FLAGS_REG
+        KEYC = 0xFEA9   ; KEY_CODE_REG
+        STMF = 0xFEAC   ; STREAMING_STATUS_REG
+        STMB = 0xFEAD   ; STREAMING_ADDRESS
+        TRSF = 0xFEAF   ; TRANSFER_STATUS_REG
+        TRSC = 0xFEB0   ; TRANSFER_ADDRESS
+
+        .globl EXTF, PLTF, LOCF, TCHX, TCHY, TCHF, KEYM, KEYC, STMF, STMB, TRSF, TRSC
+__endasm;
+#else /* __SDCC && NINTENDO */
+#   error "Not implemented."
+#endif /* __SDCC && NINTENDO */
+
     for (UINT8 i = 4; i != 0; --i) vsync(); // This delay is required for PAL SNES.
     const BOOLEAN IS_SGB = sgb_check();
     const BOOLEAN IS_CGB = ((!IS_SGB) && (_cpu == CGB_TYPE) && (*(UINT8 *)DEVICE_TYPE_ADDRESS & 0x80)); // Both CGB + SGB modes at once are not supported.

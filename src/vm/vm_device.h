@@ -50,6 +50,10 @@ BANKREF_EXTERN(VM_DEVICE_EXT)
 #define TOUCH_Y_REG                    0xFEA5
 // Register of the pressed state of the touch device.
 #define TOUCH_PRESSED_REG              0xFEA6
+// Register of the key modifier flags.
+#define KEY_MODIFIER_FLAGS_REG         0xFEA8
+// Register of the first valid key code in buffer.
+#define KEY_CODE_REG                   0xFEA9
 // Register of the streaming status.
 #define STREAMING_STATUS_REG           0xFEAC
 // Address of the streaming byte.
@@ -97,6 +101,19 @@ BANKREF_EXTERN(VM_DEVICE_EXT)
 #define VRAM_BASE_TILE_ADDRESS(BASE)   ((((BASE) >= 128) ? (VRAM_BKG0_TILE_ADDRESS - MUL16(128)) : (VRAM_BKG1_TILE_ADDRESS)) + MUL16(BASE))
 
 /**< Common. */
+
+__BYTE_REG EXTF;
+__BYTE_REG PLTF;
+__BYTE_REG LOCF;
+__BYTE_REG TCHX;
+__BYTE_REG TCHY;
+__BYTE_REG TCHF;
+__BYTE_REG KEYM;
+__BYTE_REG KEYC;
+__BYTE_REG STMF;
+__BYTE_REG STMB;
+__BYTE_REG TRSF;
+__BYTE_REG TRSC;
 
 extern UINT8 device_type;
 
