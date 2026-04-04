@@ -34755,7 +34755,61 @@ private:
 				return true;
 			}
 		);
-		const Combinator While( // `WHILE` loop.
+		const Combinator While1( // Single line `WHILE` loop.
+			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				State q = begin();
+				Node::Array children;
+				const int index = q.index;
+
+				if (!LineNumber(q, opts)) return false;
+				if (!must(Token::Types::KEYWORD, "while")(q)) return false;
+				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				{
+					Node::Ptr do_(new NodeDo());
+					children.push_back(do_);
+				}
+				{
+					State q1 = q;
+					if (
+						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						forwardN(2, Token::Types::KEYWORD, "while")(q1.index)
+					) { // Paired `END WHILE` is identical with `WEND`.
+						Token::Ptr node(new Token());
+						node
+							->type(Token::Types::KEYWORD)
+							->data("wend");
+						q1.tokens.push_back(node);
+						q1.index += 2;
+					} else if (!must(Token::Types::KEYWORD, "wend")(q1)) {
+						return false;
+					}
+					q.index = q1.index;
+
+					ignore(Token::Types::COMMENT)(q);
+					if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+				}
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+
+				Node::Ptr node = createNode(
+					"while", "_",
+					{
+						{ "allow_call", false }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				node->add(children);
+
+				return true;
+			}
+		);
+		const Combinator WhileN( // Multiline `WHILE` loop.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				PROC_GUARD(beginStructure("while"), endStructure());
 
@@ -38338,7 +38392,7 @@ private:
 			/**< Loop. */
 
 			For, Next,
-			While,
+			While1, WhileN,
 			Repeat,
 			Exit,
 
