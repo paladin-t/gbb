@@ -34784,9 +34784,6 @@ private:
 						return false;
 					}
 					q.index = q1.index;
-
-					ignore(Token::Types::COMMENT)(q);
-					if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
@@ -34878,7 +34875,46 @@ private:
 				return true;
 			}
 		);
-		const Combinator Repeat( // `REPEAT` loop.
+		const Combinator Repeat1( // Single line `REPEAT` loop.
+			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				State q = begin();
+				Node::Array children;
+				const int index = q.index;
+
+				if (!LineNumber(q, opts)) return false;
+				if (!must(Token::Types::KEYWORD, "repeat")(q)) return false;
+				{
+					Node::Ptr do_(new NodeDo());
+					children.push_back(do_);
+				}
+				{
+					State q1 = q;
+					if (!must(Token::Types::KEYWORD, "until")(q1)) return false;
+					q.index = q1.index;
+				}
+				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+
+				Node::Ptr node = createNode(
+					"repeat", "_",
+					{
+						{ "allow_call", false }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				node->add(children);
+
+				return true;
+			}
+		);
+		const Combinator RepeatN( // Multiline `REPEAT` loop.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				PROC_GUARD(beginStructure("repeat"), endStructure());
 
@@ -38393,7 +38429,7 @@ private:
 
 			For, Next,
 			While1, WhileN,
-			Repeat,
+			Repeat1, RepeatN,
 			Exit,
 
 			/**< Jump. */
