@@ -804,6 +804,10 @@ struct Options {
 	 */
 	std::string font;
 	/**
+	 * @brief The pre-defined macros.
+	 */
+	std::string macros;
+	/**
 	 * @brief The path or target of the AST output, can be "none", "stdout" or
 	 *   file path.
 	 */

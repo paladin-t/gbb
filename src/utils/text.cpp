@@ -929,6 +929,30 @@ Text::Array Text::split(const std::string &str, const std::string &delims, bool 
 	return ret;
 }
 
+Text::Array Text::split(const std::string &str, char delimiter, char quote) {
+	Array ret;
+	std::string current;
+	bool inQuote = false;
+
+	for (size_t i = 0; i < str.size(); ++i) {
+		const char c = str[i];
+
+		if (c == quote) {
+			inQuote = !inQuote;
+			current += c;
+		} else if (c == delimiter && !inQuote) {
+			ret.push_back(current);
+			current.clear();
+		} else {
+			current += c;
+		}
+	}
+	if (!current.empty() || (str.back() == delimiter && !inQuote))
+		ret.push_back(current);
+
+	return ret;
+}
+
 Text::Array Text::tokenise(const std::string &str, const std::string &singleDelims, const std::string &doubleDelims, bool parseUpToNext, size_t maxSplits) {
 	// Prepare.
 	Array ret;

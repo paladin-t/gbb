@@ -148,6 +148,7 @@ public:
 	static std::string replace(const std::string &str, const std::string &from, const std::string &to, bool all = true);
 	static std::string join(const Array &array, const std::string &sep);
 	static Array split(const std::string &str, const std::string &delims, bool parseUpToNext = true, size_t maxSplits = 0);
+	static Array split(const std::string &str, char delimiter, char quote);
 	static Array tokenise(const std::string &str, const std::string &singleDelims, const std::string &doubleDelims, bool parseUpToNext, size_t maxSplits = 0);
 	/**
 	 * @param[out] txt

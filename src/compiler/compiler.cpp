@@ -30411,7 +30411,7 @@ public:
 		Node::MacroStackReferenceTable::Stack &macroStackReferences,
 		Node::MacroStringTable::Stack &macroStrings,
 		Macro::List &macros,
-		const Macros &builtinMacros,
+		const Macros &preDefinedMacros,
 		Error::Handler onError
 	) {
 		// Prepare.
@@ -30443,7 +30443,7 @@ public:
 			                             macroStackReferences,
 			                             macroStrings,
 			                             macros,
-			                             builtinMacros,
+			                             preDefinedMacros,
 			                             _options,
 			                             gotError
 			                         );
@@ -31115,7 +31115,7 @@ private:
 		Node::MacroStackReferenceTable::Stack &macroStackReferences,
 		Node::MacroStringTable::Stack &macroStrings,
 		Macro::List &macros,
-		const Macros &builtinMacros,
+		const Macros &preDefinedMacros,
 		const Options &options,
 		Error::Handler onError_
 	) {
@@ -31134,22 +31134,53 @@ private:
 		Node::Ptr ast(new NodePage());
 		ast->options(opts);
 
-		// Define builtin macros.
-		for (Macros::value_type kv : builtinMacros) {
+		// Use pre-define macros.
+		for (Macros::value_type kv : preDefinedMacros) {
 			std::string name = kv.first;
 			Text::toLowerCase(name);
 			const Variant &data_ = kv.second;
-			const int val = (int)data_;
+			switch (data_.type()) {
+			case Variant::NIL: // Fall through.
+			case Variant::BOOLEAN: // Fall through.
+			case Variant::INTEGER: // Fall through.
+			case Variant::LONG: // Fall through.
+			case Variant::REAL: {
+					const int val = (int)data_;
 
-			Token::Ptr tk(new Token());
-			tk
-				->type(Token::Types::INTEGER)
-				->data(val)
-				->text(Text::toString(val));
+					Token::Ptr tk(new Token());
+					tk
+						->type(Token::Types::INTEGER)
+						->data(val)
+						->text(Text::toString(val));
 
-			macroConstants.add(name, Node::MacroConstantTable::Entry(tk, val)); // Add to the macro constant table.
-			const Macro macro(name, Macro::Types::CONSTANT, val, TextLocation::INVALID());
-			macros.push_back(macro); // Add to the exposable macro list.
+					macroConstants.add(name, Node::MacroConstantTable::Entry(tk, val)); // Add to the macro constant table.
+					const Macro macro(name, Macro::Types::CONSTANT, val, TextLocation::INVALID());
+					macros.push_back(macro); // Add to the exposable macro list.
+				}
+
+				break;
+			case Variant::STRING: {
+					const int val = (int)data_;
+
+					Token::Ptr tk(new Token());
+					tk
+						->type(Token::Types::INTEGER)
+						->data(val)
+						->text(Text::toString(val));
+
+					macroConstants.add(name, Node::MacroConstantTable::Entry(tk, val)); // Add to the macro constant table.
+					const Macro macro(name, Macro::Types::CONSTANT, val, TextLocation::INVALID());
+					macros.push_back(macro); // Add to the exposable macro list.
+				}
+
+				break;
+			default: {
+					const Error err("Unsupported macro data type of \"{0}\"", true);
+					onError_(err, err.format({ kv.first }), TextLocation::INVALID());
+				}
+
+				break;
+			}
 		}
 
 		/**< Processors. */
@@ -40301,6 +40332,7 @@ bool load(Program &program, Options &options) {
 
 bool compile(Program &program, const Options &options) {
 	// Prepare.
+	const std::string &macros                                                  = options.macros;
 	const std::string &ast                                                     = options.ast;
 	const Options::Passes passes                                               = options.passes;
 	const Bytes::Ptr &icon                                                     = options.icon;
@@ -40434,12 +40466,66 @@ bool compile(Program &program, const Options &options) {
 	const bool extension = (compatibility & GBBASIC::Options::Strategies::Compatibilities::EXTENSION) != GBBASIC::Options::Strategies::Compatibilities::NONE;
 	const bool sram = sramType != 0x00;
 	const bool rtc = cartridgeHasRtc;
-	const Parser::Macros builtinMacros = {
-		{ "IS_COLORED_CARTRIDGE", colored ? 1 : 0 },
+	const Parser::Macros builtInMacros = {
+		{ "IS_COLORED_CARTRIDGE",   colored   ? 1 : 0 },
 		{ "IS_EXTENSION_CARTRIDGE", extension ? 1 : 0 },
-		{ "CARTRIDGE_HAS_SRAM", sram ? 1 : 0 },
-		{ "CARTRIDGE_HAS_RTC", rtc ? 1 : 0 }
+		{ "CARTRIDGE_HAS_SRAM",     sram      ? 1 : 0 },
+		{ "CARTRIDGE_HAS_RTC",      rtc       ? 1 : 0 }
 	};
+	Parser::Macros preDefinedMacros;
+	const Text::Array macroItems = Text::split(macros, ',', '"');
+	for (std::string macroItem : macroItems) {
+		macroItem = Text::trim(macroItem);
+		if (macroItem.empty()) {
+			const std::string msg = Text::format("Unsupported macro item \"{0}\"", { macroItem });
+			onError_(msg, true, -1, -1, -1);
+
+			continue;
+		}
+
+		const size_t idx = Text::indexOf(macroItem, "=");
+		if (idx == std::string::npos) {
+			const std::string msg = Text::format("Unsupported macro format \"{0}\"", { macroItem });
+			onError_(msg, true, -1, -1, -1);
+
+			continue;
+		}
+
+		std::string key = macroItem.substr(0, idx);
+		std::string val = macroItem.substr(idx + 1);
+		key = Text::trim(key);
+		val = Text::trim(val);
+		if (key.empty() || val.empty())
+			continue;
+
+		bool boolean = false;
+		if (Text::fromString(val, boolean)) {
+			preDefinedMacros.insert(std::make_pair(key, boolean));
+
+			continue;
+		}
+		Variant::Long long_ = 0;
+		if (Text::fromString(val, long_)) {
+			preDefinedMacros.insert(std::make_pair(key, long_));
+
+			continue;
+		}
+		if (val.length() >= 2 && val.front() == '"' && val.back() == '"') {
+			const std::string str = val.substr(1, val.length() - 2);
+			preDefinedMacros.insert(std::make_pair(key, str));
+
+			continue;
+		}
+
+		const std::string msg = Text::format("Unsupported macro value \"{0}\"", { val });
+		onError_(msg, true, -1, -1, -1);
+	}
+	for (const Parser::Macros::value_type &kv : builtInMacros) {
+		if (preDefinedMacros.find(kv.first) != preDefinedMacros.end())
+			continue;
+
+		preDefinedMacros.insert(kv);
+	}
 
 	// Parse, organize and compile the source code.
 	int codeLength = 0;
@@ -40449,7 +40535,7 @@ bool compile(Program &program, const Options &options) {
 		int parsingErrors = 0;
 
 		// Parse.
-		Macro::List macros;
+		Macro::List macros_;
 		for (int i = 0; i < program.assets->code.count(); ++i) {
 			std::string code;
 			CodeAssets::Entry* entry = program.assets->code.get(i);
@@ -40463,8 +40549,8 @@ bool compile(Program &program, const Options &options) {
 				compiler.macroIdentifierAliases(),
 				compiler.macroStackReferences(),
 				compiler.macroStrings(),
-				macros,
-				builtinMacros,
+				macros_,
+				preDefinedMacros,
 				onError
 			);
 			if (!ok) {
@@ -40478,7 +40564,7 @@ bool compile(Program &program, const Options &options) {
 			asts.push_back(parser.ast());
 			codeLength += (int)code.length();
 		}
-		program.compiled.macros = macros;
+		program.compiled.macros = macros_;
 
 		if (parsingErrors == 0)
 			onPrint("Succeeded to parse the source code.");
