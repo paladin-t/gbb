@@ -50,6 +50,9 @@
 #ifndef COMPILER_INPUT_OPTION_KEY
 #	define COMPILER_INPUT_OPTION_KEY ""
 #endif /* COMPILER_INPUT_OPTION_KEY */
+#ifndef COMPILER_MACROS_OPTION_KEY
+#	define COMPILER_MACROS_OPTION_KEY "q"
+#endif /* COMPILER_MACROS_OPTION_KEY */
 #ifndef COMPILER_OPTIMIZE_CODE_OPTION_KEY
 #	define COMPILER_OPTIMIZE_CODE_OPTION_KEY "z"
 #endif /* COMPILER_OPTIMIZE_CODE_OPTION_KEY */
@@ -279,6 +282,7 @@ struct Macro { // FEAT: MACRO.
 		CONSTANT,        // `DEF ... = N`.
 		VARIABLE_ALIAS,  // `DEF ... = var`.
 		STACK_REFERENCE, // `DEF ... = STACKN`.
+		STRING,          // `DEF ... = "..."`.
 		COUNT
 	};
 
@@ -392,6 +396,7 @@ public:
 		DEF_CONSTANT,
 		DEF_IDENTIFIER_ALIAS,
 		DEF_STACK_N,
+		DEF_STRING,
 		LOCATE,
 		PRINT,
 		CLS,
@@ -801,6 +806,10 @@ struct Options {
 	 * @brief The path of the font configuration file.
 	 */
 	std::string font;
+	/**
+	 * @brief The pre-defined macros.
+	 */
+	std::string macros;
 	/**
 	 * @brief The path or target of the AST output, can be "none", "stdout" or
 	 *   file path.

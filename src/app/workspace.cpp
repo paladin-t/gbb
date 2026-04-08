@@ -5648,6 +5648,9 @@ void Workspace::compile(
 			options.font = fntOpt->second;
 		else
 			options.font = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
+		Text::Dictionary::const_iterator pdmOpt = arguments.find(COMPILER_MACROS_OPTION_KEY);
+		if (pdmOpt != arguments.end())
+			options.macros = pdmOpt->second;
 		Text::Dictionary::const_iterator astOpt = arguments.find(COMPILER_AST_OPTION_KEY);
 		if (vmOpt != arguments.end())
 			options.ast = astOpt->second;
