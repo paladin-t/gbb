@@ -31160,16 +31160,16 @@ private:
 
 				break;
 			case Variant::STRING: {
-					const int val = (int)data_;
+					const std::string val = (std::string)data_;
 
 					Token::Ptr tk(new Token());
 					tk
-						->type(Token::Types::INTEGER)
+						->type(Token::Types::STRING)
 						->data(val)
-						->text(Text::toString(val));
+						->text(val);
 
-					macroConstants.add(name, Node::MacroConstantTable::Entry(tk, val)); // Add to the macro constant table.
-					const Macro macro(name, Macro::Types::CONSTANT, val, TextLocation::INVALID());
+					macroStrings.add(name, Node::MacroStringTable::Entry(tk, val)); // Add to the macro string table.
+					const Macro macro(name, Macro::Types::STRING, val, TextLocation::INVALID());
 					macros.push_back(macro); // Add to the exposable macro list.
 				}
 
@@ -40495,9 +40495,26 @@ bool compile(Program &program, const Options &options) {
 		std::string val = macroItem.substr(idx + 1);
 		key = Text::trim(key);
 		val = Text::trim(val);
-		if (key.empty() || val.empty())
-			continue;
+		if (key.empty()) {
+			const std::string msg = Text::format("Unsupported macro key \"{0}\"", { key });
+			onError_(msg, true, -1, -1, -1);
 
+			continue;
+		}
+		if (val.empty()) {
+			const std::string msg = Text::format("Unsupported macro value \"{0}\"", { val });
+			onError_(msg, true, -1, -1, -1);
+
+			continue;
+		}
+
+		std::string val_ = val;
+		Text::toLowerCase(val_);
+		if (val_ == "nothing") {
+			preDefinedMacros.insert(std::make_pair(key, nullptr));
+
+			continue;
+		}
 		bool boolean = false;
 		if (Text::fromString(val, boolean)) {
 			preDefinedMacros.insert(std::make_pair(key, boolean));
@@ -40510,7 +40527,13 @@ bool compile(Program &program, const Options &options) {
 
 			continue;
 		}
-		if (val.length() >= 2 && val.front() == '"' && val.back() == '"') {
+		if (val.length() >= 4 && Text::startsWith(val, "\\\"", false) && Text::endsWith(val, "\\\"", false)) {
+			const std::string str = val.substr(2, val.length() - 4);
+			preDefinedMacros.insert(std::make_pair(key, str));
+
+			continue;
+		}
+		if (val.length() >= 2 && Text::startsWith(val, "'", false) && Text::endsWith(val, "'", false)) {
 			const std::string str = val.substr(1, val.length() - 2);
 			preDefinedMacros.insert(std::make_pair(key, str));
 

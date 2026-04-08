@@ -4310,6 +4310,7 @@ promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspac
 			arguments[COMPILER_SYM_OPTION_KEY]                              = sym;
 			arguments[COMPILER_ALIASES_OPTION_KEY]                          = aliases;
 			arguments[COMPILER_FONT_OPTION_KEY]                             = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
+			// Do not: `arguments[COMPILER_MACROS_OPTION_KEY]               = "";`.
 #if defined GBBASIC_DEBUG
 			arguments[COMPILER_AST_OPTION_KEY]                              = "stdout";
 #else /* GBBASIC_DEBUG */

@@ -934,6 +934,9 @@ Text::Array Text::split(const std::string &str, char delimiter, char quote) {
 	std::string current;
 	bool inQuote = false;
 
+	if (str.empty())
+		return ret;
+
 	for (size_t i = 0; i < str.size(); ++i) {
 		const char c = str[i];
 
