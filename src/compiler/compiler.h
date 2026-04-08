@@ -279,6 +279,7 @@ struct Macro { // FEAT: MACRO.
 		CONSTANT,        // `DEF ... = N`.
 		VARIABLE_ALIAS,  // `DEF ... = var`.
 		STACK_REFERENCE, // `DEF ... = STACKN`.
+		STRING,          // `DEF ... = "..."`.
 		COUNT
 	};
 
@@ -392,6 +393,7 @@ public:
 		DEF_CONSTANT,
 		DEF_IDENTIFIER_ALIAS,
 		DEF_STACK_N,
+		DEF_STRING,
 		LOCATE,
 		PRINT,
 		CLS,

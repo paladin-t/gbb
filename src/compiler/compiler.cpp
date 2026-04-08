@@ -3831,6 +3831,16 @@ public:
 		}
 	};
 	typedef MacroTable<MacroStackReferenceEntry> MacroStackReferenceTable; // FEAT: MACRO.
+	struct MacroStringEntry {
+		Token::Ptr string = nullptr;
+		std::string value;
+
+		MacroStringEntry() {
+		}
+		MacroStringEntry(const Token::Ptr &const_, const std::string &val) : string(const_), value(val) {
+		}
+	};
+	typedef MacroTable<MacroStringEntry> MacroStringTable; // FEAT: MACRO.
 
 	struct RomAllocator {
 	private:
@@ -14895,6 +14905,26 @@ public:
 
 	virtual std::string dump(int depth) const override {
 		return dump(depth, "DEF STACKN");
+	}
+	using Node::dump;
+};
+
+class NodeDefString : public NodeMacro {
+public:
+	NodeDefString() {
+	}
+	virtual ~NodeDefString() override {
+	}
+
+	NODE_TYPE(Types::DEF_STRING)
+
+	virtual Abstract abstract(void) const override {
+		return abstract("DEF STRING");
+	}
+	using Node::abstract;
+
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "DEF STRING");
 	}
 	using Node::dump;
 };
@@ -29780,6 +29810,7 @@ public:
 			ADD_STATEMENT("def ...=N",         node<NodeDefConstant>(),                    Token::Types::KEYWORD,    false);
 			ADD_STATEMENT("def ...=id",        node<NodeDefIdentifierAlias>(),             Token::Types::KEYWORD,    false);
 			ADD_STATEMENT("def ...=stackN",    node<NodeDefStackN>(),                      Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("def ...=\"...\"",   node<NodeDefString>(),                      Token::Types::KEYWORD,    false);
 
 			/**< Standard functions. */
 
@@ -30378,6 +30409,7 @@ public:
 		Node::MacroConstantTable::Stack &macroConstants,
 		Node::MacroIdentifierAliasTable::Stack &macroIdentifierAliases,
 		Node::MacroStackReferenceTable::Stack &macroStackReferences,
+		Node::MacroStringTable::Stack &macroStrings,
 		Macro::List &macros,
 		const Macros &builtinMacros,
 		Error::Handler onError
@@ -30409,6 +30441,7 @@ public:
 			                             macroConstants,
 			                             macroIdentifierAliases,
 			                             macroStackReferences,
+			                             macroStrings,
 			                             macros,
 			                             builtinMacros,
 			                             _options,
@@ -31080,6 +31113,7 @@ private:
 		Node::MacroConstantTable::Stack &macroConstants,
 		Node::MacroIdentifierAliasTable::Stack &macroIdentifierAliases,
 		Node::MacroStackReferenceTable::Stack &macroStackReferences,
+		Node::MacroStringTable::Stack &macroStrings,
 		Macro::List &macros,
 		const Macros &builtinMacros,
 		const Options &options,
@@ -31324,6 +31358,7 @@ private:
 				macroConstants.push();
 				macroIdentifierAliases.push();
 				macroStackReferences.push();
+				macroStrings.push();
 				if (idx >= 0 && idx < (int)tokens.size()) {
 					const Token::Ptr &tk = tokens[idx];
 					const TextLocation &loc = tk->begin();
@@ -31348,6 +31383,7 @@ private:
 				macroConstants.pop();
 				macroIdentifierAliases.pop();
 				macroStackReferences.pop();
+				macroStrings.pop();
 			};
 		};
 		auto headOfCurrentScope = [&] (void) -> TextLocation {
@@ -31515,6 +31551,8 @@ private:
 				return true;
 			if (macroStackReferences.find(name, 1 /* local only */))
 				return true;
+			if (macroStrings.find(name, 1 /* local only */))
+				return true;
 
 			return false;
 		};
@@ -31528,6 +31566,8 @@ private:
 			if (macroIdentifierAliases.find(name))
 				return true;
 			if (macroStackReferences.find(name))
+				return true;
+			if (macroStrings.find(name))
 				return true;
 
 			return false;
@@ -32512,6 +32552,28 @@ private:
 
 			return true;
 		};
+		auto MacroString = [&] (State &q, Node::Array &children, const std::string &name) -> bool { // Macro for string.
+			(void)children;
+
+			State q1 = begin();
+			q1.index = q.index;
+			Token::Ptr id = nullptr;
+
+			if (!(id = must(Token::Types::IDENTIFIER)(q1))) return false;
+
+			const Node::MacroStringTable::Entry* string = macroStrings.find(name); // FEAT: MACRO.
+			GBBASIC_ASSERT(string && "Impossible.");
+			{
+				const Token::Ptr &tk = string->string;
+				q.tokens.push_back(tk);
+			}
+
+			q1.success = true;
+			end(q1);
+			q.index = q1.index;
+
+			return true;
+		};
 		auto StackN = [&] (State &q, Node::Array &children, int index) -> bool { // `STACKN` statement.
 			const std::string key = "stack" + Text::toString(index);
 
@@ -33276,6 +33338,15 @@ private:
 						const int qi = q.index;
 						if (MacroStackN(q, children, name)) {
 							Intermedia(q, children, Token::Types::MACRO);
+							n += q.index - qi;
+
+							continue;
+						}
+					}
+					const Node::MacroStringTable::Entry* stringEntry = macroStrings.find(name); // FEAT: MACRO.
+					if (stringEntry) { // User defined macro string.
+						const int qi = q.index;
+						if (MacroString(q, children, name)) {
 							n += q.index - qi;
 
 							continue;
@@ -35904,6 +35975,60 @@ private:
 				return true;
 			}
 		);
+		const Combinator DefString( // FEAT: MACRO. `DEF ... = "..."`.
+			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				State q = begin();
+				Node::Array children;
+				Token::Ptr id = nullptr;
+				std::string name;
+				int r = 0;
+
+				if (!LineNumber(q, opts)) return false;
+				if (!must(Token::Types::KEYWORD, "def")(q)) return false;
+				if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
+				else name = (std::string)id->data();
+				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, name); }
+				if (must(Token::Types::OPERATOR, "=")(q)) {
+					r = q.index;
+					if (!Arguments(q, children)) return false;
+					CHECK_UNEXPECTED(q);
+				} else {
+					return throwInvalidSyntax(q.index);
+				}
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+
+				if (children.size() < 1) return throwTooFewArguments(r);
+				else if (children.size() > 1) return throwTooManyArguments(r);
+
+				if (!children.front()->onlyToken())
+					return false;
+
+				Node::Ptr node = createNode(
+					"def ...=\"...\"", "_",
+					{
+						{ "allow_call", false }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				node->add(children);
+
+				Token::Ptr var = node->onlyTokenInOnlyChild();
+				const std::string &varName = var->text();
+				macroStrings.add(name, Node::MacroStringTable::Entry(var, varName)); // Add to the macro string table.
+				const Variant data = varName;
+				const Macro macro(name, Macro::Types::STRING, data, headOfCurrentScope());
+				macros.push_back(macro); // Add to the exposable macro list.
+
+				return true;
+			}
+		);
 		const Combinator DefExpression( // FEAT: MACRO. Translate `DEF FN = ...` as `DEF FN(...) = ...`.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				State q = begin();
@@ -38452,6 +38577,7 @@ private:
 			DefConstant,
 			DefIdentifierAlias,
 			DefStackN,
+			DefString,
 			DefExpression,
 
 			/**< Bank/address of. */
@@ -38855,6 +38981,7 @@ private:
 	Node::MacroConstantTable::Stack _macroConstants;
 	Node::MacroIdentifierAliasTable::Stack _macroIdentifierAliases;
 	Node::MacroStackReferenceTable::Stack _macroStackReferences;
+	Node::MacroStringTable::Stack _macroStrings;
 	BorderFrameResources _borderFrameResources;
 	SuperPaletteResources _superPaletteResources;
 	AssetsBundle::Ptr _assets = nullptr;
@@ -39023,6 +39150,9 @@ public:
 	Node::MacroStackReferenceTable::Stack &macroStackReferences(void) {
 		return _macroStackReferences;
 	}
+	Node::MacroStringTable::Stack &macroStrings(void) {
+		return _macroStrings;
+	}
 
 	const Bytes::Ptr &bytes(void) const {
 		return _bytes;
@@ -39071,6 +39201,7 @@ public:
 			_macroConstants,
 			_macroIdentifierAliases,
 			_macroStackReferences,
+			_macroStrings,
 			_assets,
 			pipeline,
 			allocations,
@@ -39087,7 +39218,8 @@ public:
 			_macroFunctions,
 			_macroConstants,
 			_macroIdentifierAliases,
-			_macroStackReferences
+			_macroStackReferences,
+			_macroStrings
 		);
 
 		borderFrameResources = _borderFrameResources;
@@ -39110,6 +39242,7 @@ private:
 		Node::MacroConstantTable::Stack &macroConstants,
 		Node::MacroIdentifierAliasTable::Stack &macroIdentifierAliases,
 		Node::MacroStackReferenceTable::Stack &macroStackReferences,
+		Node::MacroStringTable::Stack &macroStrings,
 		AssetsBundle::Ptr assets,
 		Pipeline::Ptr pipeline,
 		RamLocation::Dictionary* allocations,
@@ -39149,6 +39282,7 @@ private:
 		(void)                                           macroConstants;         // FEAT: MACRO.
 		(void)                                           macroIdentifierAliases; // FEAT: MACRO.
 		(void)                                           macroStackReferences;   // FEAT: MACRO.
+		(void)                                           macroStrings;           // FEAT: MACRO.
 		context.top().borderFrameResources            =  borderFrameResources;
 		context.top().superPaletteResources           =  superPaletteResources;
 		context.top().assets                          =  assets;
@@ -39231,7 +39365,8 @@ private:
 		Node::MacroFunctionTable::Stack &macroFunctions,
 		Node::MacroConstantTable::Stack &macroConstants,
 		Node::MacroIdentifierAliasTable::Stack &macroIdentifierAliases,
-		Node::MacroStackReferenceTable::Stack &macroStackReferences
+		Node::MacroStackReferenceTable::Stack &macroStackReferences,
+		Node::MacroStringTable::Stack &macroStrings
 	) {
 		builtins.filter(
 			[] (const std::string &, const BuiltinTable::Entry &entry) -> bool {
@@ -39243,6 +39378,7 @@ private:
 		macroConstants.clear();
 		macroIdentifierAliases.clear();
 		macroStackReferences.clear();
+		macroStrings.clear();
 	}
 };
 
@@ -40326,6 +40462,7 @@ bool compile(Program &program, const Options &options) {
 				compiler.macroConstants(),
 				compiler.macroIdentifierAliases(),
 				compiler.macroStackReferences(),
+				compiler.macroStrings(),
 				macros,
 				builtinMacros,
 				onError
