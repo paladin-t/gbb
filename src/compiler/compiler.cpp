@@ -34762,6 +34762,8 @@ private:
 
 				node->add(children);
 
+				identifiers.use(name);
+
 				return true;
 			}
 		);
