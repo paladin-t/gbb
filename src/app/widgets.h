@@ -938,6 +938,8 @@ private:
 	Renderer* _renderer = nullptr; // Foreign.
 	Theme* _theme = nullptr; // Foreign.
 	std::string _title;
+	char _titleBuffer[WIDGETS_TEXT_BUFFER_SIZE]; // Fixed size.
+	char _macrosBuffer[1024]; // Fixed size.
 	float _superFeaturesBeginX = 0.0f;
 	float _superFeaturesEndX = 0.0f;
 	float _superFeaturesEnabledWidth = 72.0f;
@@ -949,7 +951,6 @@ private:
 	Text::Array _superPaletteNames;
 	Project* _project = nullptr; // Foreign.
 	Project* _projectShadow = nullptr;
-	char _buffer[WIDGETS_TEXT_BUFFER_SIZE]; // Fixed size.
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;

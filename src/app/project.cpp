@@ -161,6 +161,7 @@ Project &Project::operator = (const Project &other) {
 	runOnOpen(other.runOnOpen());
 	caseInsensitive(other.caseInsensitive());
 	strictOn(other.strictOn());
+	preDefinedMacros(other.preDefinedMacros());
 	superFeaturesEnabled(other.superFeaturesEnabled());
 	borderFrameType(other.borderFrameType());
 	borderFrameCode(other.borderFrameCode());
@@ -1967,6 +1968,7 @@ bool Project::open(const char* path_) {
 		runOnOpen(true); // Run-on-open for ROM typed project.
 		caseInsensitive(true);
 		strictOn(true);
+		preDefinedMacros("");
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
 		created(now);
@@ -2037,6 +2039,7 @@ bool Project::open(const char* path_) {
 		runOnOpen(false);
 		caseInsensitive(true);
 		strictOn(true);
+		preDefinedMacros("");
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
 		created(now);
@@ -2507,6 +2510,7 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		runOnOpen(false);
 		caseInsensitive(true);
 		strictOn(true);
+		preDefinedMacros("");
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
 		created(now);
@@ -2891,6 +2895,11 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 		strictOn(true);
 	}
 
+	preDefinedMacros("");
+	if (!Jpath::get(doc, preDefinedMacros(), "pre_defined_macros")) {
+		preDefinedMacros("");
+	}
+
 	superFeaturesEnabled(false);
 	if (!Jpath::get(doc, superFeaturesEnabled(), "super_features", "enabled")) {
 		superFeaturesEnabled(false);
@@ -3145,6 +3154,8 @@ bool Project::saveInformation(std::string &content) {
 	Jpath::set(doc, doc, caseInsensitive(), "case_insensitive");
 
 	Jpath::set(doc, doc, strictOn(), "strict_on");
+
+	Jpath::set(doc, doc, preDefinedMacros(), "pre_defined_macros");
 
 	Jpath::set(doc, doc, superFeaturesEnabled(), "super_features", "enabled");
 

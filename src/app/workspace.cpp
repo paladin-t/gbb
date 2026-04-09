@@ -4100,6 +4100,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		prj->iconCode(prj_->iconCode());
 		prj->caseInsensitive(prj_->caseInsensitive());
 		prj->strictOn(prj_->strictOn());
+		prj->preDefinedMacros(prj_->preDefinedMacros());
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
 		prj->borderFrameCode(prj_->borderFrameCode());
@@ -4157,6 +4158,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		prj->iconCode(prj_->iconCode());
 		prj->caseInsensitive(prj_->caseInsensitive());
 		prj->strictOn(prj_->strictOn());
+		prj->preDefinedMacros(prj_->preDefinedMacros());
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
 		prj->borderFrameCode(prj_->borderFrameCode());
@@ -4973,6 +4975,7 @@ bool Workspace::analyze(bool force) {
 		return true;
 	if (prj->contentType() != Project::ContentTypes::BASIC)
 		return true;
+	const std::string &preDefinedMacros = prj->preDefinedMacros();
 
 	if (!force) {
 		if (popupBox() || menuOpened())
@@ -5017,6 +5020,7 @@ bool Workspace::analyze(bool force) {
 	staticAnalyzer()->analyze(
 		krnl.get(),
 		assets,
+		preDefinedMacros,
 		[this, finish] (void) -> void { // On main thread.
 			const Project::Ptr &prj = currentProject();
 			if (!prj)
@@ -5573,6 +5577,7 @@ void Workspace::compile(
 		bool hasRtc = true;
 		bool caseInsensitive = true;
 		bool strictOn = true;
+		std::string preDefinedMacros;
 		if (project) {
 			if (!project->cartridgeType().empty())
 				cartType = project->cartridgeType();
@@ -5581,6 +5586,7 @@ void Workspace::compile(
 			hasRtc = project->hasRtc();
 			caseInsensitive = project->caseInsensitive();
 			strictOn = project->strictOn();
+			preDefinedMacros = project->preDefinedMacros();
 		}
 
 #if GBBASIC_MULTITHREAD_ENABLED
@@ -5654,6 +5660,10 @@ void Workspace::compile(
 		Text::Dictionary::const_iterator astOpt = arguments.find(COMPILER_AST_OPTION_KEY);
 		if (vmOpt != arguments.end())
 			options.ast = astOpt->second;
+
+		if (!preDefinedMacros.empty() && preDefinedMacros.back() != ',' && !options.macros.empty())
+			preDefinedMacros.push_back(',');
+		options.macros = preDefinedMacros + options.macros; // Concat the macro definitions.
 
 		// Initialize the cartridge options.
 		if (project) {

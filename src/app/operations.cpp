@@ -1021,6 +1021,7 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			prj->hasRtc(false);
 			prj->caseInsensitive(true);
 			prj->strictOn(true);
+			prj->preDefinedMacros("");
 			prj->description("");
 			prj->author("");
 			prj->genre("");

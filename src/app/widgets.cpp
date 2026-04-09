@@ -537,7 +537,7 @@ InputPopupBox::InputPopupBox(
 	_confirmedHandler(confirm), _canceledHandler(cancel)
 {
 	memset(_buffer, 0, sizeof(_buffer));
-	memcpy(_buffer, _default.c_str(), Math::min(sizeof(_buffer), _default.length()));
+	memcpy(_buffer, _default.c_str(), Math::min(sizeof(_buffer) - 1, _default.length()));
 
 	if (confirmTxt)
 		_confirmText = confirmTxt;
@@ -637,7 +637,7 @@ ProjectCreatingPopupBox::ProjectCreatingPopupBox(
 	_confirmedHandler(confirm), _canceledHandler(cancel)
 {
 	memset(_buffer, 0, sizeof(_buffer));
-	memcpy(_buffer, _default.c_str(), Math::min(sizeof(_buffer), _default.length()));
+	memcpy(_buffer, _default.c_str(), Math::min(sizeof(_buffer) - 1, _default.length()));
 
 	if (confirmTxt)
 		_confirmText = confirmTxt;
@@ -1672,7 +1672,7 @@ EmulatorBuildSettingsPopupBox::EmulatorBuildSettingsPopupBox(
 	_hasArgs = !!args;
 	memset(_argsBuffer, 0, sizeof(_argsBuffer));
 	if (args)
-		memcpy(_argsBuffer, args, Math::min(sizeof(_argsBuffer), strlen(args)));
+		memcpy(_argsBuffer, args, Math::min(sizeof(_argsBuffer) - 1, strlen(args)));
 
 	if (confirmTxt)
 		_confirmText = confirmTxt;
@@ -2055,7 +2055,7 @@ SearchPopupBox::SearchPopupBox(
 	_confirmedHandler(confirm), _canceledHandler(cancel)
 {
 	memset(_buffer, 0, sizeof(_buffer));
-	memcpy(_buffer, _default.c_str(), Math::min(sizeof(_buffer), _default.length()));
+	memcpy(_buffer, _default.c_str(), Math::min(sizeof(_buffer) - 1, _default.length()));
 
 	if (confirmTxt)
 		_confirmText = confirmTxt;
@@ -3529,8 +3529,12 @@ ProjectPropertyPopupBox::ProjectPropertyPopupBox(
 	*_projectShadow = *_project;
 
 	const std::string &prjTitle = _project->title();
-	memset(_buffer, 0, sizeof(_buffer));
-	memcpy(_buffer, prjTitle.c_str(), Math::min(sizeof(_buffer), prjTitle.length()));
+	memset(_titleBuffer, 0, sizeof(_titleBuffer));
+	memcpy(_titleBuffer, prjTitle.c_str(), Math::min(sizeof(_titleBuffer) - 1, prjTitle.length()));
+
+	const std::string &preDefinedMacros = _project->preDefinedMacros();
+	memset(_macrosBuffer, 0, sizeof(_macrosBuffer));
+	memcpy(_macrosBuffer, preDefinedMacros.c_str(), Math::min(sizeof(_macrosBuffer) - 1, preDefinedMacros.length()));
 
 	if (confirmTxt)
 		_confirmText = confirmTxt;
@@ -3581,8 +3585,8 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 
 					const float u = GetCursorPosX() - x;
 					SetNextItemWidth(w * 0.5f - u);
-					if (InputText("", _buffer, sizeof(_buffer), ImGuiInputTextFlags_AutoSelectAll))
-						prj->title(_buffer);
+					if (InputText("", _titleBuffer, sizeof(_titleBuffer), ImGuiInputTextFlags_AutoSelectAll))
+						prj->title(_titleBuffer);
 				}
 				PopID();
 
@@ -4102,6 +4106,36 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				}
 				PopID();
 
+				PushID("#Mcro");
+				{
+					if (isEditable) {
+						AlignTextToFramePadding();
+						TextUnformatted(_theme->windowProjectProperty_Compiling_Compiler_Macros());
+						SameLine();
+
+						SetNextItemWidth(GetContentRegionAvail().x);
+						if (InputText("", _macrosBuffer, sizeof(_macrosBuffer), ImGuiInputTextFlags_AutoSelectAll))
+							prj->preDefinedMacros(_macrosBuffer);
+					} else {
+						AlignTextToFramePadding();
+						TextUnformatted(_theme->windowProjectProperty_Compiling_Compiler_Macros());
+						SameLine();
+
+						BeginDisabled();
+						{
+							InputText("", _macrosBuffer, sizeof(_macrosBuffer), ImGuiInputTextFlags_AutoSelectAll);
+						}
+						EndDisabled();
+					}
+
+					if (IsItemHovered()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						SetTooltip(_theme->tooltipProjectProperty_SpecifyPreDefinedMacros());
+					}
+				}
+				PopID();
+
 				EndTabItem();
 			}
 			if (BeginTabItem(_theme->tabProjectProperty_Advanced(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
@@ -4553,6 +4587,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			prj->iconCode()                != _project->iconCode()             ||
 			prj->caseInsensitive()         != _project->caseInsensitive()      ||
 			prj->strictOn()                != _project->strictOn()             ||
+			prj->preDefinedMacros()        != _project->preDefinedMacros()     ||
 			prj->superFeaturesEnabled()    != _project->superFeaturesEnabled() ||
 			prj->borderFrameType()         != _project->borderFrameType()      ||
 			prj->borderFrameCode()         != _project->borderFrameCode()      ||

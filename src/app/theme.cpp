@@ -824,7 +824,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Main_Tab8SpacesWide("Tab (8 spaces wide)");
 	windowPreferences_Emulator_ApplicationIcon("Application icon");
 	windowPreferences_Emulator_InvalidIconSize_512x512IsRecommended("Invalid icon size, 512x512 is recommended");
-	windowPreferences_Emulator_LaunchOptions("  Launch options");
+	windowPreferences_Emulator_LaunchOptions("Launch options");
 	windowPreferences_Emulator_ShowPreferenceDialogOnEscPress("Show preference dialog on ESC press");
 	windowPreferences_Emulator_ShowStatusBar("Show status bar");
 	windowPreferences_Emulator_ShowTitleBar("Show title bar");
@@ -879,6 +879,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowProjectProperty_Project_Sram_None("0KB (None)");
 	windowProjectProperty_Project_Running_StartOnOpen("Start on open");
 	windowProjectProperty_Compiling_Compiler("Compiler:");
+	windowProjectProperty_Compiling_Compiler_Macros("Macros");
 	windowProjectProperty_Compiling_Compiler_StrictOn("Strict on");
 	windowProjectProperty_Compiling_Parser("Parser:");
 	windowProjectProperty_Compiling_Parser_CaseInsensitive("Case-insensitive");
@@ -1438,6 +1439,12 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipProjectProperty_ResetBorder("Reset border");
 	tooltipProjectProperty_ResetPalettesToUseTheSharedAsset("Reset palettes to use the shared asset");
 	tooltipProjectProperty_ResetIcon("Reset icon");
+	tooltipProjectProperty_SpecifyPreDefinedMacros(
+		"Specify pre-defined macros,\n"
+		"macroes are separated by \",\",\n"
+		"string values are quoted with \"'\"\n"
+		"(I.e. AAA=1,BBB='Ok')"
+	);
 	tooltipProjectProperty_WhetherToCompileInStrictModeTreatsSomeWarningsAsErrors(
 		"Whether to compile in strict mode\n"
 		"(Treats some warnings as errors)"
