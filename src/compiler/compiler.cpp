@@ -2608,8 +2608,11 @@ public:
 
 	typedef std::function<void(const std::string &, const Entry &)> Enumerator;
 
-private:
+public:
 	typedef std::map<std::string, Entry> Dictionary;
+	typedef std::vector<Dictionary::value_type> Array;
+
+private:
 	typedef std::stack<bool> FlagStack;
 
 private:
@@ -2645,11 +2648,11 @@ public:
 
 		return true;
 	}
-	Text::Array unused(void) const {
-		Text::Array result;
+	Array unused(void) const {
+		Array result;
 		for (Dictionary::value_type kv : _dictionary) {
 			if (kv.second.refCount == 0)
-				result.push_back(kv.first);
+				result.push_back(kv);
 		}
 
 		return result;
@@ -31608,6 +31611,12 @@ private:
 			onError_(err, msg, loc);
 		};
 
+		auto throwErrorWithLocation = [&] (const char* const msg, const TextLocation &loc, bool isWaning) -> bool {
+			const Error err(msg, isWaning);
+			onError(err, err.format(), loc);
+
+			return false;
+		};
 		auto throwError = [&] (const char* const msg, int index, bool isWaning) -> bool {
 			Token::Ptr tk = tokens[index];
 			if (tk->is(Token::Types::END_OF_LINE)) {
@@ -31615,10 +31624,8 @@ private:
 				if (index_ >= 0 && index_ < (int)tokens.size())
 					tk = tokens[index_];
 			}
-			const Error err(msg, isWaning);
-			onError(err, err.format(), tk->begin());
 
-			return false;
+			return throwErrorWithLocation(msg, tk->begin(), isWaning);
 		};
 		auto throwArgumentCountDoesNotMatch = [&] (int index) -> bool {
 			return throwError("Argument count does not match", index, false);
@@ -31673,6 +31680,11 @@ private:
 		auto throwUnexpectedComma = [&] (int index) -> bool {
 			return throwError("Unexpected comma", index, false);
 		};
+		auto throwUnusedVariable = [&] (const TextLocation &loc, const std::string &name) -> bool {
+			const std::string msg = Text::format("Unused variable \"{0}\"", { name });
+
+			return throwErrorWithLocation(msg.c_str(), loc, true);
+		};
 
 		auto idHasBeenDefined = [&] (const std::string &name) -> bool {
 			if (builtins.find(name))
@@ -31697,7 +31709,7 @@ private:
 
 			return false;
 		};
-		auto idHasBeenDefinedAsmacro = [&] (const std::string &name) -> bool {
+		auto idHasBeenDefinedAsMacro = [&] (const std::string &name) -> bool {
 			if (macroAliases.find(name))
 				return true;
 			if (macroFunctions.find(name))
@@ -33473,6 +33485,8 @@ private:
 					}
 					const Node::MacroIdentifierAliasTable::Entry* idAliasEntry = macroIdentifierAliases.find(name); // FEAT: MACRO.
 					if (idAliasEntry) { // User defined variable alias.
+						const std::string &name_ = idAliasEntry->name;
+						identifiers.use(name_);
 						const bool isArray =
 							!!forwardN(2, Token::Types::OPERATOR, "[")(q.index);
 						const int qi = q.index;
@@ -33926,8 +33940,10 @@ private:
 
 				node->add(children);
 
-				if (!identifiers.find(name))
-					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::CONST, id->begin()));
+				if (!identifiers.find(name)) {
+					if (!idHasBeenDefinedAsMacro(name))
+						identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::CONST, id->begin()));
+				}
 
 				return throwNotImplemented(q.index); // Reserved, not implemented yet.
 			}
@@ -34003,7 +34019,8 @@ private:
 				node->add(children);
 
 				if (!identifiers.find(name)) {
-					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::LET, id->begin()));
+					if (!idHasBeenDefinedAsMacro(name))
+						identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::LET, id->begin()));
 				} else {
 					GBBASIC_ASSERT(!let && "Impossible.");
 
@@ -34067,7 +34084,8 @@ private:
 				node->add(children);
 
 				if (!identifiers.find(name)) {
-					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::LOCAL, id->begin()));
+					if (!idHasBeenDefinedAsMacro(name))
+						identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::LOCAL, id->begin()));
 				} else {
 					GBBASIC_ASSERT(!local && "Impossible.");
 
@@ -34122,8 +34140,10 @@ private:
 
 				node->add(children);
 
-				if (!identifiers.find(name))
-					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::DIM, id->begin()));
+				if (!identifiers.find(name)) {
+					if (!idHasBeenDefinedAsMacro(name))
+						identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::DIM, id->begin()));
+				}
 
 				array.named.insert(std::make_pair(name, dimensions));
 
@@ -34469,7 +34489,7 @@ private:
 				if (!must(Token::Types::KEYWORD, "case")(q)) return throwInvalidSyntax(q.index);
 				if (!(id = must(Token::Types::SYMBOL)(q))) return throwInvalidSyntax(q.index);
 				else name = (std::string)id->data();
-				if (idHasBeenDefinedAsmacro(name)) return throwInvalidSyntax(q.index); // Is a macro.
+				if (idHasBeenDefinedAsMacro(name)) return throwInvalidSyntax(q.index); // Is a macro.
 				{
 					ignore(Token::Types::COMMENT)(q);
 					if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
@@ -34935,7 +34955,7 @@ private:
 				if (!must(Token::Types::KEYWORD, "for")(q)) return false;
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) return throwInvalidSyntax(q.index);
 				else name = (std::string)id->data();
-				if (idHasBeenDefinedAsmacro(name)) return throwInvalidSyntax(q.index); // Is a macro.
+				if (idHasBeenDefinedAsMacro(name)) return throwInvalidSyntax(q.index); // Is a macro.
 				if (!must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
 				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
 				if (!must(Token::Types::KEYWORD, "to")(q)) return throwInvalidSyntax(q.index);
@@ -34991,8 +35011,10 @@ private:
 				node->add(children);
 
 				if (!identifiers.find(name)) {
-					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::FOR, id->begin()));
-					identifiers.use(name);
+					if (!idHasBeenDefinedAsMacro(name)) {
+						identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::FOR, id->begin()));
+						identifiers.use(name);
+					}
 				}
 
 				return true;
@@ -35837,7 +35859,7 @@ private:
 					return false;
 
 				const std::string aliasName = children.front()->onlyToken()->text();
-				if (!idHasBeenDefinedAsmacro(aliasName)) // Is not a macro.
+				if (!idHasBeenDefinedAsMacro(aliasName)) // Is not a macro.
 					return false;
 
 				Node::Ptr node = createNode(
@@ -35867,8 +35889,6 @@ private:
 		);
 		const Combinator DefFn( // FEAT: MACRO. `DEF FN(...) = ...`.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
-				PROC_GUARD(beginPreventingUsingIdentifiers(), endPreventingUsingIdentifiers());
-
 				State q = begin();
 				Node::Array children;
 				Token::Ptr id = nullptr;
@@ -36245,8 +36265,6 @@ private:
 		);
 		const Combinator DefExpression( // FEAT: MACRO. Translate `DEF FN = ...` as `DEF FN(...) = ...`.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
-				PROC_GUARD(beginPreventingUsingIdentifiers(), endPreventingUsingIdentifiers());
-
 				State q = begin();
 				Node::Array children;
 				Token::Ptr id = nullptr;
@@ -38915,6 +38933,12 @@ private:
 		while (cursor < (int)tokens.size()) {
 			if (!step(ast, lastErrorNode, default_))
 				break;
+		}
+
+		// Process unused variables.
+		const IdentifierTable::Array unused = identifiers.unused();
+		for (const IdentifierTable::Array::value_type &u : unused) {
+			throwUnusedVariable(u.second.declarationLocation, u.first);
 		}
 
 		// Finish.
