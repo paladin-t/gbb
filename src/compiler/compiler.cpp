@@ -30502,6 +30502,7 @@ public:
 
 	bool process(
 		const std::string &src, int page,
+		IdentifierTable &identifiers,
 		Node::Context::Array &array,
 		Node::Context::Data &data,
 		BuiltinTable &builtins,
@@ -30537,6 +30538,7 @@ public:
 			                             _tokens, page,
 			                             _statements, _statementsWithReturned,
 			                             _stackArguments,
+			                             identifiers,
 			                             array, data,
 			                             builtins, functions, operators,
 			                             macroAliases,
@@ -31206,6 +31208,7 @@ private:
 		const Token::Array &tokens, int page,
 		const StatementDictionary &statements, const Text::Array &returned,
 		const Text::Array &stackArguments,
+		IdentifierTable &identifiers,
 		Node::Context::Array &array,
 		Node::Context::Data &data,
 		BuiltinTable &builtins,
@@ -31228,8 +31231,6 @@ private:
 		int cursor = 0;
 
 		Text::Array structures;
-
-		IdentifierTable identifiers;
 
 		IDictionary::Ptr opts(Dictionary::create({
 			{ "page", page }
@@ -31679,11 +31680,6 @@ private:
 		};
 		auto throwUnexpectedComma = [&] (int index) -> bool {
 			return throwError("Unexpected comma", index, false);
-		};
-		auto throwUnusedVariable = [&] (const TextLocation &loc, const std::string &name) -> bool {
-			const std::string msg = Text::format("Unused variable \"{0}\"", { name });
-
-			return throwErrorWithLocation(msg.c_str(), loc, true);
 		};
 
 		auto idHasBeenDefined = [&] (const std::string &name) -> bool {
@@ -38935,12 +38931,6 @@ private:
 				break;
 		}
 
-		// Process unused variables.
-		const IdentifierTable::Array unused = identifiers.unused();
-		for (const IdentifierTable::Array::value_type &u : unused) {
-			throwUnusedVariable(u.second.declarationLocation, u.first);
-		}
-
 		// Finish.
 		return ast;
 	}
@@ -40768,6 +40758,7 @@ bool compile(Program &program, const Options &options) {
 		int parsingErrors = 0;
 
 		// Parse.
+		IdentifierTable identifiers;
 		Macro::List macros_;
 		for (int i = 0; i < program.assets->code.count(); ++i) {
 			std::string code;
@@ -40775,6 +40766,7 @@ bool compile(Program &program, const Options &options) {
 			entry->toString(code, nullptr);
 			const bool ok = parser.process(
 				code, i,
+				identifiers,
 				compiler.array(), compiler.data(), compiler.builtins(), compiler.functions(), compiler.operators(),
 				compiler.macroAliases(),
 				compiler.macroFunctions(),
@@ -40796,6 +40788,12 @@ bool compile(Program &program, const Options &options) {
 			program.lineNumberWidth = parser.lineNumberWidth();
 			asts.push_back(parser.ast());
 			codeLength += (int)code.length();
+		}
+		const IdentifierTable::Array unused = identifiers.unused();
+		for (const IdentifierTable::Array::value_type &u : unused) {
+			const TextLocation &loc = u.second.declarationLocation;
+			const std::string msg = Text::format("Unused variable \"{0}\"", { u.first });
+			onError_(msg, true, loc.page, loc.row, loc.column);
 		}
 		program.compiled.macros = macros_;
 
