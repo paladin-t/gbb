@@ -2592,14 +2592,17 @@ public:
 			CONST,
 			LET,
 			LOCAL,
-			DIM
+			DIM,
+			FOR
 		};
 
 		Types type = Types::NONE;
+		TextLocation declarationLocation;
+		int refCount = 0;
 
 		Entry() {
 		}
-		Entry(Types y) : type(y) {
+		Entry(Types y, const TextLocation &loc) : type(y), declarationLocation(loc) {
 		}
 	};
 
@@ -2607,9 +2610,11 @@ public:
 
 private:
 	typedef std::map<std::string, Entry> Dictionary;
+	typedef std::stack<bool> FlagStack;
 
 private:
 	Dictionary _dictionary;
+	FlagStack _preventUsing;
 
 public:
 	IdentifierTable() {
@@ -2627,6 +2632,44 @@ public:
 			return nullptr;
 
 		return &it->second;
+	}
+	bool use(const std::string &key) {
+		if (!canUse())
+			return true;
+
+		Dictionary::iterator it = _dictionary.find(key);
+		if (it == _dictionary.end())
+			return false;
+
+		++it->second.refCount;
+
+		return true;
+	}
+	Text::Array unused(void) const {
+		Text::Array result;
+		for (Dictionary::value_type kv : _dictionary) {
+			if (kv.second.refCount == 0)
+				result.push_back(kv.first);
+		}
+
+		return result;
+	}
+	void pauseUsing(void) {
+		_preventUsing.push(true);
+	}
+	void resumeUsing(void) {
+		_preventUsing.pop();
+	}
+
+private:
+	bool canUse(void) const {
+		if (_preventUsing.empty())
+			return true;
+
+		if (_preventUsing.top())
+			return false;
+
+		return true;
 	}
 };
 
@@ -31509,6 +31552,16 @@ private:
 
 			return false;
 		};
+		auto beginPreventingUsingIdentifiers = [&] (void) -> auto {
+			return [&] (void) -> void {
+				identifiers.pauseUsing();
+			};
+		};
+		auto endPreventingUsingIdentifiers = [&] (void) -> auto {
+			return [&] (void) -> void {
+				identifiers.resumeUsing();
+			};
+		};
 		auto createNode = [&] (const std::string &keyword, const Variant &id, const Dictionary::Arguments &args) -> Node::Ptr {
 			IDictionary::Ptr opts(Dictionary::create(args));
 			const bool allowCall = (bool)opts->get("allow_call");
@@ -31835,6 +31888,10 @@ private:
 				Token::Ptr id = nullptr;
 
 				if (!(id = maybe(Token::Types::IDENTIFIER)(q1))) break;
+				if (id->is(Token::Types::IDENTIFIER)) {
+					const std::string name = (std::string)id->data();
+					identifiers.use(name);
+				}
 				if (acceptMacro) {
 					if (id) {
 						const std::string name = (std::string)id->data();
@@ -31903,6 +31960,10 @@ private:
 					any()(q1);
 				} else {
 					if (!(id = maybe(Token::Types::IDENTIFIER)(q1))) break;
+					if (id->is(Token::Types::IDENTIFIER)) {
+						const std::string name = (std::string)id->data();
+						identifiers.use(name);
+					}
 					if (acceptMacro) {
 						if (id) {
 							const std::string name = (std::string)id->data();
@@ -32266,6 +32327,8 @@ private:
 
 			q.success = true;
 			end(q);
+
+			identifiers.use(name);
 
 			return true;
 		};
@@ -33607,6 +33670,9 @@ private:
 				}
 				if ((id = forward(Token::Types::SYMBOL)(q.index))) {
 					name = (std::string)id->data();
+					if (id->is(Token::Types::IDENTIFIER)) {
+						identifiers.use(name);
+					}
 					const bool isArray = !!forwardN(2, Token::Types::OPERATOR, "[")(q.index);
 					if (isArray) { // `=[...]` (array reading).
 						State q1 = begin();
@@ -33795,6 +33861,8 @@ private:
 
 				node->add(children);
 
+				identifiers.use(name);
+
 				return true;
 			}
 		);
@@ -33859,7 +33927,7 @@ private:
 				node->add(children);
 
 				if (!identifiers.find(name))
-					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::CONST));
+					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::CONST, id->begin()));
 
 				return throwNotImplemented(q.index); // Reserved, not implemented yet.
 			}
@@ -33873,7 +33941,8 @@ private:
 				std::string name;
 
 				if (!LineNumber(q, opts)) return false;
-				let = !!forward(Token::Types::KEYWORD, "let")(q.index); if (let) any()(q);
+				let = !!forward(Token::Types::KEYWORD, "let")(q.index);
+				if (let) any()(q);
 				if ((id = must(Token::Types::OPERATOR)(q))) {
 					name = (std::string)id->data();
 					if (!Text::startsWith(name, "stack", true)) return throwInvalidSyntax(q.index);
@@ -33933,8 +34002,13 @@ private:
 
 				node->add(children);
 
-				if (!identifiers.find(name))
-					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::LET));
+				if (!identifiers.find(name)) {
+					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::LET, id->begin()));
+				} else {
+					GBBASIC_ASSERT(!let && "Impossible.");
+
+					identifiers.use(name);
+				}
 
 				return true;
 			}
@@ -33948,7 +34022,8 @@ private:
 				std::string name;
 
 				if (!LineNumber(q, opts)) return false;
-				local = !!forward(Token::Types::KEYWORD, "local")(q.index); if (local) any()(q);
+				local = !!forward(Token::Types::KEYWORD, "local")(q.index);
+				if (local) any()(q);
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 				else name = (std::string)id->data();
 				const int r = q.index;
@@ -33991,8 +34066,13 @@ private:
 
 				node->add(children);
 
-				if (!identifiers.find(name))
-					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::LOCAL));
+				if (!identifiers.find(name)) {
+					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::LOCAL, id->begin()));
+				} else {
+					GBBASIC_ASSERT(!local && "Impossible.");
+
+					identifiers.use(name);
+				}
 
 				return throwNotImplemented(q.index); // Reserved, not implemented yet.
 			}
@@ -34043,7 +34123,7 @@ private:
 				node->add(children);
 
 				if (!identifiers.find(name))
-					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::DIM));
+					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::DIM, id->begin()));
 
 				array.named.insert(std::make_pair(name, dimensions));
 
@@ -34910,6 +34990,11 @@ private:
 
 				node->add(children);
 
+				if (!identifiers.find(name)) {
+					identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::FOR, id->begin()));
+					identifiers.use(name);
+				}
+
 				return true;
 			}
 		);
@@ -35722,6 +35807,8 @@ private:
 		);
 		const Combinator DefMacroAlias( // FEAT: MACRO. `DEF ... = M`.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				PROC_GUARD(beginPreventingUsingIdentifiers(), endPreventingUsingIdentifiers());
+
 				State q = begin();
 				Node::Array children;
 				Token::Ptr id = nullptr;
@@ -35780,6 +35867,8 @@ private:
 		);
 		const Combinator DefFn( // FEAT: MACRO. `DEF FN(...) = ...`.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				PROC_GUARD(beginPreventingUsingIdentifiers(), endPreventingUsingIdentifiers());
+
 				State q = begin();
 				Node::Array children;
 				Token::Ptr id = nullptr;
@@ -35980,6 +36069,8 @@ private:
 		);
 		const Combinator DefIdentifierAlias( // FEAT: MACRO. `DEF ... = var`.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				PROC_GUARD(beginPreventingUsingIdentifiers(), endPreventingUsingIdentifiers());
+
 				State q = begin();
 				Node::Array children;
 				Token::Ptr id = nullptr;
@@ -36154,6 +36245,8 @@ private:
 		);
 		const Combinator DefExpression( // FEAT: MACRO. Translate `DEF FN = ...` as `DEF FN(...) = ...`.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				PROC_GUARD(beginPreventingUsingIdentifiers(), endPreventingUsingIdentifiers());
+
 				State q = begin();
 				Node::Array children;
 				Token::Ptr id = nullptr;
