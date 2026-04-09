@@ -1535,6 +1535,8 @@ bool DeviceBinjgb::processShellCommand(class Window* wnd, class Renderer* rnd) {
 		Text::startsWith(cmd, "https://", false);
 	const bool isBrowse =
 		Text::startsWith(cmd, "file://", false);
+	const bool isDummy =
+		Text::startsWith(cmd, "$", false);
 	const bool isSync =
 		Text::startsWith(cmd, "@", false);
 	const bool isDebug =
@@ -1551,7 +1553,8 @@ bool DeviceBinjgb::processShellCommand(class Window* wnd, class Renderer* rnd) {
 
 		Platform::surf(osstr.c_str());
 
-		fprintf(stdout, "Executed shell command (surf): \"%s\".\n", cmd.c_str());
+		const std::string &cmd_ = osstr;
+		fprintf(stdout, "Executed shell command (surf): \"%s\".\n", cmd_.c_str());
 	} else if (isBrowse) {
 		if (cmd.length() >= 7) { // "file://".
 			const std::string path = cmd.substr(7);
@@ -1562,17 +1565,26 @@ bool DeviceBinjgb::processShellCommand(class Window* wnd, class Renderer* rnd) {
 			}
 		}
 
-		fprintf(stdout, "Executed shell command (browse): \"%s\".\n", cmd.c_str());
+		const std::string cmd_ = Unicode::toOs(cmd);
+		fprintf(stdout, "Executed shell command (browse): \"%s\".\n", cmd_.c_str());
+	} else if (isDummy) {
+		// Note: this type of command does nothing here, however
+		// you could make your own handler by modifying the code.
+
+		const std::string cmd_ = Unicode::toOs(cmd);
+		fprintf(stdout, "Executed shell command (dummy): \"%s\".\n", cmd_.c_str());
 	} else if (isSync) {
 		if (_debugListener)
 			_debugListener->sync(wnd, rnd, cmd.c_str() + 1);
 
-		fprintf(stdout, "Executed shell command (sync): \"%s\".\n", cmd.c_str());
+		const std::string cmd_ = Unicode::toOs(cmd);
+		fprintf(stdout, "Executed shell command (sync): \"%s\".\n", cmd_.c_str());
 	} else if (isDebug) {
 		if (_debugListener)
 			_debugListener->debug(cmd.c_str() + 1);
 
-		fprintf(stdout, "Executed shell command (debug): \"%s\".\n", cmd.c_str());
+		const std::string cmd_ = Unicode::toOs(cmd);
+		fprintf(stdout, "Executed shell command (debug): \"%s\".\n", cmd_.c_str());
 	} else if (isCursor) {
 		if (cmd.length() >= 1) { // "^".
 			const std::string mode = cmd.substr(1);
@@ -1598,18 +1610,21 @@ bool DeviceBinjgb::processShellCommand(class Window* wnd, class Renderer* rnd) {
 		if (_debugListener)
 			_debugListener->pause(wnd, rnd);
 
-		fprintf(stdout, "Executed shell command (pause): \"%s\".\n", cmd.c_str());
+		const std::string cmd_ = Unicode::toOs(cmd);
+		fprintf(stdout, "Executed shell command (pause): \"%s\".\n", cmd_.c_str());
 	} else if (isStop) {
 		if (_debugListener)
 			_debugListener->stop(wnd, rnd);
 
-		fprintf(stdout, "Executed shell command (stop): \"%s\".\n", cmd.c_str());
+		const std::string cmd_ = Unicode::toOs(cmd);
+		fprintf(stdout, "Executed shell command (stop): \"%s\".\n", cmd_.c_str());
 	} else {
 		const std::string osstr = Unicode::toOs(cmd);
 
 		Platform::execute(osstr.c_str());
 
-		fprintf(stdout, "Executed shell command: \"%s\".\n", cmd.c_str());
+		const std::string &cmd_ = osstr;
+		fprintf(stdout, "Executed shell command: \"%s\".\n", cmd_.c_str());
 	}
 
 	return true;
