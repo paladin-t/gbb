@@ -357,6 +357,7 @@ public:
 		BLANK,
 		REM,
 		DO_NOTHING,
+		DO_NOTHING_WITH,
 		CONST,
 		LET,
 		DIM,

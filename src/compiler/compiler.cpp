@@ -10730,11 +10730,67 @@ public:
 	}
 
 	virtual Abstract abstract(void) const override {
-		return { "DONOTHING" };
+		return { "DO NOTHING" };
 	}
 
 	virtual std::string dump(int depth) const override {
-		return dump(depth, "DONOTHING");
+		return dump(depth, "DO NOTHING");
+	}
+	using Node::dump;
+};
+
+class NodeDoNothingWith : public Node {
+public:
+	NodeDoNothingWith() {
+	}
+	virtual ~NodeDoNothingWith() override {
+	}
+
+	NODE_TYPE(Types::DO_NOTHING_WITH)
+
+	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		const Generator_Void_Void generator = [&] (void) -> void {
+			// Prepare.
+			Context &ctx = context.top();
+			State &state = top();
+
+			// Determine the location in the ROM.
+			state.inRom.bank = ctx.bank;
+			state.inRom.address = ctx.addressCursor;
+			state.inRom.size = 0;
+
+			// Consume the tokens.
+			Token::Ptr idtk = nullptr;
+			std::string id;
+			if (ctx.expect.lnno) {
+				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				})) { THROW_INVALID_SYNTAX(onError); }
+			}
+			if (!consume(Token::Types::KEYWORD, "do")) { THROW_INVALID_SYNTAX(onError); }
+			if (!consume(Token::Types::IDENTIFIER, "nothing")) { THROW_INVALID_SYNTAX(onError); }
+			if (!consume(Token::Types::KEYWORD, "with")) { THROW_INVALID_SYNTAX(onError); }
+			if (!consume([&] (Token::Ptr tk) -> void {
+				idtk = tk;
+				id = (std::string)tk->data();
+			})) { THROW_INVALID_SYNTAX(onError); }
+			if (!consume(Token::Types::END_OF_LINE)) { THROW_INVALID_SYNTAX(onError); }
+
+			// Check the children.
+			if (!_children.empty()) {
+				THROW_INVALID_SYNTAX(onError);
+			}
+		};
+
+		write(bytes, context, generator, false, onError);
+	}
+
+	virtual Abstract abstract(void) const override {
+		return { "DO NOTHING WITH" };
+	}
+
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "DO NOTHING WITH");
 	}
 	using Node::dump;
 };
@@ -29744,6 +29800,7 @@ public:
 			ADD_STATEMENT("rem",               node<NodeRem>(),                            Token::Types::KEYWORD,    false);
 			ADD_STATEMENT("do",                NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
 			ADD_STATEMENT("donothing",         node<NodeDoNothing>(),                      Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("donothingwith",     node<NodeDoNothingWith>(),                  Token::Types::KEYWORD,    false);
 
 			// Type definition.
 			ADD_STATEMENT("int",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
@@ -33685,11 +33742,46 @@ private:
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "do")(q)) return false;
 				if (!must(Token::Types::IDENTIFIER, "nothing")(q)) return false;
+				if (forward(Token::Types::KEYWORD, "with")(q.index)) return false;
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
 
 				Node::Ptr node = createNode(
 					"donothing", "_",
+					{
+						{ "allow_call", false }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				node->add(children);
+
+				return true;
+			}
+		);
+		const Combinator DoNothingWith( // `DO NOTHING WITH ...`.
+			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				State q = begin();
+				Node::Array children;
+				Token::Ptr id = nullptr;
+				std::string name;
+
+				if (!LineNumber(q, opts)) return false;
+				if (!must(Token::Types::KEYWORD, "do")(q)) return false;
+				if (!must(Token::Types::IDENTIFIER, "nothing")(q)) return false;
+				if (!must(Token::Types::KEYWORD, "with")(q)) return false;
+				if (!(id = must(Token::Types::IDENTIFIER)(q))) throwInvalidSyntax(q.index);
+				name = (std::string)id->data();
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+
+				Node::Ptr node = createNode(
+					"donothingwith", "_",
 					{
 						{ "allow_call", false }
 					}
@@ -38567,6 +38659,7 @@ private:
 			Blank,
 			Rem,
 			DoNothing,
+			DoNothingWith,
 
 			/**< Declaration. */
 
