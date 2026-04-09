@@ -36231,7 +36231,10 @@ private:
 				if (children.size() < 1) return throwTooFewArguments(r);
 				else if (children.size() > 1) return throwTooManyArguments(r);
 
-				if (!children.front()->onlyToken())
+				Token::Ptr tk = children.front()->onlyToken();
+				if (!tk)
+					return false;
+				if (tk->type() != Token::Types::STRING)
 					return false;
 
 				Node::Ptr node = createNode(
