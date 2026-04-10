@@ -27,7 +27,7 @@
 */
 
 #ifndef WIDGETS_ABOUT_REVISION
-#	define WIDGETS_ABOUT_REVISION "r42"
+#	define WIDGETS_ABOUT_REVISION "r43"
 #endif /* WIDGETS_ABOUT_REVISION */
 
 /* ===========================================================================} */
@@ -4233,12 +4233,20 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 								const float btnW = 36.0f;
 								const float posX = _superFeaturesEndX - btnW;
 								SetCursorPosX(posX);
-								if (Button(_theme->dialogPrompt_Rst(), ImVec2(btnW, 0))) {
-									_activeSuperPaletteShowColorPicker = false;
-									_activeSuperPaletteIndex = -1;
-									const PaletteAssets &palette = prj->touchPalette();
-									prj->customizedSuperPalettes(false);
-									prj->synchronizeSuperPalettes(palette);
+								if (prj->getPalette(0)) {
+									if (Button(_theme->dialogPrompt_Rst(), ImVec2(btnW, 0))) {
+										_activeSuperPaletteShowColorPicker = false;
+										_activeSuperPaletteIndex = -1;
+										const PaletteAssets &palette = prj->touchPalette();
+										prj->customizedSuperPalettes(false);
+										prj->synchronizeSuperPalettes(palette);
+									}
+								} else {
+									BeginDisabled();
+									{
+										Button(_theme->dialogPrompt_Rst(), ImVec2(btnW, 0));
+									}
+									EndDisabled();
 								}
 								if (IsItemHovered()) {
 									VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));

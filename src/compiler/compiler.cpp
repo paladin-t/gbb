@@ -35058,7 +35058,6 @@ private:
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				State q = begin();
 				Node::Array children;
-				const int index = q.index;
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "while")(q)) return false;
@@ -35178,7 +35177,6 @@ private:
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				State q = begin();
 				Node::Array children;
-				const int index = q.index;
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "repeat")(q)) return false;
