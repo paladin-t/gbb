@@ -40716,31 +40716,31 @@ bool compile(Program &program, const Options &options) {
 		std::string val_ = val;
 		Text::toLowerCase(val_);
 		if (val_ == "nothing") {
-			preDefinedMacros.insert(std::make_pair(key, nullptr));
+			preDefinedMacros[key] = nullptr;
 
 			continue;
 		}
 		bool boolean = false;
 		if (Text::fromString(val, boolean)) {
-			preDefinedMacros.insert(std::make_pair(key, boolean));
+			preDefinedMacros[key] = boolean;
 
 			continue;
 		}
 		Variant::Long long_ = 0;
 		if (Text::fromString(val, long_)) {
-			preDefinedMacros.insert(std::make_pair(key, long_));
+			preDefinedMacros[key] = long_;
 
 			continue;
 		}
 		if (val.length() >= 4 && Text::startsWith(val, "\\\"", false) && Text::endsWith(val, "\\\"", false)) {
 			const std::string str = val.substr(2, val.length() - 4);
-			preDefinedMacros.insert(std::make_pair(key, str));
+			preDefinedMacros[key] = str;
 
 			continue;
 		}
 		if (val.length() >= 2 && Text::startsWith(val, "'", false) && Text::endsWith(val, "'", false)) {
 			const std::string str = val.substr(1, val.length() - 2);
-			preDefinedMacros.insert(std::make_pair(key, str));
+			preDefinedMacros[key] = str;
 
 			continue;
 		}
@@ -40749,6 +40749,7 @@ bool compile(Program &program, const Options &options) {
 		onError_(msg, true, -1, -1, -1);
 	}
 	for (const Parser::Macros::value_type &kv : builtInMacros) {
+		// User defined macros have higher priority.
 		if (preDefinedMacros.find(kv.first) != preDefinedMacros.end())
 			continue;
 

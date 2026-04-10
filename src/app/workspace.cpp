@@ -4134,12 +4134,13 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 	auto set = [this, prj, isOpened, save] (Project* prj_) -> void {
 		// Prepare.
 		const bool needReloadKernel =
-			prj->kernel()        != prj_->kernel();
+			prj->kernel()           != prj_->kernel();
 		const bool needReAnalyze =
-			prj->kernel()        != prj_->kernel()        ||
-			prj->cartridgeType() != prj_->cartridgeType() ||
-			prj->sramType()      != prj_->sramType()      ||
-			prj->hasRtc()        != prj_->hasRtc();
+			prj->kernel()           != prj_->kernel()        ||
+			prj->cartridgeType()    != prj_->cartridgeType() ||
+			prj->sramType()         != prj_->sramType()      ||
+			prj->hasRtc()           != prj_->hasRtc()        ||
+			prj->preDefinedMacros() != prj_->preDefinedMacros();
 
 		// Apply the changes.
 		const long long now = DateTime::now();
@@ -5663,7 +5664,8 @@ void Workspace::compile(
 
 		if (!preDefinedMacros.empty() && preDefinedMacros.back() != ',' && !options.macros.empty())
 			preDefinedMacros.push_back(',');
-		options.macros = preDefinedMacros + options.macros; // Concat the macro definitions.
+		options.macros =                       // Concat the macro definitions.
+			preDefinedMacros + options.macros; // Pre-defined macros in project properties have higher priority.
 
 		// Initialize the cartridge options.
 		if (project) {
