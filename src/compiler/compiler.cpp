@@ -34230,8 +34230,6 @@ private:
 					if (!idHasBeenDefinedAsMacro(name))
 						identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::LET, id->begin()));
 				} else {
-					GBBASIC_ASSERT(!let && "Impossible.");
-
 					identifiers.use(name);
 				}
 
@@ -34295,8 +34293,6 @@ private:
 					if (!idHasBeenDefinedAsMacro(name))
 						identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::LOCAL, id->begin()));
 				} else {
-					GBBASIC_ASSERT(!local && "Impossible.");
-
 					identifiers.use(name);
 				}
 
@@ -35170,6 +35166,7 @@ private:
 					any()(q);
 					if (!Expression(q, children)) return throwInvalidSyntax(q.index);
 				}
+				if (forward(Token::Types::COMMENT)(q.index) || forward(Token::Types::END_OF_LINE)(q.index)) return false;
 				{
 					Node::Ptr do_(new NodeDo());
 					cursor = q.index;
@@ -35357,6 +35354,7 @@ private:
 
 					if (!Expression(q, children)) return throwInvalidSyntax(q.index);
 				}
+				if (forward(Token::Types::COMMENT)(q.index) || forward(Token::Types::END_OF_LINE)(q.index)) return false;
 				{
 					Node::Ptr do_(new NodeDo());
 					cursor = q.index;
@@ -35497,6 +35495,7 @@ private:
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "repeat")(q)) return false;
+				if (forward(Token::Types::COMMENT)(q.index) || forward(Token::Types::END_OF_LINE)(q.index)) return false;
 				{
 					Node::Ptr do_(new NodeDo());
 					cursor = q.index;
