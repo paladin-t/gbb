@@ -5,12 +5,12 @@
 
 BANKREF_EXTERN(VM_PERSISTENCE)
 
-#define PERSISTENCE_FILE_OPENED   (persistence_file_count != 0)
+#define PERSISTENCE_FILE_OPENED   (persistence_file_handles != 0x0000)
 
 typedef UINT16 FSIGNATURE;
 typedef UINT8 FDATA;
 
-extern UINT16 persistence_file_count;
+extern UINT16 persistence_file_handles;
 
 void persistence_init(void) BANKED;
 UINT8 persistence_file_max_count(void) BANKED;

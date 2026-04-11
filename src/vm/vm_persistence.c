@@ -19,14 +19,14 @@ BANKREF(VM_PERSISTENCE)
 
 const FSIGNATURE PERSISTENCE_SIGNATURE = 0x9BA5; // Can be calculated and overwritten by compiler.
 
-UINT16 persistence_file_count; // 1 bit for each, up to 16 files.
+UINT16 persistence_file_handles; // 1 bit for each, up to 16 files.
 
 void persistence_init(void) BANKED {
     const UINT8 SRAM_BANKS = persistence_file_max_count();
 
     ENABLE_RAM;
 
-    persistence_file_count = 0;
+    persistence_file_handles = 0x0000;
     for (UINT8 i = 0; i != SRAM_BANKS; ++i) {
         SWITCH_RAM(i);
         if (*((FSIGNATURE *)SRAM_OFFSET) != PERSISTENCE_SIGNATURE) {
@@ -68,7 +68,7 @@ UINT8 persistence_file_max_count(void) BANKED {
 }
 
 void vm_fopen(SCRIPT_CTX * THIS) OLDCALL BANKED {
-    const UINT16 old   = persistence_file_count;
+    const UINT16 old   = persistence_file_handles;
     const UINT8 handle = PERSISTENCE_HANDLE((UINT8)*(--THIS->stack_ptr));
 
     if (handle >= persistence_file_max_count()) { // Handle out of bound.
@@ -78,16 +78,16 @@ void vm_fopen(SCRIPT_CTX * THIS) OLDCALL BANKED {
     }
 
     const UINT16 mask = 1 << handle;
-    if ((persistence_file_count & mask) != 0) { // Already opened.
+    if ((persistence_file_handles & mask) != 0x0000) { // Already opened.
         *(THIS->stack_ptr++) = FALSE;
 
         return;
     }
 
-    persistence_file_count |= mask;
+    persistence_file_handles |= mask;
     *(THIS->stack_ptr++) = TRUE;
 
-    if (old == 0 && persistence_file_count != 0) {
+    if (old == 0 && persistence_file_handles != 0x0000) {
         if (!FEATURE_RTC_ENABLED)
             ENABLE_RAM;
 
@@ -105,16 +105,16 @@ void vm_fclose(SCRIPT_CTX * THIS) OLDCALL BANKED {
     }
 
     const UINT16 mask = 1 << handle;
-    if ((persistence_file_count & mask) == 0) { // Already closed.
+    if ((persistence_file_handles & mask) == 0x0000) { // Already closed.
         *(THIS->stack_ptr++) = FALSE;
 
         return;
     }
 
-    persistence_file_count &= ~mask;
+    persistence_file_handles &= ~mask;
     *(THIS->stack_ptr++) = TRUE;
 
-    if (persistence_file_count == 0) {
+    if (persistence_file_handles == 0x0000) {
         if (!FEATURE_RTC_ENABLED)
             DISABLE_RAM;
     }
@@ -131,7 +131,7 @@ void vm_fread(SCRIPT_CTX * THIS) OLDCALL BANKED {
     }
 
     const UINT16 mask = 1 << handle;
-    if ((persistence_file_count & mask) == 0) { // Already closed.
+    if ((persistence_file_handles & mask) == 0x0000) { // Already closed.
         *(THIS->stack_ptr++) = 0;
 
         return;
@@ -159,7 +159,7 @@ void vm_fwrite(SCRIPT_CTX * THIS) OLDCALL BANKED {
     }
 
     const UINT16 mask = 1 << handle;
-    if ((persistence_file_count & mask) == 0) { // Already closed.
+    if ((persistence_file_handles & mask) == 0x0000) { // Already closed.
         *(THIS->stack_ptr++) = FALSE;
 
         return;
