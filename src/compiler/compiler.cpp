@@ -34937,7 +34937,80 @@ private:
 				return true;
 			}
 		);
-		const Combinator For( // `FOR` loop.
+		const Combinator For1( // Single line `FOR` loop.
+			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				State q = begin();
+				Node::Array children;
+				Token::Ptr id = nullptr;
+				std::string name;
+				const int index = q.index;
+
+				if (!LineNumber(q, opts)) return false;
+				if (!must(Token::Types::KEYWORD, "for")(q)) return false;
+				if (!(id = must(Token::Types::IDENTIFIER)(q))) return throwInvalidSyntax(q.index);
+				else name = (std::string)id->data();
+				if (idHasBeenDefinedAsMacro(name)) return throwInvalidSyntax(q.index); // Is a macro.
+				if (!must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::KEYWORD, "to")(q)) return throwInvalidSyntax(q.index);
+				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				if (forward(Token::Types::KEYWORD, "step")(q.index)) {
+					any()(q);
+					if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				}
+				{
+					Node::Ptr do_(new NodeDo());
+					cursor = q.index;
+					/*for (EVER) {
+						const bool stp = stop(FOR_STOPS, cursor, 2);
+						if (stp)
+							break;
+
+						Combinator::Options sub = opts;
+						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
+					}*/
+					children.push_back(do_);
+					q.index = cursor;
+				}
+				{
+					State q1 = q;
+					if (!must(Token::Types::KEYWORD, "next")(q1)) return throwInvalidSyntax(q1.index);
+					if (forward(Token::Types::IDENTIFIER)(q1.index)) {
+						Token::Ptr id_ = maybe(Token::Types::IDENTIFIER)(q1);
+						const std::string name_ = (std::string)id_->data();
+						if (name_ != name) return throwInvalidSyntax(q1.index);
+					}
+					q.index = q1.index;
+				}
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+
+				Node::Ptr node = createNode(
+					"for", id->data(),
+					{
+						{ "allow_call", false }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				node->add(children);
+
+				if (!identifiers.find(name)) {
+					if (!idHasBeenDefinedAsMacro(name)) {
+						identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::FOR, id->begin()));
+						identifiers.use(name);
+					}
+				}
+
+				return true;
+			}
+		);
+		const Combinator ForN( // Multiline `FOR` loop.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				PROC_GUARD(beginStructure("for"), endStructure());
 
@@ -38786,7 +38859,7 @@ private:
 
 			/**< Loop. */
 
-			For, Next,
+			For1, ForN, Next,
 			While1, WhileN,
 			Repeat1, RepeatN,
 			Exit,
