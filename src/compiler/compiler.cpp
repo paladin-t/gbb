@@ -8908,7 +8908,7 @@ public:
 	NODE_TYPE(Types::BANKOF)
 
 	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
-		const Generator_Void_Void generator = [&] (void) -> void {
+		const Generator_Void_Bool generator = [&] (bool overflow) -> void {
 			// Prepare.
 			Context &ctx = context.top();
 			State &state = top();
@@ -9511,6 +9511,20 @@ public:
 						}
 					}
 
+					// Search for labeled destination.
+					SourceLocation target;
+					if (!found) {
+						if (dest.isLeft())
+							target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+						else
+							target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+						const RomLocation* romLocation = ctx.find(target);
+						if (romLocation) {
+							bank = romLocation ? romLocation->bank : 0;
+							found = true;
+						}
+					}
+
 					// Set the stack footprint guard.
 					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
 					COUNTER_GUARD(ctx, stk);
@@ -9524,8 +9538,12 @@ public:
 						[&] (void) -> void {
 							// Emit a `VM_SET_CONST` instruction to set the data.
 							Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::SET_CONST]);
-							args = fill(args, (Int16)bank);
-							args = fill(args, (Int16)ARG0);
+							if (found) {
+								args = fill(args, (Int16)bank);
+								args = fill(args, (Int16)ARG0);
+							} else {
+								_scheduled = Scheduled(target, bytes->pointer(), args, overflow);
+							}
 						}, 0, true,
 						onError
 					);
@@ -9547,6 +9565,10 @@ public:
 			return;
 
 		switch (_type) {
+		case OperationTypes::PALETTE:
+			GBBASIC_ASSERT(false && "Impossible.");
+
+			break;
 		case OperationTypes::TILE: {
 				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 				Pipeline::Resource::Array locations;
@@ -9639,8 +9661,20 @@ public:
 			}
 
 			break;
-		default:
+		case OperationTypes::READ:
 			GBBASIC_ASSERT(false && "Impossible.");
+
+			break;
+		default: {
+				const RomLocation* romLocation = nullptr;
+				findDestination(ctx, _scheduled.target, &romLocation, onError);
+
+				const int bank = romLocation ? romLocation->bank : 0;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (Int16)bank);
+				args = fill(args, (Int16)ARG0);
+			}
 
 			break;
 		}
@@ -9685,7 +9719,7 @@ public:
 	NODE_TYPE(Types::ADDRESSOF)
 
 	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
-		const Generator_Void_Void generator = [&] (void) -> void {
+		const Generator_Void_Bool generator = [&] (bool overflow) -> void {
 			// Prepare.
 			Context &ctx = context.top();
 			State &state = top();
@@ -10291,6 +10325,20 @@ public:
 						}
 					}
 
+					// Search for labeled destination.
+					SourceLocation target;
+					if (!found) {
+						if (dest.isLeft())
+							target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+						else
+							target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+						const RomLocation* romLocation = ctx.find(target);
+						if (romLocation) {
+							address = romLocation ? ctx.startAddress + romLocation->address : -1;
+							found = true;
+						}
+					}
+
 					// Set the stack footprint guard.
 					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
 					COUNTER_GUARD(ctx, stk);
@@ -10304,8 +10352,12 @@ public:
 						[&, address] (void) -> void {
 							// Emit a `VM_SET_CONST` instruction to set the data.
 							Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::SET_CONST]);
-							args = fill(args, (Int16)address);
-							args = fill(args, (Int16)ARG0);
+							if (found) {
+								args = fill(args, (Int16)address);
+								args = fill(args, (Int16)ARG0);
+							} else {
+								_scheduled = Scheduled(target, bytes->pointer(), args, overflow);
+							}
 						}, 0, true,
 						onError
 					);
@@ -10327,6 +10379,10 @@ public:
 			return;
 
 		switch (_type) {
+		case OperationTypes::PALETTE:
+			GBBASIC_ASSERT(false && "Impossible.");
+
+			break;
 		case OperationTypes::TILE: {
 				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 				Pipeline::Resource::Array locations;
@@ -10422,8 +10478,20 @@ public:
 			}
 
 			break;
-		default:
+		case OperationTypes::READ:
 			GBBASIC_ASSERT(false && "Impossible.");
+
+			break;
+		default: {
+				const RomLocation* romLocation = nullptr;
+				findDestination(ctx, _scheduled.target, &romLocation, onError);
+
+				const int address = romLocation ? ctx.startAddress + romLocation->address : -1;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (Int16)address);
+				args = fill(args, (Int16)ARG0);
+			}
 
 			break;
 		}
