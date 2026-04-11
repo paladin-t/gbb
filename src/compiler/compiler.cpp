@@ -66,6 +66,9 @@ namespace GBBASIC {
 #ifndef EVER
 #	define EVER ; ;
 #endif /* EVER */
+#ifndef ONCE
+#	define ONCE int GBBASIC_UNIQUE_NAME(ONCE) = 0; GBBASIC_UNIQUE_NAME(ONCE) < 1; ++GBBASIC_UNIQUE_NAME(ONCE)
+#endif /* ONCE */
 #ifndef ANYTHING
 #	define ANYTHING "?"
 #endif /* ANYTHING */
@@ -12247,10 +12250,17 @@ public:
  * @brief Base class for all loop nodes.
  */
 class NodeLoop : public Node {
+protected:
+	bool _singleLine = false;
+
 public:
 	NodeLoop() {
 	}
 	virtual ~NodeLoop() override {
+	}
+
+	virtual void options(const IDictionary::Ptr &options) override {
+		_singleLine = (bool)options->get("single_line");
 	}
 
 protected:
@@ -12516,9 +12526,16 @@ private:
 
 		// (a).
 		const int addressA = ctx.startAddress + ctx.addressCursor;
-		// Emit the statements of the conditional body.
-		const Ptr &stmt = _children[withStep ? 3 : 2];
-		stmt->generate(bytes, context, onError);
+		// Emit the statements of the loop body.
+		if (_singleLine) {
+			VAR_GUARD(ctx.expect.lnno, false);
+
+			const Ptr &stmt = _children[withStep ? 3 : 2];
+			stmt->generate(bytes, context, onError);
+		} else {
+			const Ptr &stmt = _children[withStep ? 3 : 2];
+			stmt->generate(bytes, context, onError);
+		}
 
 		// (c).
 		const int addressC = ctx.startAddress + ctx.addressCursor;
@@ -12752,9 +12769,16 @@ private:
 		args = fill(args, (Int16)ARG0);
 		args = fill(args, (Int16)top().inRam.address);
 
-		// Emit the statements of the conditional body.
-		const Ptr &stmt = _children[withStep ? 3 : 2];
-		stmt->generate(bytes, context, onError);
+		// Emit the statements of the loop body.
+		if (_singleLine) {
+			VAR_GUARD(ctx.expect.lnno, false);
+
+			const Ptr &stmt = _children[withStep ? 3 : 2];
+			stmt->generate(bytes, context, onError);
+		} else {
+			const Ptr &stmt = _children[withStep ? 3 : 2];
+			stmt->generate(bytes, context, onError);
+		}
 
 		// (c).
 		const int addressC = ctx.startAddress + ctx.addressCursor;
@@ -12927,8 +12951,15 @@ public:
 			args = fill(args, Op::OPERATORS[(size_t)Op::Types::EQ]);
 
 			// Emit the statements of the loop body.
-			const Ptr &stmt = _children[1];
-			stmt->generate(bytes, context, onError);
+			if (_singleLine) {
+				VAR_GUARD(ctx.expect.lnno, false);
+
+				const Ptr &stmt = _children[1];
+				stmt->generate(bytes, context, onError);
+			} else {
+				const Ptr &stmt = _children[1];
+				stmt->generate(bytes, context, onError);
+			}
 
 			// `GOTO (a)`.
 			// Emit a `VM_JUMP` instruction.
@@ -13005,8 +13036,15 @@ public:
 			// Emit the statements of the loop body.
 			PROC_GUARD(beginLoop(ctx.loop, Context::Loop::Types::REPEAT), endLoop(ctx.loop));
 			Context::Loop &loop = ctx.loop.back();
-			const Ptr &stmt = _children[0];
-			stmt->generate(bytes, context, onError);
+			if (_singleLine) {
+				VAR_GUARD(ctx.expect.lnno, false);
+
+				const Ptr &stmt = _children[0];
+				stmt->generate(bytes, context, onError);
+			} else {
+				const Ptr &stmt = _children[0];
+				stmt->generate(bytes, context, onError);
+			}
 
 			// Emit the conditional expression.
 			do {
@@ -31774,6 +31812,12 @@ private:
 		};
 
 		// Sub combinators.
+		struct EvaluationOptions { // For combinator `Evaluation`.
+			bool canTruncate = false;
+			Token::Ptr expectsOperator = Token::Ptr(new Token());
+			Token::Ptr expectsOperand = nullptr;
+		} evalOpts;
+
 		std::function<int(State &, Node::Array &)> Evaluation  = nullptr;
 
 		auto LineNumber = [&] (State &q, const Combinator::Options &opts, int* lnno = nullptr) -> bool { // Line number.
@@ -33710,23 +33754,123 @@ private:
 				} else if (c == 0 && forward(Token::Types::OPERATOR, ")")(q.index)) {
 					break;
 				}
-				if (stop(EVALUATION_STOPS, q.index)) {
-					if (forward(Token::Types::OPERATOR, ",")(q.index) && (c != 0 || s != 0)) {
-						if (any()(q))
+				if (evalOpts.canTruncate) {
+					if (stop(EVALUATION_STOPS, q.index)) {
+						if (forward(Token::Types::OPERATOR, ",")(q.index) && (c != 0 || s != 0)) {
+							if (any()(q))
+								++n;
+						} else {
+							break;
+						}
+					} else {
+						const Token::Ptr tk = forward(Token::Types::ANY)(q.index);
+						bool break_ = false;
+						switch (tk->type()) {
+						case Token::Types::OPERATOR:
+							if (evalOpts.expectsOperator == nullptr) {
+								if (tk->data() == "(") { // Is a left parenthesis.
+									any()(q);
+									++c;
+									++n;
+
+									evalOpts.expectsOperand = tk;
+								} else {
+									const bool allowUnaryNot = evalOpts.expectsOperand && evalOpts.expectsOperand->type() == Token::Types::OPERATOR &&
+										(
+											evalOpts.expectsOperand->data() == "("      ||
+											evalOpts.expectsOperand->data() == "="      ||
+											evalOpts.expectsOperand->data() == "<"      ||
+											evalOpts.expectsOperand->data() == "<="     ||
+											evalOpts.expectsOperand->data() == ">"      ||
+											evalOpts.expectsOperand->data() == ">="     ||
+											evalOpts.expectsOperand->data() == "<>"     ||
+											evalOpts.expectsOperand->data() == "+"      ||
+											evalOpts.expectsOperand->data() == "-"      ||
+											evalOpts.expectsOperand->data() == "*"      ||
+											evalOpts.expectsOperand->data() == "/"      ||
+											evalOpts.expectsOperand->data() == "mod"    ||
+											evalOpts.expectsOperand->data() == "and"    ||
+											evalOpts.expectsOperand->data() == "or"     ||
+											evalOpts.expectsOperand->data() == "not"    ||
+											evalOpts.expectsOperand->data() == "band"   ||
+											evalOpts.expectsOperand->data() == "bor"    ||
+											evalOpts.expectsOperand->data() == "bxor"   ||
+											evalOpts.expectsOperand->data() == "lshift" ||
+											evalOpts.expectsOperand->data() == "rshift" ||
+											evalOpts.expectsOperand->data() == "bnot"
+										);
+									const bool isUnaryNot = tk->type() == Token::Types::OPERATOR &&
+										(tk->data() == "not" || tk->data() == "bnot"); // Is a unary `NOT` or `BNOT`.
+									if (allowUnaryNot && isUnaryNot) {
+										any()(q);
+										++n;
+
+										evalOpts.expectsOperand = tk;
+
+										break;
+									} else {
+										const Error err("Unexpected operator \"{0}\"", false);
+										onError(err, err.format({ tk->caseSensitiveText() }), tk->begin());
+
+										return 0;
+									}
+								}
+							} else {
+								if (tk->data() == ")") {
+									any()(q);
+									--c;
+									++n;
+
+									evalOpts.expectsOperator = Token::Ptr(new Token());
+								} else {
+									any()(q);
+									++n;
+
+									evalOpts.expectsOperator = nullptr;
+								}
+							}
+							if (tk->data() != "(" && tk->data() != ")") {
+								evalOpts.expectsOperand = tk;
+							}
+
+							break;
+						default:
+							if (n != 0 && evalOpts.expectsOperand == nullptr) {
+								break_ = true;
+
+								break;
+							}
+
+							any()(q);
 							++n;
+
+							evalOpts.expectsOperator = tk;
+							evalOpts.expectsOperand = nullptr;
+
+							break;
+						}
+						if (break_)
+							break;
+					}
+				} else {
+					if (stop(EVALUATION_STOPS, q.index)) {
+						if (forward(Token::Types::OPERATOR, ",")(q.index) && (c != 0 || s != 0)) {
+							if (any()(q))
+								++n;
+						} else {
+							break;
+						}
+					} else if (must(Token::Types::OPERATOR, "(")(q)) {
+						++c;
+						++n;
+					} else if (must(Token::Types::OPERATOR, ")")(q)) {
+						--c;
+						++n;
+					} else if (any()(q)) {
+						++n;
 					} else {
 						break;
 					}
-				} else if (must(Token::Types::OPERATOR, "(")(q)) {
-					++c;
-					++n;
-				} else if (must(Token::Types::OPERATOR, ")")(q)) {
-					--c;
-					++n;
-				} else if (any()(q)) {
-					++n;
-				} else {
-					break;
 				}
 			}
 
@@ -34961,14 +35105,18 @@ private:
 				{
 					Node::Ptr do_(new NodeDo());
 					cursor = q.index;
-					/*for (EVER) {
+					for (ONCE) {
+						if (forward(Token::Types::KEYWORD, "next")(q.index))
+							break;
+
 						const bool stp = stop(FOR_STOPS, cursor, 2);
 						if (stp)
 							break;
 
 						Combinator::Options sub = opts;
-						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
-					}*/
+						sub.mustHaveLineNumber = false;
+						if (!Statement(do_, sub)) return throwIncompleteStructure(index);
+					}
 					children.push_back(do_);
 					q.index = cursor;
 				}
@@ -34988,7 +35136,8 @@ private:
 				Node::Ptr node = createNode(
 					"for", id->data(),
 					{
-						{ "allow_call", false }
+						{ "allow_call", false },
+						{ "single_line", true }
 					}
 				);
 				if (!node) return false;
@@ -35131,13 +35280,38 @@ private:
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				State q = begin();
 				Node::Array children;
+				const int index = q.index;
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "while")(q)) return false;
-				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				{
+					VAR_GUARD(evalOpts.canTruncate, true);
+
+					if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				}
 				{
 					Node::Ptr do_(new NodeDo());
+					cursor = q.index;
+					for (ONCE) {
+						if (
+							forwardN(1, Token::Types::KEYWORD, "end")(q.index) &&
+							forwardN(2, Token::Types::KEYWORD, "while")(q.index)
+						) { // Paired `END WHILE` is identical with `WEND`.
+							break;
+						} else if (forward(Token::Types::KEYWORD, "wend")(q.index)) {
+							break;
+						}
+
+						const bool stp = stop(WHILE_STOPS, cursor, 2);
+						if (stp)
+							break;
+
+						Combinator::Options sub = opts;
+						sub.mustHaveLineNumber = false;
+						if (!Statement(do_, sub)) return throwIncompleteStructure(index);
+					}
 					children.push_back(do_);
+					q.index = cursor;
 				}
 				{
 					State q1 = q;
@@ -35162,7 +35336,8 @@ private:
 				Node::Ptr node = createNode(
 					"while", "_",
 					{
-						{ "allow_call", false }
+						{ "allow_call", false },
+						{ "single_line", true }
 					}
 				);
 				if (!node) return false;
@@ -35250,12 +35425,27 @@ private:
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				State q = begin();
 				Node::Array children;
+				const int index = q.index;
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "repeat")(q)) return false;
 				{
 					Node::Ptr do_(new NodeDo());
+					cursor = q.index;
+					for (ONCE) {
+						if (forward(Token::Types::KEYWORD, "until")(q.index))
+							break;
+
+						const bool stp = stop(REPEAT_STOPS, cursor, 2);
+						if (stp)
+							break;
+
+						Combinator::Options sub = opts;
+						sub.mustHaveLineNumber = false;
+						if (!Statement(do_, sub)) return throwIncompleteStructure(index);
+					}
 					children.push_back(do_);
+					q.index = cursor;
 				}
 				{
 					State q1 = q;
@@ -35269,7 +35459,8 @@ private:
 				Node::Ptr node = createNode(
 					"repeat", "_",
 					{
-						{ "allow_call", false }
+						{ "allow_call", false },
+						{ "single_line", true }
 					}
 				);
 				if (!node) return false;
