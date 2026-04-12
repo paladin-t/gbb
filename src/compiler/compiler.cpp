@@ -56,6 +56,9 @@ namespace GBBASIC {
 #ifndef RGB8
 #	define RGB8(R, G, B) (((UInt16)((((B) >> 3) & 0x1f) << 10)) | ((UInt16)((((G) >> 3) & 0x1f) << 5)) | (((R) >> 3) & 0x1f))
 #endif /* RGB8 */
+#ifndef MAYBE_PAGE
+#	define MAYBE_PAGE(P, Q) ((P) < 0), (((P) >= 0) ? (P) : (Q))
+#endif /* MAYBE_PAGE */
 #ifndef PAGE
 #	define PAGE(P, Q) (((P) >= 0) ? (P) : (Q))
 #endif /* PAGE */
@@ -1207,6 +1210,8 @@ struct SourceLocation {
 	int sub = 0;
 	std::string label;
 
+	bool optionalPage = false;
+
 	SourceLocation() {
 	}
 	SourceLocation(int p) : page(p) {
@@ -1214,6 +1219,10 @@ struct SourceLocation {
 	SourceLocation(int p, int s) : page(p), sub(s) {
 	}
 	SourceLocation(int p, const std::string &l) : page(p), label(l) {
+	}
+	SourceLocation(bool o, int p, int s) : optionalPage(o), page(p), sub(s) {
+	}
+	SourceLocation(bool o, int p, const std::string &l) : optionalPage(o), page(p), label(l) {
 	}
 
 	bool operator < (const SourceLocation &other) const {
@@ -4831,31 +4840,50 @@ public:
 
 		*out = nullptr;
 
-		const RomLocation* romLocation = ctx.find(target);
+		SourceLocation target_ = target;
+		if (target_.optionalPage)
+			target_.page = -1;
+
+		const RomLocation* romLocation = ctx.find(target_);
 		if (romLocation) { // In the same page.
 			*out = romLocation;
 
 			return;
 		}
 
-		if (target.label.empty()) { // By line number.
+		if (target_.label.empty()) { // By line number.
 			THROW_INVALID_PROGRAM_POINT(onError);
 		}
 
-		RomAllocator::Array romLocations = ctx.findAll(target.label);
+		RomAllocator::Array romLocations = ctx.findAll(target_.label);
 		if (romLocations.empty()) { // No label matched.
 			THROW_INVALID_PROGRAM_POINT(onError);
 		}
 		if (romLocations.size() > 1) { // Ambiguous.
 			Text::Array options;
 			for (const RomAllocator::Array::value_type &romLoc : romLocations) {
+				if (target_.page == -1 && target.page == romLoc.first.page) {
+					romLocation = &romLoc.second; // Nearest.
+					GBBASIC_ASSERT(romLocation && "Impossible.");
+
+					*out = romLocation;
+
+					return;
+				}
+
 				const std::string opt = romLoc.first.toString();
 				options.push_back(opt);
 			}
 			THROW_AMBIGUOUS_PROGRAM_POINT(onError, options);
 		}
 
-		romLocation = ctx.find(romLocations.front().first); // Unique.
+		const RomAllocator::Array::value_type &_1stRomLoc = romLocations.front();
+		const SourceLocation &_1stSrcLoc = _1stRomLoc.first;
+		if (!(target_.page == -1 || (target_.page == _1stSrcLoc.page))) {
+			THROW_INVALID_PROGRAM_POINT(onError);
+		}
+
+		romLocation = ctx.find(_1stRomLoc.first); // Unique.
 		GBBASIC_ASSERT(romLocation && "Impossible.");
 
 		*out = romLocation;
@@ -9515,9 +9543,9 @@ public:
 					SourceLocation target;
 					if (!found) {
 						if (dest.isLeft())
-							target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+							target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 						else
-							target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+							target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 						const RomLocation* romLocation = ctx.find(target);
 						if (romLocation) {
 							bank = romLocation ? romLocation->bank : 0;
@@ -10329,9 +10357,9 @@ public:
 					SourceLocation target;
 					if (!found) {
 						if (dest.isLeft())
-							target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+							target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 						else
-							target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+							target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 						const RomLocation* romLocation = ctx.find(target);
 						if (romLocation) {
 							address = romLocation ? ctx.startAddress + romLocation->address : -1;
@@ -11936,9 +11964,9 @@ public:
 						const Destination &dest = dests[i];
 						SourceLocation target;
 						if (dest.isLeft())
-							target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+							target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 						else
-							target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+							target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 						const RomLocation* romLocation = ctx.find(target);
 						const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 						args = reserve(bytes, context, 5);
@@ -11999,9 +12027,9 @@ public:
 					const Destination &dest = dests.front();
 					SourceLocation target;
 					if (dest.isLeft())
-						target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+						target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 					else
-						target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+						target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 					const RomLocation* romLocation = ctx.find(target);
 					const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ON_INPUT]);
@@ -12046,9 +12074,9 @@ public:
 					const Destination &dest = dests.front();
 					SourceLocation target;
 					if (dest.isLeft())
-						target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+						target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 					else
-						target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+						target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 					const RomLocation* romLocation = ctx.find(target);
 					const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ON_INPUT]);
@@ -13368,9 +13396,9 @@ public:
 			// Emit a `VM_JUMP_FAR` instruction.
 			SourceLocation target;
 			if (dest.isLeft())
-				target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+				target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 			else
-				target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+				target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 			const RomLocation* romLocation = ctx.find(target);
 			const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 			_longJump = overflow || !romLocation || ctx.bank != romLocation->bank; // Use long jump if overflowed or the destination has been determined being in another bank, otherwise use near jump.
@@ -13488,9 +13516,9 @@ public:
 			// Emit a `VM_CALL_FAR` instruction.
 			SourceLocation target;
 			if (dest.isLeft())
-				target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+				target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 			else
-				target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+				target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 			const RomLocation* romLocation = ctx.find(target);
 			const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 			if (overflow) {
@@ -13995,9 +14023,9 @@ public:
 				// Emit a `VM_BEGIN_THREAD` instruction.
 				SourceLocation target;
 				if (dest.isLeft())
-					target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+					target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 				else
-					target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+					target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 				const RomLocation* romLocation = ctx.find(target);
 				const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 				constexpr const bool put = true;
@@ -14056,9 +14084,9 @@ public:
 				// Emit a `VM_BEGIN_THREAD` instruction.
 				SourceLocation target;
 				if (dest.isLeft())
-					target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+					target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 				else
-					target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+					target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 				const RomLocation* romLocation = ctx.find(target);
 				const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 				const bool put = withDeclaring;
@@ -24410,9 +24438,9 @@ public:
 
 					SourceLocation target;
 					if (dest.isLeft())
-						target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+						target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 					else
-						target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+						target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 					const RomLocation* romLocation = ctx.find(target);
 					const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 					writeRoutine(
@@ -24512,9 +24540,9 @@ public:
 					_type = OperationTypes::ON;
 					SourceLocation target;
 					if (dest.isLeft())
-						target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+						target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 					else
-						target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+						target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 					const RomLocation* romLocation = ctx.find(target);
 					const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ON_ACTOR]); DEC_COUNTER(stk, 2);
@@ -26358,9 +26386,9 @@ public:
 					_type = OperationTypes::ON;
 					SourceLocation target;
 					if (dest.isLeft())
-						target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+						target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 					else
-						target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+						target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 					const RomLocation* romLocation = ctx.find(target);
 					const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ON_TRIGGER]); DEC_COUNTER(stk, 2 * 2);
@@ -27732,9 +27760,9 @@ public:
 					_type = OperationTypes::ON;
 					SourceLocation target;
 					if (dest.isLeft())
-						target = SourceLocation(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+						target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 					else
-						target = SourceLocation(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+						target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 					const RomLocation* romLocation = ctx.find(target);
 					const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ON_WIDGET]);
