@@ -716,6 +716,7 @@
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='release|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='debug|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
+    <ClCompile Include="src\compiler\evaluator.cpp" />
     <ClCompile Include="src\compiler\kernel.cpp" />
     <ClCompile Include="src\compiler\pipeline.cpp" />
     <ClCompile Include="src\compiler\static_analyzer.cpp" />
@@ -1063,6 +1064,7 @@
     <ClInclude Include="src\app\workspace.h" />
     <ClInclude Include="src\compiler\codepoint.h" />
     <ClInclude Include="src\compiler\compiler.h" />
+    <ClInclude Include="src\compiler\evaluator.h" />
     <ClInclude Include="src\compiler\kernel.h" />
     <ClInclude Include="src\compiler\pipeline.h" />
     <ClInclude Include="src\compiler\static_analyzer.h" />

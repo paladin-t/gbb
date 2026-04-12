@@ -156,6 +156,7 @@
 		689DD5F92E2F3F18001D2B86 /* workspace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD5CA2E2F3F18001D2B86 /* workspace.cpp */; settings = {COMPILER_FLAGS = "-Wno-unused-function"; }; };
 		689DD5FC2E2F3F8E001D2B86 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 689DD5FB2E2F3F8E001D2B86 /* AppDelegate.m */; };
 		689DD6042E2F3FA2001D2B86 /* inline_resource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD5FF2E2F3FA1001D2B86 /* inline_resource.cpp */; };
+		68CF99D32F8BCEA6004E1FBC /* evaluator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68CF99D12F8BCEA5004E1FBC /* evaluator.cpp */; };
 		68F4AD552F20DA52008EF32D /* vram_debugger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68F4AD542F20DA51008EF32D /* vram_debugger.cpp */; };
 		68F810F72E2F496500A859D1 /* image_.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68F810F62E2F494700A859D1 /* image_.cpp */; };
 		68F810FA2E2F4BF700A859D1 /* libSDL2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 68F810F92E2F4BF700A859D1 /* libSDL2.dylib */; };
@@ -642,6 +643,8 @@
 		689DD6022E2F3FA1001D2B86 /* inline_font.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inline_font.h; path = src/app/resource/inline_font.h; sourceTree = "<group>"; };
 		689DD6032E2F3FA2001D2B86 /* inline_text.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inline_text.h; path = src/app/resource/inline_text.h; sourceTree = "<group>"; };
 		68C4B4312E93ACA300AC1D3F /* inline_code.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = inline_code.h; path = src/app/resource/inline_code.h; sourceTree = "<group>"; };
+		68CF99D12F8BCEA5004E1FBC /* evaluator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = evaluator.cpp; path = src/compiler/evaluator.cpp; sourceTree = "<group>"; };
+		68CF99D22F8BCEA6004E1FBC /* evaluator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = evaluator.h; path = src/compiler/evaluator.h; sourceTree = "<group>"; };
 		68F4AD532F20DA51008EF32D /* vram_debugger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = vram_debugger.h; path = src/app/vram_debugger.h; sourceTree = "<group>"; };
 		68F4AD542F20DA51008EF32D /* vram_debugger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = vram_debugger.cpp; path = src/app/vram_debugger.cpp; sourceTree = "<group>"; };
 		68F810F62E2F494700A859D1 /* image_.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = image_.cpp; path = lib/clip/image_.cpp; sourceTree = "<group>"; };
@@ -752,6 +755,8 @@
 				689DD56A2E2F3EED001D2B86 /* codepoint.h */,
 				689DD56B2E2F3EED001D2B86 /* compiler.cpp */,
 				689DD56E2E2F3EED001D2B86 /* compiler.h */,
+				68CF99D12F8BCEA5004E1FBC /* evaluator.cpp */,
+				68CF99D22F8BCEA6004E1FBC /* evaluator.h */,
 				689DD5692E2F3EED001D2B86 /* kernel.cpp */,
 				689DD5682E2F3EEC001D2B86 /* kernel.h */,
 				689DD56D2E2F3EED001D2B86 /* pipeline.cpp */,
@@ -1695,6 +1700,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				689DD4642E2F3BC5001D2B86 /* emulator-debug.c in Sources */,
+				68CF99D32F8BCEA6004E1FBC /* evaluator.cpp in Sources */,
 				689DD5212E2F3DE8001D2B86 /* datetime.cpp in Sources */,
 				689DD6042E2F3FA2001D2B86 /* inline_resource.cpp in Sources */,
 				689DD5522E2F3DE9001D2B86 /* web_civetweb.cpp in Sources */,
