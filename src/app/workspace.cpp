@@ -4976,7 +4976,7 @@ bool Workspace::analyze(bool force) {
 		return true;
 	if (prj->contentType() != Project::ContentTypes::BASIC)
 		return true;
-	const std::string &preDefinedMacros = prj->preDefinedMacros();
+	const std::string definedMacros = prj->definedMacros();
 
 	if (!force) {
 		if (popupBox() || menuOpened())
@@ -5021,7 +5021,7 @@ bool Workspace::analyze(bool force) {
 	staticAnalyzer()->analyze(
 		krnl.get(),
 		assets,
-		preDefinedMacros,
+		definedMacros,
 		[this, finish] (void) -> void { // On main thread.
 			const Project::Ptr &prj = currentProject();
 			if (!prj)
@@ -5578,7 +5578,7 @@ void Workspace::compile(
 		bool hasRtc = true;
 		bool caseInsensitive = true;
 		bool strictOn = true;
-		std::string preDefinedMacros;
+		std::string definedMacros;
 		if (project) {
 			if (!project->cartridgeType().empty())
 				cartType = project->cartridgeType();
@@ -5587,7 +5587,7 @@ void Workspace::compile(
 			hasRtc = project->hasRtc();
 			caseInsensitive = project->caseInsensitive();
 			strictOn = project->strictOn();
-			preDefinedMacros = project->preDefinedMacros();
+			definedMacros = project->definedMacros();
 		}
 
 #if GBBASIC_MULTITHREAD_ENABLED
@@ -5662,10 +5662,10 @@ void Workspace::compile(
 		if (vmOpt != arguments.end())
 			options.ast = astOpt->second;
 
-		if (!preDefinedMacros.empty() && preDefinedMacros.back() != ',' && !options.macros.empty())
-			preDefinedMacros.push_back(',');
-		options.macros =                       // Concat the macro definitions.
-			preDefinedMacros + options.macros; // Pre-defined macros in project properties have higher priority.
+		if (!definedMacros.empty() && definedMacros.back() != ',' && !options.macros.empty())
+			definedMacros.push_back(',');
+		options.macros =                    // Concat the macro definitions.
+			definedMacros + options.macros; // Macros from arguments have higher priority.
 
 		// Initialize the cartridge options.
 		if (project) {

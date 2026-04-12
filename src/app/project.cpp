@@ -584,6 +584,28 @@ Image::Ptr Project::touchIconImage2Bpp(Bytes::Ptr tiles) {
 	return paletted;
 }
 
+std::string Project::definedMacros(void) const {
+	std::string propMacros =
+		Text::join(
+			{
+				Text::format("PROJECT_TITLE='{0}'",       { title() }      ),
+				Text::format("PROJECT_DESCRIPTION='{0}'", { description() }),
+				Text::format("PROJECT_AUTHOR='{0}'",      { author() }     ),
+				Text::format("PROJECT_GENRE='{0}'",       { genre() }      ),
+				Text::format("PROJECT_VERSION='{0}'",     { version() }    ),
+				Text::format("PROJECT_URL='{0}'",         { url() }        )
+			},
+			","
+		);
+
+	if (!propMacros.empty() && propMacros.back() != ',' && !preDefinedMacros().empty())
+		propMacros.push_back(',');
+	const std::string result =           // Concat the macro definitions.
+		propMacros + preDefinedMacros(); // Pre-defined macros in project properties have higher priority.
+
+	return result;
+}
+
 void Project::borderFrameType(BorderFrameTypes y) {
 	if (_borderFrameType == y)
 		return;

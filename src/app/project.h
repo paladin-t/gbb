@@ -203,6 +203,7 @@ public:
 	Texture::Ptr &touchIconTexture(void);
 	Texture::Ptr &touchIconTexture2Bpp(void);
 	Image::Ptr touchIconImage2Bpp(Bytes::Ptr tiles /* nullable */);
+	std::string definedMacros(void) const;
 	void borderFrameType(BorderFrameTypes y);
 	void borderFrameCode(const std::string &val);
 	void superPalettes(const SuperPalettes &val);
