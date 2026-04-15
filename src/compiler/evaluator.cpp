@@ -15,6 +15,23 @@
 
 namespace GBBASIC {
 
+bool Evaluator::eval(Variant &ret, const IToken::Array &expr, ErrorHandler onError) {
+	(void)ret;
+	(void)expr;
+	(void)onError;
+
+	return false;
+}
+
+bool Evaluator::eval(Variant &ret, const IToken::Array &expr, TokenResolver resolve, ErrorHandler onError) {
+	(void)ret;
+	(void)expr;
+	(void)resolve;
+	(void)onError;
+
+	return false;
+}
+
 }
 
 /* ===========================================================================} */

@@ -8,6 +8,7 @@
 
 #include "codepoint.h"
 #include "compiler.h"
+#include "evaluator.h"
 #include "../utils/datetime.h"
 #include "../utils/encoding.h"
 #include "../utils/file_handle.h"
@@ -2699,42 +2700,11 @@ private:
 
 namespace GBBASIC {
 
-class Token {
+class Token : public IToken {
 public:
 	typedef std::shared_ptr<Token> Ptr;
 	typedef std::vector<Ptr> Array;
 	typedef std::vector<Array> Matrix;
-
-	enum class Types : unsigned {
-		NONE             =  0,
-		PAGE             =  1 << 0,
-		SPACE            =  1 << 1,
-		END_OF_LINE      =  1 << 2,
-		LINE_CONNECTOR   =  1 << 3,
-		OPERATOR         =  1 << 4,
-		SYMBOL           = (1 << 5) | (1 << 6),
-			KEYWORD      =  1 << 5,
-			IDENTIFIER   =  1 << 6,
-		LABEL            =  1 << 7,
-		NOTHING          =  1 << 8,
-		BOOLEAN          =  1 << 9,
-		NUMBER           = (1 << 10) | (1 << 11),
-			INTEGER      =  1 << 10,
-			REAL         =  1 << 11,
-		STRING           =  1 << 12,
-		COMMENT          =  1 << 13,
-		INTERMEDIA       = (1 << 14) | (1 << 15) | (1 << 16) | (1 << 17),
-			MATH         =  1 << 14,
-			STATEMENT    =  1 << 15,
-			ARRAY        =  1 << 16,
-			MACRO        =  1 << 17,
-		ANY              =  0xffffffff
-	};
-
-	enum class IntegerTypes {
-		UNSPECIFIED,   // 8-bit signed integer or 8-bit unsigned integer.
-		INT            // 16-bit signed integer.
-	};
 
 private:
 	Types _type = Types::NONE;
@@ -2743,9 +2713,7 @@ private:
 	std::string _text;
 	TextLocation _begin;
 	TextLocation _end;
-	struct Details {
-		IntegerTypes integerType = IntegerTypes::UNSPECIFIED;
-	} _details;
+	Details _details;
 
 public:
 	Token() {
@@ -2758,7 +2726,7 @@ public:
 		_end = other._end;
 		_details = other._details;
 	}
-	~Token() {
+	virtual ~Token() override {
 	}
 
 	Token &operator = (const Token &other) {
@@ -2772,76 +2740,76 @@ public:
 		return *this;
 	}
 
-	Types type(void) const {
+	virtual Types type(void) const override {
 		return _type;
 	}
-	Token* type(Types y) {
+	virtual Token* type(Types y) override {
 		_type = y;
 
 		return this;
 	}
-	const Variant &data(void) const {
+	virtual const Variant &data(void) const override {
 		return _data;
 	}
-	Token* data(const Variant &data_) {
+	virtual Token* data(const Variant &data_) override {
 		_data = data_;
 
 		return this;
 	}
-	const std::string &text(void) const {
+	virtual const std::string &text(void) const override {
 		return _text;
 	}
-	Token* text(const std::string &txt) {
+	virtual Token* text(const std::string &txt) override {
 		_text = txt;
 
 		return this;
 	}
-	const std::string &caseSensitiveText(void) const {
+	virtual const std::string &caseSensitiveText(void) const override {
 		return _caseSensitiveText;
 	}
 
-	const TextLocation &begin(void) const {
+	virtual const TextLocation &begin(void) const override {
 		return _begin;
 	}
-	TextLocation &begin(void) {
+	virtual TextLocation &begin(void) override {
 		return _begin;
 	}
-	Token* begin(const TextLocation &loc) {
+	virtual Token* begin(const TextLocation &loc) override {
 		_begin = loc;
 
 		return this;
 	}
-	const TextLocation &end(void) const {
+	virtual const TextLocation &end(void) const override {
 		return _end;
 	}
-	TextLocation &end(void) {
+	virtual TextLocation &end(void) override {
 		return _end;
 	}
-	Token* end(const TextLocation &loc) {
+	virtual Token* end(const TextLocation &loc) override {
 		_end = loc;
 
 		return this;
 	}
 
-	const Details &details(void) const {
+	virtual const Details &details(void) const override {
 		return _details;
 	}
-	Details &details(void) {
+	virtual Details &details(void) override {
 		return _details;
 	}
 
-	Token* add(const std::string &str) {
+	virtual Token* add(const std::string &str) override {
 		_text += str;
 
 		return this;
 	}
-	char back(void) const {
+	virtual char back(void) const override {
 		if (_text.empty())
 			return '\0';
 
 		return _text.back();
 	}
-	Token* parse(bool caseInsensitive) {
+	virtual Token* parse(bool caseInsensitive) override {
 		switch (_type) {
 		case Types::SPACE:
 			// Ignore spaces.
@@ -2880,14 +2848,14 @@ public:
 		return this;
 	}
 
-	bool is(Types y) const {
+	virtual bool is(Types y) const override {
 		return (_type & y) != Types::NONE;
 	}
-	bool isNot(Types y) const {
+	virtual bool isNot(Types y) const override {
 		return (_type & y) == Types::NONE;
 	}
 
-	std::string dump(void) const {
+	virtual std::string dump(void) const override {
 		typedef std::function<std::string(const Variant &)> StringGetter;
 
 		auto dumpString = [] (const Variant &data, StringGetter getString, const char* forBlank, const char* quote, bool escapeNewlines, bool escapeQuotes, bool escapePercent) -> std::string {
@@ -3038,6 +3006,52 @@ static bool is(Token::Types val, Token::Types y) {
 }
 static bool isNot(Token::Types val, Token::Types y) {
 	return (val & y) == Token::Types::NONE;
+}
+
+IToken::~IToken() {
+}
+
+IToken* IToken::create(void) {
+	IToken* result = new Token();
+
+	return result;
+}
+
+IToken* IToken::create(Types y) {
+	IToken* result = (new Token())
+		->type(y);
+
+	return result;
+}
+
+IToken* IToken::create(Types y, const Variant &data_, const TextLocation* begin_, const TextLocation* end_) {
+	IToken* result = (new Token())
+		->type(y)
+		->data(data_);
+	if (begin_)
+		result->begin(*begin_);
+	if (end_)
+		result->end(*end_);
+
+	return result;
+}
+
+IToken* IToken::create(Types y, const std::string &txt, bool caseInsensitive, const TextLocation* begin_, const TextLocation* end_) {
+	IToken* result = (new Token())
+		->type(y)
+		->text(txt)
+		->parse(caseInsensitive);
+	if (begin_)
+		result->begin(*begin_);
+	if (end_)
+		result->end(*end_);
+
+	return result;
+}
+
+void IToken::destroy(IToken* ptr) {
+	IToken* impl = static_cast<IToken*>(ptr);
+	delete impl;
 }
 
 }
