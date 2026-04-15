@@ -324,6 +324,71 @@ struct FeatureUsages {
 
 /*
 ** {===========================================================================
+** Structure of operations
+*/
+
+namespace GBBASIC {
+
+struct Op {
+	typedef UInt8 Opcode;
+
+	enum class Types : Byte {
+		STOP,
+		INT8,
+		INT16,
+		REF,
+		EQ,
+		LT,
+		LE,
+		GT,
+		GE,
+		NE,
+		AND,
+		OR,
+		NOT,
+		ADD,
+		SUB,
+		MUL,
+		DIV,
+		MOD,
+		BITWISE_AND,
+		BITWISE_OR,
+		BITWISE_XOR,
+		BITWISE_LSHIFT,
+		BITWISE_RSHIFT,
+		BITWISE_NOT,
+		NEG,
+		SGN,
+		ABS,
+		SQR,
+		SQRT,
+		SIN,
+		COS,
+		ATAN2,
+		POWI,
+		MIN,
+		MAX,
+
+		COUNT
+	};
+	typedef std::array<Op, (size_t)Types::COUNT> Operators;
+
+	static Operators OPERATORS;
+
+	Opcode opcode = 0x00;
+	int size = 0;          // Size of the parameter list in bytes.
+	int associativity = 0; // -1 for left, 1 for right.
+	int precedence = 0;    // The greater, the higher.
+
+	Op(Opcode oc, int s, int a, int p);
+};
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Token interface
 */
 
