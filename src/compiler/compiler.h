@@ -324,13 +324,105 @@ struct FeatureUsages {
 
 /*
 ** {===========================================================================
+** Token interface
+*/
+
+namespace GBBASIC {
+
+/**
+ * @brief Interface of AST token.
+ */
+class IToken {
+public:
+	typedef std::shared_ptr<IToken> Ptr;
+	typedef std::vector<Ptr> Array;
+	typedef std::vector<Array> Matrix;
+
+	enum class Types : unsigned {
+		NONE             =  0,
+		PAGE             =  1 << 0,
+		SPACE            =  1 << 1,
+		END_OF_LINE      =  1 << 2,
+		LINE_CONNECTOR   =  1 << 3,
+		OPERATOR         =  1 << 4,
+		SYMBOL           = (1 << 5) | (1 << 6),
+			KEYWORD      =  1 << 5,
+			IDENTIFIER   =  1 << 6,
+		LABEL            =  1 << 7,
+		NOTHING          =  1 << 8,
+		BOOLEAN          =  1 << 9,
+		NUMBER           = (1 << 10) | (1 << 11),
+			INTEGER      =  1 << 10,
+			REAL         =  1 << 11,
+		STRING           =  1 << 12,
+		COMMENT          =  1 << 13,
+		INTERMEDIA       = (1 << 14) | (1 << 15) | (1 << 16) | (1 << 17),
+			MATH         =  1 << 14,
+			STATEMENT    =  1 << 15,
+			ARRAY        =  1 << 16,
+			MACRO        =  1 << 17,
+		ANY              =  0xffffffff
+	};
+
+	enum class IntegerTypes {
+		UNSPECIFIED,   // 8-bit signed integer or 8-bit unsigned integer.
+		INT            // 16-bit signed integer.
+	};
+
+	struct Details {
+		IntegerTypes integerType = IntegerTypes::UNSPECIFIED;
+	};
+
+public:
+	virtual ~IToken();
+
+	virtual Types type(void) const = 0;
+	virtual IToken* type(Types y) = 0;
+	virtual const Variant &data(void) const = 0;
+	virtual IToken* data(const Variant &data_) = 0;
+	virtual const std::string &text(void) const = 0;
+	virtual IToken* text(const std::string &txt) = 0;
+	virtual const std::string &caseSensitiveText(void) const = 0;
+
+	virtual const TextLocation &begin(void) const = 0;
+	virtual TextLocation &begin(void) = 0;
+	virtual IToken* begin(const TextLocation &loc) = 0;
+	virtual const TextLocation &end(void) const = 0;
+	virtual TextLocation &end(void) = 0;
+	virtual IToken* end(const TextLocation &loc) = 0;
+
+	virtual const Details &details(void) const = 0;
+	virtual Details &details(void) = 0;
+
+	virtual IToken* add(const std::string &str) = 0;
+	virtual char back(void) const = 0;
+	virtual IToken* parse(bool caseInsensitive) = 0;
+
+	virtual bool is(Types y) const = 0;
+	virtual bool isNot(Types y) const = 0;
+
+	virtual std::string dump(void) const = 0;
+
+	static IToken* create(void);
+	static IToken* create(Types y);
+	static IToken* create(Types y, const Variant &data_, const TextLocation* begin_ = nullptr, const TextLocation* end_ = nullptr);
+	static IToken* create(Types y, const std::string &txt, bool caseInsensitive = true, const TextLocation* begin_ = nullptr, const TextLocation* end_ = nullptr);
+	static void destroy(IToken* ptr);
+};
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Node interface
 */
 
 namespace GBBASIC {
 
 /**
- * @brief Interface for all AST nodes.
+ * @brief Interface of AST nodes.
  */
 class INode {
 public:
