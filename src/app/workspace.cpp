@@ -5548,11 +5548,11 @@ void Workspace::compile(
 		/**< Prepare. */
 
 		Workspace* self = params->self;
-		GBBASIC::Kernel::Ptr kernel = params->kernel;
-		Project::Ptr project = params->project;
+		GBBASIC::Kernel::Ptr kernel       = params->kernel;
+		Project::Ptr project              = params->project;
 		const Text::Dictionary &arguments = params->arguments;
-		const bool commandlineOnly = params->commandlineOnly;
-		const bool doNotQuit = params->doNotQuit;
+		const bool commandlineOnly        = params->commandlineOnly;
+		const bool doNotQuit              = params->doNotQuit;
 
 		std::string config;
 		std::string rom;
@@ -5565,11 +5565,11 @@ void Workspace::compile(
 			config = kernel->path();
 			std::string dir;
 			Path::split(kernel->path(), nullptr, nullptr, &dir);
-			rom = Path::combine(dir.c_str(), kernel->kernelRom().c_str());
-			sym = Path::combine(dir.c_str(), kernel->kernelSymbols().c_str());
-			aliases = Path::combine(dir.c_str(), kernel->kernelAliases().c_str());
+			rom       = Path::combine(dir.c_str(), kernel->kernelRom().c_str());
+			sym       = Path::combine(dir.c_str(), kernel->kernelSymbols().c_str());
+			aliases   = Path::combine(dir.c_str(), kernel->kernelAliases().c_str());
 			bootstrap = kernel->bootstrapBank();
-			heapSize = kernel->memoryHeapSize();
+			heapSize  = kernel->memoryHeapSize();
 			stackSize = kernel->memoryStackSize();
 		}
 
@@ -5581,13 +5581,13 @@ void Workspace::compile(
 		std::string definedMacros;
 		if (project) {
 			if (!project->cartridgeType().empty())
-				cartType = project->cartridgeType();
+				cartType    = project->cartridgeType();
 			if (!project->sramType().empty())
-				sramType = project->sramType();
-			hasRtc = project->hasRtc();
+				sramType    = project->sramType();
+			hasRtc          = project->hasRtc();
 			caseInsensitive = project->caseInsensitive();
-			strictOn = project->strictOn();
-			definedMacros = project->definedMacros();
+			strictOn        = project->strictOn();
+			definedMacros   = project->definedMacros();
 		}
 
 #if GBBASIC_MULTITHREAD_ENABLED
@@ -5784,6 +5784,7 @@ void Workspace::compile(
 		Text::Dictionary::const_iterator opcOpt = arguments.find(COMPILER_OPTIMIZE_CODE_OPTION_KEY);
 		if (opcOpt != arguments.end())
 			Text::fromString(opcOpt->second, options.strategies.optimizeCode);
+		// TODO
 		Text::Dictionary::const_iterator oppOpt = arguments.find(COMPILER_OPTIMIZE_ASSETS_OPTION_KEY);
 		if (oppOpt != arguments.end())
 			Text::fromString(oppOpt->second, options.strategies.optimizeAssets);

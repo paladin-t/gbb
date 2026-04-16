@@ -113,15 +113,18 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 				continue;
 
 			const IToken::Ptr resolved = resolve ? resolve(tk) : nullptr;
-			const TreeNode::Ptr curNode(new TreeNode(resolved ? resolved : tk));
-			if (isOperator(tk)) {
-				const int arity = getArity(tk);
-				if (arity == 0) {
+			if (!resolved) // Not a foldable token.
+				continue;
+
+			const TreeNode::Ptr curNode(new TreeNode(resolved));
+			if (isOperator(resolved)) {
+				const int arity = getArity(resolved);
+				if (arity == 0) // Not a foldable operator.
 					return nullptr;
-				}
+
 				if ((int)stk.size() < arity) {
 					if (onError)
-						onError("Too few arguments", tk);
+						onError("Too few arguments", resolved);
 
 					return nullptr;
 				}
@@ -183,7 +186,7 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 		}
 
 		Int16 result = 0;
-		const Op::Types y = Op::typeOf(tk->text());
+		const Op::Types y = Op::typeOf((std::string)tk->data());
 		switch (y) {
 		case Op::Types::EQ:             result =  (getInt16(childVals[0]) == getInt16(childVals[1]) ? 1 : 0); break;
 		case Op::Types::LT:             result =  (getInt16(childVals[0]) <  getInt16(childVals[1]) ? 1 : 0); break;
@@ -280,6 +283,50 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 		return false;
 	
 #if defined GBBASIC_DEBUG
+	typedef std::function<std::string(const TreeNode::Ptr &, ErrorHandler)> Serializer;
+
+	Serializer astToInfixNotation = nullptr;
+	astToInfixNotation = [&astToInfixNotation] (const TreeNode::Ptr &ast, ErrorHandler onError) -> std::string {
+		(void)onError;
+
+		if (!ast)
+			return ""; 
+
+		const IToken::Ptr &tk = ast->token();
+		if (!isOperator(tk))
+			return tk->dump();
+
+		const TreeNode::Array &children = ast->children();
+		const int arity = getArity(tk);
+		std::string result;
+		if (arity == 1 && children.size() >= 1) {
+			result = tk->dump() + " " + astToInfixNotation(children[0], onError);
+		} else if (arity == 2 && children.size() >= 2) {
+			result = astToInfixNotation(children[0], onError) + " " + tk->dump() + " " + astToInfixNotation(children[1], onError);
+		} else {
+			for (size_t i = 0; i < children.size(); ++i) {
+				if (i > 0)
+					result += " " + tk->dump() + " ";
+				result += astToInfixNotation(children[i], onError);
+			}
+		}
+
+		return "(" + result + ")";
+	};
+
+	const std::string origin = astToInfixNotation(ast, onError);
+	const std::string folded = astToInfixNotation(
+		rpnToAst(
+			ret,
+			[] (const IToken::Ptr &tk) -> IToken::Ptr {
+				return tk;
+			},
+			onError
+		),
+		onError
+	);
+
+	fprintf(stdout, "Folded %s\n    to %s\n", origin.c_str(), folded.c_str());
 #endif /* GBBASIC_DEBUG */
 
 	return true;

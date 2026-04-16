@@ -7794,17 +7794,12 @@ private:
 		// Fold constants.
 		if (ctx.expression.optimize && !rpn.empty()) {
 			auto resolveToken = [] (const IToken::Ptr &tk) -> IToken::Ptr {
-				switch (tk->type()) {
-				case Token::Types::IDENTIFIER: {
-						// TODO: FOR CONSTANT FOLDING.
-					}
+				if (tk->is(Token::Types::OPERATOR))
+					return tk;
+				if (tk->is(Token::Types::NUMBER))
+					return tk;
 
-					break;
-				default:
-					return nullptr;
-				}
-
-				return tk;
+				return nullptr;
 			};
 			auto onError_ = [this, onError] (const std::string &msg, const IToken::Ptr &tk) -> void {
 				IToken::Ptr tk_ = tk;
