@@ -8,6 +8,7 @@
 
 #include "codepoint.h"
 #include "compiler.h"
+#include "evaluator.h"
 #include "../utils/datetime.h"
 #include "../utils/encoding.h"
 #include "../utils/file_handle.h"
