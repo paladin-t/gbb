@@ -67,9 +67,11 @@ static bool isOperator(const IToken::Ptr &tk) {
 	return false;
 }
 static int getArity(const IToken::Ptr &tk) {
-	// TODO: FOR CONSTANT FOLDING.
+	const std::string &str = tk->text();
+	const Op::Types y = Op::typeOf(str);
+	const Op &op = Op::OPERATORS[(size_t)y];
 
-	return 2; 
+	return op.oprands;
 }
 
 bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, ErrorHandler onError) {
@@ -91,7 +93,6 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 
 	auto rpnToTree = [] (const IToken::Array &rpn, TokenResolver resolve, ErrorHandler onError) -> Node::Ptr {
 		Node::Stack stk;
-
 		for (const IToken::Ptr &tk : rpn) {
 			if (!tk)
 				continue;
@@ -115,22 +116,21 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 
 			stk.push(curNode);
 		}
-
 		if (stk.size() != 1) {
 			if (onError)
 				onError("Incomplete expression", rpn.back());
 
 			return false;
 		}
-
-		Node::Ptr result = stk.top();
+		const Node::Ptr result = stk.top();
 
 		return result;
 	};
 
-	Node::Ptr tree = rpnToTree(rpn, resolve, onError);
+	const Node::Ptr tree = rpnToTree(rpn, resolve, onError);
+	// TODO: FOR CONSTANT FOLDING.
 
-	return true; 
+	return false; 
 }
 
 }

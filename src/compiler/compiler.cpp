@@ -2197,45 +2197,89 @@ const Asm::Instructions Asm::INSTRUCTIONS = array(
 	Asm(0xff,                              0)   // `Asm::Types::NONE`.
 );
 
-Op::Op(Opcode oc, int s, int a, int p) : opcode(oc), size(s), associativity(a), precedence(p) {
+Op::Op(Opcode oc, int s, int r, int a, int p, bool f) :
+	opcode(oc),
+	size(s),
+	oprands(r),
+	associativity(a),
+	precedence(p),
+	isFunctionLike(f)
+{
+}
+
+Op::Types Op::typeOf(const std::string &str) {
+	if (str == "=")      return Types::EQ;
+	if (str == "<")      return Types::LT;
+	if (str == "<=")     return Types::LE;
+	if (str == ">")      return Types::GT;
+	if (str == ">=")     return Types::GE;
+	if (str == "<>")     return Types::NE;
+	if (str == "and")    return Types::AND;
+	if (str == "or")     return Types::OR;
+	if (str == "not")    return Types::NOT;
+	if (str == "+")      return Types::ADD;
+	if (str == "-")      return Types::SUB;
+	if (str == "*")      return Types::MUL;
+	if (str == "/")      return Types::DIV;
+	if (str == "mod")    return Types::MOD;
+	if (str == "band")   return Types::BITWISE_AND;
+	if (str == "bor")    return Types::BITWISE_OR;
+	if (str == "bxor")   return Types::BITWISE_XOR;
+	if (str == "lshift") return Types::BITWISE_LSHIFT;
+	if (str == "rshift") return Types::BITWISE_RSHIFT;
+	if (str == "bnot")   return Types::BITWISE_NOT;
+	if (str == NEGATIVE) return Types::NEG;
+	if (str == "sgn")    return Types::SGN;
+	if (str == "abs")    return Types::ABS;
+	if (str == "sqr")    return Types::SQR;
+	if (str == "sqrt")   return Types::SQRT;
+	if (str == "sin")    return Types::SIN;
+	if (str == "cos")    return Types::COS;
+	if (str == "atan2")  return Types::ATAN2;
+	if (str == "pow")    return Types::POWI;
+	if (str == "min")    return Types::MIN;
+	if (str == "max")    return Types::MAX;
+
+	return Types::STOP;
 }
 
 Op::Operators Op::OPERATORS = array(
-	Op( 0,   0,    0,    0), // STOP.
-	Op(32,   1,    0,    0), // INT8.
-	Op(33,   2,    0,    0), // INT16.
-	Op(34,   2,    0,    0), // REF.
-	Op( 1,   0,   -1,    4), // EQ.
-	Op( 2,   0,   -1,    4), // LT.
-	Op( 3,   0,   -1,    4), // LE.
-	Op( 4,   0,   -1,    4), // GT.
-	Op( 5,   0,   -1,    4), // GE.
-	Op( 6,   0,   -1,    4), // NE.
-	Op( 7,   0,   -1,    3), // AND.
-	Op( 8,   0,   -1,    3), // OR.
-	Op( 9,   0,    1,    8), // NOT.
-	Op(10,   0,   -1,    5), // ADD.
-	Op(11,   0,   -1,    5), // SUB.
-	Op(12,   0,   -1,    6), // MUL.
-	Op(13,   0,   -1,    6), // DIV.
-	Op(14,   0,   -1,    6), // MOD.
-	Op(15,   0,   -1,    7), // BITWISE_AND.
-	Op(16,   0,   -1,    7), // BITWISE_OR.
-	Op(17,   0,   -1,    7), // BITWISE_XOR.
-	Op(18,   0,   -1,    7), // BITWISE_LSHIFT.
-	Op(19,   0,   -1,    7), // BITWISE_RSHIFT.
-	Op(20,   0,    1,    7), // BITWISE_NOT.
-	Op(21,   0,    1,    8), // NEG.
-	Op(22,   0,   -1,    1), // SGN.
-	Op(23,   0,   -1,    1), // ABS.
-	Op(24,   0,   -1,    1), // SQR.
-	Op(25,   0,   -1,    1), // SQRT.
-	Op(26,   0,   -1,    1), // SIN.
-	Op(27,   0,   -1,    1), // COS.
-	Op(28,   0,   -1,    1), // ATAN2.
-	Op(29,   0,   -1,    1), // POWI.
-	Op(30,   0,   -1,    2), // MIN.
-	Op(31,   0,   -1,    2)  // MAX.
+	// OP, SIZE, OPRANDS, ASSOCIATIVITY, PRECECDENCE, IS FUNCTION.
+	Op( 0,    0,       0,             0,           0,       false), // STOP.
+	Op(32,    1,       0,             0,           0,       false), // INT8.
+	Op(33,    2,       0,             0,           0,       false), // INT16.
+	Op(34,    2,       0,             0,           0,       false), // REF.
+	Op( 1,    0,       2,            -1,           4,       false), // EQ.
+	Op( 2,    0,       2,            -1,           4,       false), // LT.
+	Op( 3,    0,       2,            -1,           4,       false), // LE.
+	Op( 4,    0,       2,            -1,           4,       false), // GT.
+	Op( 5,    0,       2,            -1,           4,       false), // GE.
+	Op( 6,    0,       2,            -1,           4,       false), // NE.
+	Op( 7,    0,       2,            -1,           3,       false), // AND.
+	Op( 8,    0,       2,            -1,           3,       false), // OR.
+	Op( 9,    0,       1,             1,           8,       false), // NOT.
+	Op(10,    0,       2,            -1,           5,       false), // ADD.
+	Op(11,    0,       2,            -1,           5,       false), // SUB.
+	Op(12,    0,       2,            -1,           6,       false), // MUL.
+	Op(13,    0,       2,            -1,           6,       false), // DIV.
+	Op(14,    0,       2,            -1,           6,       false), // MOD.
+	Op(15,    0,       2,            -1,           7,       false), // BITWISE_AND.
+	Op(16,    0,       2,            -1,           7,       false), // BITWISE_OR.
+	Op(17,    0,       2,            -1,           7,       false), // BITWISE_XOR.
+	Op(18,    0,       2,            -1,           7,       false), // BITWISE_LSHIFT.
+	Op(19,    0,       2,            -1,           7,       false), // BITWISE_RSHIFT.
+	Op(20,    0,       1,             1,           7,       false), // BITWISE_NOT.
+	Op(21,    0,       1,             1,           8,       false), // NEG.
+	Op(22,    0,       1,            -1,           1,        true), // SGN.
+	Op(23,    0,       1,            -1,           1,        true), // ABS.
+	Op(24,    0,       1,            -1,           1,        true), // SQR.
+	Op(25,    0,       1,            -1,           1,        true), // SQRT.
+	Op(26,    0,       1,            -1,           1,        true), // SIN.
+	Op(27,    0,       1,            -1,           1,        true), // COS.
+	Op(28,    0,       2,            -1,           1,        true), // ATAN2.
+	Op(29,    0,       2,            -1,           1,        true), // POWI.
+	Op(30,    0,       2,            -1,           2,        true), // MIN.
+	Op(31,    0,       2,            -1,           2,        true)  // MAX.
 );
 
 enum class EventTypes {
@@ -2511,7 +2555,10 @@ public:
 
 		Entry() {
 		}
-		Entry(Op::Types y, int params, bool funcLike) : type(y), parameters(params), isFunctionLike(funcLike) {
+		Entry(Op::Types y) : type(y) {
+			const Op &op = Op::OPERATORS[(size_t)type];
+			parameters = op.oprands;
+			isFunctionLike = op.isFunctionLike;
 		}
 	};
 
@@ -30557,39 +30604,39 @@ public:
 			/**< Operators. */
 
 			// `a OP b` or `OP a`.
-			ADD_OPERATOR("=",        OperatorTable::Entry(Op::Types::EQ,               2,   false));
-			ADD_OPERATOR("<",        OperatorTable::Entry(Op::Types::LT,               2,   false));
-			ADD_OPERATOR("<=",       OperatorTable::Entry(Op::Types::LE,               2,   false));
-			ADD_OPERATOR(">",        OperatorTable::Entry(Op::Types::GT,               2,   false));
-			ADD_OPERATOR(">=",       OperatorTable::Entry(Op::Types::GE,               2,   false));
-			ADD_OPERATOR("<>",       OperatorTable::Entry(Op::Types::NE,               2,   false));
-			ADD_OPERATOR("and",      OperatorTable::Entry(Op::Types::AND,              2,   false));
-			ADD_OPERATOR("or",       OperatorTable::Entry(Op::Types::OR,               2,   false));
-			ADD_OPERATOR("not",      OperatorTable::Entry(Op::Types::NOT,              1,   false));
-			ADD_OPERATOR("+",        OperatorTable::Entry(Op::Types::ADD,              2,   false));
-			ADD_OPERATOR("-",        OperatorTable::Entry(Op::Types::SUB,              2,   false));
-			ADD_OPERATOR("*",        OperatorTable::Entry(Op::Types::MUL,              2,   false));
-			ADD_OPERATOR("/",        OperatorTable::Entry(Op::Types::DIV,              2,   false));
-			ADD_OPERATOR("mod",      OperatorTable::Entry(Op::Types::MOD,              2,   false));
-			ADD_OPERATOR("band",     OperatorTable::Entry(Op::Types::BITWISE_AND,      2,   false));
-			ADD_OPERATOR("bor",      OperatorTable::Entry(Op::Types::BITWISE_OR,       2,   false));
-			ADD_OPERATOR("bxor",     OperatorTable::Entry(Op::Types::BITWISE_XOR,      2,   false));
-			ADD_OPERATOR("lshift",   OperatorTable::Entry(Op::Types::BITWISE_LSHIFT,   2,   false));
-			ADD_OPERATOR("rshift",   OperatorTable::Entry(Op::Types::BITWISE_RSHIFT,   2,   false));
-			ADD_OPERATOR("bnot",     OperatorTable::Entry(Op::Types::BITWISE_NOT,      1,   false));
-			ADD_OPERATOR(NEGATIVE,   OperatorTable::Entry(Op::Types::NEG,              1,   false));
+			ADD_OPERATOR("=",        OperatorTable::Entry(Op::Types::EQ            ));
+			ADD_OPERATOR("<",        OperatorTable::Entry(Op::Types::LT            ));
+			ADD_OPERATOR("<=",       OperatorTable::Entry(Op::Types::LE            ));
+			ADD_OPERATOR(">",        OperatorTable::Entry(Op::Types::GT            ));
+			ADD_OPERATOR(">=",       OperatorTable::Entry(Op::Types::GE            ));
+			ADD_OPERATOR("<>",       OperatorTable::Entry(Op::Types::NE            ));
+			ADD_OPERATOR("and",      OperatorTable::Entry(Op::Types::AND           ));
+			ADD_OPERATOR("or",       OperatorTable::Entry(Op::Types::OR            ));
+			ADD_OPERATOR("not",      OperatorTable::Entry(Op::Types::NOT           ));
+			ADD_OPERATOR("+",        OperatorTable::Entry(Op::Types::ADD           ));
+			ADD_OPERATOR("-",        OperatorTable::Entry(Op::Types::SUB           ));
+			ADD_OPERATOR("*",        OperatorTable::Entry(Op::Types::MUL           ));
+			ADD_OPERATOR("/",        OperatorTable::Entry(Op::Types::DIV           ));
+			ADD_OPERATOR("mod",      OperatorTable::Entry(Op::Types::MOD           ));
+			ADD_OPERATOR("band",     OperatorTable::Entry(Op::Types::BITWISE_AND   ));
+			ADD_OPERATOR("bor",      OperatorTable::Entry(Op::Types::BITWISE_OR    ));
+			ADD_OPERATOR("bxor",     OperatorTable::Entry(Op::Types::BITWISE_XOR   ));
+			ADD_OPERATOR("lshift",   OperatorTable::Entry(Op::Types::BITWISE_LSHIFT));
+			ADD_OPERATOR("rshift",   OperatorTable::Entry(Op::Types::BITWISE_RSHIFT));
+			ADD_OPERATOR("bnot",     OperatorTable::Entry(Op::Types::BITWISE_NOT   ));
+			ADD_OPERATOR(NEGATIVE,   OperatorTable::Entry(Op::Types::NEG           ));
 
 			// Function-like `OP(...)`.
-			ADD_OPERATOR("sgn",      OperatorTable::Entry(Op::Types::SGN,              1,    true));
-			ADD_OPERATOR("abs",      OperatorTable::Entry(Op::Types::ABS,              1,    true));
-			ADD_OPERATOR("sqr",      OperatorTable::Entry(Op::Types::SQR,              1,    true));
-			ADD_OPERATOR("sqrt",     OperatorTable::Entry(Op::Types::SQRT,             1,    true));
-			ADD_OPERATOR("sin",      OperatorTable::Entry(Op::Types::SIN,              1,    true));
-			ADD_OPERATOR("cos",      OperatorTable::Entry(Op::Types::COS,              1,    true));
-			ADD_OPERATOR("atan2",    OperatorTable::Entry(Op::Types::ATAN2,            2,    true));
-			ADD_OPERATOR("pow",      OperatorTable::Entry(Op::Types::POWI,             2,    true));
-			ADD_OPERATOR("min",      OperatorTable::Entry(Op::Types::MIN,              2,    true));
-			ADD_OPERATOR("max",      OperatorTable::Entry(Op::Types::MAX,              2,    true));
+			ADD_OPERATOR("sgn",      OperatorTable::Entry(Op::Types::SGN           ));
+			ADD_OPERATOR("abs",      OperatorTable::Entry(Op::Types::ABS           ));
+			ADD_OPERATOR("sqr",      OperatorTable::Entry(Op::Types::SQR           ));
+			ADD_OPERATOR("sqrt",     OperatorTable::Entry(Op::Types::SQRT          ));
+			ADD_OPERATOR("sin",      OperatorTable::Entry(Op::Types::SIN           ));
+			ADD_OPERATOR("cos",      OperatorTable::Entry(Op::Types::COS           ));
+			ADD_OPERATOR("atan2",    OperatorTable::Entry(Op::Types::ATAN2         ));
+			ADD_OPERATOR("pow",      OperatorTable::Entry(Op::Types::POWI          ));
+			ADD_OPERATOR("min",      OperatorTable::Entry(Op::Types::MIN           ));
+			ADD_OPERATOR("max",      OperatorTable::Entry(Op::Types::MAX           ));
 		} while (false);
 
 		// Finish.
