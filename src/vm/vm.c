@@ -334,12 +334,11 @@ void vm_rpn(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS) OLDCALL NONBANK
 
     ARGS = THIS->stack_ptr;
     while (TRUE) {
-        UINT8 op = *(THIS->PC++);
+        const UINT8 op = *(THIS->PC++);
         if (op >= 32) {
             switch (op) {
             case VM_OP_R_INT8: // Int8.
-                op = *(THIS->PC++);
-                *(THIS->stack_ptr) = op;
+                *(THIS->stack_ptr) = *((INT8 *)(THIS->PC++));
 
                 break;
             case VM_OP_R_INT16: // Int16.
