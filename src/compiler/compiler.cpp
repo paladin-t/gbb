@@ -7726,6 +7726,42 @@ private:
 		if (!toRpn(context, rpn, onError))
 			return; // Error occured.
 
+		// FEAT: OPTIMIZATION.
+		// Fold constants.
+		if (ctx.expression.optimize) {
+			auto resolveToken = [] (const IToken::Ptr &tk) -> IToken::Ptr {
+				switch (tk->type()) {
+				case Token::Types::IDENTIFIER: {
+						// TODO: FOR CONSTANT FOLDING.
+					}
+
+					break;
+				default:
+					return nullptr;
+				}
+
+				return tk;
+			};
+			auto onError_ = [this, onError] (const std::string &msg, const IToken::Ptr &tk) -> void {
+				IToken::Ptr tk_ = tk;
+				if (tk_ == nullptr)
+					tk_ = firstTokenInThisOrChildren();
+				const Error err(msg, true);
+				onError(err, err.format(), tk_->begin());
+			};
+
+			IToken::Array newRpn;
+			const IToken::Array rpn_(rpn.begin(), rpn.end());
+			if (Evaluator::fold(newRpn, rpn_, resolveToken, onError_)) {
+				rpn.clear();
+				rpn.reserve(newRpn.size());
+				for (IToken::Ptr &ptr : newRpn) {
+					Token::Ptr tk = std::static_pointer_cast<Token>(ptr);
+					rpn.push_back(std::move(tk));
+				}
+			}
+		}
+
 		// Emit the temporaries.
 		Context::Expression::Temporaries temporaries;
 		VAR_GUARD(ctx.expression.temporaries, &temporaries);
@@ -8058,7 +8094,7 @@ private:
 				if (tknum) {
 					const int num = (int)tknum->data();
 					const double exp = std::log2(num);
-					if ((num > 0 && num <= 8192) && Math::isInteger(exp)) {
+					if ((num > 0 && num <= 8192 /* 2 ^ 13 */) && Math::isInteger(exp)) {
 						newnum = Token::Ptr(new Token());
 						newnum
 							->type(Token::Types::INTEGER)
