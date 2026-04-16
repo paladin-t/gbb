@@ -11,6 +11,15 @@
 
 /*
 ** {===========================================================================
+** Macros and constants
+*/
+
+#define SIGN(A) ((A) > 0 ? 1 : ((A) == 0 ? 0 : -1))
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Utilities
 */
 
@@ -34,7 +43,7 @@ public:
 	~TreeNode() {
 	}
 
-	IToken::Ptr token(void) const {
+	const IToken::Ptr &token(void) const {
 		return _token;
 	}
 
@@ -74,9 +83,6 @@ static int getArity(const IToken::Ptr &tk) {
 	return op.oprands;
 }
 
-static bool isInt(const Variant &v) {
-	return v.isNumber();
-}
 static Int16 getInt(const Variant &v) {
 	return (Int16)(int)v;
 }
@@ -98,8 +104,8 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 
 	// Prepare.
 	typedef std::function<TreeNode::Ptr(const IToken::Array &, TokenResolver, ErrorHandler)> Parser;
-	typedef std::function<Maybe<Variant>(const TreeNode::Ptr &, TokenResolver)> Folder;
-	typedef std::function<void(IToken::Array &, const TreeNode::Ptr &, TokenResolver)> Builder;
+	typedef std::function<Maybe<Variant>(const TreeNode::Ptr &, ErrorHandler)> Folder;
+	typedef std::function<bool(IToken::Array &, const TreeNode::Ptr &, ErrorHandler)> Builder;
 
 	// Converting RPN to AST nodes.
 	Parser rpnToAst = [] (const IToken::Array &rpn, TokenResolver resolve, ErrorHandler onError) -> TreeNode::Ptr {
@@ -108,7 +114,7 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 			if (!tk)
 				continue;
 
-			const IToken::Ptr resolved = tk;//resolve ? resolve(tk) : nullptr;
+			const IToken::Ptr resolved = resolve ? resolve(tk) : nullptr;
 			const TreeNode::Ptr curNode(new TreeNode(resolved ? resolved : tk));
 			if (isOperator(tk)) {
 				const int arity = getArity(tk);
@@ -140,13 +146,11 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 
 	// Folding constants in the AST.
 	Folder fold = nullptr;
-	fold = [&fold] (const TreeNode::Ptr &ast, TokenResolver resolve) -> Maybe<Variant> {
+	fold = [&fold] (const TreeNode::Ptr &ast, ErrorHandler onError) -> Maybe<Variant> {
 		typedef std::vector<Variant> Variants;
 
-		const IToken::Ptr tk = ast->token();
+		const IToken::Ptr &tk = ast->token();
 		if (!isOperator(tk)) {
-			const IToken::Ptr resolved = tk;//resolve ? resolve(tk) : nullptr;
-			const IToken::Ptr tk = resolved ? resolved : tk;
 			if (tk->is(IToken::Types::NOTHING))
 				return Variant(0);
 			else if (tk->is(IToken::Types::BOOLEAN))
@@ -160,27 +164,38 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 		const TreeNode::Array &children = ast->children();
 		Variants childVals;
 		for (const TreeNode::Ptr &child : children) {
-			const Maybe<Variant> val = fold(child, resolve);
+			const Maybe<Variant> val = fold(child, onError);
 			if (val.empty())
 				return Maybe<Variant>(); // Not foldable if there's at least one non-constant node.
 
 			childVals.push_back(val.get());
 		}
 
-		for (const Variant &var : childVals) {
-			if (!isInt(var)) {
-				// TODO
+		const int arity = getArity(tk);
+		if ((int)childVals.size() < arity) {
+			GBBASIC_ASSERT(false && "Impossible.");
 
-				break;
-			}
+			if (onError)
+				onError("Too few arguments", tk);
+
+			return nullptr;
 		}
 
 		Int16 result = 0;
 		const Op::Types y = Op::typeOf(tk->text());
 		switch (y) {
-		case Op::Types::ADD: result = getInt(childVals[0]) + getInt(childVals[1]); break;
-		case Op::Types::SUB: result = getInt(childVals[0]) - getInt(childVals[1]); break;
-		case Op::Types::MUL: result = getInt(childVals[0]) * getInt(childVals[1]); break;
+		case Op::Types::EQ:             result =  (getInt(childVals[0]) == getInt(childVals[1]) ? 1 : 0); break;
+		case Op::Types::LT:             result =  (getInt(childVals[0]) <  getInt(childVals[1]) ? 1 : 0); break;
+		case Op::Types::LE:             result =  (getInt(childVals[0]) <= getInt(childVals[1]) ? 1 : 0); break;
+		case Op::Types::GT:             result =  (getInt(childVals[0]) >  getInt(childVals[1]) ? 1 : 0); break;
+		case Op::Types::GE:             result =  (getInt(childVals[0]) >= getInt(childVals[1]) ? 1 : 0); break;
+		case Op::Types::NE:             result =  (getInt(childVals[0]) != getInt(childVals[1]) ? 1 : 0); break;
+		case Op::Types::AND:            result =  (getInt(childVals[0]) && getInt(childVals[1]) ? 1 : 0); break;
+		case Op::Types::OR:             result =  (getInt(childVals[0]) || getInt(childVals[1]) ? 1 : 0); break;
+		case Op::Types::NOT:            result = (!getInt(childVals[0])                         ? 1 : 0); break;
+		case Op::Types::ADD:            result =   getInt(childVals[0]) +  getInt(childVals[1]);          break;
+		case Op::Types::SUB:            result =   getInt(childVals[0]) -  getInt(childVals[1]);          break;
+		case Op::Types::MUL:            result =   getInt(childVals[0]) *  getInt(childVals[1]);          break;
 		case Op::Types::DIV: {
 				const Int16 div = getInt(childVals[1]);
 				if (div == 0)
@@ -199,10 +214,23 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 			}
 
 			break;
-		case Op::Types::NEG: result = -getInt(childVals[0]); break;
-		case Op::Types::ABS: result = (Int16)std::abs(getInt(childVals[0])); break;
-		case Op::Types::SQR: result = getInt(childVals[0]) * getInt(childVals[0]); break;
-		case Op::Types::SQRT: result = (Int16)std::sqrt(getInt(childVals[0])); break;
+		case Op::Types::BITWISE_AND:    result =   getInt(childVals[0]) &  getInt(childVals[1]);          break;
+		case Op::Types::BITWISE_OR:     result =   getInt(childVals[0]) |  getInt(childVals[1]);          break;
+		case Op::Types::BITWISE_XOR:    result =   getInt(childVals[0]) ^  getInt(childVals[1]);          break;
+		case Op::Types::BITWISE_LSHIFT: result =   getInt(childVals[0]) << getInt(childVals[1]);          break;
+		case Op::Types::BITWISE_RSHIFT: result =   getInt(childVals[0]) >> getInt(childVals[1]);          break;
+		case Op::Types::BITWISE_NOT:    result =  ~getInt(childVals[0]);                                  break;
+		case Op::Types::NEG:            result =  -getInt(childVals[0]);                                  break;
+		case Op::Types::SGN:            result = SIGN(getInt(childVals[0]));                              break;
+		case Op::Types::ABS:            result = (Int16)std::abs(getInt(childVals[0]));                   break;
+		case Op::Types::SQR:            result =   getInt(childVals[0]) *  getInt(childVals[0]);          break;
+		case Op::Types::SQRT:           result = (Int16)std::sqrt(getInt(childVals[0]));                  break;
+		case Op::Types::SIN:            return Maybe<Variant>(); // TODO
+		case Op::Types::COS:            return Maybe<Variant>(); // TODO
+		case Op::Types::ATAN2:          return Maybe<Variant>(); // TODO
+		case Op::Types::POWI:           return Maybe<Variant>(); // TODO
+		case Op::Types::MIN:            result = Math::min(getInt(childVals[0]), getInt(childVals[1]));   break;
+		case Op::Types::MAX:            result = Math::max(getInt(childVals[0]), getInt(childVals[1]));   break;
 		default:
 			return Maybe<Variant>();
 		}
@@ -212,39 +240,43 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 
 	// Rebuilding RPN.
 	Builder astToRpn = nullptr;
-	astToRpn = [&fold, &astToRpn](IToken::Array &rpn, const TreeNode::Ptr &ast, TokenResolver resolve) -> void {
-		const Maybe<Variant> val = fold(ast, resolve);
+	astToRpn = [&fold, &astToRpn] (IToken::Array &rpn, const TreeNode::Ptr &ast, ErrorHandler onError) -> bool {
+		const IToken::Ptr &tk = ast->token();
+		const Maybe<Variant> val = fold(ast, onError);
 		if (!val.empty()) {
 			const Variant var = val.get();
-			const IToken::Types y = IToken::Types::INTEGER;
-			rpn.push_back(IToken::Ptr(IToken::create(y, var)));
+			const IToken::Types y = IToken::Types::NUMBER;
+			const TextLocation &begin = tk->begin();
+			const TextLocation &end = tk->end();
+			rpn.push_back(IToken::Ptr(IToken::create(y, var.toString(), true /* TODO */, &begin, &end)));
 
-			return;
+			return isOperator(tk);
 		}
 
-		if (!isOperator(ast->token())) {
-			const IToken::Ptr tk = ast->token();
-			const IToken::Ptr resolved = tk;//resolve ? resolve(tk) : nullptr;
-			rpn.push_back(resolved ? resolved : tk);
+		if (!isOperator(tk)) {
+			rpn.push_back(tk);
 
-			return;
+			return false; // Not folded.
 		}
 
+		int folded = 0;
 		const TreeNode::Array &children = ast->children();
 		for (const TreeNode::Ptr &child : children) {
-			astToRpn(rpn, child, resolve);
+			if (astToRpn(rpn, child, onError))
+				++folded;
 		}
-		rpn.push_back(ast->token());
+		rpn.push_back(tk);
+
+		return !!folded;
 	};
 
 	// Fold the expression.
 	ret.clear();
-
 	const TreeNode::Ptr ast = rpnToAst(rpn, resolve, onError);
 	if (!ast)
 		return false;
-
-	astToRpn(ret, ast, resolve);
+	if (!astToRpn(ret, ast, onError))
+		return false;
 	
 	return true;
 }

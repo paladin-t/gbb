@@ -7717,10 +7717,11 @@ private:
 
 		// FEAT: OPTIMIZATION.
 		// Optimized to generate the only simple token if there's any.
-		if (simpleTk) {
-			switch (simpleTk->type()) {
+		auto emitConstant = [&] (const Token::Ptr &tk, bool &emitted) -> void {
+			emitted = false;
+			switch (tk->type()) {
 			case Token::Types::IDENTIFIER: {
-					const std::string id = (std::string)simpleTk->data();
+					const std::string id = (std::string)tk->data();
 					std::string fuzzyName;
 					const RamLocation* ramLocation = ctx.findPageAndGlobal(id, fuzzyName);
 					int data = 0;
@@ -7728,44 +7729,60 @@ private:
 						data = ramLocation->address;
 					} else {
 						if (isBuiltin(context, id)) {
-							if (writeBuiltin(bytes, context, Asm::Types::PUSH, id, -1))
+							if (writeBuiltin(bytes, context, Asm::Types::PUSH, id, -1)) {
+								emitted = true;
+
 								return; // Finished.
+							}
 						} else {
 							if (!fuzzyName.empty()) {
-								THROW_ID_HAS_NOT_BEEN_DECLARED_DID_YOU_MEAN(onError, simpleTk, fuzzyName);
+								THROW_ID_HAS_NOT_BEEN_DECLARED_DID_YOU_MEAN(onError, tk, fuzzyName);
 							}
 
-							THROW_ID_HAS_NOT_BEEN_DECLARED(onError, simpleTk);
+							THROW_ID_HAS_NOT_BEEN_DECLARED(onError, tk);
 						}
 					}
 					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH_VALUE]); INC_COUNTER(stk, 2);
 					args = fill(args, (Int16)data);
+
+					emitted = true;
 
 					return; // Finished.
 				}
 
 				break;
 			case Token::Types::BOOLEAN: {
-					const Int16 data = (Int16)BOOLEAN(simpleTk->data());
+					const Int16 data = (Int16)BOOLEAN(tk->data());
 					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 					args = fill(args, (UInt16)data);
+
+					emitted = true;
 				}
 
 				return; // Finished.
 			case Token::Types::INTEGER: {
-					const Int16 data = (Int16)(Variant::Long)simpleTk->data();
+					const Int16 data = (Int16)(Variant::Long)tk->data();
 					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
 					args = fill(args, (UInt16)data);
+
+					emitted = true;
 				}
 
 				return; // Finished.
 			case Token::Types::REAL:
-				THROW_NOT_IMPLEMENTED(onError, simpleTk);
+				THROW_NOT_IMPLEMENTED(onError, tk);
 			default:
 				// Do nothing.
 
 				break;
 			}
+		};
+
+		if (simpleTk) {
+			bool emitted = false;
+			emitConstant(simpleTk, emitted);
+			if (emitted)
+				return;
 		}
 
 		// Convert the infix expression to RPN.
@@ -7805,6 +7822,14 @@ private:
 				for (IToken::Ptr &ptr : newRpn) {
 					Token::Ptr tk = std::static_pointer_cast<Token>(ptr);
 					rpn.push_back(std::move(tk));
+				}
+
+				if (rpn.size() == 1) {
+					simpleTk = rpn.front();
+					bool emitted = false;
+					emitConstant(simpleTk, emitted);
+					if (emitted)
+						return;
 				}
 			}
 		}
