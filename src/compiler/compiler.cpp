@@ -7792,7 +7792,7 @@ private:
 
 		// FEAT: OPTIMIZATION.
 		// Fold constants.
-		if (ctx.expression.optimize) {
+		if (ctx.expression.optimize && !rpn.empty()) {
 			auto resolveToken = [] (const IToken::Ptr &tk) -> IToken::Ptr {
 				switch (tk->type()) {
 				case Token::Types::IDENTIFIER: {
@@ -7816,7 +7816,8 @@ private:
 
 			IToken::Array newRpn;
 			const IToken::Array rpn_(rpn.begin(), rpn.end());
-			if (Evaluator::fold(newRpn, rpn_, resolveToken, onError_)) {
+			const Evaluator::Options opt(ctx.caseInsensitive);
+			if (Evaluator::fold(newRpn, rpn_, opt, resolveToken, onError_)) {
 				rpn.clear();
 				rpn.reserve(newRpn.size());
 				for (IToken::Ptr &ptr : newRpn) {

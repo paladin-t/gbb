@@ -25,6 +25,16 @@ namespace GBBASIC {
 class Evaluator {
 public:
 	/**
+	 * @brief Options for expression evaluation.
+	 */
+	struct Options {
+		bool caseInsensitive = true;
+
+		Options();
+		Options(bool ci);
+	};
+
+	/**
 	 * @brief Function of token resolver.
 	 */
 	typedef std::function<IToken::Ptr(const IToken::Ptr &)> TokenResolver;
@@ -39,20 +49,22 @@ public:
 	 *
 	 * @param[out] ret The result expression.
 	 * @param[in] rpn The expression to evaluate.
+	 * @param[in] options Options for folding.
 	 * @param[in] onError The error handler.
 	 * @return `true` for succeeded, otherwise `false`.
 	 */
-	static bool fold(IToken::Array &ret, const IToken::Array &rpn, ErrorHandler onError /* nullable */);
+	static bool fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, ErrorHandler onError /* nullable */);
 	/**
 	 * @brief Folds constants in an expression.
 	 *
 	 * @param[out] ret The result expression.
 	 * @param[in] rpn The expression to evaluate.
+	 * @param[in] options Options for folding.
 	 * @param[in] resolve The custom token resolver, i.e. for resolving constant symbols, etc.
 	 * @param[in] onError The error handler.
 	 * @return `true` for succeeded, otherwise `false`.
 	 */
-	static bool fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver resolve, ErrorHandler onError /* nullable */);
+	static bool fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, TokenResolver resolve, ErrorHandler onError /* nullable */);
 };
 
 }

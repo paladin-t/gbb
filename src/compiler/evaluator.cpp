@@ -61,13 +61,15 @@ public:
 namespace GBBASIC {
 
 static bool isOperator(const IToken::Ptr &tk) {
-	if (tk->type() == IToken::Types::OPERATOR)
+	if (tk->is(IToken::Types::OPERATOR))
+		return true;
+	if (tk->is(IToken::Types::INTERMEDIA))
 		return true;
 
 	return false;
 }
 static int getArity(const IToken::Ptr &tk) {
-	const std::string &str = tk->text();
+	const std::string str = (std::string)tk->data();
 	const Op::Types y = Op::typeOf(str);
 	const Op &op = Op::OPERATORS[(size_t)y];
 
@@ -78,9 +80,18 @@ static Int16 getInt16(const Variant &v) {
 	return (Int16)(int)v;
 }
 
-bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, ErrorHandler onError) {
+Evaluator::Options::Options() {
+}
+
+Evaluator::Options::Options(bool ci) :
+	caseInsensitive(ci)
+{
+}
+
+bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, ErrorHandler onError) {
 	return fold(
 		ret, rpn,
+		options,
 		[] (const IToken::Ptr &/* tk */) -> IToken::Ptr {
 			return nullptr;
 		},
@@ -88,7 +99,7 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, ErrorHandler 
 	);
 }
 
-bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver resolve, ErrorHandler onError) {
+bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, TokenResolver resolve, ErrorHandler onError) {
 	// Prepare.
 	typedef std::function<TreeNode::Ptr(const IToken::Array &, TokenResolver, ErrorHandler)> Parser;
 	typedef std::function<Maybe<Variant>(const TreeNode::Ptr &, ErrorHandler)> Folder;
@@ -105,6 +116,9 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 			const TreeNode::Ptr curNode(new TreeNode(resolved ? resolved : tk));
 			if (isOperator(tk)) {
 				const int arity = getArity(tk);
+				if (arity == 0) {
+					return nullptr;
+				}
 				if ((int)stk.size() < arity) {
 					if (onError)
 						onError("Too few arguments", tk);
@@ -227,7 +241,7 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 
 	// Rebuilding RPN.
 	Builder astToRpn = nullptr;
-	astToRpn = [&fold, &astToRpn] (IToken::Array &rpn, const TreeNode::Ptr &ast, ErrorHandler onError) -> bool {
+	astToRpn = [&options, &fold, &astToRpn] (IToken::Array &rpn, const TreeNode::Ptr &ast, ErrorHandler onError) -> bool {
 		const IToken::Ptr &tk = ast->token();
 		const Maybe<Variant> val = fold(ast, onError);
 		if (!val.empty()) {
@@ -235,7 +249,7 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 			const IToken::Types y = IToken::Types::NUMBER;
 			const TextLocation &begin = tk->begin();
 			const TextLocation &end = tk->end();
-			rpn.push_back(IToken::Ptr(IToken::create(y, var.toString(), true /* TODO */, &begin, &end)));
+			rpn.push_back(IToken::Ptr(IToken::create(y, var.toString(), options.caseInsensitive, &begin, &end)));
 
 			return isOperator(tk);
 		}
