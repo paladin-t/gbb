@@ -880,6 +880,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowProjectProperty_Project_Running_StartOnOpen("Start on open");
 	windowProjectProperty_Compiling_Compiler("Compiler:");
 	windowProjectProperty_Compiling_Compiler_Macros("Macros");
+	windowProjectProperty_Compiling_Compiler_Optimize("Optimize");
 	windowProjectProperty_Compiling_Compiler_StrictOn("Strict on");
 	windowProjectProperty_Compiling_Parser("Parser:");
 	windowProjectProperty_Compiling_Parser_CaseInsensitive("Case-insensitive");
@@ -1448,6 +1449,11 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipProjectProperty_WhetherToCompileInStrictModeTreatsSomeWarningsAsErrors(
 		"Whether to compile in strict mode\n"
 		"(Treats some warnings as errors)"
+	);
+	tooltipProjectProperty_WhetherToCompileWithNecessaryOptimizationsRecommendedToKeepItChecked(
+		"Whether to compile with necessary\n"
+		"optimizations\n"
+		"(Recommended to keep it checked)"
 	);
 
 	tooltipScene_ActorDetails(

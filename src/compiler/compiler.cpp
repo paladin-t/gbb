@@ -7796,6 +7796,8 @@ private:
 			auto resolveToken = [] (const IToken::Ptr &tk) -> IToken::Ptr {
 				if (tk->is(Token::Types::OPERATOR))
 					return tk;
+				if (tk->is(Token::Types::SYMBOL))
+					return tk;
 				if (tk->is(Token::Types::NUMBER))
 					return tk;
 

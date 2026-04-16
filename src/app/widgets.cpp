@@ -4106,6 +4106,29 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				}
 				PopID();
 
+				PushID("#Optm");
+				{
+					if (isEditable) {
+						bool pref = prj->optimize();
+						if (Checkbox(_theme->windowProjectProperty_Compiling_Compiler_Optimize(), &pref))
+							prj->optimize(pref);
+					} else {
+						BeginDisabled();
+						{
+							bool pref = true;
+							Checkbox(_theme->windowProjectProperty_Compiling_Compiler_Optimize(), &pref);
+						}
+						EndDisabled();
+					}
+
+					if (IsItemHovered()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						SetTooltip(_theme->tooltipProjectProperty_WhetherToCompileWithNecessaryOptimizationsRecommendedToKeepItChecked());
+					}
+				}
+				PopID();
+
 				PushID("#Mcro");
 				{
 					if (isEditable) {
@@ -4595,6 +4618,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			prj->iconCode()                != _project->iconCode()             ||
 			prj->caseInsensitive()         != _project->caseInsensitive()      ||
 			prj->strictOn()                != _project->strictOn()             ||
+			prj->optimize()                != _project->optimize()             ||
 			prj->preDefinedMacros()        != _project->preDefinedMacros()     ||
 			prj->superFeaturesEnabled()    != _project->superFeaturesEnabled() ||
 			prj->borderFrameType()         != _project->borderFrameType()      ||

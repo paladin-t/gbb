@@ -76,6 +76,7 @@ Project::Project(class Window* wnd, Renderer* rnd, class Workspace* ws) {
 	runOnOpen(false);
 	caseInsensitive(true);
 	strictOn(true);
+	optimize(true);
 	superFeaturesEnabled(false);
 	borderFrameType(BorderFrameTypes::NONE);
 	customizedSuperPalettes(false);
@@ -161,6 +162,7 @@ Project &Project::operator = (const Project &other) {
 	runOnOpen(other.runOnOpen());
 	caseInsensitive(other.caseInsensitive());
 	strictOn(other.strictOn());
+	optimize(other.optimize());
 	preDefinedMacros(other.preDefinedMacros());
 	superFeaturesEnabled(other.superFeaturesEnabled());
 	borderFrameType(other.borderFrameType());
@@ -1990,6 +1992,7 @@ bool Project::open(const char* path_) {
 		runOnOpen(true); // Run-on-open for ROM typed project.
 		caseInsensitive(true);
 		strictOn(true);
+		optimize(true);
 		preDefinedMacros("");
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
@@ -2061,6 +2064,7 @@ bool Project::open(const char* path_) {
 		runOnOpen(false);
 		caseInsensitive(true);
 		strictOn(true);
+		optimize(true);
 		preDefinedMacros("");
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
@@ -2532,6 +2536,7 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		runOnOpen(false);
 		caseInsensitive(true);
 		strictOn(true);
+		optimize(true);
 		preDefinedMacros("");
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
@@ -2917,6 +2922,11 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 		strictOn(true);
 	}
 
+	optimize(true);
+	if (!Jpath::get(doc, optimize(), "optimize")) {
+		optimize(true);
+	}
+
 	preDefinedMacros("");
 	if (!Jpath::get(doc, preDefinedMacros(), "pre_defined_macros")) {
 		preDefinedMacros("");
@@ -3176,6 +3186,8 @@ bool Project::saveInformation(std::string &content) {
 	Jpath::set(doc, doc, caseInsensitive(), "case_insensitive");
 
 	Jpath::set(doc, doc, strictOn(), "strict_on");
+
+	Jpath::set(doc, doc, optimize(), "optimize");
 
 	Jpath::set(doc, doc, preDefinedMacros(), "pre_defined_macros");
 

@@ -4100,6 +4100,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		prj->iconCode(prj_->iconCode());
 		prj->caseInsensitive(prj_->caseInsensitive());
 		prj->strictOn(prj_->strictOn());
+		prj->optimize(prj_->optimize());
 		prj->preDefinedMacros(prj_->preDefinedMacros());
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
@@ -4159,6 +4160,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		prj->iconCode(prj_->iconCode());
 		prj->caseInsensitive(prj_->caseInsensitive());
 		prj->strictOn(prj_->strictOn());
+		prj->optimize(prj_->optimize());
 		prj->preDefinedMacros(prj_->preDefinedMacros());
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
@@ -5578,6 +5580,7 @@ void Workspace::compile(
 		bool hasRtc = true;
 		bool caseInsensitive = true;
 		bool strictOn = true;
+		bool optimize = true;
 		std::string definedMacros;
 		if (project) {
 			if (!project->cartridgeType().empty())
@@ -5587,6 +5590,7 @@ void Workspace::compile(
 			hasRtc          = project->hasRtc();
 			caseInsensitive = project->caseInsensitive();
 			strictOn        = project->strictOn();
+			optimize        = project->optimize();
 			definedMacros   = project->definedMacros();
 		}
 
@@ -5782,9 +5786,9 @@ void Workspace::compile(
 		else if (!stackSize.empty())
 			Text::fromString(stackSize, options.strategies.stackSize);
 		Text::Dictionary::const_iterator opcOpt = arguments.find(COMPILER_OPTIMIZE_CODE_OPTION_KEY);
+		options.strategies.optimizeCode = optimize;
 		if (opcOpt != arguments.end())
-			Text::fromString(opcOpt->second, options.strategies.optimizeCode);
-		// TODO
+			Text::fromString(opcOpt->second, options.strategies.optimizeCode); // Option from argument has higher priority.
 		Text::Dictionary::const_iterator oppOpt = arguments.find(COMPILER_OPTIMIZE_ASSETS_OPTION_KEY);
 		if (oppOpt != arguments.end())
 			Text::fromString(oppOpt->second, options.strategies.optimizeAssets);

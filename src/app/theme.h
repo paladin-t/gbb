@@ -642,6 +642,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Project_Running_StartOnOpen)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Compiling_Compiler)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Compiling_Compiler_Macros)
+	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Compiling_Compiler_Optimize)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Compiling_Compiler_StrictOn)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Compiling_Parser)
 	GBBASIC_PROPERTY_READONLY(std::string, windowProjectProperty_Compiling_Parser_CaseInsensitive)
@@ -969,6 +970,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_ResetIcon)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_SpecifyPreDefinedMacros)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_WhetherToCompileInStrictModeTreatsSomeWarningsAsErrors)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipProjectProperty_WhetherToCompileWithNecessaryOptimizationsRecommendedToKeepItChecked)
 
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_ActorDetails)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipScene_Attributes)
