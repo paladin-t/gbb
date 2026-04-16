@@ -7805,10 +7805,27 @@ private:
 			};
 			auto onError_ = [this, onError] (const std::string &msg, const IToken::Ptr &tk) -> void {
 				IToken::Ptr tk_ = tk;
-				if (tk_ == nullptr)
+				if (tk_ == nullptr) {
 					tk_ = firstTokenInThisOrChildren();
-				const Error err(msg, true);
-				onError(err, err.format(), tk_->begin());
+					if (tk_ == nullptr)
+						return;
+				}
+
+				const TextLocation &loc = tk_->begin();
+				std::string msg_ = "Cannot fold expression, ";
+				if (loc.row != -1 || loc.column != -1) {
+					if (loc.page != -1) {
+						msg_ += "page ";
+						msg_ += Text::toPageNumber(loc.page);
+						msg_ += ", ";
+					}
+					msg_ += "Ln ";
+					msg_ += Text::toString(loc.row + 1);
+					msg_ += ": ";
+				}
+				msg_ += msg;
+
+				fprintf(stdout, "%s\n", msg_.c_str());
 			};
 
 			IToken::Array newRpn;

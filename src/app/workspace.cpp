@@ -5466,6 +5466,10 @@ void Workspace::upgrade(
 			prj->version(_toUpgradeToVersion);
 
 		// Tidy.
+		prj->caseInsensitive(true);
+		prj->strictOn(true);
+		prj->optimize(true);
+
 		prj->preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
 		prj->preferencesFontOffset(GBBASIC_FONT_DEFAULT_OFFSET);
 		prj->preferencesFontIsTwoBitsPerPixel(GBBASIC_FONT_DEFAULT_IS_2BPP);

@@ -88,17 +88,6 @@ Evaluator::Options::Options(bool ci) :
 {
 }
 
-bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, ErrorHandler onError) {
-	return fold(
-		ret, rpn,
-		options,
-		[] (const IToken::Ptr &/* tk */) -> IToken::Ptr {
-			return nullptr;
-		},
-		onError
-	);
-}
-
 bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, TokenResolver resolve, ErrorHandler onError) {
 	// Prepare.
 	typedef std::function<TreeNode::Ptr(const IToken::Array &, TokenResolver, ErrorHandler)> Parser;
@@ -330,6 +319,17 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 #endif /* GBBASIC_DEBUG */
 
 	return true;
+}
+
+bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, ErrorHandler onError) {
+	return fold(
+		ret, rpn,
+		options,
+		[] (const IToken::Ptr &tk) -> IToken::Ptr {
+			return tk;
+		},
+		onError
+	);
 }
 
 }
