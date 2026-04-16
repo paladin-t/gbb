@@ -25,34 +25,46 @@ namespace GBBASIC {
 class Evaluator {
 public:
 	/**
+	 * @brief Options for expression evaluation.
+	 */
+	struct Options {
+		bool caseInsensitive = true;
+
+		Options();
+		Options(bool ci);
+	};
+
+	/**
 	 * @brief Function of token resolver.
 	 */
-	typedef std::function<IToken*(const IToken*)> TokenResolver;
+	typedef std::function<IToken::Ptr(const IToken::Ptr &)> TokenResolver;
 	/**
 	 * @brief Function of error handler.
 	 */
-	typedef std::function<void(const std::string &)> ErrorHandler;
+	typedef std::function<void(const std::string &, const IToken::Ptr &)> ErrorHandler;
 
 public:
 	/**
-	 * @brief Feature usages. Filled by compiler.
+	 * @brief Folds constants in an expression.
 	 *
-	 * @param[out] ret The result value if succeeded, otherwise `nullptr`.
-	 * @param[in] expr The expression to evaluate.
-	 * @param[in] onError The error handler.
-	 * @return `true` for succeeded, otherwise `false`.
-	 */
-	static bool eval(Variant &ret, const IToken::Array &expr, ErrorHandler onError /* nullable */);
-	/**
-	 * @brief Feature usages. Filled by compiler.
-	 *
-	 * @param[out] ret The result value if succeeded, otherwise `nullptr`.
-	 * @param[in] expr The expression to evaluate.
+	 * @param[out] ret The result expression.
+	 * @param[in] rpn The expression to evaluate.
+	 * @param[in] options Options for folding.
 	 * @param[in] resolve The custom token resolver, i.e. for resolving constant symbols, etc.
 	 * @param[in] onError The error handler.
 	 * @return `true` for succeeded, otherwise `false`.
 	 */
-	static bool eval(Variant &ret, const IToken::Array &expr, TokenResolver resolve, ErrorHandler onError /* nullable */);
+	static bool fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, TokenResolver resolve, ErrorHandler onError /* nullable */);
+	/**
+	 * @brief Folds constants in an expression.
+	 *
+	 * @param[out] ret The result expression.
+	 * @param[in] rpn The expression to evaluate.
+	 * @param[in] options Options for folding.
+	 * @param[in] onError The error handler.
+	 * @return `true` for succeeded, otherwise `false`.
+	 */
+	static bool fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, ErrorHandler onError /* nullable */);
 };
 
 }

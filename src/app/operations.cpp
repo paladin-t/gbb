@@ -1021,6 +1021,7 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			prj->hasRtc(false);
 			prj->caseInsensitive(true);
 			prj->strictOn(true);
+			prj->optimize(true);
 			prj->preDefinedMacros("");
 			prj->description("");
 			prj->author("");
@@ -4305,6 +4306,7 @@ promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspac
 					prj_->hasRtc();
 			const bool caseInsensitive = prj_->caseInsensitive();
 			const bool strictOn = prj_->strictOn();
+			const bool optimize = prj_->optimize();
 
 			Text::Dictionary arguments;
 			arguments[COMPILER_ROM_OPTION_KEY]                              = rom;
@@ -4330,7 +4332,7 @@ promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspac
 				arguments[COMPILER_HEAP_SIZE_OPTION_KEY]                    = krnl->memoryHeapSize();
 			if (!krnl->memoryStackSize().empty())
 				arguments[COMPILER_STACK_SIZE_OPTION_KEY]                   = krnl->memoryStackSize();
-			arguments[COMPILER_OPTIMIZE_CODE_OPTION_KEY]                    = "true";
+			arguments[COMPILER_OPTIMIZE_CODE_OPTION_KEY]                    = Text::toString(optimize);
 			arguments[COMPILER_OPTIMIZE_ASSETS_OPTION_KEY]                  = "true";
 			arguments[WORKSPACE_OPTION_APPLICATION_DO_NOT_QUIT_KEY]         = "";
 

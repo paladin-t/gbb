@@ -376,11 +376,15 @@ struct Op {
 	static Operators OPERATORS;
 
 	Opcode opcode = 0x00;
-	int size = 0;          // Size of the parameter list in bytes.
-	int associativity = 0; // -1 for left, 1 for right.
-	int precedence = 0;    // The greater, the higher.
+	int size = 0;                // Size of the parameter list in bytes.
+	int oprands = 0;             // Count of oprands.
+	int associativity = 0;       // -1 for left, 1 for right.
+	int precedence = 0;          // The greater, the higher.
+	bool isFunctionLike = false; // Whether the operator is function-like;
 
-	Op(Opcode oc, int s, int a, int p);
+	Op(Opcode oc, int s, int r, int a, int p, bool f);
+
+	static Types typeOf(const std::string &str);
 };
 
 }

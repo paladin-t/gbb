@@ -4100,6 +4100,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		prj->iconCode(prj_->iconCode());
 		prj->caseInsensitive(prj_->caseInsensitive());
 		prj->strictOn(prj_->strictOn());
+		prj->optimize(prj_->optimize());
 		prj->preDefinedMacros(prj_->preDefinedMacros());
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
@@ -4159,6 +4160,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		prj->iconCode(prj_->iconCode());
 		prj->caseInsensitive(prj_->caseInsensitive());
 		prj->strictOn(prj_->strictOn());
+		prj->optimize(prj_->optimize());
 		prj->preDefinedMacros(prj_->preDefinedMacros());
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
@@ -5464,6 +5466,10 @@ void Workspace::upgrade(
 			prj->version(_toUpgradeToVersion);
 
 		// Tidy.
+		prj->caseInsensitive(true);
+		prj->strictOn(true);
+		prj->optimize(true);
+
 		prj->preferencesFontSize(Math::Vec2i(-1, GBBASIC_FONT_DEFAULT_SIZE));
 		prj->preferencesFontOffset(GBBASIC_FONT_DEFAULT_OFFSET);
 		prj->preferencesFontIsTwoBitsPerPixel(GBBASIC_FONT_DEFAULT_IS_2BPP);
@@ -5548,11 +5554,11 @@ void Workspace::compile(
 		/**< Prepare. */
 
 		Workspace* self = params->self;
-		GBBASIC::Kernel::Ptr kernel = params->kernel;
-		Project::Ptr project = params->project;
+		GBBASIC::Kernel::Ptr kernel       = params->kernel;
+		Project::Ptr project              = params->project;
 		const Text::Dictionary &arguments = params->arguments;
-		const bool commandlineOnly = params->commandlineOnly;
-		const bool doNotQuit = params->doNotQuit;
+		const bool commandlineOnly        = params->commandlineOnly;
+		const bool doNotQuit              = params->doNotQuit;
 
 		std::string config;
 		std::string rom;
@@ -5565,11 +5571,11 @@ void Workspace::compile(
 			config = kernel->path();
 			std::string dir;
 			Path::split(kernel->path(), nullptr, nullptr, &dir);
-			rom = Path::combine(dir.c_str(), kernel->kernelRom().c_str());
-			sym = Path::combine(dir.c_str(), kernel->kernelSymbols().c_str());
-			aliases = Path::combine(dir.c_str(), kernel->kernelAliases().c_str());
+			rom       = Path::combine(dir.c_str(), kernel->kernelRom().c_str());
+			sym       = Path::combine(dir.c_str(), kernel->kernelSymbols().c_str());
+			aliases   = Path::combine(dir.c_str(), kernel->kernelAliases().c_str());
 			bootstrap = kernel->bootstrapBank();
-			heapSize = kernel->memoryHeapSize();
+			heapSize  = kernel->memoryHeapSize();
 			stackSize = kernel->memoryStackSize();
 		}
 
@@ -5578,16 +5584,18 @@ void Workspace::compile(
 		bool hasRtc = true;
 		bool caseInsensitive = true;
 		bool strictOn = true;
+		bool optimize = true;
 		std::string definedMacros;
 		if (project) {
 			if (!project->cartridgeType().empty())
-				cartType = project->cartridgeType();
+				cartType    = project->cartridgeType();
 			if (!project->sramType().empty())
-				sramType = project->sramType();
-			hasRtc = project->hasRtc();
+				sramType    = project->sramType();
+			hasRtc          = project->hasRtc();
 			caseInsensitive = project->caseInsensitive();
-			strictOn = project->strictOn();
-			definedMacros = project->definedMacros();
+			strictOn        = project->strictOn();
+			optimize        = project->optimize();
+			definedMacros   = project->definedMacros();
 		}
 
 #if GBBASIC_MULTITHREAD_ENABLED
@@ -5782,8 +5790,9 @@ void Workspace::compile(
 		else if (!stackSize.empty())
 			Text::fromString(stackSize, options.strategies.stackSize);
 		Text::Dictionary::const_iterator opcOpt = arguments.find(COMPILER_OPTIMIZE_CODE_OPTION_KEY);
+		options.strategies.optimizeCode = optimize;
 		if (opcOpt != arguments.end())
-			Text::fromString(opcOpt->second, options.strategies.optimizeCode);
+			Text::fromString(opcOpt->second, options.strategies.optimizeCode); // Option from argument has higher priority.
 		Text::Dictionary::const_iterator oppOpt = arguments.find(COMPILER_OPTIMIZE_ASSETS_OPTION_KEY);
 		if (oppOpt != arguments.end())
 			Text::fromString(oppOpt->second, options.strategies.optimizeAssets);
