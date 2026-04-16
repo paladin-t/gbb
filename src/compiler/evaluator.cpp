@@ -11,15 +11,6 @@
 
 /*
 ** {===========================================================================
-** Macros and constants
-*/
-
-#define SIGN(A) ((A) > 0 ? 1 : ((A) == 0 ? 0 : -1))
-
-/* ===========================================================================} */
-
-/*
-** {===========================================================================
 ** Utilities
 */
 
@@ -83,7 +74,7 @@ static int getArity(const IToken::Ptr &tk) {
 	return op.oprands;
 }
 
-static Int16 getInt(const Variant &v) {
+static Int16 getInt16(const Variant &v) {
 	return (Int16)(int)v;
 }
 
@@ -98,10 +89,6 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, ErrorHandler 
 }
 
 bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver resolve, ErrorHandler onError) {
-#if !defined GBBASIC_DEBUG
-	return false;
-#endif /* GBBASIC_DEBUG */
-
 	// Prepare.
 	typedef std::function<TreeNode::Ptr(const IToken::Array &, TokenResolver, ErrorHandler)> Parser;
 	typedef std::function<Maybe<Variant>(const TreeNode::Ptr &, ErrorHandler)> Folder;
@@ -184,53 +171,53 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 		Int16 result = 0;
 		const Op::Types y = Op::typeOf(tk->text());
 		switch (y) {
-		case Op::Types::EQ:             result =  (getInt(childVals[0]) == getInt(childVals[1]) ? 1 : 0); break;
-		case Op::Types::LT:             result =  (getInt(childVals[0]) <  getInt(childVals[1]) ? 1 : 0); break;
-		case Op::Types::LE:             result =  (getInt(childVals[0]) <= getInt(childVals[1]) ? 1 : 0); break;
-		case Op::Types::GT:             result =  (getInt(childVals[0]) >  getInt(childVals[1]) ? 1 : 0); break;
-		case Op::Types::GE:             result =  (getInt(childVals[0]) >= getInt(childVals[1]) ? 1 : 0); break;
-		case Op::Types::NE:             result =  (getInt(childVals[0]) != getInt(childVals[1]) ? 1 : 0); break;
-		case Op::Types::AND:            result =  (getInt(childVals[0]) && getInt(childVals[1]) ? 1 : 0); break;
-		case Op::Types::OR:             result =  (getInt(childVals[0]) || getInt(childVals[1]) ? 1 : 0); break;
-		case Op::Types::NOT:            result = (!getInt(childVals[0])                         ? 1 : 0); break;
-		case Op::Types::ADD:            result =   getInt(childVals[0]) +  getInt(childVals[1]);          break;
-		case Op::Types::SUB:            result =   getInt(childVals[0]) -  getInt(childVals[1]);          break;
-		case Op::Types::MUL:            result =   getInt(childVals[0]) *  getInt(childVals[1]);          break;
+		case Op::Types::EQ:             result =  (getInt16(childVals[0]) == getInt16(childVals[1]) ? 1 : 0); break;
+		case Op::Types::LT:             result =  (getInt16(childVals[0]) <  getInt16(childVals[1]) ? 1 : 0); break;
+		case Op::Types::LE:             result =  (getInt16(childVals[0]) <= getInt16(childVals[1]) ? 1 : 0); break;
+		case Op::Types::GT:             result =  (getInt16(childVals[0]) >  getInt16(childVals[1]) ? 1 : 0); break;
+		case Op::Types::GE:             result =  (getInt16(childVals[0]) >= getInt16(childVals[1]) ? 1 : 0); break;
+		case Op::Types::NE:             result =  (getInt16(childVals[0]) != getInt16(childVals[1]) ? 1 : 0); break;
+		case Op::Types::AND:            result =  (getInt16(childVals[0]) && getInt16(childVals[1]) ? 1 : 0); break;
+		case Op::Types::OR:             result =  (getInt16(childVals[0]) || getInt16(childVals[1]) ? 1 : 0); break;
+		case Op::Types::NOT:            result = (!getInt16(childVals[0])                           ? 1 : 0); break;
+		case Op::Types::ADD:            result =   getInt16(childVals[0]) +  getInt16(childVals[1]);          break;
+		case Op::Types::SUB:            result =   getInt16(childVals[0]) -  getInt16(childVals[1]);          break;
+		case Op::Types::MUL:            result =   getInt16(childVals[0]) *  getInt16(childVals[1]);          break;
 		case Op::Types::DIV: {
-				const Int16 div = getInt(childVals[1]);
+				const Int16 div = getInt16(childVals[1]);
 				if (div == 0)
 					return Maybe<Variant>(); // Avoid divided by zero.
 
-				result = getInt(childVals[0]) / div;
+				result = getInt16(childVals[0]) / div;
 			}
 
 			break;
 		case Op::Types::MOD: {
-				const Int16 div = getInt(childVals[1]);
+				const Int16 div = getInt16(childVals[1]);
 				if (div == 0)
 					return Maybe<Variant>(); // Avoid divided by zero.
 
-				result = getInt(childVals[0]) % div;
+				result = getInt16(childVals[0]) % div;
 			}
 
 			break;
-		case Op::Types::BITWISE_AND:    result =   getInt(childVals[0]) &  getInt(childVals[1]);          break;
-		case Op::Types::BITWISE_OR:     result =   getInt(childVals[0]) |  getInt(childVals[1]);          break;
-		case Op::Types::BITWISE_XOR:    result =   getInt(childVals[0]) ^  getInt(childVals[1]);          break;
-		case Op::Types::BITWISE_LSHIFT: result =   getInt(childVals[0]) << getInt(childVals[1]);          break;
-		case Op::Types::BITWISE_RSHIFT: result =   getInt(childVals[0]) >> getInt(childVals[1]);          break;
-		case Op::Types::BITWISE_NOT:    result =  ~getInt(childVals[0]);                                  break;
-		case Op::Types::NEG:            result =  -getInt(childVals[0]);                                  break;
-		case Op::Types::SGN:            result = SIGN(getInt(childVals[0]));                              break;
-		case Op::Types::ABS:            result = (Int16)std::abs(getInt(childVals[0]));                   break;
-		case Op::Types::SQR:            result =   getInt(childVals[0]) *  getInt(childVals[0]);          break;
-		case Op::Types::SQRT:           result = (Int16)std::sqrt(getInt(childVals[0]));                  break;
-		case Op::Types::SIN:            return Maybe<Variant>(); // TODO
-		case Op::Types::COS:            return Maybe<Variant>(); // TODO
-		case Op::Types::ATAN2:          return Maybe<Variant>(); // TODO
-		case Op::Types::POWI:           return Maybe<Variant>(); // TODO
-		case Op::Types::MIN:            result = Math::min(getInt(childVals[0]), getInt(childVals[1]));   break;
-		case Op::Types::MAX:            result = Math::max(getInt(childVals[0]), getInt(childVals[1]));   break;
+		case Op::Types::BITWISE_AND:    result =   getInt16(childVals[0]) &  getInt16(childVals[1]);          break;
+		case Op::Types::BITWISE_OR:     result =   getInt16(childVals[0]) |  getInt16(childVals[1]);          break;
+		case Op::Types::BITWISE_XOR:    result =   getInt16(childVals[0]) ^  getInt16(childVals[1]);          break;
+		case Op::Types::BITWISE_LSHIFT: result =   getInt16(childVals[0]) << getInt16(childVals[1]);          break;
+		case Op::Types::BITWISE_RSHIFT: result =   getInt16(childVals[0]) >> getInt16(childVals[1]);          break;
+		case Op::Types::BITWISE_NOT:    result =  ~getInt16(childVals[0]);                                    break;
+		case Op::Types::NEG:            result =  -getInt16(childVals[0]);                                    break;
+		case Op::Types::SGN:            // Fall through.
+		case Op::Types::ABS:            // Fall through.
+		case Op::Types::SQR:            // Fall through.
+		case Op::Types::SQRT:           // Fall through.
+		case Op::Types::SIN:            // Fall through.
+		case Op::Types::COS:            // Fall through.
+		case Op::Types::ATAN2:          // Fall through.
+		case Op::Types::POWI:           // Fall through.
+		case Op::Types::MIN:            // Fall through.
+		case Op::Types::MAX:            // Fall through.
 		default:
 			return Maybe<Variant>();
 		}
@@ -278,6 +265,9 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, TokenResolver
 	if (!astToRpn(ret, ast, onError))
 		return false;
 	
+#if defined GBBASIC_DEBUG
+#endif /* GBBASIC_DEBUG */
+
 	return true;
 }
 
