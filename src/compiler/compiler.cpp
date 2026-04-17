@@ -7793,44 +7793,45 @@ private:
 		// FEAT: OPTIMIZATION.
 		// Fold constants.
 		if (ctx.expression.optimize && !rpn.empty()) {
-			auto resolveToken = [] (const IToken::Ptr &tk) -> IToken::Ptr {
-				if (tk->is(Token::Types::OPERATOR))
-					return tk;
-				if (tk->is(Token::Types::SYMBOL))
-					return tk;
-				if (tk->is(Token::Types::NUMBER))
-					return tk;
+			const Evaluator::Options options(
+				ctx.caseInsensitive,
+				[] (const IToken::Ptr &tk) -> IToken::Ptr {
+					if (tk->is(Token::Types::OPERATOR))
+						return tk;
+					if (tk->is(Token::Types::SYMBOL))
+						return tk;
+					if (tk->is(Token::Types::NUMBER))
+						return tk;
 
-				return nullptr;
-			};
-			auto onError_ = [this, onError] (const std::string &msg, const IToken::Ptr &tk) -> void {
-				IToken::Ptr tk_ = tk;
-				if (tk_ == nullptr)
-					tk_ = firstTokenInThisOrChildren();
+					return nullptr;
+				},
+				[this, onError] (const std::string &msg, const IToken::Ptr &tk) -> void {
+					IToken::Ptr tk_ = tk;
+					if (tk_ == nullptr)
+						tk_ = firstTokenInThisOrChildren();
 
-				std::string msg_ = "Cannot fold expression, ";
-				if (tk_) {
-					const TextLocation &loc = tk_->begin();
-					if (loc.row != -1 || loc.column != -1) {
-						if (loc.page != -1) {
-							msg_ += "page ";
-							msg_ += Text::toPageNumber(loc.page);
-							msg_ += ", ";
+					std::string msg_ = "Cannot fold expression, ";
+					if (tk_) {
+						const TextLocation &loc = tk_->begin();
+						if (loc.row != -1 || loc.column != -1) {
+							if (loc.page != -1) {
+								msg_ += "page ";
+								msg_ += Text::toPageNumber(loc.page);
+								msg_ += ", ";
+							}
+							msg_ += "Ln ";
+							msg_ += Text::toString(loc.row + 1);
+							msg_ += ": ";
 						}
-						msg_ += "Ln ";
-						msg_ += Text::toString(loc.row + 1);
-						msg_ += ": ";
 					}
+					msg_ += msg;
+
+					fprintf(stdout, "%s\n", msg_.c_str());
 				}
-				msg_ += msg;
-
-				fprintf(stdout, "%s\n", msg_.c_str());
-			};
-
+			);
 			IToken::Array newRpn;
 			const IToken::Array rpn_(rpn.begin(), rpn.end());
-			const Evaluator::Options opt(ctx.caseInsensitive);
-			if (Evaluator::fold(newRpn, rpn_, opt, resolveToken, onError_)) {
+			if (Evaluator::fold(newRpn, rpn_, options)) {
 				rpn.clear();
 				rpn.reserve(newRpn.size());
 				for (IToken::Ptr &ptr : newRpn) {

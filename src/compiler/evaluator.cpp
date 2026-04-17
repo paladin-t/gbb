@@ -95,11 +95,26 @@ Evaluator::Options::Options(bool ci) :
 {
 }
 
-bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, TokenResolver resolve, ErrorHandler onError) {
+Evaluator::Options::Options(bool ci, TokenResolver r, ErrorHandler err) :
+	caseInsensitive(ci),
+	resolve(r),
+	onError(err)
+{
+}
+
+bool Evaluator::toRpn(IToken::Array &ret, const IToken::Array &in, const Options &options) {
+	// TODO
+	return false;
+}
+
+bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options) {
 	// Prepare.
 	typedef std::function<TreeNode::Ptr(const IToken::Array &, TokenResolver, ErrorHandler)> Parser;
 	typedef std::function<Maybe<Variant>(const TreeNode::Ptr &, ErrorHandler)> Folder;
 	typedef std::function<bool(IToken::Array &, const TreeNode::Ptr &, ErrorHandler)> Builder;
+
+	TokenResolver resolve = options.resolve;
+	ErrorHandler onError = options.onError;
 
 	// Converting RPN to AST nodes.
 	Parser rpnToAst = [] (const IToken::Array &rpn, TokenResolver resolve, ErrorHandler onError) -> TreeNode::Ptr {
@@ -351,15 +366,9 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 	return true;
 }
 
-bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, ErrorHandler onError) {
-	return fold(
-		ret, rpn,
-		options,
-		[] (const IToken::Ptr &tk) -> IToken::Ptr {
-			return tk;
-		},
-		onError
-	);
+bool Evaluator::calc(Variant &ret, const IToken::Array &rpn, const Options &options) {
+	// TODO
+	return false;
 }
 
 }
