@@ -54,7 +54,7 @@ public:
 	 * @param[in] onError The error handler.
 	 * @return `true` for succeeded, otherwise `false`.
 	 */
-	static bool fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, TokenResolver resolve, ErrorHandler onError /* nullable */);
+	static bool fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, TokenResolver resolve /* nullable */, ErrorHandler onError /* nullable */);
 	/**
 	 * @brief Folds constants in an expression.
 	 *

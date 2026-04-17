@@ -49,18 +49,10 @@ public:
 	}
 };
 
-}
-
-/* ===========================================================================} */
-
-/*
-** {===========================================================================
-** Evaluator
-*/
-
-namespace GBBASIC {
-
 static bool isOperator(const IToken::Ptr &tk) {
+	if (!tk)
+		return false;
+
 	if (tk->is(IToken::Types::OPERATOR))
 		return true;
 	if (tk->is(IToken::Types::INTERMEDIA))
@@ -68,7 +60,11 @@ static bool isOperator(const IToken::Ptr &tk) {
 
 	return false;
 }
+
 static int getArity(const IToken::Ptr &tk) {
+	if (!tk)
+		return 0;
+
 	const std::string str = (std::string)tk->data();
 	const Op::Types y = Op::typeOf(str);
 	const Op &op = Op::OPERATORS[(size_t)y];
@@ -79,6 +75,17 @@ static int getArity(const IToken::Ptr &tk) {
 static Int16 getInt16(const Variant &v) {
 	return (Int16)(int)v;
 }
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Evaluator
+*/
+
+namespace GBBASIC {
 
 Evaluator::Options::Options() {
 }
@@ -105,7 +112,7 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 			if (!resolved) // Not a foldable token.
 				continue;
 
-			const TreeNode::Ptr curNode(new TreeNode(resolved));
+			const TreeNode::Ptr node(new TreeNode(resolved));
 			if (isOperator(resolved)) {
 				const int arity = getArity(resolved);
 				if (arity == 0) // Not a foldable operator.
@@ -118,13 +125,13 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 					return nullptr;
 				}
 
-				for (int i = 0; i < arity; ++i) {
-					curNode->add(stk.top());
+				for (int i = 0; i < arity && !stk.empty(); ++i) {
+					node->add(stk.top());
 					stk.pop();
 				}
 			}
 
-			stk.push(curNode);
+			stk.push(node);
 		}
 		if (stk.size() != 1) {
 			if (onError)
@@ -132,6 +139,7 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 
 			return nullptr;
 		}
+
 		const TreeNode::Ptr result = stk.top();
 
 		return result;
@@ -141,6 +149,9 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 	Folder fold = nullptr;
 	fold = [&fold] (const TreeNode::Ptr &ast, ErrorHandler onError) -> Maybe<Variant> {
 		typedef std::vector<Variant> Variants;
+
+		if (!ast)
+			return Maybe<Variant>();
 
 		const IToken::Ptr &tk = ast->token();
 		if (!isOperator(tk)) {
@@ -163,7 +174,6 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 
 			childVals.push_back(val.get());
 		}
-
 		const int arity = getArity(tk);
 		if ((int)childVals.size() < arity) {
 			GBBASIC_ASSERT(false && "Impossible.");
@@ -234,6 +244,9 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 	// Rebuilding RPN.
 	Builder astToRpn = nullptr;
 	astToRpn = [&options, &fold, &astToRpn] (IToken::Array &rpn, const TreeNode::Ptr &ast, ErrorHandler onError) -> bool {
+		if (!ast)
+			return false;
+
 		const IToken::Ptr &tk = ast->token();
 		const Maybe<Variant> val = fold(ast, onError);
 		if (!val.empty()) {
@@ -272,48 +285,65 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 		return false;
 	
 #if defined GBBASIC_DEBUG
-	typedef std::function<std::string(const TreeNode::Ptr &, ErrorHandler)> Serializer;
+	typedef std::function<std::string(const IToken::Array &, ErrorHandler)> Formatter;
 
-	Serializer astToInfixNotation = nullptr;
-	astToInfixNotation = [&astToInfixNotation] (const TreeNode::Ptr &ast, ErrorHandler onError) -> std::string {
-		(void)onError;
+	Formatter toInfixNotation = nullptr;
+	toInfixNotation = [&toInfixNotation] (const IToken::Array &rpn, ErrorHandler onError) -> std::string {
+		typedef std::stack<std::string> StringStack;
 
-		if (!ast)
-			return ""; 
+		StringStack stk;
+		for (const IToken::Ptr &tk : rpn) {
+			if (!tk)
+				continue;
 
-		const IToken::Ptr &tk = ast->token();
-		if (!isOperator(tk))
-			return tk->dump();
+			if (isOperator(tk)) {
+				const std::string sym = tk->data().toString();
+				const int arity = getArity(tk);
 
-		const TreeNode::Array &children = ast->children();
-		const int arity = getArity(tk);
-		std::string result;
-		if (arity == 1 && children.size() >= 1) {
-			result = tk->dump() + " " + astToInfixNotation(children[0], onError);
-		} else if (arity == 2 && children.size() >= 2) {
-			result = astToInfixNotation(children[0], onError) + " " + tk->dump() + " " + astToInfixNotation(children[1], onError);
-		} else {
-			for (size_t i = 0; i < children.size(); ++i) {
-				if (i > 0)
-					result += " " + tk->dump() + " ";
-				result += astToInfixNotation(children[i], onError);
+				if (arity == 1) {
+					if (stk.empty()) {
+						if (onError)
+							onError("Invalid RPN, missing operand for unary operator", tk);
+
+						return "";
+					}
+
+					const std::string operand = stk.top();
+					stk.pop();
+					stk.push(sym + "(" + operand + ")");
+				} else if (arity == 2) {
+					if (stk.size() < 2) {
+						if (onError)
+							onError("Invalid RPN, missing operands for binary operator", tk);
+
+						return "";
+					}
+
+					const std::string right = stk.top();
+					stk.pop();
+					const std::string left = stk.top();
+					stk.pop();
+					stk.push("(" + left + " " + sym + " " + right + ")");
+				} else {
+					stk.push(sym);
+				}
+			} else {
+				const std::string txt = tk->data().toString();
+				stk.push(txt);
 			}
 		}
+		if (stk.size() != 1) {
+			if (onError)
+				onError("Invalid RPN expression", nullptr);
 
-		return "(" + result + ")";
+			return "";
+		}
+
+		return stk.top();
 	};
 
-	const std::string origin = astToInfixNotation(ast, onError);
-	const std::string folded = astToInfixNotation(
-		rpnToAst(
-			ret,
-			[] (const IToken::Ptr &tk) -> IToken::Ptr {
-				return tk;
-			},
-			onError
-		),
-		onError
-	);
+	const std::string origin = toInfixNotation(rpn, onError);
+	const std::string folded = toInfixNotation(ret, onError);
 
 	fprintf(stdout, "Folded %s\n    to %s\n", origin.c_str(), folded.c_str());
 #endif /* GBBASIC_DEBUG */
