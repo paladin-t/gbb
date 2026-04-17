@@ -7,6 +7,7 @@
 */
 
 #include "evaluator.h"
+#include "../utils/text.h"
 #include <stack>
 
 /*
@@ -103,8 +104,177 @@ Evaluator::Options::Options(bool ci, TokenResolver r, ErrorHandler err) :
 }
 
 bool Evaluator::toRpn(IToken::Array &ret, const IToken::Array &in, const Options &options) {
-	// TODO
-	return false;
+	// Prepare.
+	typedef std::stack<IToken::Ptr> Stack;
+
+	ErrorHandler onError = options.onError;
+
+	Stack stack;
+	ret.clear();
+
+	auto valid = [] (const IToken::Ptr &tk) -> bool {
+		return isOperator(tk);
+	};
+	auto get = [] (const IToken::Ptr &tk) -> Op {
+		const std::string str = (std::string)tk->data();
+		const Op::Types y = Op::typeOf(str);
+
+		return Op::OPERATORS[(size_t)y];
+	};
+	auto equals = [] (const IToken::Ptr &tk, const std::string &key_) -> bool {
+		const std::string key = (std::string)tk->data();
+
+		return key_ == key;
+	};
+	auto compare = [] (const Op &left, const Op &right) -> int {
+		return left.precedence - right.precedence;
+	};
+	auto add = [&ret] (const IToken::Ptr &tk) -> void {
+		ret.push_back(tk);
+	};
+
+	// Iterate the tokens.
+	IToken::Ptr expectsOperator(IToken::create());
+	IToken::Ptr expectsOperand = nullptr;
+	for (const IToken::Ptr &tk : in) {
+		switch (tk->type()) {
+		case IToken::Types::OPERATOR:
+			if (expectsOperator == nullptr) {
+				if (tk->data() == "(") { // Is a left parenthesis.
+					expectsOperand = tk;
+				} else {
+					const bool allowUnaryNot = expectsOperand && expectsOperand->is(IToken::Types::OPERATOR) &&
+						(
+							expectsOperand->data() == "("      ||
+							expectsOperand->data() == "="      ||
+							expectsOperand->data() == "<"      ||
+							expectsOperand->data() == "<="     ||
+							expectsOperand->data() == ">"      ||
+							expectsOperand->data() == ">="     ||
+							expectsOperand->data() == "<>"     ||
+							expectsOperand->data() == "+"      ||
+							expectsOperand->data() == "-"      ||
+							expectsOperand->data() == "*"      ||
+							expectsOperand->data() == "/"      ||
+							expectsOperand->data() == "mod"    ||
+							expectsOperand->data() == "and"    ||
+							expectsOperand->data() == "or"     ||
+							expectsOperand->data() == "not"    ||
+							expectsOperand->data() == "band"   ||
+							expectsOperand->data() == "bor"    ||
+							expectsOperand->data() == "bxor"   ||
+							expectsOperand->data() == "lshift" ||
+							expectsOperand->data() == "rshift" ||
+							expectsOperand->data() == "bnot"
+						);
+					const bool isUnaryNot = tk->type() == IToken::Types::OPERATOR &&
+						(tk->data() == "not" || tk->data() == "bnot"); // Is a unary `NOT` or `BNOT`.
+					if (allowUnaryNot && isUnaryNot) {
+						expectsOperand = tk;
+
+						break;
+					} else {
+						if (onError) {
+							const std::string msg = "Unexpected operator \"{0}\"";
+							onError(Text::format(msg, { tk->caseSensitiveText() }), tk);
+						}
+
+						return false;
+					}
+				}
+			} else {
+				if (tk->data() == ")") {
+					expectsOperator = IToken::Ptr(IToken::create());
+				} else {
+					expectsOperator = nullptr;
+				}
+			}
+			if (tk->data() != "(" && tk->data() != ")") {
+				expectsOperand = tk;
+			}
+
+			break;
+		case IToken::Types::SYMBOL: case IToken::Types::KEYWORD: case IToken::Types::IDENTIFIER: // Fall through.
+		case IToken::Types::BOOLEAN:                                                             // Fall through.
+		case IToken::Types::NUMBER: case IToken::Types::INTEGER: case IToken::Types::REAL:       // Fall through.
+		case IToken::Types::INTERMEDIA: case IToken::Types::MATH: case IToken::Types::STATEMENT: case IToken::Types::ARRAY: case IToken::Types::MACRO:
+			expectsOperator = tk;
+			expectsOperand = nullptr;
+
+			break;
+		case IToken::Types::COMMENT:
+			continue;
+		default:
+			if (onError) {
+				if (tk->caseSensitiveText().length() >= 2 && Text::startsWith(tk->caseSensitiveText(), "\"", false) && Text::endsWith(tk->caseSensitiveText(), "\"", false)) {
+					const std::string msg = "Invalid expression {0}";
+					onError(Text::format(msg, { tk->caseSensitiveText() }), tk);
+				} else {
+					const std::string msg = "Invalid expression \"{0}\"";
+					onError(Text::format(msg, { tk->caseSensitiveText() }), tk);
+				}
+			}
+
+			return false;
+		}
+
+		if (valid(tk)) { // The token is an operator.
+			while (!stack.empty() && valid(stack.top())) { // While there is an operator (y) at the top of the operators stack.
+				// Either (x) is left-associative and its precedence is less or equal to that of (y), or
+				// (x) is right-associative and its precedence is less than (y).
+				const Op currentOperator = get(tk); // The current operator.
+				const Op lastOperator = get(stack.top()); // The top operator from the stack.
+				if ((currentOperator.associativity == -1 && compare(currentOperator, lastOperator) <= 0) || (currentOperator.associativity == 1 && compare(currentOperator, lastOperator) < 0)) {
+					// Pop (y) from the stack.
+					// Add (y) to the output collection.
+					const IToken::Ptr top = stack.top();
+					stack.pop();
+					add(top);
+
+					continue;
+				}
+
+				break;
+			}
+			// Push the new operator on the stack.
+			stack.push(tk);
+		} else if (equals(tk, "(")) { // The token is a left parenthesis.
+			// Push it on the stack.
+			stack.push(tk);
+		} else if (equals(tk, ")")) { // The token is a right parenthesis.
+			while (!stack.empty() && !equals(stack.top(), "(")) {
+				// Until the top token (from the stack) is left parenthesis,
+				// pop from the stack to the output collection.
+				const IToken::Ptr top = stack.top();
+				stack.pop();
+				add(top);
+			}
+			// Also pop the left parenthesis but don't include it in the output collection.
+			if (!stack.empty())
+				stack.pop();
+		} else { // Otherwise.
+			// Add the token to the output collection.
+			add(tk);
+		}
+	}
+	if (expectsOperand) {
+		if (onError) {
+			const std::string msg = "Unexpected operator \"{0}\"";
+			onError(Text::format(msg, { expectsOperand->caseSensitiveText() }), expectsOperand);
+		}
+
+		return false;
+	}
+
+	while (!stack.empty()) { // While there are still operator tokens in the stack.
+		// Pop them to the output collection.
+		const IToken::Ptr top = stack.top();
+		stack.pop();
+		add(top);
+	}
+
+	// Finish.
+	return true;
 }
 
 bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options) {
