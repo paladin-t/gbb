@@ -7,6 +7,7 @@
 */
 
 #include "evaluator.h"
+#include "../utils/text.h"
 #include <stack>
 
 /*
@@ -49,18 +50,10 @@ public:
 	}
 };
 
-}
-
-/* ===========================================================================} */
-
-/*
-** {===========================================================================
-** Evaluator
-*/
-
-namespace GBBASIC {
-
 static bool isOperator(const IToken::Ptr &tk) {
+	if (!tk)
+		return false;
+
 	if (tk->is(IToken::Types::OPERATOR))
 		return true;
 	if (tk->is(IToken::Types::INTERMEDIA))
@@ -68,7 +61,11 @@ static bool isOperator(const IToken::Ptr &tk) {
 
 	return false;
 }
+
 static int getArity(const IToken::Ptr &tk) {
+	if (!tk)
+		return 0;
+
 	const std::string str = (std::string)tk->data();
 	const Op::Types y = Op::typeOf(str);
 	const Op &op = Op::OPERATORS[(size_t)y];
@@ -80,6 +77,17 @@ static Int16 getInt16(const Variant &v) {
 	return (Int16)(int)v;
 }
 
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Evaluator
+*/
+
+namespace GBBASIC {
+
 Evaluator::Options::Options() {
 }
 
@@ -88,11 +96,200 @@ Evaluator::Options::Options(bool ci) :
 {
 }
 
-bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, TokenResolver resolve, ErrorHandler onError) {
+Evaluator::Options::Options(bool ci, TokenResolver r, ErrorHandler err) :
+	caseInsensitive(ci),
+	resolve(r),
+	onError(err)
+{
+}
+
+bool Evaluator::toRpn(IToken::Array &ret, const IToken::Array &in, const Options &options) {
+	// Prepare.
+	typedef std::stack<IToken::Ptr> Stack;
+
+	ErrorHandler onError = options.onError;
+
+	Stack stack;
+	ret.clear();
+
+	auto valid = [] (const IToken::Ptr &tk) -> bool {
+		return isOperator(tk);
+	};
+	auto get = [] (const IToken::Ptr &tk) -> Op {
+		const std::string str = (std::string)tk->data();
+		const Op::Types y = Op::typeOf(str);
+
+		return Op::OPERATORS[(size_t)y];
+	};
+	auto equals = [] (const IToken::Ptr &tk, const std::string &key_) -> bool {
+		const std::string key = (std::string)tk->data();
+
+		return key_ == key;
+	};
+	auto compare = [] (const Op &left, const Op &right) -> int {
+		return left.precedence - right.precedence;
+	};
+	auto add = [&ret] (const IToken::Ptr &tk) -> void {
+		ret.push_back(tk);
+	};
+
+	// Iterate the tokens.
+	IToken::Ptr expectsOperator(IToken::create());
+	IToken::Ptr expectsOperand = nullptr;
+	for (const IToken::Ptr &tk : in) {
+		switch (tk->type()) {
+		case IToken::Types::OPERATOR:
+			if (expectsOperator == nullptr) {
+				if (tk->data() == "(") { // Is a left parenthesis.
+					expectsOperand = tk;
+				} else {
+					const bool allowUnaryNot = expectsOperand && expectsOperand->is(IToken::Types::OPERATOR) &&
+						(
+							expectsOperand->data() == "("      ||
+							expectsOperand->data() == "="      ||
+							expectsOperand->data() == "<"      ||
+							expectsOperand->data() == "<="     ||
+							expectsOperand->data() == ">"      ||
+							expectsOperand->data() == ">="     ||
+							expectsOperand->data() == "<>"     ||
+							expectsOperand->data() == "+"      ||
+							expectsOperand->data() == "-"      ||
+							expectsOperand->data() == "*"      ||
+							expectsOperand->data() == "/"      ||
+							expectsOperand->data() == "mod"    ||
+							expectsOperand->data() == "and"    ||
+							expectsOperand->data() == "or"     ||
+							expectsOperand->data() == "not"    ||
+							expectsOperand->data() == "band"   ||
+							expectsOperand->data() == "bor"    ||
+							expectsOperand->data() == "bxor"   ||
+							expectsOperand->data() == "lshift" ||
+							expectsOperand->data() == "rshift" ||
+							expectsOperand->data() == "bnot"
+						);
+					const bool isUnaryNot = tk->type() == IToken::Types::OPERATOR &&
+						(tk->data() == "not" || tk->data() == "bnot"); // Is a unary `NOT` or `BNOT`.
+					if (allowUnaryNot && isUnaryNot) {
+						expectsOperand = tk;
+
+						break;
+					} else {
+						if (onError) {
+							const std::string msg = "Unexpected operator \"{0}\"";
+							onError(Text::format(msg, { tk->caseSensitiveText() }), tk);
+						}
+
+						return false;
+					}
+				}
+			} else {
+				if (tk->data() == ")") {
+					expectsOperator = IToken::Ptr(IToken::create());
+				} else {
+					expectsOperator = nullptr;
+				}
+			}
+			if (tk->data() != "(" && tk->data() != ")") {
+				expectsOperand = tk;
+			}
+
+			break;
+		case IToken::Types::SYMBOL: case IToken::Types::KEYWORD: case IToken::Types::IDENTIFIER: // Fall through.
+		case IToken::Types::BOOLEAN:                                                             // Fall through.
+		case IToken::Types::NUMBER: case IToken::Types::INTEGER: case IToken::Types::REAL:       // Fall through.
+		case IToken::Types::INTERMEDIA: case IToken::Types::MATH: case IToken::Types::STATEMENT: case IToken::Types::ARRAY: case IToken::Types::MACRO:
+			expectsOperator = tk;
+			expectsOperand = nullptr;
+
+			break;
+		case IToken::Types::STRING:
+			expectsOperator = tk;
+			expectsOperand = nullptr;
+
+			break;
+		case IToken::Types::COMMENT:
+			continue;
+		default:
+			if (onError) {
+				if (tk->caseSensitiveText().length() >= 2 && Text::startsWith(tk->caseSensitiveText(), "\"", false) && Text::endsWith(tk->caseSensitiveText(), "\"", false)) {
+					const std::string msg = "Invalid expression {0}";
+					onError(Text::format(msg, { tk->caseSensitiveText() }), tk);
+				} else {
+					const std::string msg = "Invalid expression \"{0}\"";
+					onError(Text::format(msg, { tk->caseSensitiveText() }), tk);
+				}
+			}
+
+			return false;
+		}
+
+		if (valid(tk)) { // The token is an operator.
+			while (!stack.empty() && valid(stack.top())) { // While there is an operator (y) at the top of the operators stack.
+				// Either (x) is left-associative and its precedence is less or equal to that of (y), or
+				// (x) is right-associative and its precedence is less than (y).
+				const Op currentOperator = get(tk); // The current operator.
+				const Op lastOperator = get(stack.top()); // The top operator from the stack.
+				if ((currentOperator.associativity == -1 && compare(currentOperator, lastOperator) <= 0) || (currentOperator.associativity == 1 && compare(currentOperator, lastOperator) < 0)) {
+					// Pop (y) from the stack.
+					// Add (y) to the output collection.
+					const IToken::Ptr top = stack.top();
+					stack.pop();
+					add(top);
+
+					continue;
+				}
+
+				break;
+			}
+			// Push the new operator on the stack.
+			stack.push(tk);
+		} else if (equals(tk, "(")) { // The token is a left parenthesis.
+			// Push it on the stack.
+			stack.push(tk);
+		} else if (equals(tk, ")")) { // The token is a right parenthesis.
+			while (!stack.empty() && !equals(stack.top(), "(")) {
+				// Until the top token (from the stack) is left parenthesis,
+				// pop from the stack to the output collection.
+				const IToken::Ptr top = stack.top();
+				stack.pop();
+				add(top);
+			}
+			// Also pop the left parenthesis but don't include it in the output collection.
+			if (!stack.empty())
+				stack.pop();
+		} else { // Otherwise.
+			// Add the token to the output collection.
+			add(tk);
+		}
+	}
+	if (expectsOperand) {
+		if (onError) {
+			const std::string msg = "Unexpected operator \"{0}\"";
+			onError(Text::format(msg, { expectsOperand->caseSensitiveText() }), expectsOperand);
+		}
+
+		return false;
+	}
+
+	while (!stack.empty()) { // While there are still operator tokens in the stack.
+		// Pop them to the output collection.
+		const IToken::Ptr top = stack.top();
+		stack.pop();
+		add(top);
+	}
+
+	// Finish.
+	return true;
+}
+
+bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options) {
 	// Prepare.
 	typedef std::function<TreeNode::Ptr(const IToken::Array &, TokenResolver, ErrorHandler)> Parser;
 	typedef std::function<Maybe<Variant>(const TreeNode::Ptr &, ErrorHandler)> Folder;
 	typedef std::function<bool(IToken::Array &, const TreeNode::Ptr &, ErrorHandler)> Builder;
+
+	TokenResolver resolve = options.resolve;
+	ErrorHandler onError = options.onError;
 
 	// Converting RPN to AST nodes.
 	Parser rpnToAst = [] (const IToken::Array &rpn, TokenResolver resolve, ErrorHandler onError) -> TreeNode::Ptr {
@@ -105,7 +302,7 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 			if (!resolved) // Not a foldable token.
 				continue;
 
-			const TreeNode::Ptr curNode(new TreeNode(resolved));
+			const TreeNode::Ptr node(new TreeNode(resolved));
 			if (isOperator(resolved)) {
 				const int arity = getArity(resolved);
 				if (arity == 0) // Not a foldable operator.
@@ -118,13 +315,13 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 					return nullptr;
 				}
 
-				for (int i = 0; i < arity; ++i) {
-					curNode->add(stk.top());
+				for (int i = 0; i < arity && !stk.empty(); ++i) {
+					node->add(stk.top());
 					stk.pop();
 				}
 			}
 
-			stk.push(curNode);
+			stk.push(node);
 		}
 		if (stk.size() != 1) {
 			if (onError)
@@ -132,6 +329,7 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 
 			return nullptr;
 		}
+
 		const TreeNode::Ptr result = stk.top();
 
 		return result;
@@ -141,6 +339,9 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 	Folder fold = nullptr;
 	fold = [&fold] (const TreeNode::Ptr &ast, ErrorHandler onError) -> Maybe<Variant> {
 		typedef std::vector<Variant> Variants;
+
+		if (!ast)
+			return Maybe<Variant>();
 
 		const IToken::Ptr &tk = ast->token();
 		if (!isOperator(tk)) {
@@ -163,7 +364,6 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 
 			childVals.push_back(val.get());
 		}
-
 		const int arity = getArity(tk);
 		if ((int)childVals.size() < arity) {
 			GBBASIC_ASSERT(false && "Impossible.");
@@ -234,6 +434,9 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 	// Rebuilding RPN.
 	Builder astToRpn = nullptr;
 	astToRpn = [&options, &fold, &astToRpn] (IToken::Array &rpn, const TreeNode::Ptr &ast, ErrorHandler onError) -> bool {
+		if (!ast)
+			return false;
+
 		const IToken::Ptr &tk = ast->token();
 		const Maybe<Variant> val = fold(ast, onError);
 		if (!val.empty()) {
@@ -272,48 +475,65 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 		return false;
 	
 #if defined GBBASIC_DEBUG
-	typedef std::function<std::string(const TreeNode::Ptr &, ErrorHandler)> Serializer;
+	typedef std::function<std::string(const IToken::Array &, ErrorHandler)> Formatter;
 
-	Serializer astToInfixNotation = nullptr;
-	astToInfixNotation = [&astToInfixNotation] (const TreeNode::Ptr &ast, ErrorHandler onError) -> std::string {
-		(void)onError;
+	Formatter toInfixNotation = nullptr;
+	toInfixNotation = [&toInfixNotation] (const IToken::Array &rpn, ErrorHandler onError) -> std::string {
+		typedef std::stack<std::string> StringStack;
 
-		if (!ast)
-			return ""; 
+		StringStack stk;
+		for (const IToken::Ptr &tk : rpn) {
+			if (!tk)
+				continue;
 
-		const IToken::Ptr &tk = ast->token();
-		if (!isOperator(tk))
-			return tk->dump();
+			if (isOperator(tk)) {
+				const std::string sym = tk->data().toString();
+				const int arity = getArity(tk);
 
-		const TreeNode::Array &children = ast->children();
-		const int arity = getArity(tk);
-		std::string result;
-		if (arity == 1 && children.size() >= 1) {
-			result = tk->dump() + " " + astToInfixNotation(children[0], onError);
-		} else if (arity == 2 && children.size() >= 2) {
-			result = astToInfixNotation(children[0], onError) + " " + tk->dump() + " " + astToInfixNotation(children[1], onError);
-		} else {
-			for (size_t i = 0; i < children.size(); ++i) {
-				if (i > 0)
-					result += " " + tk->dump() + " ";
-				result += astToInfixNotation(children[i], onError);
+				if (arity == 1) {
+					if (stk.empty()) {
+						if (onError)
+							onError("Invalid RPN, missing operand for unary operator", tk);
+
+						return "";
+					}
+
+					const std::string operand = stk.top();
+					stk.pop();
+					stk.push(sym + "(" + operand + ")");
+				} else if (arity == 2) {
+					if (stk.size() < 2) {
+						if (onError)
+							onError("Invalid RPN, missing operands for binary operator", tk);
+
+						return "";
+					}
+
+					const std::string right = stk.top();
+					stk.pop();
+					const std::string left = stk.top();
+					stk.pop();
+					stk.push("(" + left + " " + sym + " " + right + ")");
+				} else {
+					stk.push(sym);
+				}
+			} else {
+				const std::string txt = tk->data().toString();
+				stk.push(txt);
 			}
 		}
+		if (stk.size() != 1) {
+			if (onError)
+				onError("Invalid RPN expression", nullptr);
 
-		return "(" + result + ")";
+			return "";
+		}
+
+		return stk.top();
 	};
 
-	const std::string origin = astToInfixNotation(ast, onError);
-	const std::string folded = astToInfixNotation(
-		rpnToAst(
-			ret,
-			[] (const IToken::Ptr &tk) -> IToken::Ptr {
-				return tk;
-			},
-			onError
-		),
-		onError
-	);
+	const std::string origin = toInfixNotation(rpn, onError);
+	const std::string folded = toInfixNotation(ret, onError);
 
 	fprintf(stdout, "Folded %s\n    to %s\n", origin.c_str(), folded.c_str());
 #endif /* GBBASIC_DEBUG */
@@ -321,15 +541,134 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 	return true;
 }
 
-bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options, ErrorHandler onError) {
-	return fold(
-		ret, rpn,
-		options,
-		[] (const IToken::Ptr &tk) -> IToken::Ptr {
-			return tk;
-		},
-		onError
-	);
+bool Evaluator::calc(Variant &ret, const IToken::Array &rpn, const Options &options) {
+	typedef std::stack<Variant> Stack;
+	typedef std::vector<Variant> Variants;
+
+	TokenResolver resolve = options.resolve;
+	ErrorHandler onError = options.onError;
+
+	Stack stk;
+	ret = nullptr;
+
+	// Iterate the tokens.
+	for (const IToken::Ptr &tk : rpn) {
+		if (!tk)
+			continue;
+
+		const IToken::Ptr resolved = resolve ? resolve(tk) : nullptr;
+		if (!resolved) // Not a calculable token.
+			continue;
+
+		if (!isOperator(resolved)) {
+			if (resolved->is(IToken::Types::NOTHING)) {
+				stk.push(Variant(0));
+			} else if (resolved->is(IToken::Types::BOOLEAN)) {
+				stk.push(Variant((bool)resolved->data() ? 1 : 0));
+			} else if (resolved->is(IToken::Types::NUMBER)) {
+				stk.push(Variant((Int16)(Int)resolved->data()));
+			} else {
+				if (onError) {
+					const std::string msg = "Invalid operand {0}";
+					onError(Text::format(msg, { resolved->caseSensitiveText() }), resolved);
+				}
+
+				return false;
+			}
+		} else {
+			const int arity = getArity(resolved);
+			if (arity == 0) {
+				if (onError) {
+					const std::string msg = "Invalid operator {0}";
+					onError(Text::format(msg, { resolved->caseSensitiveText() }), resolved);
+				}
+
+				return false;
+			}
+			if ((int)stk.size() < arity) {
+				if (onError)
+					onError("Too few arguments", resolved);
+
+				return false;
+			}
+			Variants childVals;
+			for (int i = 0; i < arity; ++i) {
+				childVals.insert(childVals.begin(), stk.top());
+				stk.pop();
+			}
+
+			Int16 result = 0;
+			const Op::Types y = Op::typeOf((std::string)resolved->data());
+			switch (y) {
+			case Op::Types::EQ:             result =  (getInt16(childVals[0]) == getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::LT:             result =  (getInt16(childVals[0]) <  getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::LE:             result =  (getInt16(childVals[0]) <= getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::GT:             result =  (getInt16(childVals[0]) >  getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::GE:             result =  (getInt16(childVals[0]) >= getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::NE:             result =  (getInt16(childVals[0]) != getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::AND:            result =  (getInt16(childVals[0]) && getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::OR:             result =  (getInt16(childVals[0]) || getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::NOT:            result = (!getInt16(childVals[0])                           ? 1 : 0); break;
+			case Op::Types::ADD:            result =   getInt16(childVals[0]) +  getInt16(childVals[1]);          break;
+			case Op::Types::SUB:            result =   getInt16(childVals[0]) -  getInt16(childVals[1]);          break;
+			case Op::Types::MUL:            result =   getInt16(childVals[0]) *  getInt16(childVals[1]);          break;
+			case Op::Types::DIV: {
+					const Int16 div = getInt16(childVals[1]);
+					if (div == 0) {
+						if (onError)
+							onError("Divided by zero", resolved);
+
+						return false;
+					}
+
+					result = getInt16(childVals[0]) / div;
+				}
+
+				break;
+			case Op::Types::MOD: {
+					const Int16 div = getInt16(childVals[1]);
+					if (div == 0) {
+						if (onError)
+							onError("Divided by zero", resolved);
+
+						return false;
+					}
+
+					result = getInt16(childVals[0]) % div;
+				}
+
+				break;
+			case Op::Types::BITWISE_AND:    result =   getInt16(childVals[0]) &  getInt16(childVals[1]);          break;
+			case Op::Types::BITWISE_OR:     result =   getInt16(childVals[0]) |  getInt16(childVals[1]);          break;
+			case Op::Types::BITWISE_XOR:    result =   getInt16(childVals[0]) ^  getInt16(childVals[1]);          break;
+			case Op::Types::BITWISE_LSHIFT: result =   getInt16(childVals[0]) << getInt16(childVals[1]);          break;
+			case Op::Types::BITWISE_RSHIFT: result =   getInt16(childVals[0]) >> getInt16(childVals[1]);          break;
+			case Op::Types::BITWISE_NOT:    result =  ~getInt16(childVals[0]);                                    break;
+			case Op::Types::NEG:            result =  -getInt16(childVals[0]);                                    break;
+			default:
+				if (onError) {
+					const std::string msg = "Unsupported operator {0}";
+					onError(Text::format(msg, { resolved->caseSensitiveText() }), resolved);
+				}
+
+				return false;
+			}
+
+			stk.push(Variant(result));
+		}
+	}
+
+	if (stk.size() != 1) {
+		if (onError)
+			onError("Incomplete expression", rpn.empty() ? nullptr : rpn.back());
+
+		return false;
+	}
+
+	// Finish.
+	ret = stk.top();
+
+	return true;
 }
 
 }
