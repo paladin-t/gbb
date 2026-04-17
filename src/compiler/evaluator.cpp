@@ -202,6 +202,11 @@ bool Evaluator::toRpn(IToken::Array &ret, const IToken::Array &in, const Options
 			expectsOperand = nullptr;
 
 			break;
+		case IToken::Types::STRING:
+			expectsOperator = tk;
+			expectsOperand = nullptr;
+
+			break;
 		case IToken::Types::COMMENT:
 			continue;
 		default:
@@ -537,8 +542,133 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 }
 
 bool Evaluator::calc(Variant &ret, const IToken::Array &rpn, const Options &options) {
-	// TODO
-	return false;
+	typedef std::stack<Variant> Stack;
+	typedef std::vector<Variant> Variants;
+
+	TokenResolver resolve = options.resolve;
+	ErrorHandler onError = options.onError;
+
+	Stack stk;
+	ret = nullptr;
+
+	// Iterate the tokens.
+	for (const IToken::Ptr &tk : rpn) {
+		if (!tk)
+			continue;
+
+		const IToken::Ptr resolved = resolve ? resolve(tk) : nullptr;
+		if (!resolved) // Not a calculable token.
+			continue;
+
+		if (!isOperator(resolved)) {
+			if (resolved->is(IToken::Types::NOTHING)) {
+				stk.push(Variant(0));
+			} else if (resolved->is(IToken::Types::BOOLEAN)) {
+				stk.push(Variant((bool)resolved->data() ? 1 : 0));
+			} else if (resolved->is(IToken::Types::NUMBER)) {
+				stk.push(Variant((Int16)(Int)resolved->data()));
+			} else {
+				if (onError) {
+					const std::string msg = "Invalid operand {0}";
+					onError(Text::format(msg, { resolved->caseSensitiveText() }), resolved);
+				}
+
+				return false;
+			}
+		} else {
+			const int arity = getArity(resolved);
+			if (arity == 0) {
+				if (onError) {
+					const std::string msg = "Invalid operator {0}";
+					onError(Text::format(msg, { resolved->caseSensitiveText() }), resolved);
+				}
+
+				return false;
+			}
+			if ((int)stk.size() < arity) {
+				if (onError)
+					onError("Too few arguments", resolved);
+
+				return false;
+			}
+			Variants childVals;
+			for (int i = 0; i < arity; ++i) {
+				childVals.insert(childVals.begin(), stk.top());
+				stk.pop();
+			}
+
+			Int16 result = 0;
+			const Op::Types y = Op::typeOf((std::string)resolved->data());
+			switch (y) {
+			case Op::Types::EQ:             result =  (getInt16(childVals[0]) == getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::LT:             result =  (getInt16(childVals[0]) <  getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::LE:             result =  (getInt16(childVals[0]) <= getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::GT:             result =  (getInt16(childVals[0]) >  getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::GE:             result =  (getInt16(childVals[0]) >= getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::NE:             result =  (getInt16(childVals[0]) != getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::AND:            result =  (getInt16(childVals[0]) && getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::OR:             result =  (getInt16(childVals[0]) || getInt16(childVals[1]) ? 1 : 0); break;
+			case Op::Types::NOT:            result = (!getInt16(childVals[0])                           ? 1 : 0); break;
+			case Op::Types::ADD:            result =   getInt16(childVals[0]) +  getInt16(childVals[1]);          break;
+			case Op::Types::SUB:            result =   getInt16(childVals[0]) -  getInt16(childVals[1]);          break;
+			case Op::Types::MUL:            result =   getInt16(childVals[0]) *  getInt16(childVals[1]);          break;
+			case Op::Types::DIV: {
+					const Int16 div = getInt16(childVals[1]);
+					if (div == 0) {
+						if (onError)
+							onError("Divided by zero", resolved);
+
+						return false;
+					}
+
+					result = getInt16(childVals[0]) / div;
+				}
+
+				break;
+			case Op::Types::MOD: {
+					const Int16 div = getInt16(childVals[1]);
+					if (div == 0) {
+						if (onError)
+							onError("Divided by zero", resolved);
+
+						return false;
+					}
+
+					result = getInt16(childVals[0]) % div;
+				}
+
+				break;
+			case Op::Types::BITWISE_AND:    result =   getInt16(childVals[0]) &  getInt16(childVals[1]);          break;
+			case Op::Types::BITWISE_OR:     result =   getInt16(childVals[0]) |  getInt16(childVals[1]);          break;
+			case Op::Types::BITWISE_XOR:    result =   getInt16(childVals[0]) ^  getInt16(childVals[1]);          break;
+			case Op::Types::BITWISE_LSHIFT: result =   getInt16(childVals[0]) << getInt16(childVals[1]);          break;
+			case Op::Types::BITWISE_RSHIFT: result =   getInt16(childVals[0]) >> getInt16(childVals[1]);          break;
+			case Op::Types::BITWISE_NOT:    result =  ~getInt16(childVals[0]);                                    break;
+			case Op::Types::NEG:            result =  -getInt16(childVals[0]);                                    break;
+			default:
+				if (onError) {
+					const std::string msg = "Unsupported operator {0}";
+					onError(Text::format(msg, { resolved->caseSensitiveText() }), resolved);
+				}
+
+				return false;
+			}
+
+			stk.push(Variant(result));
+		}
+	}
+
+	if (stk.size() != 1) {
+		if (onError)
+			onError("Incomplete expression", rpn.empty() ? nullptr : rpn.back());
+
+		return false;
+	}
+
+	// Finish.
+	ret = stk.top();
+
+	return true;
 }
 
 }

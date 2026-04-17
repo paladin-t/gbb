@@ -7829,8 +7829,8 @@ private:
 					fprintf(stdout, "%s\n", msg_.c_str());
 				}
 			);
-			IToken::Array newRpn;
 			const IToken::Array rpn_(rpn.begin(), rpn.end());
+			IToken::Array newRpn;
 			if (Evaluator::fold(newRpn, rpn_, options)) {
 				rpn.clear();
 				rpn.reserve(newRpn.size());
