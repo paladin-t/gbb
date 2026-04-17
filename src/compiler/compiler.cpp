@@ -7793,7 +7793,7 @@ private:
 		// FEAT: OPTIMIZATION.
 		// Fold constants.
 		if (ctx.expression.optimize && !rpn.empty()) {
-			const Evaluator::Options options(
+			const Evaluator::OptionsForFolding options(
 				ctx.caseInsensitive,
 				[] (const IToken::Ptr &tk) -> IToken::Ptr {
 					if (tk->is(Token::Types::OPERATOR))
@@ -7831,7 +7831,7 @@ private:
 			);
 			const IToken::Array rpn_(rpn.begin(), rpn.end());
 			IToken::Array newRpn;
-			if (Evaluator::fold(newRpn, rpn_, options)) {
+			if (Evaluator::fold(&newRpn, rpn_, options)) {
 				rpn.clear();
 				rpn.reserve(newRpn.size());
 				for (IToken::Ptr &ptr : newRpn) {
@@ -8123,14 +8123,9 @@ private:
 
 	bool toRpn(Context::Stack &context, Token::Array &rpn, Error::Handler onError) const {
 		// Prepare.
-		typedef std::stack<Token::Ptr> Stack;
-
 		Context &ctx = context.top();
 
-		Token::Array result;
-		Stack stack;
-
-		auto valid = [&ctx] (const Token::Ptr &tk) -> bool {
+		auto valid = [&ctx] (const IToken::Ptr &tk) -> bool {
 			if (!ctx.operators)
 				return false;
 
@@ -8141,7 +8136,12 @@ private:
 
 			return true;
 		};
-		auto get = [&ctx] (const Token::Ptr &tk) -> Op {
+		auto equals = [] (const IToken::Ptr &tk, const std::string &key_) -> bool {
+			const std::string key = (std::string)tk->data();
+
+			return key_ == key;
+		};
+		auto get = [&ctx] (const IToken::Ptr &tk) -> Op {
 			if (!ctx.operators)
 				return Op::OPERATORS[(size_t)Op::Types::STOP];
 
@@ -8151,14 +8151,6 @@ private:
 				return Op::OPERATORS[(size_t)Op::Types::STOP];
 
 			return Op::OPERATORS[(size_t)entry->type];
-		};
-		auto equals = [] (const Token::Ptr &tk, const std::string &key_) -> bool {
-			const std::string key = (std::string)tk->data();
-
-			return key_ == key;
-		};
-		auto compare = [] (const Op &left, const Op &right) -> int {
-			return left.precedence - right.precedence;
 		};
 		auto is = [&rpn] (Token::Types y, Variant d = nullptr) -> Token::Ptr {
 			if (rpn.empty())
@@ -8171,7 +8163,7 @@ private:
 
 			return tk;
 		};
-		auto add = [&rpn, &ctx, is] (const Token::Ptr &tk) -> void {
+		auto add = [&rpn, &ctx, is] (const IToken::Ptr &tk) -> void {
 			// FEAT: OPTIMIZATION.
 			// Replace some multiplication and division with bitwise shifting to optimize the code.
 			Token::Ptr newnum = nullptr;
@@ -8209,133 +8201,39 @@ private:
 				rpn.push_back(newnum);
 				rpn.push_back(newop);
 			} else { // Push the unoptimized token.
-				rpn.push_back(tk);
+				Token::Ptr tk_ = std::static_pointer_cast<Token>(tk);
+				rpn.push_back(tk_);
 			}
 		};
+		auto compare = [] (const Op &left, const Op &right) -> int {
+			return left.precedence - right.precedence;
+		};
 
-		// Iterate the tokens.
-		Token::Ptr expectsOperator = Token::Ptr(new Token());
-		Token::Ptr expectsOperand = nullptr;
-		for (const Token::Ptr &tk : _tokens) {
-			switch (tk->type()) {
-			case Token::Types::OPERATOR:
-				if (expectsOperator == nullptr) {
-					if (tk->data() == "(") { // Is a left parenthesis.
-						expectsOperand = tk;
-					} else {
-						const bool allowUnaryNot = expectsOperand && expectsOperand->type() == Token::Types::OPERATOR &&
-							(
-								expectsOperand->data() == "("      ||
-								expectsOperand->data() == "="      ||
-								expectsOperand->data() == "<"      ||
-								expectsOperand->data() == "<="     ||
-								expectsOperand->data() == ">"      ||
-								expectsOperand->data() == ">="     ||
-								expectsOperand->data() == "<>"     ||
-								expectsOperand->data() == "+"      ||
-								expectsOperand->data() == "-"      ||
-								expectsOperand->data() == "*"      ||
-								expectsOperand->data() == "/"      ||
-								expectsOperand->data() == "mod"    ||
-								expectsOperand->data() == "and"    ||
-								expectsOperand->data() == "or"     ||
-								expectsOperand->data() == "not"    ||
-								expectsOperand->data() == "band"   ||
-								expectsOperand->data() == "bor"    ||
-								expectsOperand->data() == "bxor"   ||
-								expectsOperand->data() == "lshift" ||
-								expectsOperand->data() == "rshift" ||
-								expectsOperand->data() == "bnot"
-							);
-						const bool isUnaryNot = tk->type() == Token::Types::OPERATOR &&
-							(tk->data() == "not" || tk->data() == "bnot"); // Is a unary `NOT` or `BNOT`.
-						if (allowUnaryNot && isUnaryNot) {
-							expectsOperand = tk;
+		// Call the converter.
+		const Evaluator::OptionsForRpn options(
+			false,
+			valid,
+			equals,
+			get,
+			add,
+			compare,
+			[this, onError] (unsigned y, const IToken::Ptr &tk) -> void {
+				Token::Ptr tk_ = std::static_pointer_cast<Token>(tk);
+				switch ((Evaluator::OptionsForRpn::Errors)y) {
+				case Evaluator::OptionsForRpn::Errors::UNEXPECTED_OPERATOR:
+					throwUnexpectedOperator(onError, tk_);
 
-							break;
-						} else {
-							THROW_UNEXPECTED_OPERATOR(onError, tk, false);
-						}
-					}
-				} else {
-					if (tk->data() == ")") {
-						expectsOperator = Token::Ptr(new Token());
-					} else {
-						expectsOperator = nullptr;
-					}
-				}
-				if (tk->data() != "(" && tk->data() != ")") {
-					expectsOperand = tk;
-				}
-
-				break;
-			case Token::Types::SYMBOL: case Token::Types::KEYWORD: case Token::Types::IDENTIFIER: // Fall through.
-			case Token::Types::BOOLEAN:                                                           // Fall through.
-			case Token::Types::NUMBER: case Token::Types::INTEGER: case Token::Types::REAL:       // Fall through.
-			case Token::Types::INTERMEDIA: case Token::Types::MATH: case Token::Types::STATEMENT: case Token::Types::ARRAY: case Token::Types::MACRO:
-				expectsOperator = tk;
-				expectsOperand = nullptr;
-
-				break;
-			case Token::Types::COMMENT:
-				continue;
-			default:
-				throwInvalidExpression(onError, tk);
-
-				return false;
-			}
-
-			if (valid(tk)) { // The token is an operator.
-				while (!stack.empty() && valid(stack.top())) { // While there is an operator (y) at the top of the operators stack.
-					// Either (x) is left-associative and its precedence is less or equal to that of (y), or
-					// (x) is right-associative and its precedence is less than (y).
-					const Op currentOperator = get(tk); // The current operator.
-					const Op lastOperator = get(stack.top()); // The top operator from the stack.
-					if ((currentOperator.associativity == -1 && compare(currentOperator, lastOperator) <= 0) || (currentOperator.associativity == 1 && compare(currentOperator, lastOperator) < 0)) {
-						// Pop (y) from the stack.
-						// Add (y) to the output collection.
-						const Token::Ptr top = stack.top();
-						stack.pop();
-						add(top);
-
-						continue;
-					}
+					break;
+				case Evaluator::OptionsForRpn::Errors::INVALID_EXPRESSION:
+					throwInvalidExpression(onError, tk_);
 
 					break;
 				}
-				// Push the new operator on the stack.
-				stack.push(tk);
-			} else if (equals(tk, "(")) { // The token is a left parenthesis.
-				// Push it on the stack.
-				stack.push(tk);
-			} else if (equals(tk, ")")) { // The token is a right parenthesis.
-				while (!stack.empty() && !equals(stack.top(), "(")) {
-					// Until the top token (from the stack) is left parenthesis,
-					// pop from the stack to the output collection.
-					const Token::Ptr top = stack.top();
-					stack.pop();
-					add(top);
-				}
-				// Also pop the left parenthesis but don't include it in the output collection.
-				stack.pop();
-			} else { // Otherwise.
-				// Add the token to the output collection.
-				add(tk);
 			}
-		}
-		if (expectsOperand) {
-			THROW_UNEXPECTED_OPERATOR(onError, expectsOperand, false);
-		}
+		);
+		const IToken::Array in(_tokens.begin(), _tokens.end());
 
-		while (!stack.empty()) { // While there are still operator tokens in the stack.
-			// Pop them to the output collection.
-			const Token::Ptr top = stack.top();
-			stack.pop();
-			add(top);
-		}
-
-		// Finish.
-		return true;
+		return Evaluator::toRpn(nullptr, in, options);
 	}
 };
 

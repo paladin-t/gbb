@@ -12,6 +12,21 @@
 
 /*
 ** {===========================================================================
+** Macros and constants
+*/
+
+#ifndef EVALUATOR_DEBUG
+#	if defined GBBASIC_DEBUG
+#		define EVALUATOR_DEBUG 1
+#	else /* GBBASIC_DEBUG */
+#		define EVALUATOR_DEBUG 0
+#	endif /* GBBASIC_DEBUG */
+#endif /* EVALUATOR_DEBUG */
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Utilities
 */
 
@@ -77,6 +92,62 @@ static Int16 getInt16(const Variant &v) {
 	return (Int16)(int)v;
 }
 
+#if EVALUATOR_DEBUG
+static std::string toInfixNotationString(const IToken::Array &rpn, Evaluator::ErrorHandler onError) {
+	typedef std::stack<std::string> StringStack;
+
+	StringStack stk;
+	for (const IToken::Ptr &tk : rpn) {
+		if (!tk)
+			continue;
+
+		if (isOperator(tk)) {
+			const std::string sym = tk->data().toString();
+			const int arity = getArity(tk);
+
+			if (arity == 1) {
+				if (stk.empty()) {
+					if (onError)
+						onError("Invalid RPN, missing operand for unary operator", tk);
+
+					return "";
+				}
+
+				const std::string operand = stk.top();
+				stk.pop();
+				stk.push(sym + "(" + operand + ")");
+			} else if (arity == 2) {
+				if (stk.size() < 2) {
+					if (onError)
+						onError("Invalid RPN, missing operands for binary operator", tk);
+
+					return "";
+				}
+
+				const std::string right = stk.top();
+				stk.pop();
+				const std::string left = stk.top();
+				stk.pop();
+				stk.push("(" + left + " " + sym + " " + right + ")");
+			} else {
+				stk.push(sym);
+			}
+		} else {
+			const std::string txt = tk->data().toString();
+			stk.push(txt);
+		}
+	}
+	if (stk.size() != 1) {
+		if (onError)
+			onError("Invalid RPN expression", nullptr);
+
+		return "";
+	}
+
+	return stk.top();
+}
+#endif /* EVALUATOR_DEBUG */
+
 }
 
 /* ===========================================================================} */
@@ -88,50 +159,101 @@ static Int16 getInt16(const Variant &v) {
 
 namespace GBBASIC {
 
-Evaluator::Options::Options() {
+Evaluator::OptionsForRpn::OptionsForRpn() {
 }
 
-Evaluator::Options::Options(bool ci) :
-	caseInsensitive(ci)
+Evaluator::OptionsForRpn::OptionsForRpn(bool accStr, TypedErrorHandler err) :
+	acceptString(accStr),
+	onError(err)
 {
 }
 
-Evaluator::Options::Options(bool ci, TokenResolver r, ErrorHandler err) :
+Evaluator::OptionsForRpn::OptionsForRpn(
+	bool accStr,
+	ValidationHandler valid_,
+	EqualityHandler equals_,
+	GettingHandler get_,
+	AddingHandler add_,
+	ComparisonHandler compare_,
+	TypedErrorHandler err
+) :
+	acceptString(accStr),
+	valid(valid_),
+	equals(equals_),
+	get(get_),
+	add(add_),
+	compare(compare_),
+	onError(err)
+{
+}
+
+Evaluator::OptionsForFolding::OptionsForFolding() {
+}
+
+Evaluator::OptionsForFolding::OptionsForFolding(bool ci, TokenResolver r, ErrorHandler err) :
 	caseInsensitive(ci),
 	resolve(r),
 	onError(err)
 {
 }
 
-bool Evaluator::toRpn(IToken::Array &ret, const IToken::Array &in, const Options &options) {
+Evaluator::OptionsForCalculating::OptionsForCalculating() {
+}
+
+Evaluator::OptionsForCalculating::OptionsForCalculating(TokenResolver r, ErrorHandler err) :
+	resolve(r),
+	onError(err)
+{
+}
+
+bool Evaluator::toRpn(IToken::Array* ret, const IToken::Array &in, const OptionsForRpn &options) {
 	// Prepare.
 	typedef std::stack<IToken::Ptr> Stack;
 
-	ErrorHandler onError = options.onError;
+	const bool acceptString = options.acceptString;
+	const TypedErrorHandler onError = options.onError;
 
 	Stack stack;
-	ret.clear();
+	if (ret)
+		ret->clear();
 
-	auto valid = [] (const IToken::Ptr &tk) -> bool {
-		return isOperator(tk);
-	};
-	auto get = [] (const IToken::Ptr &tk) -> Op {
-		const std::string str = (std::string)tk->data();
-		const Op::Types y = Op::typeOf(str);
+	OptionsForRpn::ValidationHandler valid = options.valid;
+	OptionsForRpn::EqualityHandler equals = options.equals;
+	OptionsForRpn::GettingHandler get = options.get;
+	OptionsForRpn::AddingHandler add = options.add;
+	OptionsForRpn::ComparisonHandler compare = options.compare;
 
-		return Op::OPERATORS[(size_t)y];
-	};
-	auto equals = [] (const IToken::Ptr &tk, const std::string &key_) -> bool {
-		const std::string key = (std::string)tk->data();
+	if (valid == nullptr) {
+		valid = [] (const IToken::Ptr &tk) -> bool {
+			return isOperator(tk);
+		};
+	}
+	if (equals == nullptr) {
+		equals = [] (const IToken::Ptr &tk, const std::string &key_) -> bool {
+			const std::string key = (std::string)tk->data();
 
-		return key_ == key;
-	};
-	auto compare = [] (const Op &left, const Op &right) -> int {
-		return left.precedence - right.precedence;
-	};
-	auto add = [&ret] (const IToken::Ptr &tk) -> void {
-		ret.push_back(tk);
-	};
+			return key_ == key;
+		};
+	}
+	if (get == nullptr) {
+		get = [] (const IToken::Ptr &tk) -> Op {
+			const std::string str = (std::string)tk->data();
+			const Op::Types y = Op::typeOf(str);
+
+			return Op::OPERATORS[(size_t)y];
+		};
+	}
+	if (add == nullptr) {
+		add = [&ret] (const IToken::Ptr &tk) -> void {
+			if (ret)
+				ret->push_back(tk);
+		};
+	}
+	if (compare == nullptr) {
+		compare = [] (const Op &left, const Op &right) -> int {
+			return left.precedence - right.precedence;
+		};
+	}
 
 	// Iterate the tokens.
 	IToken::Ptr expectsOperator(IToken::create());
@@ -174,10 +296,8 @@ bool Evaluator::toRpn(IToken::Array &ret, const IToken::Array &in, const Options
 
 						break;
 					} else {
-						if (onError) {
-							const std::string msg = "Unexpected operator \"{0}\"";
-							onError(Text::format(msg, { tk->caseSensitiveText() }), tk);
-						}
+						if (onError)
+							onError((unsigned)OptionsForRpn::Errors::UNEXPECTED_OPERATOR, tk);
 
 						return false;
 					}
@@ -202,23 +322,19 @@ bool Evaluator::toRpn(IToken::Array &ret, const IToken::Array &in, const Options
 			expectsOperand = nullptr;
 
 			break;
-		case IToken::Types::STRING:
-			expectsOperator = tk;
-			expectsOperand = nullptr;
-
-			break;
 		case IToken::Types::COMMENT:
 			continue;
-		default:
-			if (onError) {
-				if (tk->caseSensitiveText().length() >= 2 && Text::startsWith(tk->caseSensitiveText(), "\"", false) && Text::endsWith(tk->caseSensitiveText(), "\"", false)) {
-					const std::string msg = "Invalid expression {0}";
-					onError(Text::format(msg, { tk->caseSensitiveText() }), tk);
-				} else {
-					const std::string msg = "Invalid expression \"{0}\"";
-					onError(Text::format(msg, { tk->caseSensitiveText() }), tk);
-				}
+		case IToken::Types::STRING:
+			if (acceptString) {
+				expectsOperator = tk;
+				expectsOperand = nullptr;
+
+				break;
+			} else {
+				// Fall through.
 			}
+		default:
+			onError((unsigned)OptionsForRpn::Errors::INVALID_EXPRESSION, tk);
 
 			return false;
 		}
@@ -263,10 +379,8 @@ bool Evaluator::toRpn(IToken::Array &ret, const IToken::Array &in, const Options
 		}
 	}
 	if (expectsOperand) {
-		if (onError) {
-			const std::string msg = "Unexpected operator \"{0}\"";
-			onError(Text::format(msg, { expectsOperand->caseSensitiveText() }), expectsOperand);
-		}
+		if (onError)
+			onError((unsigned)OptionsForRpn::Errors::UNEXPECTED_OPERATOR, expectsOperand);
 
 		return false;
 	}
@@ -282,14 +396,17 @@ bool Evaluator::toRpn(IToken::Array &ret, const IToken::Array &in, const Options
 	return true;
 }
 
-bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options) {
+bool Evaluator::fold(IToken::Array* ret, const IToken::Array &rpn, const OptionsForFolding &options) {
 	// Prepare.
 	typedef std::function<TreeNode::Ptr(const IToken::Array &, TokenResolver, ErrorHandler)> Parser;
 	typedef std::function<Maybe<Variant>(const TreeNode::Ptr &, ErrorHandler)> Folder;
 	typedef std::function<bool(IToken::Array &, const TreeNode::Ptr &, ErrorHandler)> Builder;
 
-	TokenResolver resolve = options.resolve;
-	ErrorHandler onError = options.onError;
+	GBBASIC_ASSERT(ret);
+
+	const bool caseInsensitive = options.caseInsensitive;
+	const TokenResolver resolve = options.resolve;
+	const ErrorHandler onError = options.onError;
 
 	// Converting RPN to AST nodes.
 	Parser rpnToAst = [] (const IToken::Array &rpn, TokenResolver resolve, ErrorHandler onError) -> TreeNode::Ptr {
@@ -433,7 +550,7 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 
 	// Rebuilding RPN.
 	Builder astToRpn = nullptr;
-	astToRpn = [&options, &fold, &astToRpn] (IToken::Array &rpn, const TreeNode::Ptr &ast, ErrorHandler onError) -> bool {
+	astToRpn = [caseInsensitive, &fold, &astToRpn] (IToken::Array &rpn, const TreeNode::Ptr &ast, ErrorHandler onError) -> bool {
 		if (!ast)
 			return false;
 
@@ -444,7 +561,7 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 			const IToken::Types y = IToken::Types::NUMBER;
 			const TextLocation &begin = tk->begin();
 			const TextLocation &end = tk->end();
-			rpn.push_back(IToken::Ptr(IToken::create(y, var.toString(), options.caseInsensitive, &begin, &end)));
+			rpn.push_back(IToken::Ptr(IToken::create(y, var.toString(), caseInsensitive, &begin, &end)));
 
 			return isOperator(tk);
 		}
@@ -467,89 +584,40 @@ bool Evaluator::fold(IToken::Array &ret, const IToken::Array &rpn, const Options
 	};
 
 	// Fold the expression.
-	ret.clear();
+	if (ret)
+		ret->clear();
+	IToken::Array ret_;
 	const TreeNode::Ptr ast = rpnToAst(rpn, resolve, onError);
 	if (!ast)
 		return false;
-	if (!astToRpn(ret, ast, onError))
+	if (!astToRpn(ret_, ast, onError))
 		return false;
 	
-#if defined GBBASIC_DEBUG
-	typedef std::function<std::string(const IToken::Array &, ErrorHandler)> Formatter;
-
-	Formatter toInfixNotation = nullptr;
-	toInfixNotation = [&toInfixNotation] (const IToken::Array &rpn, ErrorHandler onError) -> std::string {
-		typedef std::stack<std::string> StringStack;
-
-		StringStack stk;
-		for (const IToken::Ptr &tk : rpn) {
-			if (!tk)
-				continue;
-
-			if (isOperator(tk)) {
-				const std::string sym = tk->data().toString();
-				const int arity = getArity(tk);
-
-				if (arity == 1) {
-					if (stk.empty()) {
-						if (onError)
-							onError("Invalid RPN, missing operand for unary operator", tk);
-
-						return "";
-					}
-
-					const std::string operand = stk.top();
-					stk.pop();
-					stk.push(sym + "(" + operand + ")");
-				} else if (arity == 2) {
-					if (stk.size() < 2) {
-						if (onError)
-							onError("Invalid RPN, missing operands for binary operator", tk);
-
-						return "";
-					}
-
-					const std::string right = stk.top();
-					stk.pop();
-					const std::string left = stk.top();
-					stk.pop();
-					stk.push("(" + left + " " + sym + " " + right + ")");
-				} else {
-					stk.push(sym);
-				}
-			} else {
-				const std::string txt = tk->data().toString();
-				stk.push(txt);
-			}
-		}
-		if (stk.size() != 1) {
-			if (onError)
-				onError("Invalid RPN expression", nullptr);
-
-			return "";
-		}
-
-		return stk.top();
-	};
-
-	const std::string origin = toInfixNotation(rpn, onError);
-	const std::string folded = toInfixNotation(ret, onError);
+#if EVALUATOR_DEBUG
+	const std::string origin = toInfixNotationString(ret_, onError);
+	const std::string folded = toInfixNotationString(ret_, onError);
 
 	fprintf(stdout, "Folded %s\n    to %s\n", origin.c_str(), folded.c_str());
-#endif /* GBBASIC_DEBUG */
+#endif /* EVALUATOR_DEBUG */
+
+	if (ret)
+		std::swap(*ret, ret_);
 
 	return true;
 }
 
-bool Evaluator::calc(Variant &ret, const IToken::Array &rpn, const Options &options) {
+bool Evaluator::calc(Variant* ret, const IToken::Array &rpn, const OptionsForCalculating &options) {
 	typedef std::stack<Variant> Stack;
 	typedef std::vector<Variant> Variants;
 
-	TokenResolver resolve = options.resolve;
-	ErrorHandler onError = options.onError;
+	GBBASIC_ASSERT(ret);
+
+	const TokenResolver resolve = options.resolve;
+	const ErrorHandler onError = options.onError;
 
 	Stack stk;
-	ret = nullptr;
+	if (ret)
+		*ret = nullptr;
 
 	// Iterate the tokens.
 	for (const IToken::Ptr &tk : rpn) {
@@ -666,7 +734,17 @@ bool Evaluator::calc(Variant &ret, const IToken::Array &rpn, const Options &opti
 	}
 
 	// Finish.
-	ret = stk.top();
+	Variant ret_ = stk.top();
+
+#if EVALUATOR_DEBUG
+	const std::string origin = toInfixNotationString(rpn, onError);
+	const std::string calculated = ret_.toString();
+
+	fprintf(stdout, "Calculated %s from %s\n", calculated.c_str(), origin.c_str());
+#endif /* EVALUATOR_DEBUG */
+
+	if (ret)
+		std::swap(*ret, ret_);
 
 	return true;
 }

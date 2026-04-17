@@ -32,18 +32,66 @@ public:
 	 * @brief Function of error handler.
 	 */
 	typedef std::function<void(const std::string &, const IToken::Ptr &)> ErrorHandler;
+	/**
+	 * @brief Function of typed-error handler.
+	 */
+	typedef std::function<void(unsigned, const IToken::Ptr &)> TypedErrorHandler;
 
 	/**
-	 * @brief Options for expression evaluation.
+	 * @brief Options for converting expression to RPN.
 	 */
-	struct Options {
+	struct OptionsForRpn {
+		typedef std::function<bool(const IToken::Ptr &)> ValidationHandler;
+		typedef std::function<bool(const IToken::Ptr &, const std::string &)> EqualityHandler;
+		typedef std::function<Op(const IToken::Ptr &)> GettingHandler;
+		typedef std::function<void(const IToken::Ptr &)> AddingHandler;
+		typedef std::function<int(const Op &, const Op &)> ComparisonHandler;
+
+		enum class Errors : unsigned {
+			UNEXPECTED_OPERATOR,
+			INVALID_EXPRESSION
+		};
+
+		bool acceptString = false;
+		ValidationHandler valid = nullptr;
+		EqualityHandler equals = nullptr;
+		GettingHandler get = nullptr;
+		AddingHandler add = nullptr;
+		ComparisonHandler compare = nullptr;
+		TypedErrorHandler onError = nullptr;
+
+		OptionsForRpn();
+		OptionsForRpn(bool accStr, TypedErrorHandler err);
+		OptionsForRpn(
+			bool accStr,
+			ValidationHandler valid_,
+			EqualityHandler equals_,
+			GettingHandler get_,
+			AddingHandler add_,
+			ComparisonHandler compare_,
+			TypedErrorHandler err
+		);
+	};
+	/**
+	 * @brief Options for expression folding.
+	 */
+	struct OptionsForFolding {
 		bool caseInsensitive = true;
 		TokenResolver resolve = [] (const IToken::Ptr &tk) -> IToken::Ptr { return tk; };
 		ErrorHandler onError = nullptr;
 
-		Options();
-		Options(bool ci);
-		Options(bool ci, TokenResolver r, ErrorHandler err);
+		OptionsForFolding();
+		OptionsForFolding(bool ci, TokenResolver r, ErrorHandler err);
+	};
+	/**
+	 * @brief Options for expression calculating.
+	 */
+	struct OptionsForCalculating {
+		TokenResolver resolve = [] (const IToken::Ptr &tk) -> IToken::Ptr { return tk; };
+		ErrorHandler onError = nullptr;
+
+		OptionsForCalculating();
+		OptionsForCalculating(TokenResolver r, ErrorHandler err);
 	};
 
 public:
@@ -55,7 +103,7 @@ public:
 	 * @param[in] options Options for folding.
 	 * @return `true` for succeeded, otherwise `false`.
 	 */
-	static bool toRpn(IToken::Array &ret, const IToken::Array &in, const Options &options);
+	static bool toRpn(IToken::Array* ret /* nullable */, const IToken::Array &in, const OptionsForRpn &options);
 	/**
 	 * @brief Folds constants in an expression.
 	 *
@@ -64,7 +112,7 @@ public:
 	 * @param[in] options Options for folding.
 	 * @return `true` for succeeded, otherwise `false`.
 	 */
-	static bool fold(IToken::Array &ret, const IToken::Array &rpn, const Options &options);
+	static bool fold(IToken::Array* ret, const IToken::Array &rpn, const OptionsForFolding &options);
 	/**
 	 * @brief Calculates an expression.
 	 *
@@ -73,7 +121,7 @@ public:
 	 * @param[in] options Options for calculating.
 	 * @return `true` for succeeded, otherwise `false`.
 	 */
-	static bool calc(Variant &ret, const IToken::Array &rpn, const Options &options);
+	static bool calc(Variant* ret, const IToken::Array &rpn, const OptionsForCalculating &options);
 };
 
 }
