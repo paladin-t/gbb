@@ -162,14 +162,14 @@ namespace GBBASIC {
 Evaluator::OptionsForRpn::OptionsForRpn() {
 }
 
-Evaluator::OptionsForRpn::OptionsForRpn(bool accStr, TypedErrorHandler err) :
-	acceptString(accStr),
+Evaluator::OptionsForRpn::OptionsForRpn(IToken::Types accy, TypedErrorHandler err) :
+	acceptedTypes(accy),
 	onError(err)
 {
 }
 
 Evaluator::OptionsForRpn::OptionsForRpn(
-	bool accStr,
+	IToken::Types accy,
 	ValidationHandler valid_,
 	EqualityHandler equals_,
 	GettingHandler get_,
@@ -177,7 +177,7 @@ Evaluator::OptionsForRpn::OptionsForRpn(
 	ComparisonHandler compare_,
 	TypedErrorHandler err
 ) :
-	acceptString(accStr),
+	acceptedTypes(accy),
 	valid(valid_),
 	equals(equals_),
 	get(get_),
@@ -192,6 +192,29 @@ Evaluator::OptionsForFolding::OptionsForFolding() {
 
 Evaluator::OptionsForFolding::OptionsForFolding(bool ci, TokenResolver r, ErrorHandler err) :
 	caseInsensitive(ci),
+	acceptFunctionLike(false),
+	resolve(r),
+	onError(err)
+{
+}
+
+Evaluator::OptionsForFolding::OptionsForFolding(
+	bool ci,
+	UnaryMathHandler sqrt_,
+	UnaryMathHandler sin_,
+	UnaryMathHandler cos_,
+	BinaryMathHandler atan2_,
+	BinaryMathHandler powi_,
+	TokenResolver r,
+	ErrorHandler err
+) :
+	caseInsensitive(ci),
+	acceptFunctionLike(true),
+	sqrt(sqrt_),
+	sin(sin_),
+	cos(cos_),
+	atan2(atan2_),
+	powi(powi_),
 	resolve(r),
 	onError(err)
 {
@@ -201,6 +224,27 @@ Evaluator::OptionsForCalculating::OptionsForCalculating() {
 }
 
 Evaluator::OptionsForCalculating::OptionsForCalculating(TokenResolver r, ErrorHandler err) :
+	acceptFunctionLike(false),
+	resolve(r),
+	onError(err)
+{
+}
+
+Evaluator::OptionsForCalculating::OptionsForCalculating(
+	UnaryMathHandler sqrt_,
+	UnaryMathHandler sin_,
+	UnaryMathHandler cos_,
+	BinaryMathHandler atan2_,
+	BinaryMathHandler powi_,
+	TokenResolver r,
+	ErrorHandler err
+) :
+	acceptFunctionLike(true),
+	sqrt(sqrt_),
+	sin(sin_),
+	cos(cos_),
+	atan2(atan2_),
+	powi(powi_),
 	resolve(r),
 	onError(err)
 {
@@ -210,7 +254,7 @@ bool Evaluator::toRpn(IToken::Array* ret, const IToken::Array &in, const Options
 	// Prepare.
 	typedef std::stack<IToken::Ptr> Stack;
 
-	const bool acceptString = options.acceptString;
+	const IToken::Types acceptedTypes = options.acceptedTypes;
 	const TypedErrorHandler onError = options.onError;
 
 	Stack stack;
@@ -256,9 +300,18 @@ bool Evaluator::toRpn(IToken::Array* ret, const IToken::Array &in, const Options
 	}
 
 	// Iterate the tokens.
+	auto raiseInvalidExpression = [] (const IToken::Ptr &tk, TypedErrorHandler onError) -> void {
+		onError((unsigned)OptionsForRpn::Errors::INVALID_EXPRESSION, tk);
+	};
 	IToken::Ptr expectsOperator(IToken::create());
 	IToken::Ptr expectsOperand = nullptr;
 	for (const IToken::Ptr &tk : in) {
+		if ((unsigned)(acceptedTypes & tk->type()) == 0) {
+			raiseInvalidExpression(tk, onError);
+
+			return false;
+		}
+
 		switch (tk->type()) {
 		case IToken::Types::OPERATOR:
 			if (expectsOperator == nullptr) {
@@ -322,19 +375,15 @@ bool Evaluator::toRpn(IToken::Array* ret, const IToken::Array &in, const Options
 			expectsOperand = nullptr;
 
 			break;
+		case IToken::Types::STRING:
+			expectsOperator = tk;
+			expectsOperand = nullptr;
+
+			break;
 		case IToken::Types::COMMENT:
 			continue;
-		case IToken::Types::STRING:
-			if (acceptString) {
-				expectsOperator = tk;
-				expectsOperand = nullptr;
-
-				break;
-			} else {
-				// Fall through.
-			}
 		default:
-			onError((unsigned)OptionsForRpn::Errors::INVALID_EXPRESSION, tk);
+			raiseInvalidExpression(tk, onError);
 
 			return false;
 		}
@@ -405,6 +454,7 @@ bool Evaluator::fold(IToken::Array* ret, const IToken::Array &rpn, const Options
 	GBBASIC_ASSERT(ret);
 
 	const bool caseInsensitive = options.caseInsensitive;
+	const bool acceptFunctionLike = options.acceptFunctionLike;
 	const TokenResolver resolve = options.resolve;
 	const ErrorHandler onError = options.onError;
 
@@ -454,7 +504,7 @@ bool Evaluator::fold(IToken::Array* ret, const IToken::Array &rpn, const Options
 
 	// Folding constants in the AST.
 	Folder fold = nullptr;
-	fold = [&fold] (const TreeNode::Ptr &ast, ErrorHandler onError) -> Maybe<Variant> {
+	fold = [&options, acceptFunctionLike, &fold] (const TreeNode::Ptr &ast, ErrorHandler onError) -> Maybe<Variant> {
 		typedef std::vector<Variant> Variants;
 
 		if (!ast)
@@ -531,16 +581,87 @@ bool Evaluator::fold(IToken::Array* ret, const IToken::Array &rpn, const Options
 		case Op::Types::BITWISE_RSHIFT: result =   getInt16(childVals[0]) >> getInt16(childVals[1]);          break;
 		case Op::Types::BITWISE_NOT:    result =  ~getInt16(childVals[0]);                                    break;
 		case Op::Types::NEG:            result =  -getInt16(childVals[0]);                                    break;
-		case Op::Types::SGN:            // Fall through.
-		case Op::Types::ABS:            // Fall through.
-		case Op::Types::SQR:            // Fall through.
-		case Op::Types::SQRT:           // Fall through.
-		case Op::Types::SIN:            // Fall through.
-		case Op::Types::COS:            // Fall through.
-		case Op::Types::ATAN2:          // Fall through.
-		case Op::Types::POWI:           // Fall through.
-		case Op::Types::MIN:            // Fall through.
-		case Op::Types::MAX:            // Fall through.
+		case Op::Types::SGN:
+			if (acceptFunctionLike) {
+				result = (Int16)Math::sign(getInt16(childVals[0]));
+
+				break;
+			} else {
+				return Maybe<Variant>();
+			}
+		case Op::Types::ABS:
+			if (acceptFunctionLike) {
+				result = (Int16)std::abs(getInt16(childVals[0]));
+
+				break;
+			} else {
+				return Maybe<Variant>();
+			}
+		case Op::Types::SQR:
+			if (acceptFunctionLike) {
+				const Int16 a = getInt16(childVals[0]);
+				result = a * a;
+
+				break;
+			} else {
+				return Maybe<Variant>();
+			}
+		case Op::Types::SQRT:
+			if (acceptFunctionLike && options.sqrt) {
+				result = options.sqrt(getInt16(childVals[0]));
+
+				break;
+			} else {
+				return Maybe<Variant>();
+			}
+		case Op::Types::SIN:
+			if (acceptFunctionLike && options.sin) {
+				result = options.sin(getInt16(childVals[0]));
+
+				break;
+			} else {
+				return Maybe<Variant>();
+			}
+		case Op::Types::COS:
+			if (acceptFunctionLike && options.cos) {
+				result = options.cos(getInt16(childVals[0]));
+
+				break;
+			} else {
+				return Maybe<Variant>();
+			}
+		case Op::Types::ATAN2:
+			if (acceptFunctionLike && options.atan2) {
+				result = options.atan2(getInt16(childVals[0]), getInt16(childVals[1]));
+
+				break;
+			} else {
+				return Maybe<Variant>();
+			}
+		case Op::Types::POWI:
+			if (acceptFunctionLike && options.powi) {
+				result = options.powi(getInt16(childVals[0]), getInt16(childVals[1]));
+
+				break;
+			} else {
+				return Maybe<Variant>();
+			}
+		case Op::Types::MIN:
+			if (acceptFunctionLike) {
+				result = Math::min(getInt16(childVals[0]), getInt16(childVals[1]));
+
+				break;
+			} else {
+				return Maybe<Variant>();
+			}
+		case Op::Types::MAX:
+			if (acceptFunctionLike) {
+				result = Math::max(getInt16(childVals[0]), getInt16(childVals[1]));
+
+				break;
+			} else {
+				return Maybe<Variant>();
+			}
 		default:
 			return Maybe<Variant>();
 		}
@@ -612,6 +733,7 @@ bool Evaluator::calc(Variant* ret, const IToken::Array &rpn, const OptionsForCal
 
 	GBBASIC_ASSERT(ret);
 
+	const bool acceptFunctionLike = options.acceptFunctionLike;
 	const TokenResolver resolve = options.resolve;
 	const ErrorHandler onError = options.onError;
 
@@ -665,6 +787,12 @@ bool Evaluator::calc(Variant* ret, const IToken::Array &rpn, const OptionsForCal
 				stk.pop();
 			}
 
+			auto raiseUnsupportedOperator = [] (const IToken::Ptr &resolved, ErrorHandler onError) -> void {
+				if (onError) {
+					const std::string msg = "Unsupported operator {0}";
+					onError(Text::format(msg, { resolved->caseSensitiveText() }), resolved);
+				}
+			};
 			Int16 result = 0;
 			const Op::Types y = Op::typeOf((std::string)resolved->data());
 			switch (y) {
@@ -713,11 +841,109 @@ bool Evaluator::calc(Variant* ret, const IToken::Array &rpn, const OptionsForCal
 			case Op::Types::BITWISE_RSHIFT: result =   getInt16(childVals[0]) >> getInt16(childVals[1]);          break;
 			case Op::Types::BITWISE_NOT:    result =  ~getInt16(childVals[0]);                                    break;
 			case Op::Types::NEG:            result =  -getInt16(childVals[0]);                                    break;
-			default:
-				if (onError) {
-					const std::string msg = "Unsupported operator {0}";
-					onError(Text::format(msg, { resolved->caseSensitiveText() }), resolved);
+			case Op::Types::SGN:
+				if (acceptFunctionLike) {
+					result = (Int16)Math::sign(getInt16(childVals[0]));
+
+					break;
+				} else {
+					raiseUnsupportedOperator(resolved, onError);
+
+					return false;
 				}
+			case Op::Types::ABS:
+				if (acceptFunctionLike) {
+					result = (Int16)std::abs(getInt16(childVals[0]));
+
+					break;
+				} else {
+					raiseUnsupportedOperator(resolved, onError);
+
+					return false;
+				}
+			case Op::Types::SQR:
+				if (acceptFunctionLike) {
+					const Int16 a = getInt16(childVals[0]);
+					result = a * a;
+
+					break;
+				} else {
+					raiseUnsupportedOperator(resolved, onError);
+
+					return false;
+				}
+			case Op::Types::SQRT:
+				if (acceptFunctionLike && options.sqrt) {
+					result = options.sqrt(getInt16(childVals[0]));
+
+					break;
+				} else {
+					raiseUnsupportedOperator(resolved, onError);
+
+					return false;
+				}
+			case Op::Types::SIN:
+				if (acceptFunctionLike && options.sin) {
+					result = options.sin(getInt16(childVals[0]));
+
+					break;
+				} else {
+					raiseUnsupportedOperator(resolved, onError);
+
+					return false;
+				}
+			case Op::Types::COS:
+				if (acceptFunctionLike && options.cos) {
+					result = options.cos(getInt16(childVals[0]));
+
+					break;
+				} else {
+					raiseUnsupportedOperator(resolved, onError);
+
+					return false;
+				}
+			case Op::Types::ATAN2:
+				if (acceptFunctionLike && options.atan2) {
+					result = options.atan2(getInt16(childVals[0]), getInt16(childVals[1]));
+
+					break;
+				} else {
+					raiseUnsupportedOperator(resolved, onError);
+
+					return false;
+				}
+			case Op::Types::POWI:
+				if (acceptFunctionLike && options.powi) {
+					result = options.powi(getInt16(childVals[0]), getInt16(childVals[1]));
+
+					break;
+				} else {
+					raiseUnsupportedOperator(resolved, onError);
+
+					return false;
+				}
+			case Op::Types::MIN:
+				if (acceptFunctionLike) {
+					result = Math::min(getInt16(childVals[0]), getInt16(childVals[1]));
+
+					break;
+				} else {
+					raiseUnsupportedOperator(resolved, onError);
+
+					return false;
+				}
+			case Op::Types::MAX:
+				if (acceptFunctionLike) {
+					result = Math::max(getInt16(childVals[0]), getInt16(childVals[1]));
+
+					break;
+				} else {
+					raiseUnsupportedOperator(resolved, onError);
+
+					return false;
+				}
+			default:
+				raiseUnsupportedOperator(resolved, onError);
 
 				return false;
 			}

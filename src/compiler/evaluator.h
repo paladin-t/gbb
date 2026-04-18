@@ -25,6 +25,14 @@ namespace GBBASIC {
 class Evaluator {
 public:
 	/**
+	 * @brief Function of unary math.
+	 */
+	typedef std::function<Int16(Int16)> UnaryMathHandler;
+	/**
+	 * @brief Function of binary math.
+	 */
+	typedef std::function<Int16(Int16, Int16)> BinaryMathHandler;
+	/**
 	 * @brief Function of token resolver.
 	 */
 	typedef std::function<IToken::Ptr(const IToken::Ptr &)> TokenResolver;
@@ -52,7 +60,13 @@ public:
 			INVALID_EXPRESSION
 		};
 
-		bool acceptString = false;
+		IToken::Types acceptedTypes =
+			IToken::Types::OPERATOR |
+			IToken::Types::SYMBOL |
+			IToken::Types::BOOLEAN |
+			IToken::Types::NUMBER |
+			IToken::Types::COMMENT |
+			IToken::Types::INTERMEDIA;
 		ValidationHandler valid = nullptr;
 		EqualityHandler equals = nullptr;
 		GettingHandler get = nullptr;
@@ -61,9 +75,9 @@ public:
 		TypedErrorHandler onError = nullptr;
 
 		OptionsForRpn();
-		OptionsForRpn(bool accStr, TypedErrorHandler err);
+		OptionsForRpn(IToken::Types accy, TypedErrorHandler err);
 		OptionsForRpn(
-			bool accStr,
+			IToken::Types accy,
 			ValidationHandler valid_,
 			EqualityHandler equals_,
 			GettingHandler get_,
@@ -77,21 +91,52 @@ public:
 	 */
 	struct OptionsForFolding {
 		bool caseInsensitive = true;
+		bool acceptFunctionLike = false;
+		UnaryMathHandler sqrt = nullptr;
+		UnaryMathHandler sin = nullptr;
+		UnaryMathHandler cos = nullptr;
+		BinaryMathHandler atan2 = nullptr;
+		BinaryMathHandler powi = nullptr;
 		TokenResolver resolve = [] (const IToken::Ptr &tk) -> IToken::Ptr { return tk; };
 		ErrorHandler onError = nullptr;
 
 		OptionsForFolding();
 		OptionsForFolding(bool ci, TokenResolver r, ErrorHandler err);
+		OptionsForFolding(
+			bool ci,
+			UnaryMathHandler sqrt_,
+			UnaryMathHandler sin_,
+			UnaryMathHandler cos_,
+			BinaryMathHandler atan2_,
+			BinaryMathHandler powi_,
+			TokenResolver r,
+			ErrorHandler err
+		);
 	};
 	/**
 	 * @brief Options for expression calculating.
 	 */
 	struct OptionsForCalculating {
+		bool acceptFunctionLike = false;
+		UnaryMathHandler sqrt = nullptr;
+		UnaryMathHandler sin = nullptr;
+		UnaryMathHandler cos = nullptr;
+		BinaryMathHandler atan2 = nullptr;
+		BinaryMathHandler powi = nullptr;
 		TokenResolver resolve = [] (const IToken::Ptr &tk) -> IToken::Ptr { return tk; };
 		ErrorHandler onError = nullptr;
 
 		OptionsForCalculating();
 		OptionsForCalculating(TokenResolver r, ErrorHandler err);
+		OptionsForCalculating(
+			UnaryMathHandler sqrt_,
+			UnaryMathHandler sin_,
+			UnaryMathHandler cos_,
+			BinaryMathHandler atan2_,
+			BinaryMathHandler powi_,
+			TokenResolver r,
+			ErrorHandler err
+		);
 	};
 
 public:
