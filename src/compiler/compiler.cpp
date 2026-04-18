@@ -30829,6 +30829,7 @@ private:
 		const std::string SPACE             = " \t";
 		const std::string PAGE              = "#";
 		const std::string PAGE_NUMBER       = "0123456789";
+		const std::string PREPROCESSOR      = "defilnors";
 		const std::string COMMENT           = "\'";
 		const std::string COMMENT_REM       = "rem";
 		const std::string OPERATOR          = "()[]<>=+-*/,;:";
@@ -31167,6 +31168,14 @@ private:
 							node->add(ch);
 
 							met = Token::Types::PAGE;
+						} else if ((is(Token::Types::PAGE) || is(Token::Types::PREPROCESSOR)) && contains(EitherStringOrArray(Left<std::string>(PREPROCESSOR)), ch)) {
+							// Met preprocessor.
+							if (is(Token::Types::PAGE))
+								node->type(Token::Types::PREPROCESSOR);
+
+							node->add(ch);
+
+							met = Token::Types::PREPROCESSOR;
 						} else if (is(Token::Types::SYMBOL) && isSymbolic(ch)) {
 							// Met symbol; proceed later.
 							// Do nothing.
@@ -31841,6 +31850,9 @@ private:
 		auto throwDataSectionOverflow = [&] (int index) -> bool {
 			return throwError("Data section overflow", index, false);
 		};
+		auto throwDiagnosticError = [&] (int index, const std::string &msg) -> bool {
+			return throwError(msg.c_str(), index, false);
+		};
 		auto throwFillerInsideStructureAlwaysTakesEffectOnceAndOnlyOnce = [&] (int index, const std::string &struct_) -> bool {
 			const std::string msg = Text::format("Filler inside structure \"{0}\" always takes effect once and only once", { struct_ });
 
@@ -31867,6 +31879,9 @@ private:
 		};
 		auto throwNotImplemented = [&] (int index) -> bool {
 			return throwError("Not implemented", index, false);
+		};
+		auto throwStringExpected = [&] (int index) -> bool {
+			return throwError("String expected", index, false);
 		};
 		auto throwTooFewArguments = [&] (int index) -> bool {
 			return throwError("Too few arguments", index, false);
@@ -34069,6 +34084,50 @@ private:
 		};
 
 		// Syntax combinators.
+		const Combinator PreprocessorIf(
+			[&] (Node::Ptr &p, const Combinator::Options &) -> bool {
+				State q = begin();
+
+				if (!must(Token::Types::INTEGER)(q)) return false;
+				if (!must(Token::Types::PREPROCESSOR, "#if")(q)) return false;
+				// TODO: CONDITIONAL COMPILATION.
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!must(Token::Types::END_OF_LINE)(q)) return false;
+
+				// TODO: CONDITIONAL COMPILATION.
+				Node::Ptr node = createNode(
+					" ", "_",
+					{
+						{ "allow_call", false }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				return true;
+			}
+		);
+		const Combinator PreprocessorError(
+			[&] (Node::Ptr &p, const Combinator::Options &) -> bool {
+				State q = begin();
+				Token::Ptr id = nullptr;
+				std::string txt;
+				const int index = q.index;
+
+				if (!must(Token::Types::INTEGER)(q)) return false;
+				if (!must(Token::Types::PREPROCESSOR, "#error")(q)) return false;
+				if (!(id = must(Token::Types::STRING)(q))) return throwStringExpected(q.index);
+				txt = (std::string)id->data();
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!must(Token::Types::END_OF_LINE)(q)) return false;
+
+				return throwDiagnosticError(index, txt);
+			}
+		);
 		const Combinator Blank( // Blank line.
 			[&] (Node::Ptr &p, const Combinator::Options &) -> bool {
 				State q = begin();
@@ -34159,7 +34218,7 @@ private:
 				if (!must(Token::Types::KEYWORD, "do")(q)) return false;
 				if (!must(Token::Types::IDENTIFIER, "nothing")(q)) return false;
 				if (!must(Token::Types::KEYWORD, "with")(q)) return false;
-				if (!(id = must(Token::Types::IDENTIFIER)(q))) throwInvalidSyntax(q.index);
+				if (!(id = must(Token::Types::IDENTIFIER)(q))) return throwInvalidSyntax(q.index);
 				name = (std::string)id->data();
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
@@ -39191,6 +39250,11 @@ private:
 			}
 		);
 		const Combinator::List Combinators = {
+			/**< Preprocessor. */
+
+			PreprocessorIf,
+			PreprocessorError,
+
 			/**< Blank. */
 
 			Blank,
