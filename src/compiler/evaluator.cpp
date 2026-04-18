@@ -88,6 +88,24 @@ static int getArity(const IToken::Ptr &tk) {
 	return op.oprands;
 }
 
+static bool isFunctionLike(Op::Types y) {
+	switch (y) {
+	case Op::Types::SGN: // Fall through.
+	case Op::Types::ABS: // Fall through.
+	case Op::Types::SQR: // Fall through.
+	case Op::Types::SQRT: // Fall through.
+	case Op::Types::SIN: // Fall through.
+	case Op::Types::COS: // Fall through.
+	case Op::Types::ATAN2: // Fall through.
+	case Op::Types::POWI: // Fall through.
+	case Op::Types::MIN: // Fall through.
+	case Op::Types::MAX:
+		return true;
+	default:
+		return false;
+	}
+}
+
 static Int16 getInt16(const Variant &v) {
 	return (Int16)(int)v;
 }
@@ -541,8 +559,13 @@ bool Evaluator::fold(IToken::Array* ret, const IToken::Array &rpn, const Options
 			return nullptr;
 		}
 
+		#define FUNC1(RET, FUNC) if (options.##FUNC) { (RET) = options.##FUNC(getInt16(childVals[0])); } else { return Maybe<Variant>(); }
+		#define FUNC2(RET, FUNC) if (options.##FUNC) { (RET) = options.##FUNC(getInt16(childVals[0]), getInt16(childVals[1])); } else { return Maybe<Variant>(); }
 		Int16 result = 0;
 		const Op::Types y = Op::typeOf((std::string)tk->data());
+		if (!acceptFunctionLike && isFunctionLike(y)) {
+			return Maybe<Variant>();
+		}
 		switch (y) {
 		case Op::Types::EQ:             result =  (getInt16(childVals[0]) == getInt16(childVals[1]) ? 1 : 0); break;
 		case Op::Types::LT:             result =  (getInt16(childVals[0]) <  getInt16(childVals[1]) ? 1 : 0); break;
@@ -581,90 +604,21 @@ bool Evaluator::fold(IToken::Array* ret, const IToken::Array &rpn, const Options
 		case Op::Types::BITWISE_RSHIFT: result =   getInt16(childVals[0]) >> getInt16(childVals[1]);          break;
 		case Op::Types::BITWISE_NOT:    result =  ~getInt16(childVals[0]);                                    break;
 		case Op::Types::NEG:            result =  -getInt16(childVals[0]);                                    break;
-		case Op::Types::SGN:
-			if (acceptFunctionLike) {
-				result = (Int16)Math::sign(getInt16(childVals[0]));
-
-				break;
-			} else {
-				return Maybe<Variant>();
-			}
-		case Op::Types::ABS:
-			if (acceptFunctionLike) {
-				result = (Int16)std::abs(getInt16(childVals[0]));
-
-				break;
-			} else {
-				return Maybe<Variant>();
-			}
-		case Op::Types::SQR:
-			if (acceptFunctionLike) {
-				const Int16 a = getInt16(childVals[0]);
-				result = a * a;
-
-				break;
-			} else {
-				return Maybe<Variant>();
-			}
-		case Op::Types::SQRT:
-			if (acceptFunctionLike && options.sqrt) {
-				result = options.sqrt(getInt16(childVals[0]));
-
-				break;
-			} else {
-				return Maybe<Variant>();
-			}
-		case Op::Types::SIN:
-			if (acceptFunctionLike && options.sin) {
-				result = options.sin(getInt16(childVals[0]));
-
-				break;
-			} else {
-				return Maybe<Variant>();
-			}
-		case Op::Types::COS:
-			if (acceptFunctionLike && options.cos) {
-				result = options.cos(getInt16(childVals[0]));
-
-				break;
-			} else {
-				return Maybe<Variant>();
-			}
-		case Op::Types::ATAN2:
-			if (acceptFunctionLike && options.atan2) {
-				result = options.atan2(getInt16(childVals[0]), getInt16(childVals[1]));
-
-				break;
-			} else {
-				return Maybe<Variant>();
-			}
-		case Op::Types::POWI:
-			if (acceptFunctionLike && options.powi) {
-				result = options.powi(getInt16(childVals[0]), getInt16(childVals[1]));
-
-				break;
-			} else {
-				return Maybe<Variant>();
-			}
-		case Op::Types::MIN:
-			if (acceptFunctionLike) {
-				result = Math::min(getInt16(childVals[0]), getInt16(childVals[1]));
-
-				break;
-			} else {
-				return Maybe<Variant>();
-			}
-		case Op::Types::MAX:
-			if (acceptFunctionLike) {
-				result = Math::max(getInt16(childVals[0]), getInt16(childVals[1]));
-
-				break;
-			} else {
-				return Maybe<Variant>();
-			}
+		case Op::Types::SGN:            result = (Int16)Math::sign(getInt16(childVals[0]));                   break;
+		case Op::Types::ABS:            result = (Int16)std::abs(getInt16(childVals[0]));                     break;
+		case Op::Types::SQR:            result = getInt16(childVals[0]) * getInt16(childVals[0]);             break;
+		case Op::Types::SQRT:           FUNC1(result, sqrt);                                                  break;
+		case Op::Types::SIN:            FUNC1(result, sin);                                                   break;
+		case Op::Types::COS:            FUNC1(result, cos);                                                   break;
+		case Op::Types::ATAN2:          FUNC2(result, atan2);                                                 break;
+		case Op::Types::POWI:           FUNC2(result, powi);                                                  break;
+		case Op::Types::MIN:            result = Math::min(getInt16(childVals[0]), getInt16(childVals[1]));   break;
+		case Op::Types::MAX:            result = Math::max(getInt16(childVals[0]), getInt16(childVals[1]));   break;
 		default:
 			return Maybe<Variant>();
 		}
+		#undef FUNC1
+		#undef FUNC2
 
 		return Variant(result);
 	};
@@ -787,6 +741,8 @@ bool Evaluator::calc(Variant* ret, const IToken::Array &rpn, const OptionsForCal
 				stk.pop();
 			}
 
+			#define FUNC1(RET, FUNC) if (options.##FUNC) { (RET) = options.##FUNC(getInt16(childVals[0])); } else { raiseUnsupportedOperator(resolved, onError); return false; }
+			#define FUNC2(RET, FUNC) if (options.##FUNC) { (RET) = options.##FUNC(getInt16(childVals[0]), getInt16(childVals[1])); } else { raiseUnsupportedOperator(resolved, onError); return false; }
 			auto raiseUnsupportedOperator = [] (const IToken::Ptr &resolved, ErrorHandler onError) -> void {
 				if (onError) {
 					const std::string msg = "Unsupported operator {0}";
@@ -795,6 +751,11 @@ bool Evaluator::calc(Variant* ret, const IToken::Array &rpn, const OptionsForCal
 			};
 			Int16 result = 0;
 			const Op::Types y = Op::typeOf((std::string)resolved->data());
+			if (!acceptFunctionLike && isFunctionLike(y)) {
+				raiseUnsupportedOperator(resolved, onError);
+
+				return false;
+			}
 			switch (y) {
 			case Op::Types::EQ:             result =  (getInt16(childVals[0]) == getInt16(childVals[1]) ? 1 : 0); break;
 			case Op::Types::LT:             result =  (getInt16(childVals[0]) <  getInt16(childVals[1]) ? 1 : 0); break;
@@ -841,112 +802,23 @@ bool Evaluator::calc(Variant* ret, const IToken::Array &rpn, const OptionsForCal
 			case Op::Types::BITWISE_RSHIFT: result =   getInt16(childVals[0]) >> getInt16(childVals[1]);          break;
 			case Op::Types::BITWISE_NOT:    result =  ~getInt16(childVals[0]);                                    break;
 			case Op::Types::NEG:            result =  -getInt16(childVals[0]);                                    break;
-			case Op::Types::SGN:
-				if (acceptFunctionLike) {
-					result = (Int16)Math::sign(getInt16(childVals[0]));
-
-					break;
-				} else {
-					raiseUnsupportedOperator(resolved, onError);
-
-					return false;
-				}
-			case Op::Types::ABS:
-				if (acceptFunctionLike) {
-					result = (Int16)std::abs(getInt16(childVals[0]));
-
-					break;
-				} else {
-					raiseUnsupportedOperator(resolved, onError);
-
-					return false;
-				}
-			case Op::Types::SQR:
-				if (acceptFunctionLike) {
-					const Int16 a = getInt16(childVals[0]);
-					result = a * a;
-
-					break;
-				} else {
-					raiseUnsupportedOperator(resolved, onError);
-
-					return false;
-				}
-			case Op::Types::SQRT:
-				if (acceptFunctionLike && options.sqrt) {
-					result = options.sqrt(getInt16(childVals[0]));
-
-					break;
-				} else {
-					raiseUnsupportedOperator(resolved, onError);
-
-					return false;
-				}
-			case Op::Types::SIN:
-				if (acceptFunctionLike && options.sin) {
-					result = options.sin(getInt16(childVals[0]));
-
-					break;
-				} else {
-					raiseUnsupportedOperator(resolved, onError);
-
-					return false;
-				}
-			case Op::Types::COS:
-				if (acceptFunctionLike && options.cos) {
-					result = options.cos(getInt16(childVals[0]));
-
-					break;
-				} else {
-					raiseUnsupportedOperator(resolved, onError);
-
-					return false;
-				}
-			case Op::Types::ATAN2:
-				if (acceptFunctionLike && options.atan2) {
-					result = options.atan2(getInt16(childVals[0]), getInt16(childVals[1]));
-
-					break;
-				} else {
-					raiseUnsupportedOperator(resolved, onError);
-
-					return false;
-				}
-			case Op::Types::POWI:
-				if (acceptFunctionLike && options.powi) {
-					result = options.powi(getInt16(childVals[0]), getInt16(childVals[1]));
-
-					break;
-				} else {
-					raiseUnsupportedOperator(resolved, onError);
-
-					return false;
-				}
-			case Op::Types::MIN:
-				if (acceptFunctionLike) {
-					result = Math::min(getInt16(childVals[0]), getInt16(childVals[1]));
-
-					break;
-				} else {
-					raiseUnsupportedOperator(resolved, onError);
-
-					return false;
-				}
-			case Op::Types::MAX:
-				if (acceptFunctionLike) {
-					result = Math::max(getInt16(childVals[0]), getInt16(childVals[1]));
-
-					break;
-				} else {
-					raiseUnsupportedOperator(resolved, onError);
-
-					return false;
-				}
+			case Op::Types::SGN:            result = (Int16)Math::sign(getInt16(childVals[0]));                   break;
+			case Op::Types::ABS:            result = (Int16)std::abs(getInt16(childVals[0]));                     break;
+			case Op::Types::SQR:            result = getInt16(childVals[0]) * getInt16(childVals[0]);             break;
+			case Op::Types::SQRT:           FUNC1(result, sqrt);                                                  break;
+			case Op::Types::SIN:            FUNC1(result, sin);                                                   break;
+			case Op::Types::COS:            FUNC1(result, cos);                                                   break;
+			case Op::Types::ATAN2:          FUNC2(result, atan2);                                                 break;
+			case Op::Types::POWI:           FUNC2(result, powi);                                                  break;
+			case Op::Types::MIN:            result = Math::min(getInt16(childVals[0]), getInt16(childVals[1]));   break;
+			case Op::Types::MAX:            result = Math::max(getInt16(childVals[0]), getInt16(childVals[1]));   break;
 			default:
 				raiseUnsupportedOperator(resolved, onError);
 
 				return false;
 			}
+			#undef FUNC1
+			#undef FUNC2
 
 			stk.push(Variant(result));
 		}
