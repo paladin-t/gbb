@@ -13,6 +13,40 @@
 
 /*
 ** {===========================================================================
+** Utilities
+*/
+
+#if defined GBBASIC_OS_WIN
+#	define memicmp _memicmp
+#else /* GBBASIC_OS_WIN */
+static int memicmp(const void* l, const void* r, size_t count) {
+	if (count == 0)
+		return 0;
+
+	const unsigned char* lp = (const unsigned char*)l;
+	const unsigned char* rp = (const unsigned char*)r;
+
+	for (size_t i = 0; i < count; ++i) {
+		unsigned char lc = lp[i];
+		unsigned char rc = rp[i];
+
+		if (lc >= 'A' && lc <= 'Z')
+			lc = lc - 'A' + 'a';
+		if (rc >= 'A' && rc <= 'Z')
+			rc = rc - 'A' + 'a';
+
+		if (lc != rc)
+			return (int)lc - (int)rc;
+	}
+
+	return 0;
+}
+#endif /* GBBASIC_OS_WIN */
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Code language definition
 */
 
@@ -38,6 +72,56 @@ static bool tokenizeString(const char* inBegin, const char* inEnd, const char* &
 
 		p += Unicode::expectUtf8(p);
 	}
+
+	return false;
+}
+
+static bool tokenizePreprocessor(const char* inBegin, const char* inEnd, const char* &outBegin, const char* &outEnd) {
+	// Prepare.
+	const char        SHARP          = '#';
+	const std::string PREPROCESSOR   = "adefgilmnorsw";
+
+	auto contains = [] (const std::string &pattern, const char ch) -> bool {
+		return Text::indexOf(pattern, ch) != std::string::npos;
+	};
+
+	// Expect '#'.
+	const char* p = inBegin;
+	if (*p != SHARP)
+		return false;
+	++p;
+
+	// Expect preprocessor.
+	if (!contains(PREPROCESSOR, *p))
+		return false;
+	while (p < inEnd) {
+		if (!contains(PREPROCESSOR, *p))
+			break;
+
+		outBegin = inBegin;
+		outEnd = p + 1;
+
+		++p;
+	}
+
+	// Check the token.
+	if (!outBegin || !outEnd || outBegin >= outEnd)
+		return false;
+
+	if (memicmp(outBegin, "#if", 3) == 0)
+		return true;
+	if (memicmp(outBegin, "#elseif", 7) == 0)
+		return true;
+	if (memicmp(outBegin, "#else", 5) == 0)
+		return true;
+	if (memicmp(outBegin, "#endif", 6) == 0)
+		return true;
+	if (memicmp(outBegin, "#message", 8) == 0)
+		return true;
+	if (memicmp(outBegin, "#warn", 5) == 0)
+		return true;
+	if (memicmp(outBegin, "#error", 6) == 0)
+		return true;
 
 	return false;
 }
@@ -110,7 +194,8 @@ static bool tokenize(const char* inBegin, const char* inEnd, const char* &outBeg
 		paletteIndex = ImGui::CodeEditor::PaletteIndex::Default;
 	} else if (tokenizeString(inBegin, inEnd, outBegin, outEnd, '"')) {
 		paletteIndex = ImGui::CodeEditor::PaletteIndex::String;
-	// } else if (...) { // TODO: CONDITIONAL COMPILATION.
+	} else if (tokenizePreprocessor(inBegin, inEnd, outBegin, outEnd)) {
+		paletteIndex = ImGui::CodeEditor::PaletteIndex::Preprocessor;
 	} else if (tokenizeAssetDestination(inBegin, inEnd, outBegin, outEnd)) {
 		paletteIndex = ImGui::CodeEditor::PaletteIndex::Symbol;
 	}
