@@ -7909,6 +7909,9 @@ public:
 
 class NodeExpression : public Node {
 public:
+	typedef std::function<bool(const std::string &)> IdentifierChecker;
+
+public:
 	NodeExpression() {
 	}
 	virtual ~NodeExpression() override {
@@ -7963,13 +7966,16 @@ public:
 	}
 
 	virtual bool get(Variant &ret, const std::string &msg, int argc, const Variant* argv) const override {
-		(void)argc;
-		(void)argv;
-
 		ret = nullptr;
 
-		if (msg == "evaluated")
-			return evaluate(ret);
+		if (msg == "evaluated") {
+			void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
+			IdentifierChecker* idIsVar = arg0 ? (IdentifierChecker*)(arg0) : nullptr;
+			void* arg1 = unpack<void*>(argc, argv, 1, nullptr);
+			IdentifierChecker* idIsMacro = arg1 ? (IdentifierChecker*)(arg1) : nullptr;
+
+			return evaluate(ret, idIsVar ? *idIsVar : nullptr, idIsMacro ? *idIsMacro : nullptr);
+		}
 
 		return false;
 	}
@@ -8618,7 +8624,7 @@ private:
 		return Evaluator::toRpn(nullptr, in, options);
 	}
 
-	bool evaluate(Variant &ret) const {
+	bool evaluate(Variant &ret, IdentifierChecker idIsVar /* nullable */, IdentifierChecker idIsMacro /* nullable */) const {
 		// Prepare.
 		ret = nullptr;
 
@@ -8641,10 +8647,10 @@ private:
 			std::bind(cos, std::placeholders::_1),
 			std::bind(atan2, std::placeholders::_1, std::placeholders::_2),
 			std::bind(powi, std::placeholders::_1, std::placeholders::_2),
-			[] (const IToken::Ptr &tk) -> IToken::Ptr {
+			[idIsVar, idIsMacro] (const IToken::Ptr &tk) -> IToken::Ptr {
 				if (tk->is(Token::Types::OPERATOR))
 					return tk;
-				if (tk->is(Token::Types::SYMBOL))
+				if (tk->is(Token::Types::KEYWORD))
 					return tk;
 				if (tk->is(Token::Types::NUMBER))
 					return tk;
@@ -8652,9 +8658,25 @@ private:
 					Token::Ptr tk_(new Token());
 					tk_
 						->type(Token::Types::INTEGER)
-						->data(1);
+						->data(1); // String always results in `1`.
 
 					return tk_;
+				}
+				if (tk->is(Token::Types::IDENTIFIER)) {
+					const std::string &name = (std::string)tk->data();
+					if (idIsVar && idIsVar(name)) {
+						return tk; // Keep as-is for variable.
+					}
+					if (idIsMacro && !idIsMacro(name)) {
+						Token::Ptr tk_(new Token());
+						tk_
+							->type(Token::Types::INTEGER)
+							->data(0); // Non-defined macro always results in `0`.
+
+						return tk_;
+					}
+
+					return tk;
 				}
 
 				return nullptr;
@@ -34491,6 +34513,10 @@ private:
 				const int index = q.index;
 				ReadOnceVariant evaluated = nullptr;
 				bool everEvaluated = false;
+				NodeExpression::IdentifierChecker idIsVar = [&identifiers] (const std::string &name) -> bool {
+					return !!identifiers.find(name);
+				};
+				NodeExpression::IdentifierChecker idIsMacro = idHasBeenDefinedAsMacro;
 
 				if (tooManyNestedStructures()) return throwTooManyNestedStructures(index);
 
@@ -34510,7 +34536,7 @@ private:
 					// TODO: `#IF DEF ...`.
 					if (children_.size() != 1) return throwInvalidExpression(q1.index);
 					const Node::Ptr &expr = children_.front();
-					if (!expr->get(evaluated.ref(), "evaluated")) return throwNonConstantExpression(q1.index); // Evaluate the expression.
+					if (!expr->get(evaluated.ref(), "evaluated", &idIsVar, &idIsMacro)) return throwNonConstantExpression(q1.index); // Evaluate the expression.
 
 					q.index = q1.index;
 
@@ -34533,7 +34559,7 @@ private:
 						everEvaluated = true;
 						children.push_back(do_);
 					} else {
-						// Ignore the chunk of code of the condition expression didn't result to `true`.
+						// Ignore the chunk of code of the condition wasn't satisfied.
 					}
 					q.index = cursor;
 				}
@@ -34569,7 +34595,7 @@ private:
 						// TODO: `#ELSE IF DEF ...`.
 						if (children_.size() != 1) return throwInvalidExpression(q1.index);
 						const Node::Ptr &expr = children_.front();
-						if (!expr->get(evaluated.ref(), "evaluated")) return throwNonConstantExpression(q1.index); // Evaluate the expression.
+						if (!expr->get(evaluated.ref(), "evaluated", &idIsVar, &idIsMacro)) return throwNonConstantExpression(q1.index); // Evaluate the expression.
 
 						q.index = q1.index;
 
@@ -34592,7 +34618,7 @@ private:
 						everEvaluated = true;
 						children.push_back(do_);
 					} else {
-						// Ignore the chunk of code of the condition expression didn't result to `true`.
+						// Ignore the chunk of code of the condition wasn't satisfied.
 					}
 					q.index = cursor;
 				}
@@ -34625,7 +34651,7 @@ private:
 						everEvaluated = true;
 						children.push_back(do_);
 					} else {
-						// Ignore the chunk of code of one of the previous condition expression resulted to `true`.
+						// Ignore the chunk of code of one of the previous condition was already satisfied.
 					}
 					q.index = cursor;
 				}
