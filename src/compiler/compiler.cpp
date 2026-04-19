@@ -7727,6 +7727,22 @@ public:
 		// TODO: CONDITIONAL COMPILATION.
 	}
 
+	virtual bool get(Variant &ret, const std::string &msg, int argc, const Variant* argv) const override {
+		ret = nullptr;
+
+		if (msg == "...") {
+			(void)msg;
+			(void)argc;
+			(void)argv;
+
+			// TODO: CONDITIONAL COMPILATION.
+
+			return false;
+		}
+
+		return false;
+	}
+
 	virtual Abstract abstract(void) const override {
 		return abstract("#IF");
 	}
@@ -34532,8 +34548,6 @@ private:
 					Node::Array children_;
 					if (!Expression(q1, children_)) return throwInvalidSyntax(q1.index);
 
-					// TODO: CONDITIONAL COMPILATION.
-					// TODO: `#IF DEF ...`.
 					if (children_.size() != 1) return throwInvalidExpression(q1.index);
 					const Node::Ptr &expr = children_.front();
 					if (!expr->get(evaluated.ref(), "evaluated", &idIsVar, &idIsMacro)) return throwNonConstantExpression(q1.index); // Evaluate the expression.
@@ -34591,8 +34605,6 @@ private:
 						Node::Array children_;
 						if (!Expression(q1, children_)) return throwInvalidSyntax(q.index);
 
-						// TODO: CONDITIONAL COMPILATION.
-						// TODO: `#ELSE IF DEF ...`.
 						if (children_.size() != 1) return throwInvalidExpression(q1.index);
 						const Node::Ptr &expr = children_.front();
 						if (!expr->get(evaluated.ref(), "evaluated", &idIsVar, &idIsMacro)) return throwNonConstantExpression(q1.index); // Evaluate the expression.
