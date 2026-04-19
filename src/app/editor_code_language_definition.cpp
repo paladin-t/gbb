@@ -80,6 +80,16 @@ static bool tokenizePreprocessor(const char* inBegin, const char* inEnd, const c
 	// Prepare.
 	const char        SHARP          = '#';
 	const std::string PREPROCESSOR   = "adefgilmnorsw";
+	const char        IF[]           = { '#', 'i', 'f' };
+	const char        ELSE[]         = { '#', 'e', 'l', 's', 'e' };
+	const char        ELSE_IF[]      = { '#', 'e', 'l', 's', 'e', ' ', 'i', 'f' };
+	const char        ELSEIF[]       = { '#', 'e', 'l', 's', 'e', 'i', 'f' };
+	const char        END[]          = { '#', 'e', 'n', 'd' };
+	const char        END_IF[]       = { '#', 'e', 'n', 'd', ' ', 'i', 'f' };
+	const char        ENDIF[]        = { '#', 'e', 'n', 'd', 'i', 'f' };
+	const char        MESSAGE[]      = { '#', 'm', 'e', 's', 's', 'a', 'g', 'e' };
+	const char        WARN[]         = { '#', 'w', 'a', 'r', 'n' };
+	const char        ERROR[]        = { '#', 'e', 'r', 'r', 'o', 'r' };
 
 	auto contains = [] (const std::string &pattern, const char ch) -> bool {
 		return Text::indexOf(pattern, ch) != std::string::npos;
@@ -104,23 +114,49 @@ static bool tokenizePreprocessor(const char* inBegin, const char* inEnd, const c
 		++p;
 	}
 
+	if (memicmp(outBegin, ELSE, GBBASIC_COUNTOF(ELSE)) == 0 || memicmp(outBegin, END, GBBASIC_COUNTOF(END)) == 0) {
+		const char* q = p;
+		bool hasIf = false;
+		if (*q == ' ') {
+			++q;
+			if (*q == 'i' || *q == 'I') {
+				++q;
+				if (*q == 'f' || *q == 'F') {
+					++q;
+					hasIf = true;
+				}
+			}
+		}
+		if (hasIf) {
+			p = q;
+			outBegin = inBegin;
+			outEnd = p;
+		}
+	}
+
 	// Check the token.
 	if (!outBegin || !outEnd || outBegin >= outEnd)
 		return false;
 
-	if (memicmp(outBegin, "#if", 3) == 0)
+	if (memicmp(outBegin, IF, GBBASIC_COUNTOF(IF)) == 0)
 		return true;
-	if (memicmp(outBegin, "#elseif", 7) == 0)
+	if (memicmp(outBegin, ELSE, GBBASIC_COUNTOF(ELSE)) == 0)
 		return true;
-	if (memicmp(outBegin, "#else", 5) == 0)
+	if (memicmp(outBegin, ELSE_IF, GBBASIC_COUNTOF(ELSE_IF)) == 0)
 		return true;
-	if (memicmp(outBegin, "#endif", 6) == 0)
+	if (memicmp(outBegin, ELSEIF, GBBASIC_COUNTOF(ELSEIF)) == 0)
 		return true;
-	if (memicmp(outBegin, "#message", 8) == 0)
+	if (memicmp(outBegin, END, GBBASIC_COUNTOF(END)) == 0)
 		return true;
-	if (memicmp(outBegin, "#warn", 5) == 0)
+	if (memicmp(outBegin, END_IF, GBBASIC_COUNTOF(END_IF)) == 0)
 		return true;
-	if (memicmp(outBegin, "#error", 6) == 0)
+	if (memicmp(outBegin, ENDIF, GBBASIC_COUNTOF(ENDIF)) == 0)
+		return true;
+	if (memicmp(outBegin, MESSAGE, GBBASIC_COUNTOF(MESSAGE)) == 0)
+		return true;
+	if (memicmp(outBegin, WARN, GBBASIC_COUNTOF(WARN)) == 0)
+		return true;
+	if (memicmp(outBegin, ERROR, GBBASIC_COUNTOF(ERROR)) == 0)
 		return true;
 
 	return false;
