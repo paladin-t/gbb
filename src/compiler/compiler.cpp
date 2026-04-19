@@ -1259,6 +1259,35 @@ TextLocation TextLocation::INVALID(void) {
 	return TextLocation(-1, -1, -1);
 }
 
+struct Prompt {
+	typedef std::function<void(const Prompt &, const std::string &, const TextLocation* /* nullable */)> Handler;
+
+	typedef std::initializer_list<std::string> Arguments;
+
+	std::string message;
+
+	Prompt() {
+	}
+	Prompt(const std::string &msg) :
+		message(msg)
+	{
+	}
+
+	std::string format(void) const {
+		return message;
+	}
+	std::string format(const Arguments &args) const {
+		Text::Array args_ = args;
+		for (std::string &arg : args_) {
+			if (arg == "\n")
+				arg = "<EOL>";
+		}
+		const std::string result = Text::format(message, args_);
+
+		return result;
+	}
+};
+
 struct Error {
 	typedef std::function<void(const Error &, const std::string &, const TextLocation &)> Handler;
 
@@ -3506,6 +3535,20 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_DATA_SECTION_OVERFLOW */
+#ifndef THROW_DIAGNOSTIC_ERROR
+#	define THROW_DIAGNOSTIC_ERROR(ON_ERROR, TK, MSG) \
+		do { \
+			throwDiagnosticError((ON_ERROR), (TK), (MSG)); \
+			return; \
+		} while (false)
+#endif /* THROW_DIAGNOSTIC_ERROR */
+#ifndef THROW_DIAGNOSTIC_WARNING
+	// As warning.
+#	define THROW_DIAGNOSTIC_WARNING(ON_ERROR, TK, MSG) \
+		do { \
+			throwDiagnosticWarning((ON_ERROR), (TK), (MSG)); \
+		} while (false)
+#endif /* THROW_DIAGNOSTIC_WARNING */
 #ifndef THROW_DUPLICATE_DESTINATION
 #	define THROW_DUPLICATE_DESTINATION(ON_ERROR, TK) \
 		do { \
@@ -6813,6 +6856,18 @@ public:
 		const Error err("Data section overflow", false);
 		onError(err, err.format(), tk->begin());
 	}
+	void throwDiagnosticError(Error::Handler onError, Token::Ptr tk, const std::string &msg) {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err(msg, false);
+		onError(err, err.format(), tk->begin());
+	}
+	void throwDiagnosticWarning(Error::Handler onError, Token::Ptr tk, const std::string &msg) {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err(msg, true);
+		onError(err, err.format(), tk->begin());
+	}
 	void throwDuplicateDestination(Error::Handler onError, Token::Ptr tk = nullptr) const {
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
@@ -7610,6 +7665,230 @@ public:
 		const std::string name = "#" + Text::toString(_page);
 
 		return dump(depth, name.c_str());
+	}
+	using Node::dump;
+};
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Preprocessors
+*/
+
+class NodePreprocessorIf : public Node {
+public:
+	NodePreprocessorIf() {
+	}
+	virtual ~NodePreprocessorIf() override {
+	}
+
+	NODE_TYPE(Types::PREPROCESSOR_IF)
+
+	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		// Prepare.
+		Context &ctx = context.top();
+		State &state = top();
+
+		// Determine the location in the ROM.
+		state.inRom.bank = ctx.bank;
+		state.inRom.address = ctx.addressCursor;
+		state.inRom.size = 0;
+
+		// Consume the tokens.
+		if (ctx.expect.lnno) {
+			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+			})) { THROW_INVALID_SYNTAX(onError); }
+		}
+		if (!consume(Token::Types::KEYWORD, "#if")) { THROW_INVALID_SYNTAX(onError); }
+
+		// Check the children.
+		(void)_children;
+
+		// Generate all the children.
+		Node::generate(bytes, context, onError);
+
+		// TODO: CONDITIONAL COMPILATION.
+	}
+
+	virtual Abstract abstract(void) const override {
+		return abstract("#IF");
+	}
+	using Node::abstract;
+
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "#IF");
+	}
+	using Node::dump;
+};
+
+class NodePreprocessorMessage : public Node {
+public:
+	NodePreprocessorMessage() {
+	}
+	virtual ~NodePreprocessorMessage() override {
+	}
+
+	NODE_TYPE(Types::PREPROCESSOR_MESSAGE)
+
+	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		// Prepare.
+		Context &ctx = context.top();
+		State &state = top();
+
+		// Determine the location in the ROM.
+		state.inRom.bank = ctx.bank;
+		state.inRom.address = ctx.addressCursor;
+		state.inRom.size = 0;
+
+		// Consume the tokens.
+		if (ctx.expect.lnno) {
+			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+			})) { THROW_INVALID_SYNTAX(onError); }
+		}
+		if (!consume(Token::Types::KEYWORD, "#message")) { THROW_INVALID_SYNTAX(onError); }
+
+		// Check the children.
+		if (_children.empty()) {
+			THROW_TOO_FEW_ARGUMENTS(onError);
+		} else if (_children.size() == 1) {
+			// Do nothing.
+		} else {
+			THROW_TOO_MANY_ARGUMENTS(onError);
+		}
+
+		// Message was prompted during parsing.
+		// Do nothing.
+		(void)bytes;
+	}
+
+	virtual Abstract abstract(void) const override {
+		return abstract("#MESSAGE");
+	}
+	using Node::abstract;
+
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "#MESSAGE");
+	}
+	using Node::dump;
+};
+
+class NodePreprocessorWarn : public Node {
+public:
+	NodePreprocessorWarn() {
+	}
+	virtual ~NodePreprocessorWarn() override {
+	}
+
+	NODE_TYPE(Types::PREPROCESSOR_WARN)
+
+	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		// Prepare.
+		Context &ctx = context.top();
+		State &state = top();
+
+		// Determine the location in the ROM.
+		state.inRom.bank = ctx.bank;
+		state.inRom.address = ctx.addressCursor;
+		state.inRom.size = 0;
+
+		// Consume the tokens.
+		if (ctx.expect.lnno) {
+			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+			})) { THROW_INVALID_SYNTAX(onError); }
+		}
+		if (!consume(Token::Types::KEYWORD, "#warn")) { THROW_INVALID_SYNTAX(onError); }
+
+		// Check the children.
+		if (_children.empty()) {
+			THROW_TOO_FEW_ARGUMENTS(onError);
+		} else if (_children.size() == 1) {
+			// Do nothing.
+		} else {
+			THROW_TOO_MANY_ARGUMENTS(onError);
+		}
+
+		// Prompt the warning.
+		(void)bytes;
+
+		Token::Ptr simpleTk = onlyTokenInOnlyChild();
+		if (simpleTk && simpleTk->is(Token::Types::STRING)) {
+			const std::string &txt = simpleTk->caseSensitiveText();
+			THROW_DIAGNOSTIC_WARNING(onError, simpleTk, txt);
+		} else {
+			THROW_TYPE_EXPECTED(onError, "String", simpleTk);
+		}
+	}
+
+	virtual Abstract abstract(void) const override {
+		return abstract("#WARN");
+	}
+	using Node::abstract;
+
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "#WARN");
+	}
+	using Node::dump;
+};
+
+class NodePreprocessorError : public Node {
+public:
+	NodePreprocessorError() {
+	}
+	virtual ~NodePreprocessorError() override {
+	}
+
+	NODE_TYPE(Types::PREPROCESSOR_ERROR)
+
+	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		// Prepare.
+		Context &ctx = context.top();
+		State &state = top();
+
+		// Determine the location in the ROM.
+		state.inRom.bank = ctx.bank;
+		state.inRom.address = ctx.addressCursor;
+		state.inRom.size = 0;
+
+		// Consume the tokens.
+		if (ctx.expect.lnno) {
+			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+			})) { THROW_INVALID_SYNTAX(onError); }
+		}
+		if (!consume(Token::Types::KEYWORD, "#error")) { THROW_INVALID_SYNTAX(onError); }
+
+		// Check the children.
+		if (_children.empty()) {
+			THROW_TOO_FEW_ARGUMENTS(onError);
+		} else if (_children.size() == 1) {
+			// Do nothing.
+		} else {
+			THROW_TOO_MANY_ARGUMENTS(onError);
+		}
+
+		// Prompt the warning.
+		(void)bytes;
+
+		Token::Ptr simpleTk = onlyTokenInOnlyChild();
+		if (simpleTk && simpleTk->is(Token::Types::STRING)) {
+			const std::string &txt = simpleTk->caseSensitiveText();
+			THROW_DIAGNOSTIC_ERROR(onError, simpleTk, txt);
+		} else {
+			THROW_TYPE_EXPECTED(onError, "String", simpleTk);
+		}
+	}
+
+	virtual Abstract abstract(void) const override {
+		return abstract("#ERROR");
+	}
+	using Node::abstract;
+
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "#ERROR");
 	}
 	using Node::dump;
 };
@@ -10809,7 +11088,7 @@ public:
 
 /*
 ** {===========================================================================
-** Blank, comment and nop
+** Blank, comment, nop and dummy
 */
 
 class NodeBlank : public Node {
@@ -29992,7 +30271,17 @@ public:
 		// Add the statements for the parser.
 		// This information is used by the parser to understand the tokens.
 		do {
-			// Format: identifier, creator, type, has return value.
+			// Format:    identifier,          creator,                                    type,           has return value.
+
+			/**< Preprocessors. */
+
+			// Conditional compilation.
+			ADD_STATEMENT("#if",               node<NodePreprocessorIf>(),                 Token::Types::KEYWORD,    false);
+
+			// Diagnostic outputs.
+			ADD_STATEMENT("#message",          node<NodePreprocessorMessage>(),            Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("#warn",             node<NodePreprocessorWarn>(),               Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("#error",            node<NodePreprocessorError>(),              Token::Types::KEYWORD,    false);
 
 			/**< Operators. */
 
@@ -30041,14 +30330,20 @@ public:
 			ADD_STATEMENT("=[...]",            node<NodeArrayRead>(),                      Token::Types::NONE,       false);
 			ADD_STATEMENT("[...]=",            node<NodeArrayWrite>(),                     Token::Types::NONE,       false);
 
-			/**< Syntax. */
+			/**< Blank, comment, nop and dummy. */
 
 			// Blank and remark.
 			ADD_STATEMENT(" ",                 node<NodeBlank>(),                          Token::Types::KEYWORD,    false);
 			ADD_STATEMENT("rem",               node<NodeRem>(),                            Token::Types::KEYWORD,    false);
+
+			// Multiuse `DO`.
 			ADD_STATEMENT("do",                NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
+
+			// Nop and dummy.
 			ADD_STATEMENT("donothing",         node<NodeDoNothing>(),                      Token::Types::KEYWORD,    false);
 			ADD_STATEMENT("donothingwith",     node<NodeDoNothingWith>(),                  Token::Types::KEYWORD,    false);
+
+			/**< Syntax. */
 
 			// Type definition.
 			ADD_STATEMENT("int",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
@@ -30718,6 +31013,7 @@ public:
 		Node::MacroStringTable::Stack &macroStrings,
 		Macro::List &macros,
 		const Macros &preDefinedMacros,
+		Prompt::Handler onPrint,
 		Error::Handler onError
 	) {
 		// Prepare.
@@ -30752,6 +31048,7 @@ public:
 			                             macros,
 			                             preDefinedMacros,
 			                             _options,
+			                             onPrint,
 			                             gotError
 			                         );
 		_linesOfCode              += (int)lines.size();
@@ -30829,7 +31126,7 @@ private:
 		const std::string SPACE             = " \t";
 		const std::string PAGE              = "#";
 		const std::string PAGE_NUMBER       = "0123456789";
-		const std::string PREPROCESSOR      = "defilnors";
+		const std::string PREPROCESSOR      = "adefgilmnorsw";
 		const std::string COMMENT           = "\'";
 		const std::string COMMENT_REM       = "rem";
 		const std::string OPERATOR          = "()[]<>=+-*/,;:";
@@ -31434,6 +31731,7 @@ private:
 		Macro::List &macros,
 		const Macros &preDefinedMacros,
 		const Options &options,
+		Prompt::Handler onPrint_,
 		Error::Handler onError_
 	) {
 		/**< Prepare. */
@@ -31813,6 +32111,26 @@ private:
 		};
 
 		// Error handling.
+		auto promptMessageWithLocation = [&] (const char* const msg, const TextLocation &loc) -> bool {
+			const Prompt prompt(msg);
+			onPrint_(prompt, prompt.format(), &loc);
+
+			return false;
+		};
+		auto promptMessage = [&] (const char* const msg, int index) -> bool {
+			Token::Ptr tk = tokens[index];
+			if (tk->is(Token::Types::END_OF_LINE)) {
+				const int index_ = index - 1;
+				if (index_ >= 0 && index_ < (int)tokens.size())
+					tk = tokens[index_];
+			}
+
+			return promptMessageWithLocation(msg, tk->begin());
+		};
+		auto promptDiagnosticMessage = [&] (int index, const std::string &msg) -> bool {
+			return promptMessage(msg.c_str(), index);
+		};
+
 		int warnings = 0;
 		int errors = 0;
 		Error::Handler onError = [onError_, &warnings, &errors] (const Error &err, const std::string &msg, const TextLocation &loc) -> void {
@@ -31822,7 +32140,6 @@ private:
 				++errors;
 			onError_(err, msg, loc);
 		};
-
 		auto throwErrorWithLocation = [&] (const char* const msg, const TextLocation &loc, bool isWaning) -> bool {
 			const Error err(msg, isWaning);
 			onError(err, err.format(), loc);
@@ -31849,9 +32166,6 @@ private:
 		};
 		auto throwDataSectionOverflow = [&] (int index) -> bool {
 			return throwError("Data section overflow", index, false);
-		};
-		auto throwDiagnosticError = [&] (int index, const std::string &msg) -> bool {
-			return throwError(msg.c_str(), index, false);
 		};
 		auto throwFillerInsideStructureAlwaysTakesEffectOnceAndOnlyOnce = [&] (int index, const std::string &struct_) -> bool {
 			const std::string msg = Text::format("Filler inside structure \"{0}\" always takes effect once and only once", { struct_ });
@@ -34084,7 +34398,7 @@ private:
 		};
 
 		// Syntax combinators.
-		const Combinator PreprocessorIf(
+		const Combinator PreprocessorIf( // `#IF ... #ELSEIF ... #ELSE ... #ENDIF`.
 			[&] (Node::Ptr &p, const Combinator::Options &) -> bool {
 				State q = begin();
 
@@ -34111,7 +34425,69 @@ private:
 				return true;
 			}
 		);
-		const Combinator PreprocessorError(
+		const Combinator PreprocessorMessage( // `#MESSAGE ...`.
+			[&] (Node::Ptr &p, const Combinator::Options &) -> bool {
+				State q = begin();
+				Token::Ptr id = nullptr;
+				std::string txt;
+				const int index = q.index;
+
+				if (!must(Token::Types::INTEGER)(q)) return false;
+				if (!must(Token::Types::PREPROCESSOR, "#message")(q)) return false;
+				if (!(id = must(Token::Types::STRING)(q))) return throwStringExpected(q.index);
+				txt = (std::string)id->data();
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!must(Token::Types::END_OF_LINE)(q)) return false;
+
+				promptDiagnosticMessage(index, txt);
+
+				Node::Ptr node = createNode(
+					"#message", "_",
+					{
+						{ "allow_call", false }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				return true;
+			}
+		);
+		const Combinator PreprocessorWarn( // `#WARN ...`.
+			[&] (Node::Ptr &p, const Combinator::Options &) -> bool {
+				State q = begin();
+				Token::Ptr id = nullptr;
+				std::string txt;
+				const int index = q.index;
+
+				if (!must(Token::Types::INTEGER)(q)) return false;
+				if (!must(Token::Types::PREPROCESSOR, "#warn")(q)) return false;
+				if (!(id = must(Token::Types::STRING)(q))) return throwStringExpected(q.index);
+				txt = (std::string)id->data();
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!must(Token::Types::END_OF_LINE)(q)) return false;
+
+				Node::Ptr node = createNode(
+					"#warn", "_",
+					{
+						{ "allow_call", false }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				return true;
+			}
+		);
+		const Combinator PreprocessorError( // `#ERROR ...`.
 			[&] (Node::Ptr &p, const Combinator::Options &) -> bool {
 				State q = begin();
 				Token::Ptr id = nullptr;
@@ -34125,7 +34501,20 @@ private:
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!must(Token::Types::END_OF_LINE)(q)) return false;
 
-				return throwDiagnosticError(index, txt);
+				Node::Ptr node = createNode(
+					"#error", "_",
+					{
+						{ "allow_call", false }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				return true;
 			}
 		);
 		const Combinator Blank( // Blank line.
@@ -39253,9 +39642,9 @@ private:
 			/**< Preprocessor. */
 
 			PreprocessorIf,
-			PreprocessorError,
+			PreprocessorMessage, PreprocessorWarn, PreprocessorError,
 
-			/**< Blank. */
+			/**< Blank, comment, nop and dummy. */
 
 			Blank,
 			Rem,
@@ -41099,6 +41488,29 @@ bool compile(Program &program, const Options &options) {
 	} while (false);
 
 	// Prepare the processors.
+	Prompt::Handler onPrint_ = [onPrint] (const Prompt &prompt, const std::string &msg, const TextLocation* loc /* nullable */) -> void {
+		(void)prompt;
+
+		if (!loc) {
+			onPrint(msg);
+
+			return;
+		}
+
+		std::string msg_;
+		if (loc->row != -1 || loc->column != -1) {
+			if (loc->page != -1) {
+				msg_ += "Page ";
+				msg_ += Text::toPageNumber(loc->page);
+				msg_ += ", ";
+			}
+			msg_ += "Ln ";
+			msg_ += Text::toString(loc->row + 1);
+			msg_ += ": ";
+		}
+		msg_ += msg;
+		onPrint(msg_);
+	};
 	Error::Handler onError = [onError_] (const Error &err, const std::string &msg, const TextLocation &loc) -> void {
 		onError_(msg, err.isWarning, loc.page, loc.row, loc.column);
 	};
@@ -41271,6 +41683,7 @@ bool compile(Program &program, const Options &options) {
 				compiler.macroStrings(),
 				macros_,
 				preDefinedMacros,
+				onPrint_,
 				onError
 			);
 			if (!ok) {

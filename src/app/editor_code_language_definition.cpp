@@ -110,6 +110,7 @@ static bool tokenize(const char* inBegin, const char* inEnd, const char* &outBeg
 		paletteIndex = ImGui::CodeEditor::PaletteIndex::Default;
 	} else if (tokenizeString(inBegin, inEnd, outBegin, outEnd, '"')) {
 		paletteIndex = ImGui::CodeEditor::PaletteIndex::String;
+	// } else if (...) { // TODO: CONDITIONAL COMPILATION.
 	} else if (tokenizeAssetDestination(inBegin, inEnd, outBegin, outEnd)) {
 		paletteIndex = ImGui::CodeEditor::PaletteIndex::Symbol;
 	}

@@ -37,6 +37,7 @@ private:
 		Macro::List macrosDefinitions;
 		Text::Array destinations;
 		RamLocation::Dictionary ramAllocations;
+		// TODO: CONDITIONAL COMPILATION.
 		CodePageName::Array codePageNames;
 
 		Result() {
@@ -51,6 +52,7 @@ private:
 	Macro::List _macrosDefinitions;
 	Text::Array _destinations;
 	RamLocation::Dictionary _ramAllocations;
+	// TODO: CONDITIONAL COMPILATION.
 	CodePageName::Array _codePageNames;
 
 public:
@@ -107,6 +109,8 @@ public:
 
 				std::swap(_ramAllocations, result->ramAllocations);
 
+				// TODO: CONDITIONAL COMPILATION.
+
 				std::swap(_codePageNames, result->codePageNames);
 				_codePageNames.shrink_to_fit();
 
@@ -147,6 +151,8 @@ public:
 		return &_ramAllocations;
 	}
 
+	// TODO: CONDITIONAL COMPILATION.
+
 	virtual const CodePageName* getCodePageName(int page) const override {
 		if (page < 0 || page >= (int)_codePageNames.size())
 			return nullptr;
@@ -159,6 +165,7 @@ public:
 		_macrosDefinitions.clear();
 		_destinations.clear();
 		_ramAllocations.clear();
+		// TODO: CONDITIONAL COMPILATION.
 		_codePageNames.clear();
 	}
 
@@ -230,6 +237,8 @@ private:
 
 		doAnalyzeProgram(result, program);
 
+		// TODO: CONDITIONAL COMPILATION.
+
 		doAnalyzeCodePages(result, program);
 
 		const long long end = DateTime::ticks();
@@ -274,6 +283,7 @@ private:
 				);
 		}
 	}
+	// TODO: CONDITIONAL COMPILATION.
 	static void doAnalyzeCodePages(Result* result, Program &program) {
 		// Prepare.
 		const INode::Ptr &root = program.root; // Get the compiled AST, which could be corrupt.

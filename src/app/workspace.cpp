@@ -5007,6 +5007,7 @@ bool Workspace::analyze(bool force) {
 	auto finish = [] (Workspace* ws) -> void {
 		ws->clearLanguageDefinition(false);
 		ws->clearAnalyzedCodeInformation();
+		// TODO: CONDITIONAL COMPILATION.
 		ws->clearCodePageNames();
 
 		ws->needAnalyzing(false);
@@ -5044,6 +5045,7 @@ void Workspace::clearAnalyzingResult(void) {
 
 	clearLanguageDefinition(false);
 	clearAnalyzedCodeInformation();
+	// TODO: CONDITIONAL COMPILATION.
 	clearAssetPageNames();
 }
 
@@ -5128,6 +5130,8 @@ const std::string &Workspace::getAnalyzedCodeInformation(void) {
 
 	return analyzedCodeInformation();
 }
+
+// TODO: CONDITIONAL COMPILATION.
 
 void Workspace::clearAssetPageNames(void) {
 	assetPageNames().clear();

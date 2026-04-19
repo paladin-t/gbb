@@ -1623,6 +1623,7 @@ private:
 
 		// Initialize with default definition.
 		const GBBASIC::Kernel::Ptr &krnl = ws->activeKernel();
+		// langDef.Tokenize = std::bind(...); // TODO: CONDITIONAL COMPILATION.
 		SetLanguageDefinition(EditorCodeLanguageDefinition::languageDefinition(krnl ? krnl->path().c_str() : nullptr));
 
 		// Initialize with macros.
