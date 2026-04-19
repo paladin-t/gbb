@@ -479,6 +479,107 @@ std::string Variant::toString(void) const {
 	return "unknown";
 }
 
+ReadOnceVariant::ReadOnceVariant() {
+}
+
+ReadOnceVariant::ReadOnceVariant(const ReadOnceVariant &other) {
+	_variant = other._variant;
+}
+
+ReadOnceVariant::ReadOnceVariant(const Variant &var) : _variant(var) {
+}
+
+ReadOnceVariant &ReadOnceVariant::operator = (const ReadOnceVariant &other) {
+	_variant = other._variant;
+
+	return *this;
+}
+
+ReadOnceVariant &ReadOnceVariant::operator = (const Variant &other) {
+	_variant = other;
+
+	return *this;
+}
+
+ReadOnceVariant::operator std::nullptr_t (void) {
+	if (_variant.type() == Variant::NIL)
+		return nullptr;
+
+	return nullptr;
+}
+
+ReadOnceVariant::operator bool (void) {
+	const bool ret = (bool)_variant;
+	_variant = nullptr;
+
+	return ret;
+}
+
+ReadOnceVariant::operator Variant::Int (void) {
+	const Variant::Int ret = (Variant::Int)_variant;
+	_variant = nullptr;
+
+	return ret;
+}
+
+ReadOnceVariant::operator Variant::Long (void) {
+	const Variant::Long ret = (Variant::Long)_variant;
+	_variant = nullptr;
+
+	return ret;
+}
+
+ReadOnceVariant::operator Variant::Real (void) {
+	const Variant::Real ret = (Variant::Real)_variant;
+	_variant = nullptr;
+
+	return ret;
+}
+
+ReadOnceVariant::operator const char* (void) {
+	const char* ret = (const char*)_variant;
+	_variant = nullptr;
+
+	return ret;
+}
+
+ReadOnceVariant::operator const std::string (void) {
+	const std::string ret = (std::string)_variant;
+	_variant = nullptr;
+
+	return ret;
+}
+
+ReadOnceVariant::operator void* (void) {
+	void* ret = (void*)_variant;
+	_variant = nullptr;
+
+	return ret;
+}
+
+ReadOnceVariant::operator Object::Ptr (void) {
+	const Object::Ptr ret = (Object::Ptr)_variant;
+	_variant = nullptr;
+
+	return ret;
+}
+
+Variant::Types ReadOnceVariant::type(void) const {
+	return _variant.type();
+}
+
+Variant &ReadOnceVariant::ref(void) {
+	return _variant;
+}
+
+bool ReadOnceVariant::isNull(void) const {
+	return _variant.type() == Variant::NIL;
+}
+
+void ReadOnceVariant::reset(void) {
+	_variant = nullptr;
+}
+
 /* ===========================================================================} */
 
 /*

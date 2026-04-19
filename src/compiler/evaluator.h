@@ -14,6 +14,23 @@
 
 /*
 ** {===========================================================================
+** Macros and constants
+*/
+
+#ifndef EVALUATOR_DEFAULT_ACCEPTED_RPN_TYPES
+#	define EVALUATOR_DEFAULT_ACCEPTED_RPN_TYPES \
+		GBBASIC::IToken::Types::OPERATOR | \
+		GBBASIC::IToken::Types::SYMBOL | \
+		GBBASIC::IToken::Types::BOOLEAN | \
+		GBBASIC::IToken::Types::NUMBER | \
+		GBBASIC::IToken::Types::COMMENT | \
+		GBBASIC::IToken::Types::INTERMEDIA
+#endif /* EVALUATOR_DEFAULT_ACCEPTED_RPN_TYPES */
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Evaluator
 */
 
@@ -60,13 +77,7 @@ public:
 			INVALID_EXPRESSION
 		};
 
-		IToken::Types acceptedTypes =
-			IToken::Types::OPERATOR |
-			IToken::Types::SYMBOL |
-			IToken::Types::BOOLEAN |
-			IToken::Types::NUMBER |
-			IToken::Types::COMMENT |
-			IToken::Types::INTERMEDIA;
+		IToken::Types acceptedTypes = EVALUATOR_DEFAULT_ACCEPTED_RPN_TYPES;
 		ValidationHandler valid = nullptr;
 		EqualityHandler equals = nullptr;
 		GettingHandler get = nullptr;

@@ -4806,6 +4806,21 @@ public:
 		return result;
 	}
 
+	virtual bool get(Variant &ret, const std::string &msg, int argc, const Variant* argv) const override {
+		(void)msg;
+		(void)argc;
+		(void)argv;
+
+		// Do nothing.
+		ret = nullptr;
+
+		return false;
+	}
+	using INode::get;
+	template<typename Arg> static Arg unpack(int argc, const Variant* argv, int idx, Arg default_) {
+		return (0 <= idx && idx < argc && argv) ? (Arg)argv[idx] : default_;
+	}
+
 	Abstract abstract(const char* head0) const {
 		const Token::Array allTokens_ = allTokens(false);
 		Abstract result;
@@ -7701,7 +7716,7 @@ public:
 				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
 			})) { THROW_INVALID_SYNTAX(onError); }
 		}
-		if (!consume(Token::Types::KEYWORD, "#if")) { THROW_INVALID_SYNTAX(onError); }
+		if (!consume(Token::Types::PREPROCESSOR, "#if")) { THROW_INVALID_SYNTAX(onError); }
 
 		// Check the children.
 		(void)_children;
@@ -7743,19 +7758,17 @@ public:
 		state.inRom.size = 0;
 
 		// Consume the tokens.
+		Token::Ptr tkmsg = nullptr;
 		if (ctx.expect.lnno) {
 			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
 				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
 			})) { THROW_INVALID_SYNTAX(onError); }
 		}
-		if (!consume(Token::Types::KEYWORD, "#message")) { THROW_INVALID_SYNTAX(onError); }
+		if (!consume(Token::Types::PREPROCESSOR, "#message")) { THROW_INVALID_SYNTAX(onError); }
+		if (!(tkmsg = consume(Token::Types::STRING, ANYTHING))) { THROW_TYPE_EXPECTED(onError, "String", tkmsg); }
 
 		// Check the children.
-		if (_children.empty()) {
-			THROW_TOO_FEW_ARGUMENTS(onError);
-		} else if (_children.size() == 1) {
-			// Do nothing.
-		} else {
+		if (!_children.empty()) {
 			THROW_TOO_MANY_ARGUMENTS(onError);
 		}
 
@@ -7795,31 +7808,28 @@ public:
 		state.inRom.size = 0;
 
 		// Consume the tokens.
+		Token::Ptr tkmsg = nullptr;
 		if (ctx.expect.lnno) {
 			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
 				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
 			})) { THROW_INVALID_SYNTAX(onError); }
 		}
-		if (!consume(Token::Types::KEYWORD, "#warn")) { THROW_INVALID_SYNTAX(onError); }
+		if (!consume(Token::Types::PREPROCESSOR, "#warn")) { THROW_INVALID_SYNTAX(onError); }
+		if (!(tkmsg = consume(Token::Types::STRING, ANYTHING))) { THROW_TYPE_EXPECTED(onError, "String", tkmsg); }
 
 		// Check the children.
-		if (_children.empty()) {
-			THROW_TOO_FEW_ARGUMENTS(onError);
-		} else if (_children.size() == 1) {
-			// Do nothing.
-		} else {
+		if (!_children.empty()) {
 			THROW_TOO_MANY_ARGUMENTS(onError);
 		}
 
 		// Prompt the warning.
 		(void)bytes;
 
-		Token::Ptr simpleTk = onlyTokenInOnlyChild();
-		if (simpleTk && simpleTk->is(Token::Types::STRING)) {
-			const std::string &txt = simpleTk->caseSensitiveText();
-			THROW_DIAGNOSTIC_WARNING(onError, simpleTk, txt);
+		if (tkmsg && tkmsg->is(Token::Types::STRING)) {
+			const std::string &txt = tkmsg->caseSensitiveText();
+			THROW_DIAGNOSTIC_WARNING(onError, tkmsg, txt);
 		} else {
-			THROW_TYPE_EXPECTED(onError, "String", simpleTk);
+			THROW_TYPE_EXPECTED(onError, "String", tkmsg);
 		}
 	}
 
@@ -7854,31 +7864,28 @@ public:
 		state.inRom.size = 0;
 
 		// Consume the tokens.
+		Token::Ptr tkmsg = nullptr;
 		if (ctx.expect.lnno) {
 			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
 				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
 			})) { THROW_INVALID_SYNTAX(onError); }
 		}
-		if (!consume(Token::Types::KEYWORD, "#error")) { THROW_INVALID_SYNTAX(onError); }
+		if (!consume(Token::Types::PREPROCESSOR, "#error")) { THROW_INVALID_SYNTAX(onError); }
+		if (!(tkmsg = consume(Token::Types::STRING, ANYTHING))) { THROW_TYPE_EXPECTED(onError, "String", tkmsg); }
 
 		// Check the children.
-		if (_children.empty()) {
-			THROW_TOO_FEW_ARGUMENTS(onError);
-		} else if (_children.size() == 1) {
-			// Do nothing.
-		} else {
+		if (!_children.empty()) {
 			THROW_TOO_MANY_ARGUMENTS(onError);
 		}
 
 		// Prompt the warning.
 		(void)bytes;
 
-		Token::Ptr simpleTk = onlyTokenInOnlyChild();
-		if (simpleTk && simpleTk->is(Token::Types::STRING)) {
-			const std::string &txt = simpleTk->caseSensitiveText();
-			THROW_DIAGNOSTIC_ERROR(onError, simpleTk, txt);
+		if (tkmsg && tkmsg->is(Token::Types::STRING)) {
+			const std::string &txt = tkmsg->caseSensitiveText();
+			THROW_DIAGNOSTIC_ERROR(onError, tkmsg, txt);
 		} else {
-			THROW_TYPE_EXPECTED(onError, "String", simpleTk);
+			THROW_TYPE_EXPECTED(onError, "String", tkmsg);
 		}
 	}
 
@@ -7953,6 +7960,18 @@ public:
 				break;
 			}
 		} while (false);
+	}
+
+	virtual bool get(Variant &ret, const std::string &msg, int argc, const Variant* argv) const override {
+		(void)argc;
+		(void)argv;
+
+		ret = nullptr;
+
+		if (msg == "evaluated")
+			return evaluate(ret);
+
+		return false;
 	}
 
 	virtual Abstract abstract(void) const override {
@@ -8574,7 +8593,7 @@ private:
 
 		// Call the converter.
 		const Evaluator::OptionsForRpn options(
-			Token::Types::OPERATOR | Token::Types::SYMBOL | Token::Types::BOOLEAN | Token::Types::NUMBER | Token::Types::COMMENT | Token::Types::INTERMEDIA,
+			EVALUATOR_DEFAULT_ACCEPTED_RPN_TYPES,
 			valid,
 			equals,
 			get,
@@ -8597,6 +8616,58 @@ private:
 		const IToken::Array in(_tokens.begin(), _tokens.end());
 
 		return Evaluator::toRpn(nullptr, in, options);
+	}
+
+	bool evaluate(Variant &ret) const {
+		// Prepare.
+		ret = nullptr;
+
+		// Convert to RPN.
+		const Evaluator::OptionsForRpn optionsForRpn(
+			Token::Types::OPERATOR | Token::Types::SYMBOL | Token::Types::BOOLEAN | Token::Types::NUMBER | Token::Types::STRING,
+			[] (unsigned /* y */, const IToken::Ptr &/* tk */) -> void {
+				// Do nothing.
+			}
+		);
+		const IToken::Array in(_tokens.begin(), _tokens.end());
+		IToken::Array rpn;
+		if (!Evaluator::toRpn(&rpn, in, optionsForRpn))
+			return false;
+
+		// Calculate the expression.
+		const Evaluator::OptionsForCalculating optionsForCalculating(
+			std::bind(sqrt, std::placeholders::_1),
+			std::bind(sin, std::placeholders::_1),
+			std::bind(cos, std::placeholders::_1),
+			std::bind(atan2, std::placeholders::_1, std::placeholders::_2),
+			std::bind(powi, std::placeholders::_1, std::placeholders::_2),
+			[] (const IToken::Ptr &tk) -> IToken::Ptr {
+				if (tk->is(Token::Types::OPERATOR))
+					return tk;
+				if (tk->is(Token::Types::SYMBOL))
+					return tk;
+				if (tk->is(Token::Types::NUMBER))
+					return tk;
+				if (tk->is(Token::Types::STRING)) {
+					Token::Ptr tk_(new Token());
+					tk_
+						->type(Token::Types::INTEGER)
+						->data(1);
+
+					return tk_;
+				}
+
+				return nullptr;
+			},
+			[] (const std::string &/* msg */, const IToken::Ptr &/* tk */) -> void {
+				// Do nothing.
+			}
+		);
+		if (!Evaluator::calc(&ret, rpn, optionsForCalculating))
+			return false;
+
+		// Finish.
+		return true;
 	}
 };
 
@@ -30271,308 +30342,308 @@ public:
 		// Add the statements for the parser.
 		// This information is used by the parser to understand the tokens.
 		do {
-			// Format:    identifier,          creator,                                    type,           has return value.
+			// Format:    identifier,          creator,                                    type,               has return value.
 
 			/**< Preprocessors. */
 
 			// Conditional compilation.
-			ADD_STATEMENT("#if",               node<NodePreprocessorIf>(),                 Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("#if",               node<NodePreprocessorIf>(),                 Token::Types::PREPROCESSOR,   false);
 
 			// Diagnostic outputs.
-			ADD_STATEMENT("#message",          node<NodePreprocessorMessage>(),            Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("#warn",             node<NodePreprocessorWarn>(),               Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("#error",            node<NodePreprocessorError>(),              Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("#message",          node<NodePreprocessorMessage>(),            Token::Types::PREPROCESSOR,   false);
+			ADD_STATEMENT("#warn",             node<NodePreprocessorWarn>(),               Token::Types::PREPROCESSOR,   false);
+			ADD_STATEMENT("#error",            node<NodePreprocessorError>(),              Token::Types::PREPROCESSOR,   false);
 
 			/**< Operators. */
 
 			// `a OP b` or `OP a`.
-			ADD_STATEMENT("mod",               NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("and",               NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("or",                NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("not",               NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("band",              NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("bor",               NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("bxor",              NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("lshift",            NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("rshift",            NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("bnot",              NODE /* for syntax assistance */,           Token::Types::OPERATOR,   false);
+			ADD_STATEMENT("mod",               NODE /* for syntax assistance */,           Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("and",               NODE /* for syntax assistance */,           Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("or",                NODE /* for syntax assistance */,           Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("not",               NODE /* for syntax assistance */,           Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("band",              NODE /* for syntax assistance */,           Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("bor",               NODE /* for syntax assistance */,           Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("bxor",              NODE /* for syntax assistance */,           Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("lshift",            NODE /* for syntax assistance */,           Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("rshift",            NODE /* for syntax assistance */,           Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("bnot",              NODE /* for syntax assistance */,           Token::Types::OPERATOR,       false);
 
 			// Function-like `OP(...)`.
-			ADD_STATEMENT("sgn",               node<NodeMath>("sgn"),                      Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("abs",               node<NodeMath>("abs"),                      Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("sqr",               node<NodeMath>("sqr"),                      Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("sqrt",              node<NodeMath>("sqrt"),                     Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("sin",               node<NodeMath>("sin"),                      Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("cos",               node<NodeMath>("cos"),                      Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("atan2",             node<NodeMath>("atan2"),                    Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("pow",               node<NodeMath>("pow"),                      Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("min",               node<NodeMath>("min"),                      Token::Types::OPERATOR,   false);
-			ADD_STATEMENT("max",               node<NodeMath>("max"),                      Token::Types::OPERATOR,   false);
+			ADD_STATEMENT("sgn",               node<NodeMath>("sgn"),                      Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("abs",               node<NodeMath>("abs"),                      Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("sqr",               node<NodeMath>("sqr"),                      Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("sqrt",              node<NodeMath>("sqrt"),                     Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("sin",               node<NodeMath>("sin"),                      Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("cos",               node<NodeMath>("cos"),                      Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("atan2",             node<NodeMath>("atan2"),                    Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("pow",               node<NodeMath>("pow"),                      Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("min",               node<NodeMath>("min"),                      Token::Types::OPERATOR,       false);
+			ADD_STATEMENT("max",               node<NodeMath>("max"),                      Token::Types::OPERATOR,       false);
 
 			// `ASC(...)`.
-			ADD_STATEMENT("asc",               node<NodeAsc>(),                            Token::Types::KEYWORD,     true);
+			ADD_STATEMENT("asc",               node<NodeAsc>(),                            Token::Types::KEYWORD,         true);
 
 			// `DEG(...)`.
-			ADD_STATEMENT("deg",               node<NodeDeg>(),                            Token::Types::KEYWORD,     true);
+			ADD_STATEMENT("deg",               node<NodeDeg>(),                            Token::Types::KEYWORD,         true);
 
 			// `LEN(...)`.
-			ADD_STATEMENT("len",               node<NodeLen>(),                            Token::Types::KEYWORD,     true);
+			ADD_STATEMENT("len",               node<NodeLen>(),                            Token::Types::KEYWORD,         true);
 
 			// `RND[(...)]`.
-			ADD_STATEMENT("randomize",         node<NodeRandomize>(),                      Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("rnd",               node<NodeRnd>(),                            Token::Types::OPERATOR,    true);
+			ADD_STATEMENT("randomize",         node<NodeRandomize>(),                      Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("rnd",               node<NodeRnd>(),                            Token::Types::OPERATOR,        true);
 
 			// Bank/address of.
-			ADD_STATEMENT("bankof",            node<NodeBankOf>(),                         Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("addressof",         node<NodeAddressOf>(),                      Token::Types::KEYWORD,     true);
+			ADD_STATEMENT("bankof",            node<NodeBankOf>(),                         Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("addressof",         node<NodeAddressOf>(),                      Token::Types::KEYWORD,         true);
 
 			// Array accessors.
-			ADD_STATEMENT("=[...]",            node<NodeArrayRead>(),                      Token::Types::NONE,       false);
-			ADD_STATEMENT("[...]=",            node<NodeArrayWrite>(),                     Token::Types::NONE,       false);
+			ADD_STATEMENT("=[...]",            node<NodeArrayRead>(),                      Token::Types::NONE,           false);
+			ADD_STATEMENT("[...]=",            node<NodeArrayWrite>(),                     Token::Types::NONE,           false);
 
 			/**< Blank, comment, nop and dummy. */
 
 			// Blank and remark.
-			ADD_STATEMENT(" ",                 node<NodeBlank>(),                          Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("rem",               node<NodeRem>(),                            Token::Types::KEYWORD,    false);
+			ADD_STATEMENT(" ",                 node<NodeBlank>(),                          Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("rem",               node<NodeRem>(),                            Token::Types::KEYWORD,        false);
 
 			// Multiuse `DO`.
-			ADD_STATEMENT("do",                NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("do",                NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 
 			// Nop and dummy.
-			ADD_STATEMENT("donothing",         node<NodeDoNothing>(),                      Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("donothingwith",     node<NodeDoNothingWith>(),                  Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("donothing",         node<NodeDoNothing>(),                      Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("donothingwith",     node<NodeDoNothingWith>(),                  Token::Types::KEYWORD,        false);
 
 			/**< Syntax. */
 
 			// Type definition.
-			ADD_STATEMENT("int",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("uint",              RESERVED,                                   Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("int",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("uint",              RESERVED,                                   Token::Types::KEYWORD,        false);
 
 			// Declaration.
-			ADD_STATEMENT("var",               RESERVED,                                   Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("const",             node<NodeConst>(),                          Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("let",               node<NodeLet>(),                            Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("local",             RESERVED,                                   Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("dim",               node<NodeDim>(),                            Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("var",               RESERVED,                                   Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("const",             node<NodeConst>(),                          Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("let",               node<NodeLet>(),                            Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("local",             RESERVED,                                   Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("dim",               node<NodeDim>(),                            Token::Types::KEYWORD,        false);
 
 			// Conditional.
-			ADD_STATEMENT("if",                node<NodeIf>(),                             Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("then",              node<NodeThen>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("else",              node<NodeElse>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("elseif",            node<NodeElseIf>(),                         Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("endif",             NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("iif",               node<NodeIif>(),                            Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("select",            node<NodeSelect>(),                         Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("case",              node<NodeCase>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("endselect",         NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("on",                node<NodeOn>(),                             Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("off",               node<NodeOff>(),                            Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("if",                node<NodeIf>(),                             Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("then",              node<NodeThen>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("else",              node<NodeElse>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("elseif",            node<NodeElseIf>(),                         Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("endif",             NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("iif",               node<NodeIif>(),                            Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("select",            node<NodeSelect>(),                         Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("case",              node<NodeCase>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("endselect",         NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("on",                node<NodeOn>(),                             Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("off",               node<NodeOff>(),                            Token::Types::KEYWORD,        false);
 
 			// Loop.
-			ADD_STATEMENT("for",               node<NodeFor>(),                            Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("to",                NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("step",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("next",              node<NodeNext>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("while",             node<NodeWhile>(),                          Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("wend",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("repeat",            node<NodeRepeat>(),                         Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("until",             NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("exit",              node<NodeExit>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("continue",          RESERVED,                                   Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("for",               node<NodeFor>(),                            Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("to",                NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("step",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("next",              node<NodeNext>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("while",             node<NodeWhile>(),                          Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("wend",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("repeat",            node<NodeRepeat>(),                         Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("until",             NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("exit",              node<NodeExit>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("continue",          RESERVED,                                   Token::Types::KEYWORD,        false);
 
 			// Jump.
-			ADD_STATEMENT("goto",              node<NodeGoto>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("gosub",             node<NodeGosub>(),                          Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("return",            node<NodeReturn>(),                         Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("end",               node<NodeEnd>(),                            Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("call",              node<NodeCall>(),                           Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("goto",              node<NodeGoto>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("gosub",             node<NodeGosub>(),                          Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("return",            node<NodeReturn>(),                         Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("end",               node<NodeEnd>(),                            Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("call",              node<NodeCall>(),                           Token::Types::KEYWORD,        false);
 
 			// Thread.
-			ADD_STATEMENT("start",             node<NodeStart>(),                          Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("join",              node<NodeJoin>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("kill",              node<NodeKill>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("wait",              node<NodeWait>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("lock",              node<NodeLock>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("unlock",            node<NodeUnlock>(),                         Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("arg",               node<NodeArg>(),                            Token::Types::KEYWORD,     true);
+			ADD_STATEMENT("start",             node<NodeStart>(),                          Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("join",              node<NodeJoin>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("kill",              node<NodeKill>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("wait",              node<NodeWait>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("lock",              node<NodeLock>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("unlock",            node<NodeUnlock>(),                         Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("arg",               node<NodeArg>(),                            Token::Types::KEYWORD,         true);
 
 			// Scope and macros.
-			ADD_STATEMENT("begin",             NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("begindo",           node<NodeBeginDo>(),                        Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("enddo",             NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("begindef",          node<NodeBeginDef>(),                       Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("enddef",            NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("def",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("fn",                node<NodeFn>(),                             Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("def ...=M",         node<NodeDefMacroAlias>(),                  Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("def fn(...)=...",   node<NodeDefFn>(),                          Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("def ...=N",         node<NodeDefConstant>(),                    Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("def ...=id",        node<NodeDefIdentifierAlias>(),             Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("def ...=stackN",    node<NodeDefStackN>(),                      Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("def ...=\"...\"",   node<NodeDefString>(),                      Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("begin",             NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("begindo",           node<NodeBeginDo>(),                        Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("enddo",             NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("begindef",          node<NodeBeginDef>(),                       Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("enddef",            NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("def",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("fn",                node<NodeFn>(),                             Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("def ...=M",         node<NodeDefMacroAlias>(),                  Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("def fn(...)=...",   node<NodeDefFn>(),                          Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("def ...=N",         node<NodeDefConstant>(),                    Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("def ...=id",        node<NodeDefIdentifierAlias>(),             Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("def ...=stackN",    node<NodeDefStackN>(),                      Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("def ...=\"...\"",   node<NodeDefString>(),                      Token::Types::KEYWORD,        false);
 
 			/**< Standard functions. */
 
 			// Output.
-			ADD_STATEMENT("locate",            node<NodeLocate>(),                         Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("print",             node<NodePrint>(),                          Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("cls",               node<NodeCls>(),                            Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("locate",            node<NodeLocate>(),                         Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("print",             node<NodePrint>(),                          Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("cls",               node<NodeCls>(),                            Token::Types::KEYWORD,        false);
 
 			// Peek and poke.
-			ADD_STATEMENT("peek",              node<NodePeek>(),                           Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("poke",              node<NodePoke>(),                           Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("peek",              node<NodePeek>(),                           Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("poke",              node<NodePoke>(),                           Token::Types::KEYWORD,        false);
 
 			// Stack.
-			ADD_STATEMENT("reserve",           node<NodeReserve>(),                        Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("push",              node<NodePush>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("pop",               node<NodePop>(),                            Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("top",               node<NodeTop>(),                            Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("stack",             node<NodeStack>(),                          Token::Types::KEYWORD,     true);
+			ADD_STATEMENT("reserve",           node<NodeReserve>(),                        Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("push",              node<NodePush>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("pop",               node<NodePop>(),                            Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("top",               node<NodeTop>(),                            Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("stack",             node<NodeStack>(),                          Token::Types::KEYWORD,         true);
 			for (int i = 0; i < COMPILER_STACK_ARGUMENT_MAX_COUNT; ++i) {
 				const std::string key = _stackArguments[i];
-				ADD_STATEMENT(key,             node<NodeStackN>(i),                        Token::Types::OPERATOR,    true);
+				ADD_STATEMENT(key,             node<NodeStackN>(i),                        Token::Types::OPERATOR,        true);
 			}
 
 			// Variable.
-			ADD_STATEMENT("pack",              node<NodePack>(),                           Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("unpack",            node<NodeUnpack>(),                         Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("swap",              node<NodeSwap>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("inc",               node<NodeInc>(),                            Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("dec",               node<NodeDec>(),                            Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("pack",              node<NodePack>(),                           Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("unpack",            node<NodeUnpack>(),                         Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("swap",              node<NodeSwap>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("inc",               node<NodeInc>(),                            Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("dec",               node<NodeDec>(),                            Token::Types::KEYWORD,        false);
 
 			// Data stream.
-			ADD_STATEMENT("data",              node<NodeData>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("read",              node<NodeRead>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("restore",           node<NodeRestore>(),                        Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("data",              node<NodeData>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("read",              node<NodeRead>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("restore",           node<NodeRestore>(),                        Token::Types::KEYWORD,        false);
 
 			// System.
-			ADD_STATEMENT("sleep",             node<NodeSleep>(),                          Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("raise",             node<NodeRaise>(),                          Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("reset",             node<NodeReset>(),                          Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("sleep",             node<NodeSleep>(),                          Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("raise",             node<NodeRaise>(),                          Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("reset",             node<NodeReset>(),                          Token::Types::KEYWORD,        false);
 
 			/**< Basic functions. */
 
 			// Graphics.
-			ADD_STATEMENT("color",             node<NodeRoutine>("color"),                 Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("palette",           node<NodePalette>(),                        Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("rgb",               node<NodeRgb>(),                            Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("hsv",               node<NodeHsv>(),                            Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("plot",              node<NodeRoutine>("plot"),                  Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("point",             node<NodeFunction>("point"),                Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("line",              node<NodeRoutine>("line"),                  Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("rect",              node<NodeRect>("rect"),                     Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("rectfill",          node<NodeRect>("rectfill"),                 Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("text",              node<NodeText>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("image",             node<NodeImageManipulation>(),              Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("tile",              node<NodeTileManipulation>(),               Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("map",               node<NodeMapManipulation>(),                Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("window",            node<NodeWindowManipulation>(),             Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("sprite",            node<NodeSpriteManipulation>(),             Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("color",             node<NodeRoutine>("color"),                 Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("palette",           node<NodePalette>(),                        Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("rgb",               node<NodeRgb>(),                            Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("hsv",               node<NodeHsv>(),                            Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("plot",              node<NodeRoutine>("plot"),                  Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("point",             node<NodeFunction>("point"),                Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("line",              node<NodeRoutine>("line"),                  Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("rect",              node<NodeRect>("rect"),                     Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("rectfill",          node<NodeRect>("rectfill"),                 Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("text",              node<NodeText>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("image",             node<NodeImageManipulation>(),              Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("tile",              node<NodeTileManipulation>(),               Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("map",               node<NodeMapManipulation>(),                Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("window",            node<NodeWindowManipulation>(),             Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("sprite",            node<NodeSpriteManipulation>(),             Token::Types::KEYWORD,        false);
 
 			// Audio.
-			ADD_STATEMENT("play",              node<NodePlay>(),                           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("stop",              node<NodeRoutine>("stop"),                  Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("sound",             node<NodeSound>(),                          Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("beep",              node<NodeBeep>(),                           Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("play",              node<NodePlay>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("stop",              node<NodeRoutine>("stop"),                  Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("sound",             node<NodeSound>(),                          Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("beep",              node<NodeBeep>(),                           Token::Types::KEYWORD,        false);
 
 			// Input.
-			ADD_STATEMENT("btn",               node<NodeFunction>("btn", Defaults()),      Token::Types::KEYWORD,     true)
+			ADD_STATEMENT("btn",               node<NodeFunction>("btn", Defaults()),      Token::Types::KEYWORD,         true)
 				->parameters(0, { 0xff /* mask for all buttons */ });
-			ADD_STATEMENT("btnd",              node<NodeFunction>("btnd", Defaults()),     Token::Types::KEYWORD,     true)
+			ADD_STATEMENT("btnd",              node<NodeFunction>("btnd", Defaults()),     Token::Types::KEYWORD,         true)
 				->parameters(0, { 0xff /* mask for all buttons */ });
-			ADD_STATEMENT("btnu",              node<NodeFunction>("btnu", Defaults()),     Token::Types::KEYWORD,     true)
+			ADD_STATEMENT("btnu",              node<NodeFunction>("btnu", Defaults()),     Token::Types::KEYWORD,         true)
 				->parameters(0, { 0xff /* mask for all buttons */ });
-			ADD_STATEMENT("touch",             node<NodeTouch>(),                          Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("touchd",            node<NodeTouch>(),                          Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("touchu",            node<NodeTouch>(),                          Token::Types::KEYWORD,     true);
+			ADD_STATEMENT("touch",             node<NodeTouch>(),                          Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("touchd",            node<NodeTouch>(),                          Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("touchu",            node<NodeTouch>(),                          Token::Types::KEYWORD,         true);
 
 			// Persistence.
-			ADD_STATEMENT("fopen",             node<NodeFile>("fopen"),                    Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("fclose",            node<NodeFile>("fclose"),                   Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("fread",             node<NodeFile>("fread"),                    Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("fwrite",            node<NodeFile>("fwrite"),                   Token::Types::KEYWORD,     true);
+			ADD_STATEMENT("fopen",             node<NodeFile>("fopen"),                    Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("fclose",            node<NodeFile>("fclose"),                   Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("fread",             node<NodeFile>("fread"),                    Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("fwrite",            node<NodeFile>("fwrite"),                   Token::Types::KEYWORD,         true);
 
 			// Serial port.
-			ADD_STATEMENT("serial",            node<NodeSerial>(),                         Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("sread",             node<NodeFunction>("sread", Defaults()),    Token::Types::KEYWORD,     true)
+			ADD_STATEMENT("serial",            node<NodeSerial>(),                         Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("sread",             node<NodeFunction>("sread", Defaults()),    Token::Types::KEYWORD,         true)
 				->parameters(0, { TRUE /* sync */ });
-			ADD_STATEMENT("swrite",            node<NodeFunction>("swrite", Defaults()),   Token::Types::KEYWORD,     true)
+			ADD_STATEMENT("swrite",            node<NodeFunction>("swrite", Defaults()),   Token::Types::KEYWORD,         true)
 				->parameters(1, { DefaultTable::Entry::PLACEHOLDER /* value */, TRUE /* sync */ });
 
 			// Debug.
-			ADD_STATEMENT("dbginfo",           node<NodeRoutine>("dbginfo", Defaults()),   Token::Types::KEYWORD,    false)
+			ADD_STATEMENT("dbginfo",           node<NodeRoutine>("dbginfo", Defaults()),   Token::Types::KEYWORD,        false)
 				->parameters(0, { TRUE /* full */ });
-			ADD_STATEMENT("filler",            node<NodeFiller>(),                         Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("filler",            node<NodeFiller>(),                         Token::Types::KEYWORD,        false);
 
 			/**< Memory functions. */
 
 			// Memory.
-			ADD_STATEMENT("memcpy",            node<NodeMemcpy>(),                         Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("memset",            node<NodeMemset>(),                         Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("memadd",            node<NodeMemadd>(),                         Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("memcpy",            node<NodeMemcpy>(),                         Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("memset",            node<NodeMemset>(),                         Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("memadd",            node<NodeMemadd>(),                         Token::Types::KEYWORD,        false);
 
 			/**< Advanced functions. */
 
 			// Object.
-			ADD_STATEMENT("new",               node<NodeNew>(),                            Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("del",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("fill",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("load",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("get",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("set",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("property",          NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("width",             node<NodeWidth>(),                          Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("height",            node<NodeHeight>(),                         Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("move",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("find",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("control",           NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("auto",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("is",                node<NodeIs>(),                             Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("with",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("new",               node<NodeNew>(),                            Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("del",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("fill",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("load",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("get",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("set",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("property",          NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("width",             node<NodeWidth>(),                          Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("height",            node<NodeHeight>(),                         Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("move",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("find",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("control",           NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("auto",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("is",                node<NodeIs>(),                             Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("with",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 
 			// Scene.
-			ADD_STATEMENT("camera",            node<NodeRoutine>("camera"),                Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("viewport",          node<NodeViewport>(),                       Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("scene",             node<NodeSceneManipulation>(),              Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("camera",            node<NodeRoutine>("camera"),                Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("viewport",          node<NodeViewport>(),                       Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("scene",             node<NodeSceneManipulation>(),              Token::Types::KEYWORD,        false);
 
 			// Actor.
-			ADD_STATEMENT("actor",             node<NodeActorManipulation>(),              Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("actor",             node<NodeActorManipulation>(),              Token::Types::KEYWORD,        false);
 
 			// Emote.
-			ADD_STATEMENT("emote",             node<NodeEmoteManipulation>(),              Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("emote",             node<NodeEmoteManipulation>(),              Token::Types::KEYWORD,        false);
 
 			// Projectile.
-			ADD_STATEMENT("projectile",        node<NodeProjectileManipulation>(),         Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("projectile",        node<NodeProjectileManipulation>(),         Token::Types::KEYWORD,        false);
 
 			// Trigger.
-			ADD_STATEMENT("trigger",           node<NodeTriggerManipulation>(),            Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("trigger",           node<NodeTriggerManipulation>(),            Token::Types::KEYWORD,        false);
 
 			// GUI.
-			ADD_STATEMENT("widget",            node<NodeWidgetManipulation>(),             Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("label",             node<NodeLabelManipulation>(),              Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("progressbar",       node<NodeProgressBarManipulation>(),        Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("menu",              node<NodeMenuManipulation>(),               Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("dialog",            node<NodeDialogManipulation>(),             Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("widget",            node<NodeWidgetManipulation>(),             Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("label",             node<NodeLabelManipulation>(),              Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("progressbar",       node<NodeProgressBarManipulation>(),        Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("menu",              node<NodeMenuManipulation>(),               Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("dialog",            node<NodeDialogManipulation>(),             Token::Types::KEYWORD,        false);
 
 			// Scroll.
-			ADD_STATEMENT("scroll",            node<NodeScroll>(),                         Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("scroll",            node<NodeScroll>(),                         Token::Types::KEYWORD,        false);
 
 			// Effects.
-			ADD_STATEMENT("fx",                node<NodeFx>(),                             Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("fx",                node<NodeFx>(),                             Token::Types::KEYWORD,        false);
 
 			// Physics.
-			ADD_STATEMENT("hits",              node<NodeHits>(),                           Token::Types::OPERATOR,    true);
+			ADD_STATEMENT("hits",              node<NodeHits>(),                           Token::Types::OPERATOR,        true);
 
 			// Game.
-			ADD_STATEMENT("update",            node<NodeUpdate>(),                         Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("update",            node<NodeUpdate>(),                         Token::Types::KEYWORD,        false);
 
 			// Device.
-			ADD_STATEMENT("screen",            node<NodeScreen>(),                         Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("option",            node<NodeOption>("option"),                 Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("query",             node<NodeQuery>("query"),                   Token::Types::KEYWORD,     true);
-			ADD_STATEMENT("stream",            node<NodeStream>(),                         Token::Types::KEYWORD,    false);
-			ADD_STATEMENT("shell",             node<NodeShell>(),                          Token::Types::KEYWORD,    false);
+			ADD_STATEMENT("screen",            node<NodeScreen>(),                         Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("option",            node<NodeOption>("option"),                 Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("query",             node<NodeQuery>("query"),                   Token::Types::KEYWORD,         true);
+			ADD_STATEMENT("stream",            node<NodeStream>(),                         Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("shell",             node<NodeShell>(),                          Token::Types::KEYWORD,        false);
 		} while (false);
 
 		// Add the builtin entries for the compiler.
@@ -32185,11 +32256,17 @@ private:
 		auto throwIncompleteStructure = [&] (int index) -> bool {
 			return throwError("Incomplete structure", index, false);
 		};
+		auto throwInvalidExpression = [&] (int index) -> bool {
+			return throwError("Invalid expression", index, false);
+		};
 		auto throwInvalidSyntax = [&] (int index) -> bool {
 			return throwError("Invalid syntax", index, false);
 		};
 		auto throwLoopExpected = [&] (int index) -> bool {
 			return throwError("Loop expected", index, false);
+		};
+		auto throwNonConstantExpression = [&] (int index) -> bool {
+			return throwError("Non-constant expression", index, false);
 		};
 		auto throwNotImplemented = [&] (int index) -> bool {
 			return throwError("Not implemented", index, false);
@@ -32265,43 +32342,50 @@ private:
 		/**< Combinators. */
 
 		// Stops.
+		const Lexical::List PREPROCESSOR_IF_STOPS = {
+			Lexical(Token::Types::PREPROCESSOR,     "#else"),
+			Lexical(Token::Types::PREPROCESSOR,     "#elseif"),
+				Lexical(Token::Types::PREPROCESSOR, "#else", Token::Types::KEYWORD, "if"),
+			Lexical(Token::Types::PREPROCESSOR,     "#endif"),
+				Lexical(Token::Types::PREPROCESSOR, "#end", Token::Types::KEYWORD, "if")
+		};
 		const Lexical::List EVALUATION_STOPS = {
-			Lexical(Token::Types::KEYWORD,     ANYTHING),
-			Lexical(Token::Types::OPERATOR,    "["),
-			Lexical(Token::Types::OPERATOR,    "]"),
-			Lexical(Token::Types::OPERATOR,    ","),
-			Lexical(Token::Types::OPERATOR,    ";")
+			Lexical(Token::Types::KEYWORD,          ANYTHING),
+			Lexical(Token::Types::OPERATOR,         "["),
+			Lexical(Token::Types::OPERATOR,         "]"),
+			Lexical(Token::Types::OPERATOR,         ","),
+			Lexical(Token::Types::OPERATOR,         ";")
 		};
 		const Lexical::List IF_STOPS = {
-			Lexical(Token::Types::KEYWORD,     "else"),
-			Lexical(Token::Types::KEYWORD,     "elseif"),
-				Lexical(Token::Types::KEYWORD, "else", Token::Types::KEYWORD, "if"),
-			Lexical(Token::Types::KEYWORD,     "endif"),
-				Lexical(Token::Types::KEYWORD, "end", Token::Types::KEYWORD, "if")
+			Lexical(Token::Types::KEYWORD,          "else"),
+			Lexical(Token::Types::KEYWORD,          "elseif"),
+				Lexical(Token::Types::KEYWORD,      "else", Token::Types::KEYWORD, "if"),
+			Lexical(Token::Types::KEYWORD,          "endif"),
+				Lexical(Token::Types::KEYWORD,      "end", Token::Types::KEYWORD, "if")
 		};
 		const Lexical::List SELECT_STOPS = {
-			Lexical(Token::Types::KEYWORD,     "case"),
-			Lexical(Token::Types::KEYWORD,     "else"),
-			Lexical(Token::Types::KEYWORD,     "endselect"),
-				Lexical(Token::Types::KEYWORD, "end", Token::Types::KEYWORD, "select")
+			Lexical(Token::Types::KEYWORD,          "case"),
+			Lexical(Token::Types::KEYWORD,          "else"),
+			Lexical(Token::Types::KEYWORD,          "endselect"),
+				Lexical(Token::Types::KEYWORD,      "end", Token::Types::KEYWORD, "select")
 		};
 		const Lexical::List FOR_STOPS = {
-			Lexical(Token::Types::KEYWORD,     "next")
+			Lexical(Token::Types::KEYWORD,          "next")
 		};
 		const Lexical::List WHILE_STOPS = {
-			Lexical(Token::Types::KEYWORD,     "wend"),
-				Lexical(Token::Types::KEYWORD, "end", Token::Types::KEYWORD, "while")
+			Lexical(Token::Types::KEYWORD,          "wend"),
+				Lexical(Token::Types::KEYWORD,      "end", Token::Types::KEYWORD, "while")
 		};
 		const Lexical::List REPEAT_STOPS = {
-			Lexical(Token::Types::KEYWORD,     "until")
+			Lexical(Token::Types::KEYWORD,          "until")
 		};
 		const Lexical::List BEGINDO_STOPS = {
-			Lexical(Token::Types::KEYWORD,     "enddo"),
-				Lexical(Token::Types::KEYWORD, "end", Token::Types::KEYWORD, "do")
+			Lexical(Token::Types::KEYWORD,          "enddo"),
+				Lexical(Token::Types::KEYWORD,      "end", Token::Types::KEYWORD, "do")
 		};
 		const Lexical::List BEGINDEF_STOPS = {
-			Lexical(Token::Types::KEYWORD,     "enddef"),
-				Lexical(Token::Types::KEYWORD, "end", Token::Types::KEYWORD, "def")
+			Lexical(Token::Types::KEYWORD,          "enddef"),
+				Lexical(Token::Types::KEYWORD,      "end", Token::Types::KEYWORD, "def")
 		};
 
 		// Sub combinators.
@@ -34398,19 +34482,178 @@ private:
 		};
 
 		// Syntax combinators.
-		const Combinator PreprocessorIf( // `#IF ... #ELSEIF ... #ELSE ... #ENDIF`.
-			[&] (Node::Ptr &p, const Combinator::Options &) -> bool {
+		const Combinator PreprocessorIf( // Preprocessor `#IF ... #ELSE IF ... #ELSE ... #END IF`.
+			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				PROC_GUARD(beginStructure("#if"), endStructure());
+
 				State q = begin();
+				Node::Array children;
+				const int index = q.index;
+				ReadOnceVariant evaluated = nullptr;
+				bool everEvaluated = false;
+
+				if (tooManyNestedStructures()) return throwTooManyNestedStructures(index);
 
 				if (!must(Token::Types::INTEGER)(q)) return false;
-				if (!must(Token::Types::PREPROCESSOR, "#if")(q)) return false;
-				// TODO: CONDITIONAL COMPILATION.
+				{
+					// `#IF ...` directive.
+					if (!must(Token::Types::PREPROCESSOR, "#if")(q)) return false;
+
+					// Condition expression.
+					State q1 = begin();
+					q1.index = q.index;
+
+					Node::Array children_;
+					if (!Expression(q1, children_)) return throwInvalidSyntax(q1.index);
+
+					// TODO: CONDITIONAL COMPILATION.
+					// TODO: `#IF DEF ...`.
+					if (children_.size() != 1) return throwInvalidExpression(q1.index);
+					const Node::Ptr &expr = children_.front();
+					if (!expr->get(evaluated.ref(), "evaluated")) return throwNonConstantExpression(q1.index); // Evaluate the expression.
+
+					q.index = q1.index;
+
+					ignore(Token::Types::COMMENT)(q);
+					if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+				}
+				{
+					// Body chunk of `#IF`.
+					Node::Ptr do_(new NodeDo());
+					cursor = q.index;
+					for (EVER) {
+						const bool stp = stop(PREPROCESSOR_IF_STOPS, cursor, 2);
+						if (stp)
+							break;
+
+						Combinator::Options sub = opts;
+						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
+					}
+					if ((bool)evaluated) {
+						everEvaluated = true;
+						children.push_back(do_);
+					} else {
+						// Ignore the chunk of code of the condition expression didn't result to `true`.
+					}
+					q.index = cursor;
+				}
+				for (EVER) {
+					// `#ELSE IF ...` directive(s).
+					bool pairedElseIf = false;
+					if (
+						forwardN(2, Token::Types::PREPROCESSOR, "#else")(q.index) &&
+						forwardN(3, Token::Types::KEYWORD, "if")(q.index)
+					) { // Paired `ELSE IF` is identical with `ELSEIF`.
+						pairedElseIf = true;
+					} else if (!forwardN(2, Token::Types::PREPROCESSOR, "#elseif")(q.index)) {
+						break;
+					}
+
+					{
+						// Condition expression.
+						State q1 = begin();
+						q1.index = q.index;
+
+						if (!LineNumber(q1, opts)) return throwInvalidSyntax(q.index);
+						if (pairedElseIf) {
+							q1.index += 2; // `#ELSE IF`.
+						} else {
+							++q1.index; // `#ELSEIF`.
+						}
+						if (forward(Token::Types::END_OF_LINE)(q1.index)) return throwInvalidSyntax(q1.index);
+
+						Node::Array children_;
+						if (!Expression(q1, children_)) return throwInvalidSyntax(q.index);
+
+						// TODO: CONDITIONAL COMPILATION.
+						// TODO: `#ELSE IF DEF ...`.
+						if (children_.size() != 1) return throwInvalidExpression(q1.index);
+						const Node::Ptr &expr = children_.front();
+						if (!expr->get(evaluated.ref(), "evaluated")) return throwNonConstantExpression(q1.index); // Evaluate the expression.
+
+						q.index = q1.index;
+
+						ignore(Token::Types::COMMENT)(q);
+						if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+					}
+
+					// Body chunk of `#ELSE IF`.
+					Node::Ptr do_(new NodeDo());
+					cursor = q.index;
+					for (EVER) {
+						const bool stp = stop(PREPROCESSOR_IF_STOPS, cursor, 2);
+						if (stp)
+							break;
+
+						Combinator::Options sub = opts;
+						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
+					}
+					if ((bool)evaluated && !everEvaluated) {
+						everEvaluated = true;
+						children.push_back(do_);
+					} else {
+						// Ignore the chunk of code of the condition expression didn't result to `true`.
+					}
+					q.index = cursor;
+				}
+				if (forwardN(2, Token::Types::PREPROCESSOR, "#else")(q.index)) {
+					// `#ELSE` directive.
+					{
+						State q1 = begin();
+						q1.index = q.index;
+
+						if (!LineNumber(q1, opts)) return throwInvalidSyntax(q.index);
+						++q1.index; // `#ELSE`.
+						ignore(Token::Types::COMMENT)(q1);
+						if (!ignore(Token::Types::END_OF_LINE)(q1)) return throwInvalidSyntax(q1.index);
+
+						q.index = q1.index;
+					}
+
+					// Body chunk of `#ELSE`.
+					Node::Ptr do_(new NodeDo());
+					cursor = q.index;
+					for (EVER) {
+						const bool stp = stop(PREPROCESSOR_IF_STOPS, cursor, 2);
+						if (stp)
+							break;
+
+						Combinator::Options sub = opts;
+						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
+					}
+					if (!everEvaluated) {
+						everEvaluated = true;
+						children.push_back(do_);
+					} else {
+						// Ignore the chunk of code of one of the previous condition expression resulted to `true`.
+					}
+					q.index = cursor;
+				}
+				{
+					// `#END IF ...` directive.
+					State q1 = q;
+					if (!LineNumber(q1, opts)) return throwInvalidSyntax(q1.index);
+					if (
+						forwardN(1, Token::Types::PREPROCESSOR, "#end")(q1.index) &&
+						forwardN(2, Token::Types::KEYWORD, "if")(q1.index)
+					) { // Paired `#END IF` is identical with `#ENDIF`.
+						Token::Ptr node(new Token());
+						node
+							->type(Token::Types::PREPROCESSOR)
+							->data("#endif");
+						q1.tokens.push_back(node);
+						q1.index += 2;
+					} else if (!must(Token::Types::PREPROCESSOR, "#endif")(q1)) {
+						return throwInvalidSyntax(q1.index);
+					}
+					q.index = q1.index;
+				}
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!must(Token::Types::END_OF_LINE)(q)) return false;
 
 				// TODO: CONDITIONAL COMPILATION.
 				Node::Ptr node = createNode(
-					" ", "_",
+					"#if", "_",
 					{
 						{ "allow_call", false }
 					}
@@ -34422,10 +34665,12 @@ private:
 				q.success = true;
 				end(q);
 
+				node->add(children);
+
 				return true;
 			}
 		);
-		const Combinator PreprocessorMessage( // `#MESSAGE ...`.
+		const Combinator PreprocessorMessage( // Diagnostic `#MESSAGE ...`.
 			[&] (Node::Ptr &p, const Combinator::Options &) -> bool {
 				State q = begin();
 				Token::Ptr id = nullptr;
@@ -34457,7 +34702,7 @@ private:
 				return true;
 			}
 		);
-		const Combinator PreprocessorWarn( // `#WARN ...`.
+		const Combinator PreprocessorWarn( // Diagnostic `#WARN ...`.
 			[&] (Node::Ptr &p, const Combinator::Options &) -> bool {
 				State q = begin();
 				Token::Ptr id = nullptr;
@@ -34487,7 +34732,7 @@ private:
 				return true;
 			}
 		);
-		const Combinator PreprocessorError( // `#ERROR ...`.
+		const Combinator PreprocessorError( // Diagnostic `#ERROR ...`.
 			[&] (Node::Ptr &p, const Combinator::Options &) -> bool {
 				State q = begin();
 				Token::Ptr id = nullptr;

@@ -646,6 +646,17 @@ public:
 
 	virtual /* LAZY */ Array children(void) const = 0;
 
+	virtual bool get(Variant &ret, const std::string &msg, int argc, const Variant* argv) const = 0;
+	bool get(Variant &ret, const std::string &msg) const {
+		return get(ret, msg, 0, (const Variant*)nullptr);
+	}
+	template<typename ...Args> bool get(Variant &ret, const std::string &msg, const Args &...args) const {
+		constexpr const size_t n = sizeof...(Args);
+		const Variant argv[n] = { Variant(args)... };
+
+		return get(ret, msg, (int)n, argv);
+	}
+
 	virtual /* LAZY */ Abstract abstract(void) const = 0;
 
 	virtual /* LAZY */ std::string dump(int depth) const = 0;
