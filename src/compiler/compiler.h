@@ -306,6 +306,34 @@ struct Macro { // FEAT: MACRO.
 };
 
 /**
+ * @brief Information of preprocessor branches.
+ */
+struct PreprocessorBranch {
+	typedef std::vector<PreprocessorBranch> Array;
+
+	bool isAlive = true;
+	int page = -1;
+	int beginLine = -1;
+	int endLine = -1;
+	int conditionLine = -1;
+
+	PreprocessorBranch();
+	PreprocessorBranch(bool alive, int pg, int begin, int end, int cond);
+
+	bool operator == (const PreprocessorBranch &other) const;
+	bool operator != (const PreprocessorBranch &other) const;
+	bool operator < (const PreprocessorBranch &other) const;
+	bool operator <= (const PreprocessorBranch &other) const;
+	bool operator > (const PreprocessorBranch &other) const;
+	bool operator >= (const PreprocessorBranch &other) const;
+
+	int compare(const PreprocessorBranch &other) const;
+
+	bool valid(void) const;
+	void clear(void);
+};
+
+/**
  * @brief Feature usages.
  */
 struct FeatureUsages {
@@ -410,26 +438,27 @@ public:
 	enum class Types : unsigned {
 		NONE             =  0,
 		PAGE             =  1 << 0,
-		SPACE            =  1 << 1,
-		END_OF_LINE      =  1 << 2,
-		LINE_CONNECTOR   =  1 << 3,
-		OPERATOR         =  1 << 4,
-		SYMBOL           = (1 << 5) | (1 << 6),
-			KEYWORD      =  1 << 5,
-			IDENTIFIER   =  1 << 6,
-		LABEL            =  1 << 7,
-		NOTHING          =  1 << 8,
-		BOOLEAN          =  1 << 9,
-		NUMBER           = (1 << 10) | (1 << 11),
-			INTEGER      =  1 << 10,
-			REAL         =  1 << 11,
-		STRING           =  1 << 12,
-		COMMENT          =  1 << 13,
-		INTERMEDIA       = (1 << 14) | (1 << 15) | (1 << 16) | (1 << 17),
-			MATH         =  1 << 14,
-			STATEMENT    =  1 << 15,
-			ARRAY        =  1 << 16,
-			MACRO        =  1 << 17,
+		PREPROCESSOR     =  1 << 1,
+		SPACE            =  1 << 2,
+		END_OF_LINE      =  1 << 3,
+		LINE_CONNECTOR   =  1 << 4,
+		OPERATOR         =  1 << 5,
+		SYMBOL           = (1 << 6) | (1 << 7),
+			KEYWORD      =  1 << 6,
+			IDENTIFIER   =  1 << 7,
+		LABEL            =  1 << 8,
+		NOTHING          =  1 << 9,
+		BOOLEAN          =  1 << 10,
+		NUMBER           = (1 << 11) | (1 << 12),
+			INTEGER      =  1 << 11,
+			REAL         =  1 << 12,
+		STRING           =  1 << 13,
+		COMMENT          =  1 << 14,
+		INTERMEDIA       = (1 << 15) | (1 << 16) | (1 << 17) | (1 << 18),
+			MATH         =  1 << 15,
+			STATEMENT    =  1 << 16,
+			ARRAY        =  1 << 17,
+			MACRO        =  1 << 18,
 		ANY              =  0xffffffff
 	};
 
@@ -504,6 +533,10 @@ public:
 		ANY, // For select query.
 		PROGRAM,
 		PAGE,
+		PREPROCESSOR_IF,
+		PREPROCESSOR_MESSAGE,
+		PREPROCESSOR_WARN,
+		PREPROCESSOR_ERROR,
 		EXPRESSION,
 		MATH,
 		ASC,
@@ -640,6 +673,17 @@ public:
 	virtual /* LAZY */ TextLocation::Range location(void) const = 0;
 
 	virtual /* LAZY */ Array children(void) const = 0;
+
+	virtual bool get(Variant &ret, const std::string &msg, int argc, const Variant* argv) const = 0;
+	bool get(Variant &ret, const std::string &msg) const {
+		return get(ret, msg, 0, (const Variant*)nullptr);
+	}
+	template<typename ...Args> bool get(Variant &ret, const std::string &msg, const Args &...args) const {
+		constexpr const size_t n = sizeof...(Args);
+		const Variant argv[n] = { Variant(args)... };
+
+		return get(ret, msg, (int)n, argv);
+	}
 
 	virtual /* LAZY */ Abstract abstract(void) const = 0;
 

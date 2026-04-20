@@ -166,6 +166,40 @@ public:
 	std::string toString(void) const;
 };
 
+/**
+ * @brief Variant wrapper that resets on read.
+ */
+class ReadOnceVariant {
+private:
+	Variant _variant = nullptr;
+
+public:
+	ReadOnceVariant();
+	ReadOnceVariant(const ReadOnceVariant &other);
+	ReadOnceVariant(const Variant &var);
+
+	ReadOnceVariant &operator = (const ReadOnceVariant &other);
+	ReadOnceVariant &operator = (const Variant &other);
+
+	explicit operator std::nullptr_t (void);
+	explicit operator bool (void);
+	explicit operator Variant::Int (void);
+	explicit operator Variant::Long (void);
+	explicit operator Variant::Real (void);
+	explicit operator const char* (void);
+	explicit operator const std::string (void);
+	explicit operator void* (void);
+	explicit operator Object::Ptr (void);
+
+	Variant::Types type(void) const;
+
+	Variant &ref(void);
+
+	bool isNull(void) const;
+
+	void reset(void);
+};
+
 /* ===========================================================================} */
 
 /*

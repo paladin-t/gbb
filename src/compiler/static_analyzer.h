@@ -71,6 +71,8 @@ public:
 
 	virtual const RamLocation::Dictionary* getRamAllocations(void) const = 0;
 
+	virtual const PreprocessorBranch::Array* getPreprocessorBranches(int page) const = 0;
+
 	virtual const CodePageName* getCodePageName(int page) const = 0;
 
 	virtual void clear(void) = 0;

@@ -4182,7 +4182,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 				const int kernelIdx = getValidKernelIndex(prj);
 				activeKernelIndex(kernelIdx);
 
-				clearLanguageDefinition(true);
+				clearAnalyzedCodeInformationInEditors(true);
 			}
 		}
 
@@ -4344,7 +4344,7 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd, const char* pro
 			Operations::kernelInstall(wnd, rnd, this)
 				.then(
 					[wnd, rnd, this] (std::string result) -> void { // Installed.
-						clearLanguageDefinition(true);
+						clearAnalyzedCodeInformationInEditors(true);
 
 #if WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX
 						ImGui::MessagePopupBox::ConfirmedHandler confirm = ImGui::MessagePopupBox::ConfirmedHandler(
@@ -4387,7 +4387,7 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd, const char* pro
 			Operations::kernelUninstall(wnd, rnd, this, idx)
 				.then(
 					[wnd, rnd, this] (std::string result) -> void {
-						clearLanguageDefinition(true);
+						clearAnalyzedCodeInformationInEditors(true);
 
 #if WORKSPACE_SHOW_INSTALLATION_MESSAGE_POPUP_BOX
 						ImGui::MessagePopupBox::ConfirmedHandler confirm = ImGui::MessagePopupBox::ConfirmedHandler(
@@ -5005,7 +5005,7 @@ bool Workspace::analyze(bool force) {
 	);
 
 	auto finish = [] (Workspace* ws) -> void {
-		ws->clearLanguageDefinition(false);
+		ws->clearAnalyzedCodeInformationInEditors(false);
 		ws->clearAnalyzedCodeInformation();
 		ws->clearCodePageNames();
 
@@ -5042,12 +5042,12 @@ void Workspace::clearAnalyzingResult(void) {
 
 	staticAnalyzer()->clear();
 
-	clearLanguageDefinition(false);
+	clearAnalyzedCodeInformationInEditors(false);
 	clearAnalyzedCodeInformation();
 	clearAssetPageNames();
 }
 
-void Workspace::clearLanguageDefinition(bool clearRevision) {
+void Workspace::clearAnalyzedCodeInformationInEditors(bool clearRevision) {
 	const Project::Ptr &prj = currentProject();
 	if (!prj || !prj->assets())
 		return;
@@ -5056,12 +5056,12 @@ void Workspace::clearLanguageDefinition(bool clearRevision) {
 		CodeAssets::Entry* entry = prj->getCode(i);
 		Editable* editor = entry->editor;
 		if (editor)
-			editor->post(Editable::CLEAR_LANGUAGE_DEFINITION, clearRevision);
+			editor->post(Editable::CLEAR_ANALYZED_CODE_INFORMATIONS, clearRevision);
 	}
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 	if (prj->minorCodeEditor()) {
-		prj->minorCodeEditor()->post(Editable::CLEAR_LANGUAGE_DEFINITION, clearRevision);
+		prj->minorCodeEditor()->post(Editable::CLEAR_ANALYZED_CODE_INFORMATIONS, clearRevision);
 	}
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 }
@@ -5073,14 +5073,14 @@ unsigned Workspace::getLanguageDefinitionRevision(void) const {
 	return staticAnalyzer()->getLanguegeDefinitionRevision();
 }
 
-const GBBASIC::Macro::List* Workspace::getMacroDefinitions(void) {
+const GBBASIC::Macro::List* Workspace::getMacroDefinitions(void) const {
 	if (!staticAnalyzer())
 		return nullptr;
 
 	return staticAnalyzer()->getMacroDefinitions();
 }
 
-const Text::Array* Workspace::getDestinitions(void) {
+const Text::Array* Workspace::getDestinitions(void) const {
 	if (!staticAnalyzer())
 		return nullptr;
 
@@ -5127,6 +5127,13 @@ const std::string &Workspace::getAnalyzedCodeInformation(void) {
 	_analyzedCodeInformation = allocationInfo;
 
 	return analyzedCodeInformation();
+}
+
+const GBBASIC::PreprocessorBranch::Array* Workspace::getPreprocessorBranches(int page) const {
+	if (!staticAnalyzer())
+		return nullptr;
+
+	return staticAnalyzer()->getPreprocessorBranches(page);
 }
 
 void Workspace::clearAssetPageNames(void) {
