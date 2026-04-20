@@ -33,11 +33,13 @@ namespace GBBASIC {
 
 class StaticAnalyzerImpl : public StaticAnalyzer {
 private:
+	typedef std::vector<PreprocessorBranch::Array> PagedPreprocessorBranches;
+
 	struct Result {
 		Macro::List macrosDefinitions;
 		Text::Array destinations;
 		RamLocation::Dictionary ramAllocations;
-		// TODO: CONDITIONAL COMPILATION.
+		PagedPreprocessorBranches pagedPreprocessorBranches;
 		CodePageName::Array codePageNames;
 
 		Result() {
@@ -52,7 +54,7 @@ private:
 	Macro::List _macrosDefinitions;
 	Text::Array _destinations;
 	RamLocation::Dictionary _ramAllocations;
-	// TODO: CONDITIONAL COMPILATION.
+	PagedPreprocessorBranches _pagedPreprocessorBranches;
 	CodePageName::Array _codePageNames;
 
 public:
@@ -109,7 +111,7 @@ public:
 
 				std::swap(_ramAllocations, result->ramAllocations);
 
-				// TODO: CONDITIONAL COMPILATION.
+				std::swap(_pagedPreprocessorBranches, result->pagedPreprocessorBranches);
 
 				std::swap(_codePageNames, result->codePageNames);
 				_codePageNames.shrink_to_fit();
@@ -151,7 +153,12 @@ public:
 		return &_ramAllocations;
 	}
 
-	// TODO: CONDITIONAL COMPILATION.
+	virtual const PreprocessorBranch::Array* getPreprocessorBranches(int page) const override {
+		if (page < 0 || page >= (int)_pagedPreprocessorBranches.size())
+			return nullptr;
+
+		return &_pagedPreprocessorBranches[page];
+	}
 
 	virtual const CodePageName* getCodePageName(int page) const override {
 		if (page < 0 || page >= (int)_codePageNames.size())
@@ -165,7 +172,7 @@ public:
 		_macrosDefinitions.clear();
 		_destinations.clear();
 		_ramAllocations.clear();
-		// TODO: CONDITIONAL COMPILATION.
+		_pagedPreprocessorBranches.clear();
 		_codePageNames.clear();
 	}
 
@@ -237,7 +244,7 @@ private:
 
 		doAnalyzeProgram(result, program);
 
-		// TODO: CONDITIONAL COMPILATION.
+		doAnalyzePagedPreprocessorBranches(result, program);
 
 		doAnalyzeCodePages(result, program);
 
@@ -283,7 +290,51 @@ private:
 				);
 		}
 	}
-	// TODO: CONDITIONAL COMPILATION.
+	static void doAnalyzePagedPreprocessorBranches(Result* result, Program &program) {
+		// Prepare.
+		const INode::Ptr &root = program.root; // Get the compiled AST, which could be corrupt.
+		if (!root)
+			return;
+
+		// Select pages.
+		Select pages = Select(root)
+			.children(Where(INode::Types::PAGE));
+
+		if (pages.ok()) {
+			// Parse the preprocessor branches.
+			result->pagedPreprocessorBranches.resize(pages.count());
+			pages
+				.foreach(
+					[&] (const Select &, const INode::Ptr &page, int index) -> void {
+						Select preprocIfs = Select(page)
+							.children(Where(INode::Types::PREPROCESSOR_IF, false, true));
+						if (!preprocIfs.ok())
+							return;
+
+						for (int i = 0; i < preprocIfs.count(); ++i) {
+							INode::Ptr preprocIf = preprocIfs[i];
+							Variant var = nullptr;
+							if (!preprocIf->get(var, "branches"))
+								continue;
+
+							void* ptr = (void*)var;
+							if (!ptr)
+								continue;
+
+							const PreprocessorBranch::Array* bptr = (const PreprocessorBranch::Array*)ptr;
+							const PreprocessorBranch::Array &toAppend = *bptr;
+							PreprocessorBranch::Array &branches = result->pagedPreprocessorBranches[index];
+							branches.reserve(branches.size() + toAppend.size());
+							branches.insert(
+								branches.end(),
+								std::make_move_iterator(toAppend.begin()),
+								std::make_move_iterator(toAppend.end())
+							);
+						}
+					}
+				);
+		}
+	}
 	static void doAnalyzeCodePages(Result* result, Program &program) {
 		// Prepare.
 		const INode::Ptr &root = program.root; // Get the compiled AST, which could be corrupt.

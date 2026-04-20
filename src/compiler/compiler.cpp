@@ -7733,6 +7733,7 @@ public:
 		if (ptr) {
 			const PreprocessorBranch::Array* bptr = (const PreprocessorBranch::Array*)ptr;
 			_branches = *bptr;
+			_branches.shrink_to_fit();
 		}
 	}
 

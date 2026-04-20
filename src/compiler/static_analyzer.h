@@ -48,8 +48,6 @@ public:
 	typedef std::function<Semaphore(WorkTaskFunction::OperationHandler/* on work thread */, WorkTaskFunction::SealHandler/* nullable */ /* on main thread */, WorkTaskFunction::DisposeHandler/* nullable */ /* on main thread */)> AnalyzeHandler;
 	typedef std::function<void(void)> AnalyzedHandler;
 
-	// TODO: CONDITIONAL COMPILATION.
-
 	struct CodePageName {
 		typedef std::vector<CodePageName> Array;
 
@@ -73,7 +71,7 @@ public:
 
 	virtual const RamLocation::Dictionary* getRamAllocations(void) const = 0;
 
-	// TODO: CONDITIONAL COMPILATION.
+	virtual const PreprocessorBranch::Array* getPreprocessorBranches(int page) const = 0;
 
 	virtual const CodePageName* getCodePageName(int page) const = 0;
 
