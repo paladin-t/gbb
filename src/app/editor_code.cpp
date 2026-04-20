@@ -50,7 +50,7 @@ public:
 		for (int i = 1; i < (int)ranges.size(); ++i) {
 			CodeRange &last = _mergedRanges.back();
 			if (ranges[i].first <= last.second + 1)
-				last.second = std::max(last.second, ranges[i].second);
+				last.second = Math::max(last.second, ranges[i].second);
 			else
 				_mergedRanges.push_back(ranges[i]);
 		}
@@ -150,7 +150,6 @@ private:
 		bool filled = false;
 
 		void clear(bool clearRevision) {
-			deadCodeRange.clear();
 			if (clearRevision)
 				revision = 0;
 			filled = false;

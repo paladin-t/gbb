@@ -669,7 +669,7 @@ bool Evaluator::fold(IToken::Array* ret, const IToken::Array &rpn, const Options
 		return false;
 	
 #if EVALUATOR_DEBUG
-	const std::string origin = toInfixNotationString(ret_, onError);
+	const std::string origin = toInfixNotationString(rpn, onError);
 	const std::string folded = toInfixNotationString(ret_, onError);
 
 	fprintf(stdout, "Folded %s\n    to %s\n", origin.c_str(), folded.c_str());
