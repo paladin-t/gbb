@@ -34078,6 +34078,13 @@ private:
 			Token::Ptr expectsOperator = Token::Ptr(new Token()); // For evaluation when `evalOpts.canTruncate == true`.
 			Token::Ptr expectsOperand = nullptr;
 
+			auto refresh = [&] (void) -> void {
+				if (evalOpts.canTruncate) {
+					expectsOperator = Token::Ptr(new Token());
+					expectsOperand = nullptr;
+				}
+			};
+
 			int n = 0;
 			int c = 0;
 			int s = 0;
@@ -34117,6 +34124,8 @@ private:
 							any()(q);
 							++n;
 
+							refresh();
+
 							continue;
 						}
 					} else if (name == "rnd") { // `RND` is a specialized math function, which accepts 0, 1 or 2 arguments.
@@ -34132,6 +34141,8 @@ private:
 							q1.success = true;
 							end(q1);
 							q.index = q1.index;
+
+							refresh();
 
 							continue;
 						}
@@ -34149,6 +34160,8 @@ private:
 							end(q1);
 							q.index = q1.index;
 
+							refresh();
+
 							continue;
 						}
 					} else if (name == "hits") { // `HITS` is a specialized function, which accepts `RECT` or `POINT` as arguments.
@@ -34164,6 +34177,8 @@ private:
 							q1.success = true;
 							end(q1);
 							q.index = q1.index;
+
+							refresh();
 
 							continue;
 						}
@@ -34183,6 +34198,8 @@ private:
 								end(q1);
 								q.index = q1.index;
 
+								refresh();
+
 								continue;
 							}
 						}
@@ -34196,6 +34213,8 @@ private:
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
 
+							refresh();
+
 							continue;
 						}
 					}
@@ -34204,6 +34223,8 @@ private:
 						if (AddressOfAt(q, children, false)) {
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
+
+							refresh();
 
 							continue;
 						}
@@ -34214,6 +34235,8 @@ private:
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
 
+							refresh();
+
 							continue;
 						}
 					}
@@ -34222,6 +34245,8 @@ private:
 						if (InvokingNative(q, children, false)) {
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
+
+							refresh();
 
 							continue;
 						}
@@ -34232,6 +34257,8 @@ private:
 						if (Invoking(q, children, false)) {
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
+
+							refresh();
 
 							continue;
 						}
@@ -34249,6 +34276,8 @@ private:
 							Intermedia(q, children, Token::Types::MACRO);
 							n += q.index - qi;
 
+							refresh();
+
 							continue;
 						}
 					}
@@ -34257,6 +34286,8 @@ private:
 						const int qi = q.index;
 						if (MacroConstant(q, children, name)) {
 							n += q.index - qi;
+
+							refresh();
 
 							continue;
 						}
@@ -34272,6 +34303,8 @@ private:
 							if (MacroIdentifierAlias(q, children, name)) {
 								n += q.index - qi;
 
+								refresh();
+
 								continue;
 							}
 						}
@@ -34283,6 +34316,8 @@ private:
 							Intermedia(q, children, Token::Types::MACRO);
 							n += q.index - qi;
 
+							refresh();
+
 							continue;
 						}
 					}
@@ -34291,6 +34326,8 @@ private:
 						const int qi = q.index;
 						if (MacroString(q, children, name)) {
 							n += q.index - qi;
+
+							refresh();
 
 							continue;
 						}
@@ -34310,6 +34347,8 @@ private:
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
 
+							refresh();
+
 							continue;
 						}
 					}
@@ -34323,6 +34362,8 @@ private:
 						if (targets && len && LenR(q, children, false)) {
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
+
+							refresh();
 
 							continue;
 						}
@@ -34339,6 +34380,8 @@ private:
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
 
+							refresh();
+
 							continue;
 						}
 					}
@@ -34354,6 +34397,8 @@ private:
 						if (targets && !prop && (!bank && !addr) && TileR(q, children, false)) {
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
+
+							refresh();
 
 							continue;
 						}
@@ -34374,6 +34419,8 @@ private:
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
 
+							refresh();
+
 							continue;
 						}
 					}
@@ -34393,6 +34440,8 @@ private:
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
 
+							refresh();
+
 							continue;
 						}
 					}
@@ -34404,6 +34453,8 @@ private:
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
 
+							refresh();
+
 							continue;
 						}
 					}
@@ -34414,6 +34465,8 @@ private:
 						if (targets && ObjectS(q, children, false)) { // Projectile.
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
+
+							refresh();
 
 							continue;
 						}
@@ -34429,6 +34482,8 @@ private:
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
 
+							refresh();
+
 							continue;
 						}
 					}
@@ -34440,6 +34495,8 @@ private:
 						if (targets && Is(q, children, false)) { // Macro before, type after.
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
+
+							refresh();
 
 							continue;
 						}
@@ -34455,6 +34512,8 @@ private:
 						if (targets && Is(q, children, false)) { // Variable before, type after.
 							Intermedia(q, children, Token::Types::STATEMENT);
 							n += q.index - qi;
+
+							refresh();
 
 							continue;
 						}
@@ -34479,6 +34538,8 @@ private:
 							q1.success = true;
 							end(q1);
 							q.index = q1.index;
+
+							refresh();
 
 							continue;
 						}
