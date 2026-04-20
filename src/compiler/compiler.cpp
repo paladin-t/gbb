@@ -32551,8 +32551,6 @@ private:
 		// Sub combinators.
 		struct EvaluationOptions { // For combinator `Evaluation`.
 			bool canTruncate = false;
-			Token::Ptr expectsOperator = Token::Ptr(new Token());
-			Token::Ptr expectsOperand = nullptr;
 		} evalOpts;
 
 		std::function<int(State &, Node::Array &)> Evaluation  = nullptr;
@@ -34077,6 +34075,9 @@ private:
 		};
 
 		Evaluation = [&] (State &q, Node::Array &children) -> int { // An evaluable sequence.
+			Token::Ptr expectsOperator = Token::Ptr(new Token()); // For evaluation when `evalOpts.canTruncate == true`.
+			Token::Ptr expectsOperand = nullptr;
+
 			int n = 0;
 			int c = 0;
 			int s = 0;
@@ -34504,37 +34505,37 @@ private:
 						bool break_ = false;
 						switch (tk->type()) {
 						case Token::Types::OPERATOR:
-							if (evalOpts.expectsOperator == nullptr) {
+							if (expectsOperator == nullptr) {
 								if (tk->data() == "(") { // Is a left parenthesis.
 									any()(q);
 									++c;
 									++n;
 
-									evalOpts.expectsOperand = tk;
+									expectsOperand = tk;
 								} else {
-									const bool allowUnaryNot = evalOpts.expectsOperand && evalOpts.expectsOperand->type() == Token::Types::OPERATOR &&
+									const bool allowUnaryNot = expectsOperand && expectsOperand->type() == Token::Types::OPERATOR &&
 										(
-											evalOpts.expectsOperand->data() == "("      ||
-											evalOpts.expectsOperand->data() == "="      ||
-											evalOpts.expectsOperand->data() == "<"      ||
-											evalOpts.expectsOperand->data() == "<="     ||
-											evalOpts.expectsOperand->data() == ">"      ||
-											evalOpts.expectsOperand->data() == ">="     ||
-											evalOpts.expectsOperand->data() == "<>"     ||
-											evalOpts.expectsOperand->data() == "+"      ||
-											evalOpts.expectsOperand->data() == "-"      ||
-											evalOpts.expectsOperand->data() == "*"      ||
-											evalOpts.expectsOperand->data() == "/"      ||
-											evalOpts.expectsOperand->data() == "mod"    ||
-											evalOpts.expectsOperand->data() == "and"    ||
-											evalOpts.expectsOperand->data() == "or"     ||
-											evalOpts.expectsOperand->data() == "not"    ||
-											evalOpts.expectsOperand->data() == "band"   ||
-											evalOpts.expectsOperand->data() == "bor"    ||
-											evalOpts.expectsOperand->data() == "bxor"   ||
-											evalOpts.expectsOperand->data() == "lshift" ||
-											evalOpts.expectsOperand->data() == "rshift" ||
-											evalOpts.expectsOperand->data() == "bnot"
+											expectsOperand->data() == "("      ||
+											expectsOperand->data() == "="      ||
+											expectsOperand->data() == "<"      ||
+											expectsOperand->data() == "<="     ||
+											expectsOperand->data() == ">"      ||
+											expectsOperand->data() == ">="     ||
+											expectsOperand->data() == "<>"     ||
+											expectsOperand->data() == "+"      ||
+											expectsOperand->data() == "-"      ||
+											expectsOperand->data() == "*"      ||
+											expectsOperand->data() == "/"      ||
+											expectsOperand->data() == "mod"    ||
+											expectsOperand->data() == "and"    ||
+											expectsOperand->data() == "or"     ||
+											expectsOperand->data() == "not"    ||
+											expectsOperand->data() == "band"   ||
+											expectsOperand->data() == "bor"    ||
+											expectsOperand->data() == "bxor"   ||
+											expectsOperand->data() == "lshift" ||
+											expectsOperand->data() == "rshift" ||
+											expectsOperand->data() == "bnot"
 										);
 									const bool isUnaryNot = tk->type() == Token::Types::OPERATOR &&
 										(tk->data() == "not" || tk->data() == "bnot"); // Is a unary `NOT` or `BNOT`.
@@ -34542,7 +34543,7 @@ private:
 										any()(q);
 										++n;
 
-										evalOpts.expectsOperand = tk;
+										expectsOperand = tk;
 
 										break;
 									} else {
@@ -34553,26 +34554,32 @@ private:
 									}
 								}
 							} else {
-								if (tk->data() == ")") {
+								if (tk->data() == "(") { // Is a left parenthesis.
+									any()(q);
+									++c;
+									++n;
+
+									expectsOperand = tk;
+								} else if (tk->data() == ")") {
 									any()(q);
 									--c;
 									++n;
 
-									evalOpts.expectsOperator = Token::Ptr(new Token());
+									expectsOperator = Token::Ptr(new Token());
 								} else {
 									any()(q);
 									++n;
 
-									evalOpts.expectsOperator = nullptr;
+									expectsOperator = nullptr;
 								}
 							}
 							if (tk->data() != "(" && tk->data() != ")") {
-								evalOpts.expectsOperand = tk;
+								expectsOperand = tk;
 							}
 
 							break;
 						default:
-							if (n != 0 && evalOpts.expectsOperand == nullptr) {
+							if (n != 0 && expectsOperand == nullptr) {
 								break_ = true;
 
 								break;
@@ -34581,8 +34588,8 @@ private:
 							any()(q);
 							++n;
 
-							evalOpts.expectsOperator = tk;
-							evalOpts.expectsOperand = nullptr;
+							expectsOperator = tk;
+							expectsOperand = nullptr;
 
 							break;
 						}
