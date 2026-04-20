@@ -1475,6 +1475,31 @@ int Macro::compare(const Macro &other) const {
 	return 0;
 }
 
+PreprocessorBranch::PreprocessorBranch() {
+}
+
+PreprocessorBranch::PreprocessorBranch(bool alive, int pg, int begin, int end, int cond) :
+	isAlive(alive),
+	page(pg), beginLine(begin), endLine(end),
+	conditionLine(cond)
+{
+}
+
+bool PreprocessorBranch::valid(void) const {
+	if (page == -1 || beginLine == -1 || endLine == -1 || conditionLine == -1)
+		return false;
+
+	return true;
+}
+
+void PreprocessorBranch::clear(void) {
+	isAlive = true;
+	page = -1;
+	beginLine = -1;
+	endLine = -1;
+	conditionLine = -1;
+}
+
 FeatureUsages::FeatureUsages() {
 }
 
@@ -7692,6 +7717,9 @@ public:
 */
 
 class NodePreprocessorIf : public Node {
+private:
+	PreprocessorBranch::Array _branches;
+
 public:
 	NodePreprocessorIf() {
 	}
@@ -7699,6 +7727,14 @@ public:
 	}
 
 	NODE_TYPE(Types::PREPROCESSOR_IF)
+
+	virtual void options(const IDictionary::Ptr &options) override {
+		void* ptr = (void*)options->get("branches");
+		if (ptr) {
+			const PreprocessorBranch::Array* bptr = (const PreprocessorBranch::Array*)ptr;
+			_branches = *bptr;
+		}
+	}
 
 	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
 		// Prepare.
@@ -7719,25 +7755,29 @@ public:
 		if (!consume(Token::Types::PREPROCESSOR, "#if")) { THROW_INVALID_SYNTAX(onError); }
 
 		// Check the children.
-		(void)_children;
+		if (_children.empty()) { // No condition is satisfied.
+			return;
+		} else if (_children.size() == 1) { // One condition is satisfied.
+			// Do nothing.
+		} else { // Multiple conditions are satisfied?
+			GBBASIC_ASSERT(false && "Impossible.");
+
+			THROW_INVALID_SYNTAX(onError);
+		}
 
 		// Generate all the children.
 		Node::generate(bytes, context, onError);
-
-		// TODO: CONDITIONAL COMPILATION.
 	}
 
-	virtual bool get(Variant &ret, const std::string &msg, int argc, const Variant* argv) const override {
+	virtual bool get(Variant &ret, const std::string &msg, int /* argc */, const Variant* /* argv */) const override {
 		ret = nullptr;
 
-		if (msg == "...") {
-			(void)msg;
-			(void)argc;
-			(void)argv;
+		if (msg == "branches") {
+			const PreprocessorBranch::Array* bptr = &_branches;
 
-			// TODO: CONDITIONAL COMPILATION.
+			ret = (void*)bptr;
 
-			return false;
+			return true;
 		}
 
 		return false;
@@ -8646,7 +8686,7 @@ private:
 
 		// Convert to RPN.
 		const Evaluator::OptionsForRpn optionsForRpn(
-			Token::Types::OPERATOR | Token::Types::SYMBOL | Token::Types::BOOLEAN | Token::Types::NUMBER | Token::Types::STRING,
+			Token::Types::OPERATOR | Token::Types::SYMBOL | Token::Types::BOOLEAN | Token::Types::NUMBER | Token::Types::STRING | Token::Types::MATH,
 			[] (unsigned /* y */, const IToken::Ptr &/* tk */) -> void {
 				// Do nothing.
 			}
@@ -8693,6 +8733,11 @@ private:
 					}
 
 					return tk;
+				}
+				if (tk->is(Token::Types::MATH)) {
+					// Not supported yet.
+
+					return nullptr;
 				}
 
 				return nullptr;
@@ -31930,7 +31975,6 @@ private:
 
 			return tk;
 		};
-
 		auto between = [&] (int beginIdx, int endIdx) -> Token::Array {
 			Token::Array result;
 			for (int i = beginIdx; i <= endIdx; ++i) {
@@ -31943,9 +31987,33 @@ private:
 
 			return result;
 		};
+		auto prologue = [&] (int index, int* pg /* nullable */, int* ln /* nullable */, int* col /* nullable */) -> bool {
+			if (index >= (int)tokens.size())
+				return false;
+
+			const Token::Ptr &tk = tokens[index];
+			const TextLocation &loc = tk->begin();
+			if (pg) *pg = loc.page;
+			if (ln) *ln = loc.row;
+			if (col) *col = loc.column;
+
+			return true;
+		};
+		auto epilogue = [&] (int index, int* pg /* nullable */, int* ln /* nullable */, int* col /* nullable */) -> bool {
+			if (index >= (int)tokens.size())
+				return false;
+
+			const Token::Ptr &tk = tokens[index];
+			const TextLocation &loc = tk->end();
+			if (pg) *pg = loc.page;
+			if (ln) *ln = loc.row;
+			if (col) *col = loc.column;
+
+			return true;
+		};
 
 		auto inspect = [] (const Token::Ptr &tk) -> void {
-			(void)tk;
+			(void)tk; // For debugging.
 		};
 		auto backwardN = [&] (int n, Token::Types y, Variant d = nullptr) -> auto {
 			GBBASIC_ASSERT(n > 0 && "Wrong data.");
@@ -34527,8 +34595,10 @@ private:
 				State q = begin();
 				Node::Array children;
 				const int index = q.index;
-				ReadOnceVariant evaluated = nullptr;
-				bool everEvaluated = false;
+				PreprocessorBranch branch;
+				PreprocessorBranch::Array branches;
+				bool activatedBranch = false;
+				ReadOnceVariant conditionValue = nullptr;
 				NodeExpression::IdentifierChecker idIsVar = [&identifiers] (const std::string &name) -> bool {
 					return !!identifiers.find(name);
 				};
@@ -34540,6 +34610,7 @@ private:
 				{
 					// `#IF ...` directive.
 					if (!must(Token::Types::PREPROCESSOR, "#if")(q)) return false;
+					prologue(q.index, &branch.page, &branch.conditionLine, nullptr);
 
 					// Condition expression.
 					State q1 = begin();
@@ -34550,7 +34621,7 @@ private:
 
 					if (children_.size() != 1) return throwInvalidExpression(q1.index);
 					const Node::Ptr &expr = children_.front();
-					if (!expr->get(evaluated.ref(), "evaluated", &idIsVar, &idIsMacro)) return throwNonConstantExpression(q1.index); // Evaluate the expression.
+					if (!expr->get(conditionValue.ref(), "evaluated", &idIsVar, &idIsMacro)) return throwNonConstantExpression(q1.index); // Evaluate the expression.
 
 					q.index = q1.index;
 
@@ -34558,9 +34629,10 @@ private:
 					if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
 				}
 				{
-					// Body chunk of `#IF`.
+					// Branch chunk of `#IF`.
 					Node::Ptr do_(new NodeDo());
 					cursor = q.index;
+					prologue(cursor, nullptr, &branch.beginLine, nullptr);
 					for (EVER) {
 						const bool stp = stop(PREPROCESSOR_IF_STOPS, cursor, 2);
 						if (stp)
@@ -34569,13 +34641,21 @@ private:
 						Combinator::Options sub = opts;
 						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
 					}
-					if ((bool)evaluated) {
-						everEvaluated = true;
+					epilogue(cursor, nullptr, &branch.endLine, nullptr);
+					if ((bool)conditionValue) {
+						// Add the chunk of code for later pass.
+						// Mark this branch as alive.
+						branch.isAlive = true;
+						activatedBranch = true;
 						children.push_back(do_);
 					} else {
 						// Ignore the chunk of code of the condition wasn't satisfied.
+						// Mark this branch as dead.
+						branch.isAlive = false;
 					}
 					q.index = cursor;
+					branches.push_back(branch);
+					branch.clear();
 				}
 				for (EVER) {
 					// `#ELSE IF ...` directive(s).
@@ -34596,10 +34676,11 @@ private:
 
 						if (!LineNumber(q1, opts)) return throwInvalidSyntax(q.index);
 						if (pairedElseIf) {
-							q1.index += 2; // `#ELSE IF`.
+							next(q1); next(q1); // `#ELSE IF`.
 						} else {
-							++q1.index; // `#ELSEIF`.
+							next(q1); // `#ELSEIF`.
 						}
+						prologue(q1.index, &branch.page, &branch.conditionLine, nullptr);
 						if (forward(Token::Types::END_OF_LINE)(q1.index)) return throwInvalidSyntax(q1.index);
 
 						Node::Array children_;
@@ -34607,7 +34688,7 @@ private:
 
 						if (children_.size() != 1) return throwInvalidExpression(q1.index);
 						const Node::Ptr &expr = children_.front();
-						if (!expr->get(evaluated.ref(), "evaluated", &idIsVar, &idIsMacro)) return throwNonConstantExpression(q1.index); // Evaluate the expression.
+						if (!expr->get(conditionValue.ref(), "evaluated", &idIsVar, &idIsMacro)) return throwNonConstantExpression(q1.index); // Evaluate the expression.
 
 						q.index = q1.index;
 
@@ -34615,9 +34696,10 @@ private:
 						if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
 					}
 
-					// Body chunk of `#ELSE IF`.
+					// Branch chunk of `#ELSE IF`.
 					Node::Ptr do_(new NodeDo());
 					cursor = q.index;
+					prologue(cursor, nullptr, &branch.beginLine, nullptr);
 					for (EVER) {
 						const bool stp = stop(PREPROCESSOR_IF_STOPS, cursor, 2);
 						if (stp)
@@ -34626,13 +34708,21 @@ private:
 						Combinator::Options sub = opts;
 						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
 					}
-					if ((bool)evaluated && !everEvaluated) {
-						everEvaluated = true;
+					epilogue(cursor, nullptr, &branch.endLine, nullptr);
+					if ((bool)conditionValue && !activatedBranch) {
+						// Add the chunk of code for later pass.
+						// Mark this branch as alive.
+						branch.isAlive = true;
+						activatedBranch = true;
 						children.push_back(do_);
 					} else {
 						// Ignore the chunk of code of the condition wasn't satisfied.
+						// Mark this branch as dead.
+						branch.isAlive = false;
 					}
 					q.index = cursor;
+					branches.push_back(branch);
+					branch.clear();
 				}
 				if (forwardN(2, Token::Types::PREPROCESSOR, "#else")(q.index)) {
 					// `#ELSE` directive.
@@ -34641,16 +34731,18 @@ private:
 						q1.index = q.index;
 
 						if (!LineNumber(q1, opts)) return throwInvalidSyntax(q.index);
-						++q1.index; // `#ELSE`.
+						prologue(q1.index, &branch.page, &branch.conditionLine, nullptr);
+						next(q1); // `#ELSE`.
 						ignore(Token::Types::COMMENT)(q1);
 						if (!ignore(Token::Types::END_OF_LINE)(q1)) return throwInvalidSyntax(q1.index);
 
 						q.index = q1.index;
 					}
 
-					// Body chunk of `#ELSE`.
+					// Branch chunk of `#ELSE`.
 					Node::Ptr do_(new NodeDo());
 					cursor = q.index;
+					prologue(cursor, nullptr, &branch.beginLine, nullptr);
 					for (EVER) {
 						const bool stp = stop(PREPROCESSOR_IF_STOPS, cursor, 2);
 						if (stp)
@@ -34659,13 +34751,21 @@ private:
 						Combinator::Options sub = opts;
 						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
 					}
-					if (!everEvaluated) {
-						everEvaluated = true;
+					epilogue(cursor, nullptr, &branch.endLine, nullptr);
+					if (!activatedBranch) {
+						// Add the chunk of code for later pass.
+						// Mark this branch as alive.
+						branch.isAlive = true;
+						activatedBranch = true;
 						children.push_back(do_);
 					} else {
 						// Ignore the chunk of code of one of the previous condition was already satisfied.
+						// Mark this branch as dead.
+						branch.isAlive = false;
 					}
 					q.index = cursor;
+					branches.push_back(branch);
+					branch.clear();
 				}
 				{
 					// `#END IF ...` directive.
@@ -34680,7 +34780,7 @@ private:
 							->type(Token::Types::PREPROCESSOR)
 							->data("#endif");
 						q1.tokens.push_back(node);
-						q1.index += 2;
+						next(q1); next(q1); // `#END IF`.
 					} else if (!must(Token::Types::PREPROCESSOR, "#endif")(q1)) {
 						return throwInvalidSyntax(q1.index);
 					}
@@ -34689,7 +34789,6 @@ private:
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!must(Token::Types::END_OF_LINE)(q)) return false;
 
-				// TODO: CONDITIONAL COMPILATION.
 				Node::Ptr node = createNode(
 					"#if", "_",
 					{
@@ -34697,6 +34796,11 @@ private:
 					}
 				);
 				if (!node) return false;
+				node->options(
+					IDictionary::Ptr(Dictionary::create({
+						{ "branches", (void*)&branches }
+					}))
+				);
 				node->concat(q.tokens);
 				p->add(node);
 
@@ -35406,7 +35510,7 @@ private:
 							node
 								->type(Token::Types::KEYWORD)
 								->data("elseif");
-							q1.index += 2;
+							next(q1); next(q1);
 							elseif->concat(node); // `ELSE IF`.
 						} else {
 							elseif->concat(next(q1)); // `ELSEIF`.
@@ -35476,7 +35580,7 @@ private:
 							->type(Token::Types::KEYWORD)
 							->data("endif");
 						q1.tokens.push_back(node);
-						q1.index += 2;
+						next(q1); next(q1); // `END IF`.
 					} else if (!must(Token::Types::KEYWORD, "endif")(q1)) {
 						return throwInvalidSyntax(q1.index);
 					}
@@ -35773,7 +35877,7 @@ private:
 							->type(Token::Types::KEYWORD)
 							->data("endselect");
 						q1.tokens.push_back(node);
-						q1.index += 2;
+						next(q1); next(q1); // `END SELECT`.
 					} else if (!must(Token::Types::KEYWORD, "endselect")(q1)) {
 						return throwInvalidSyntax(q1.index);
 					}
@@ -36217,7 +36321,7 @@ private:
 							->type(Token::Types::KEYWORD)
 							->data("wend");
 						q1.tokens.push_back(node);
-						q1.index += 2;
+						next(q1); next(q1); // `END WHILE`.
 					} else if (!must(Token::Types::KEYWORD, "wend")(q1)) {
 						return false;
 					}
@@ -36287,7 +36391,7 @@ private:
 							->type(Token::Types::KEYWORD)
 							->data("wend");
 						q1.tokens.push_back(node);
-						q1.index += 2;
+						next(q1); next(q1); // `END WHILE`.
 					} else if (!must(Token::Types::KEYWORD, "wend")(q1)) {
 						return throwInvalidSyntax(q1.index);
 					}
@@ -36477,14 +36581,10 @@ private:
 				if (!caseSensitiveName.empty() && caseSensitiveName.back() == ':')
 					caseSensitiveName.pop_back();
 				dst->options(
-					IDictionary::Ptr(
-						Dictionary::create(
-							{
-								{ "name", name },
-								{ "case_sensitive_name", caseSensitiveName }
-							}
-						)
-					)
+					IDictionary::Ptr(Dictionary::create({
+						{ "name", name },
+						{ "case_sensitive_name", caseSensitiveName }
+					}))
 				);
 				dst->concat(q.tokens);
 				p->add(dst);
@@ -36828,7 +36928,7 @@ private:
 						->type(Token::Types::KEYWORD)
 						->data("begindo");
 					q.tokens.push_back(node);
-					q.index += 2;
+					next(q); next(q); // `BEGIN DO`.
 				} else if (!must(Token::Types::KEYWORD, "begindo")(q)) {
 					return false;
 				}
@@ -36860,7 +36960,7 @@ private:
 							->type(Token::Types::KEYWORD)
 							->data("enddo");
 						q1.tokens.push_back(node);
-						q1.index += 2;
+						next(q1); next(q1); // `END DO`.
 					} else if (!must(Token::Types::KEYWORD, "enddo")(q1)) {
 						return throwInvalidSyntax(q1.index);
 					}
@@ -36907,7 +37007,7 @@ private:
 						->type(Token::Types::KEYWORD)
 						->data("begindef");
 					q.tokens.push_back(node);
-					q.index += 2;
+					next(q); next(q); // `BEGIN DEF`.
 				} else if (!must(Token::Types::KEYWORD, "begindef")(q)) {
 					return false;
 				}
@@ -36953,7 +37053,7 @@ private:
 							->type(Token::Types::KEYWORD)
 							->data("enddef");
 						q1.tokens.push_back(node);
-						q1.index += 2;
+						next(q1); next(q1); // `END DEF`.
 					} else if (!must(Token::Types::KEYWORD, "enddef")(q1)) {
 						return throwInvalidSyntax(q1.index);
 					}

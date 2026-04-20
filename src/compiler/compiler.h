@@ -306,6 +306,25 @@ struct Macro { // FEAT: MACRO.
 };
 
 /**
+ * @brief Information of preprocessor branches.
+ */
+struct PreprocessorBranch {
+	typedef std::vector<PreprocessorBranch> Array;
+
+	bool isAlive = true;
+	int page = -1;
+	int beginLine = -1;
+	int endLine = -1;
+	int conditionLine = -1;
+
+	PreprocessorBranch();
+	PreprocessorBranch(bool alive, int pg, int begin, int end, int cond);
+
+	bool valid(void) const;
+	void clear(void);
+};
+
+/**
  * @brief Feature usages.
  */
 struct FeatureUsages {
