@@ -516,7 +516,6 @@ public:
 	GBBASIC_PROPERTY_READONLY(GBBASIC::StaticAnalyzer::Ptr, staticAnalyzer)
 	GBBASIC_PROPERTY(bool, needAnalyzing)
 	GBBASIC_FIELD(std::string, analyzedCodeInformation)
-	// TODO: CONDITIONAL COMPILATION.
 
 	GBBASIC_FIELD(AssetPageNames, assetPageNames)
 
@@ -969,13 +968,13 @@ public:
 	bool analyzing(void) const;
 	bool analyze(bool force);
 	void clearAnalyzingResult(void);
-	void clearLanguageDefinition(bool clearRevision);
+	void clearAnalyzedCodeInformationInEditors(bool clearRevision);
 	unsigned getLanguageDefinitionRevision(void) const;
-	const GBBASIC::Macro::List* getMacroDefinitions(void);
-	const Text::Array* getDestinitions(void);
+	const GBBASIC::Macro::List* getMacroDefinitions(void) const;
+	const Text::Array* getDestinitions(void) const;
 	void clearAnalyzedCodeInformation(void);
 	const std::string &getAnalyzedCodeInformation(void);
-	// TODO: CONDITIONAL COMPILATION.
+	const GBBASIC::PreprocessorBranch::Array* getPreprocessorBranches(int page) const;
 	void clearAssetPageNames(void);
 	void clearFontPageNames(void);
 	const Text::Array &getFontPageNames(void);

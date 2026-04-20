@@ -19,6 +19,67 @@
 
 /*
 ** {===========================================================================
+** Utilities
+*/
+
+class DeadCodeRange {
+private:
+	typedef std::pair<int, int> CodeRange;
+	typedef std::vector<CodeRange> CodeRanges;
+
+private:
+	CodeRanges _mergedRanges;
+
+public:
+	DeadCodeRange() {
+	}
+	explicit DeadCodeRange(const GBBASIC::PreprocessorBranch::Array &branches) {
+		CodeRanges ranges;
+		for (const GBBASIC::PreprocessorBranch &branch : branches) {
+			if (!branch.isAlive && branch.valid()) {
+				const int begin = branch.beginLine;
+				const int end = Math::max(branch.beginLine, branch.endLine - 1);
+				ranges.emplace_back(begin, end);
+			}
+		}
+		if (ranges.empty())
+			return;
+
+		std::sort(ranges.begin(), ranges.end());
+		_mergedRanges.push_back(ranges[0]);
+		for (int i = 1; i < (int)ranges.size(); ++i) {
+			CodeRange &last = _mergedRanges.back();
+			if (ranges[i].first <= last.second + 1)
+				last.second = std::max(last.second, ranges[i].second);
+			else
+				_mergedRanges.push_back(ranges[i]);
+		}
+	}
+
+	bool isDeadLine(int ln) const {
+		CodeRanges::const_iterator it = std::upper_bound(
+			_mergedRanges.begin(), _mergedRanges.end(), ln,
+			[] (int value, const CodeRange &range) {
+				return value < range.first;
+			}
+		);
+		if (it == _mergedRanges.begin())
+			return false;
+
+		--it;
+
+		return ln <= it->second;
+	}
+
+	void clear(void) {
+		_mergedRanges.clear();
+	}
+};
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Code editor
 */
 
@@ -84,15 +145,17 @@ private:
 		}
 	} _cache;
 	struct {
+		DeadCodeRange deadCodeRange;
 		unsigned revision = 0;
 		bool filled = false;
 
 		void clear(bool clearRevision) {
+			deadCodeRange.clear();
 			if (clearRevision)
 				revision = 0;
 			filled = false;
 		}
-	} _inCodeDefinitions;
+	} _analyzedCodeInformations;
 
 	struct Tools {
 		typedef std::function<void(void)> GlobalSearchingHandler;
@@ -245,6 +308,8 @@ public:
 		post(Editable::SET_COLUMN_INDICATOR, (Int)settings.mainColumnIndicator);
 		post(Editable::SET_SHOW_SPACES, (Int)settings.mainShowWhiteSpaces);
 
+		SetIsDeadLineHandler(std::bind(&EditorCodeImpl::isDeadLine, this, std::placeholders::_1));
+
 		SetColorizedHandler(std::bind(&EditorCodeImpl::colorized, this, std::placeholders::_1));
 
 		SetModifiedHandler(std::bind(&EditorCodeImpl::modified, this, wnd, rnd, ws, std::placeholders::_1));
@@ -262,6 +327,8 @@ public:
 
 		fprintf(stdout, "Code editor closed: #%d.\n", _index);
 
+		SetIsDeadLineHandler(nullptr);
+
 		SetColorizedHandler(nullptr);
 
 		SetModifiedHandler(nullptr);
@@ -277,7 +344,7 @@ public:
 		_status.clear();
 		_statusWidth = 0.0f;
 		_cache.clear();
-		_inCodeDefinitions.clear(true);
+		_analyzedCodeInformations.clear(true);
 
 		_tools.clear();
 		_tools.search = nullptr;
@@ -747,15 +814,15 @@ public:
 			}
 
 			return Variant(true);
-		case CLEAR_ERRORS:
-			ClearErrorMarkers();
-
-			return Variant(true);
-		case CLEAR_LANGUAGE_DEFINITION: {
+		case CLEAR_ANALYZED_CODE_INFORMATIONS: {
 				const bool clearRevision = unpack<bool>(argc, argv, 0, false);
 
-				_inCodeDefinitions.clear(clearRevision);
+				_analyzedCodeInformations.clear(clearRevision);
 			}
+
+			return Variant(true);
+		case CLEAR_ERRORS:
+			ClearErrorMarkers();
 
 			return Variant(true);
 		case UPDATE_INDEX: {
@@ -798,7 +865,7 @@ public:
 	) override {
 		ImGuiStyle &style = ImGui::GetStyle();
 
-		touchLanguageDefinition(ws);
+		touchAnalyzedCodeInformations(ws);
 
 		shortcuts(wnd, rnd, ws);
 
@@ -1479,6 +1546,9 @@ private:
 		}
 	}
 
+	bool isDeadLine(int ln) {
+		return _analyzedCodeInformations.deadCodeRange.isDeadLine(ln);
+	}
 	void colorized(bool) {
 		_tokens.filled = false;
 	}
@@ -1607,24 +1677,31 @@ private:
 		return result;
 	}
 
-	void touchLanguageDefinition(Workspace* ws) {
+	void touchAnalyzedCodeInformations(Workspace* ws) {
 		// Prepare.
-		if (_inCodeDefinitions.filled)
+		if (_analyzedCodeInformations.filled)
 			return;
 
 		// Ignore if not changed.
 		const unsigned revision = ws->getLanguageDefinitionRevision();
-		if (_inCodeDefinitions.revision == revision) {
-			_inCodeDefinitions.filled = true;
+		if (_analyzedCodeInformations.revision == revision) {
+			_analyzedCodeInformations.filled = true;
 
 			return;
 		}
-		_inCodeDefinitions.revision = revision;
+		_analyzedCodeInformations.revision = revision;
 
 		// Initialize with default definition.
 		const GBBASIC::Kernel::Ptr &krnl = ws->activeKernel();
-		// langDef.Tokenize = std::bind(...); // TODO: CONDITIONAL COMPILATION.
 		SetLanguageDefinition(EditorCodeLanguageDefinition::languageDefinition(krnl ? krnl->path().c_str() : nullptr));
+
+		// Initialize with conditional compilation branches.
+		const GBBASIC::PreprocessorBranch::Array* preprocessorBranches = ws->getPreprocessorBranches(_index);
+		if (preprocessorBranches && !preprocessorBranches->empty()) {
+			_analyzedCodeInformations.deadCodeRange = DeadCodeRange(*preprocessorBranches);
+
+			Colorize();
+		}
 
 		// Initialize with macros.
 		Text::Set added;
@@ -1660,7 +1737,7 @@ private:
 		}
 
 		// Finish.
-		_inCodeDefinitions.filled = true;
+		_analyzedCodeInformations.filled = true;
 	}
 
 	static EditorCodeImpl* openCodeEditorGlobally(Window* wnd, Renderer* rnd, Workspace* ws, Project* prj, int index, bool colorize) {

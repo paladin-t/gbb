@@ -1485,6 +1485,59 @@ PreprocessorBranch::PreprocessorBranch(bool alive, int pg, int begin, int end, i
 {
 }
 
+bool PreprocessorBranch::operator == (const PreprocessorBranch &other) const {
+	return compare(other) == 0;
+}
+
+bool PreprocessorBranch::operator != (const PreprocessorBranch &other) const {
+	return compare(other) != 0;
+}
+
+bool PreprocessorBranch::operator < (const PreprocessorBranch &other) const {
+	return compare(other) < 0;
+}
+
+bool PreprocessorBranch::operator <= (const PreprocessorBranch &other) const {
+	return compare(other) <= 0;
+}
+
+bool PreprocessorBranch::operator > (const PreprocessorBranch &other) const {
+	return compare(other) > 0;
+}
+
+bool PreprocessorBranch::operator >= (const PreprocessorBranch &other) const {
+	return compare(other) >= 0;
+}
+
+int PreprocessorBranch::compare(const PreprocessorBranch &other) const {
+	if (!isAlive && other.isAlive)
+		return -1;
+	else if (isAlive && !other.isAlive)
+		return 1;
+
+	if (page < other.page)
+		return -1;
+	else if (page > other.page)
+		return 1;
+
+	if (beginLine < other.beginLine)
+		return -1;
+	else if (beginLine > other.beginLine)
+		return 1;
+
+	if (endLine < other.endLine)
+		return -1;
+	else if (endLine > other.endLine)
+		return 1;
+
+	if (conditionLine < other.conditionLine)
+		return -1;
+	else if (conditionLine > other.conditionLine)
+		return 1;
+
+	return 0;
+}
+
 bool PreprocessorBranch::valid(void) const {
 	if (page == -1 || beginLine == -1 || endLine == -1 || conditionLine == -1)
 		return false;

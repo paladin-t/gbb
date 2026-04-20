@@ -3391,8 +3391,15 @@ void CodeEditor::RenderText(int ln, int &aOffset, const ImVec2 &aPosition, ImU32
 	ImDrawList* drawList = GetWindowDrawList();
 
 	if (IsDeadLineHandler && IsDeadLineHandler(ln)) {
-		aColor &= 0xffffffff & ~(0xff << IM_COL32_A_SHIFT);
-		aColor |= 0x90 << IM_COL32_A_SHIFT;
+		/*aColor &= 0xffffffff & ~(0xff << IM_COL32_A_SHIFT);
+		aColor |= 0x90 << IM_COL32_A_SHIFT;*/
+		ImVec4 col = ColorConvertU32ToFloat4(aColor);
+		float h, s, v;
+		ColorConvertRGBtoHSV(col.x, col.y, col.z, h, s, v);
+		s *= 0.3f;
+		ColorConvertHSVtoRGB(h, s, v, col.x, col.y, col.z);
+		col.w = 0.8f;
+		aColor = ColorConvertFloat4ToU32(col);
 	}
 
 	const bool procSpaces =

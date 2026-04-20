@@ -111,7 +111,12 @@ public:
 
 				std::swap(_ramAllocations, result->ramAllocations);
 
-				std::swap(_pagedPreprocessorBranches, result->pagedPreprocessorBranches);
+				if (!::equals(_pagedPreprocessorBranches, result->pagedPreprocessorBranches)) {
+					_pagedPreprocessorBranches.clear();
+					std::swap(_pagedPreprocessorBranches, result->pagedPreprocessorBranches);
+					_pagedPreprocessorBranches.shrink_to_fit();
+					diff |= true;
+				}
 
 				std::swap(_codePageNames, result->codePageNames);
 				_codePageNames.shrink_to_fit();

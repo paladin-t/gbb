@@ -320,6 +320,15 @@ struct PreprocessorBranch {
 	PreprocessorBranch();
 	PreprocessorBranch(bool alive, int pg, int begin, int end, int cond);
 
+	bool operator == (const PreprocessorBranch &other) const;
+	bool operator != (const PreprocessorBranch &other) const;
+	bool operator < (const PreprocessorBranch &other) const;
+	bool operator <= (const PreprocessorBranch &other) const;
+	bool operator > (const PreprocessorBranch &other) const;
+	bool operator >= (const PreprocessorBranch &other) const;
+
+	int compare(const PreprocessorBranch &other) const;
+
 	bool valid(void) const;
 	void clear(void);
 };
