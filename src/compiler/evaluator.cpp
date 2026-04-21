@@ -556,11 +556,11 @@ bool Evaluator::fold(IToken::Array* ret, const IToken::Array &rpn, const Options
 			if (onError)
 				onError("Too few arguments", tk);
 
-			return nullptr;
+			return Maybe<Variant>();
 		}
 
-		#define FUNC1(RET, FUNC) if (options.##FUNC) { (RET) = options.##FUNC(getInt16(childVals[0])); } else { return Maybe<Variant>(); }
-		#define FUNC2(RET, FUNC) if (options.##FUNC) { (RET) = options.##FUNC(getInt16(childVals[0]), getInt16(childVals[1])); } else { return Maybe<Variant>(); }
+		#define FUNC1(RET, FUNC) if (options.FUNC) { (RET) = options.FUNC(getInt16(childVals[0])); } else { return Maybe<Variant>(); }
+		#define FUNC2(RET, FUNC) if (options.FUNC) { (RET) = options.FUNC(getInt16(childVals[0]), getInt16(childVals[1])); } else { return Maybe<Variant>(); }
 		Int16 result = 0;
 		const Op::Types y = Op::typeOf((std::string)tk->data());
 		if (!acceptFunctionLike && isFunctionLike(y)) {
@@ -741,8 +741,8 @@ bool Evaluator::calc(Variant* ret, const IToken::Array &rpn, const OptionsForCal
 				stk.pop();
 			}
 
-			#define FUNC1(RET, FUNC) if (options.##FUNC) { (RET) = options.##FUNC(getInt16(childVals[0])); } else { raiseUnsupportedOperator(resolved, onError); return false; }
-			#define FUNC2(RET, FUNC) if (options.##FUNC) { (RET) = options.##FUNC(getInt16(childVals[0]), getInt16(childVals[1])); } else { raiseUnsupportedOperator(resolved, onError); return false; }
+			#define FUNC1(RET, FUNC) if (options.FUNC) { (RET) = options.FUNC(getInt16(childVals[0])); } else { raiseUnsupportedOperator(resolved, onError); return false; }
+			#define FUNC2(RET, FUNC) if (options.FUNC) { (RET) = options.FUNC(getInt16(childVals[0]), getInt16(childVals[1])); } else { raiseUnsupportedOperator(resolved, onError); return false; }
 			auto raiseUnsupportedOperator = [] (const IToken::Ptr &resolved, ErrorHandler onError) -> void {
 				if (onError) {
 					const std::string msg = "Unsupported operator {0}";

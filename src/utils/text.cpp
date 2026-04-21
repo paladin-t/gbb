@@ -808,8 +808,8 @@ std::string Text::concatMacros(const std::string &l, const std::string &r) {
 	std::string left = l;
 	std::string right = r;
 
-	int m = Text::count(right, "'");
-	int n = Text::count(right, "\\\"");
+	size_t m = Text::count(right, "'");
+	size_t n = Text::count(right, "\\\"");
 	if (!right.empty() && (m == 0) && (n > 0) && (n % 2 == 0))
 		right = Text::replace(right, "\\\"", "'");
 

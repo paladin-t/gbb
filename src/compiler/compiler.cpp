@@ -34720,7 +34720,7 @@ private:
 				PreprocessorBranch branch;
 				PreprocessorBranch::Array branches;
 				bool activatedBranch = false;
-				ReadOnceVariant conditionValue = nullptr;
+				ReadOnceVariant conditionValue = Variant(nullptr);
 				NodeExpression::IdentifierChecker idIsVar = [&identifiers] (const std::string &name) -> bool {
 					return !!identifiers.find(name);
 				};
@@ -34971,7 +34971,6 @@ private:
 				State q = begin();
 				Token::Ptr id = nullptr;
 				std::string txt;
-				const int index = q.index;
 
 				if (!must(Token::Types::INTEGER)(q)) return false;
 				if (!must(Token::Types::PREPROCESSOR, "#warn")(q)) return false;
@@ -35001,7 +35000,6 @@ private:
 				State q = begin();
 				Token::Ptr id = nullptr;
 				std::string txt;
-				const int index = q.index;
 
 				if (!must(Token::Types::INTEGER)(q)) return false;
 				if (!must(Token::Types::PREPROCESSOR, "#error")(q)) return false;
