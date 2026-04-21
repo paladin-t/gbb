@@ -800,6 +800,38 @@ std::string Text::sanitizeFilename(const std::string &str, char replacementChar)
 	return result;
 }
 
+std::string Text::sanitizeProperty(const std::string &str) {
+	return Text::replace(str, "'", "\"");
+}
+
+std::string Text::concatMacros(const std::string &l, const std::string &r) {
+	std::string left = l;
+	std::string right = r;
+
+	int m = Text::count(right, "'");
+	int n = Text::count(right, "\\\"");
+	if (!right.empty() && (m == 0) && (n > 0) && (n % 2 == 0))
+		right = Text::replace(right, "\\\"", "'");
+
+	m = Text::count(right, "'");
+	n = Text::count(right, "\"");
+	if (!right.empty() && (m == 0) && (n > 0) && (n % 2 == 0))
+		right = Text::replace(right, "\"", "'");
+
+	m = Text::count(right, "\"");
+	n = Text::count(right, "'");
+	if (!right.empty() && (m == 0) && (n > 0) && (n % 2 == 0))
+		left = Text::replace(left, "\"", "'");
+
+	if (!left.empty() && left.back() != ',' && !right.empty())
+		left.push_back(',');
+
+	const std::string result =
+		left + right;
+
+	return result;
+}
+
 std::string Text::remove(const std::string &str, const std::string &charsToRemove) {
 	std::string result = str;
 	for (char ch : charsToRemove)
@@ -870,6 +902,9 @@ std::string Text::padRight(const std::string &txt, int width, char fill) {
 }
 
 std::string Text::replace(const std::string &str, const std::string &from, const std::string &to, bool all) {
+	if (str.empty())
+		return str;
+
 	if (from.empty())
 		return str;
 
@@ -1214,6 +1249,20 @@ size_t Text::count(const std::string &str, const char what) {
 		if (*tmp == what)
 			++result;
 		++tmp;
+	}
+
+	return result;
+}
+
+size_t Text::count(const std::string &str, const std::string &what) {
+	if (what.empty())
+		return 0;
+
+	size_t result = 0;
+	size_t pos = 0;
+	while ((pos = str.find(what, pos)) != std::string::npos) {
+		++result;
+		pos += what.length();
 	}
 
 	return result;

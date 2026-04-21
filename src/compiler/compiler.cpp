@@ -42084,7 +42084,8 @@ bool compile(Program &program, const Options &options) {
 		{ "CARTRIDGE_HAS_RTC",      rtc       ? 1 : 0 }
 	};
 	Parser::Macros preDefinedMacros;
-	const Text::Array macroItems = Text::split(macros, ',', '"');
+	const char quote = Text::indexOf(macros, '"') != std::string::npos ? '"' : '\'';
+	const Text::Array macroItems = Text::split(macros, ',', quote);
 	for (std::string macroItem : macroItems) {
 		macroItem = Text::trim(macroItem);
 		if (macroItem.empty()) {
@@ -42138,8 +42139,8 @@ bool compile(Program &program, const Options &options) {
 
 			continue;
 		}
-		if (val.length() >= 4 && Text::startsWith(val, "\\\"", false) && Text::endsWith(val, "\\\"", false)) {
-			const std::string str = val.substr(2, val.length() - 4);
+		if (val.length() >= 2 && Text::startsWith(val, "\"", false) && Text::endsWith(val, "\"", false)) {
+			const std::string str = val.substr(1, val.length() - 2);
 			preDefinedMacros[key] = str;
 
 			continue;

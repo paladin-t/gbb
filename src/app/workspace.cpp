@@ -4143,6 +4143,14 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 			prj->hasRtc()           != prj_->hasRtc()        ||
 			prj->preDefinedMacros() != prj_->preDefinedMacros();
 
+		if (!prj_->title().empty())
+			prj_->title(Text::sanitizeProperty(prj_->title()));
+		prj_->description(Text::sanitizeProperty(prj_->description()));
+		prj_->author(Text::sanitizeProperty(prj_->author()));
+		prj_->genre(Text::sanitizeProperty(prj_->genre()));
+		prj_->version(Text::sanitizeProperty(prj_->version()));
+		prj_->url(Text::sanitizeProperty(prj_->url()));
+
 		// Apply the changes.
 		const long long now = DateTime::now();
 		if (!prj_->title().empty())
@@ -5677,10 +5685,7 @@ void Workspace::compile(
 		if (vmOpt != arguments.end())
 			options.ast = astOpt->second;
 
-		if (!definedMacros.empty() && definedMacros.back() != ',' && !options.macros.empty())
-			definedMacros.push_back(',');
-		options.macros =                    // Concat the macro definitions.
-			definedMacros + options.macros; // Macros from arguments have higher priority.
+		options.macros = Text::concatMacros(definedMacros, options.macros); // Macros from arguments have higher priority.
 
 		// Initialize the cartridge options.
 		if (project) {

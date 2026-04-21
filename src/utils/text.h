@@ -136,6 +136,8 @@ public:
 	static std::string snakeToPascal(const std::string &str);
 
 	static std::string sanitizeFilename(const std::string &str, char replacementChar = '_');
+	static std::string sanitizeProperty(const std::string &str);
+	static std::string concatMacros(const std::string &l, const std::string &r);
 
 	static std::string remove(const std::string &str, const std::string &charsToRemove);
 	static std::string trim(const std::string &str, const std::string &delims = " \f\n\r\t\v");
@@ -167,6 +169,7 @@ public:
 	static bool endsWith(const std::string &str, const std::string &what, bool caseInsensitive);
 	static bool matchWildcard(const std::string &str, const char* wildcard, bool caseInsensitive);
 	static size_t count(const std::string &str, const char what);
+	static size_t count(const std::string &str, const std::string &what);
 
 	static const char* styleOf(const std::string &str);
 	/**
