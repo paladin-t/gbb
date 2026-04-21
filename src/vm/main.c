@@ -14,7 +14,7 @@ extern const UINT8 BOOTSTRAP[];
 BANKREF_EXTERN(BOOTSTRAP)
 
 inline void setup(void) {
-    script_runner_init(TRUE);
+    script_runner_init();
     script_execute(BANK(BOOTSTRAP), BOOTSTRAP, NULL, 0);
 }
 

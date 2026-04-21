@@ -97,7 +97,6 @@ __endasm;
 #   error "Not implemented."
 #endif /* __SDCC && NINTENDO */
 
-    for (UINT8 i = 4; i != 0; --i) vsync(); // This delay is required for PAL SNES.
     const BOOLEAN IS_SGB = sgb_check();
     const BOOLEAN IS_CGB = ((!IS_SGB) && (_cpu == CGB_TYPE) && (*(UINT8 *)DEVICE_TYPE_ADDRESS & 0x80)); // Both CGB + SGB modes at once are not supported.
     const BOOLEAN IS_GBA = (_is_GBA && IS_CGB); // The GBA features are only available together with CGB.

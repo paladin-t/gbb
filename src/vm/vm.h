@@ -117,8 +117,8 @@ typedef struct SCRIPT_CTX {
 // The shared context memory.
 extern UINT16 script_memory[VM_HEAP_SIZE + (VM_MAX_CONTEXTS * VM_CONTEXT_STACK_SIZE)];
 
-// The contexts for executing scripts. The `script_runner_init(...)`,
-// `script_execute(...)`, `script_runner_update(...)` functions manipulate these
+// The contexts for executing scripts. The `script_runner_init`,
+// `script_execute`, `script_runner_update` functions manipulate these
 // contexts.
 extern SCRIPT_CTX CTXS[VM_MAX_CONTEXTS];
 extern SCRIPT_CTX * first_ctx, * free_ctxs;
@@ -251,7 +251,7 @@ void vm_fill(SCRIPT_CTX * THIS, INT16 idx, INT16 value, INT16 count) OLDCALL BAN
 BOOLEAN VM_STEP(SCRIPT_CTX * CTX) NAKED NONBANKED STEP_FUNC_ATTR;
 
 // Initializes the script runner contexts.
-void script_runner_init(BOOLEAN reset) BANKED;
+void script_runner_init(void) BANKED;
 // Executes a script in the new allocated context.
 SCRIPT_CTX * script_execute(UINT8 bank, UINT8 * pc, UINT16 * handle, UINT8 nargs, ...) BANKED;
 // Terminates a script by ID; returns non-zero if no such thread is running.
