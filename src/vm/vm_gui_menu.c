@@ -32,13 +32,13 @@ void gui_menu_update(void) BANKED {
     BOOLEAN entered = FALSE;
     BOOLEAN left = FALSE;
     do {
-        if (!(device_type & DEVICE_TYPE_GBB)) // Ignore touch handling if extension features are not supported.
+        if (!(device_type & DEVICE_TYPE_WITH_TOUCH_SUPPORT)) // Ignore touch handling if touch feature is not supported.
             break;
 
         const UINT8 margin_y = GUI_MARGIN_Y(gui_margin);
         const UINT8 line_height = GUI_MENU_LINE_HEIGHT;
-        UINT8 x = *(UINT8 *)TOUCH_X_REG;
-        UINT8 y = *(UINT8 *)TOUCH_Y_REG;
+        UINT8 x = INPUT_TOUCH_X;
+        UINT8 y = INPUT_TOUCH_Y;
         if (GUI_CATEGORY_LAYER(gui_widget_category) == GRAPHICS_LAYER_WINDOW) {
             x -= WX_REG; x += 7;
             y -= WY_REG;

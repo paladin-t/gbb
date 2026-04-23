@@ -16,10 +16,10 @@ BANKREF(VM_GUI_LABEL)
 #define GUI_LABEL_IS_TOUCH_PRESSED   (gui_label_touch_states & 0x0F)
 #define GUI_LABEL_IS_TOUCH_DOWN      ((gui_label_touch_states & 0x0F) & ~(gui_label_touch_states >> 4))
 #define GUI_LABEL_IS_TOUCH_UP        (~(gui_label_touch_states & 0x0F) & (gui_label_touch_states >> 4))
-#define GUI_LABEL_ACCEPT_TOUCH       do { gui_label_touch_states = (gui_label_touch_states << 4) | *(UINT8 *)TOUCH_PRESSED_REG; } while (0)
+#define GUI_LABEL_ACCEPT_TOUCH       do { gui_label_touch_states = (gui_label_touch_states << 4) | INPUT_TOUCH_PRESSED; } while (0)
 
 INLINE BOOLEAN gui_label_btn_down(void) {
-    const UINT8 j = joypad();
+    const UINT8 j = INPUT_JOYPAD;
     const UINT8 ret = (j & (J_A)) & ~(gui_button_previous & (J_A));
     gui_button_previous = j;
 
@@ -28,7 +28,7 @@ INLINE BOOLEAN gui_label_btn_down(void) {
 
 #if GUI_IMPLEMENT_TOUCH_HANDLING_ENABLED
     do {
-        if (!(device_type & DEVICE_TYPE_GBB)) // Ignore touch handling if extension features are not supported.
+        if (!(device_type & DEVICE_TYPE_WITH_TOUCH_SUPPORT)) // Ignore touch handling if touch feature is not supported.
             break;
 
         GUI_LABEL_ACCEPT_TOUCH;
@@ -37,8 +37,8 @@ INLINE BOOLEAN gui_label_btn_down(void) {
             break;
 
 #   if GUI_IMPLEMENT_LABEL_ACCURATE_TOUCH_HANDLING_ENABLED
-        UINT8 x = *(UINT8 *)TOUCH_X_REG;
-        UINT8 y = *(UINT8 *)TOUCH_Y_REG;
+        UINT8 x = INPUT_TOUCH_X;
+        UINT8 y = INPUT_TOUCH_Y;
         if (GUI_CATEGORY_LAYER(gui_widget_category) == GRAPHICS_LAYER_WINDOW) {
             x -= WX_REG; x += 7;
             y -= WY_REG;

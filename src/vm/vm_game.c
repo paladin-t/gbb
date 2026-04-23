@@ -5,7 +5,10 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
+#include "utils/sgb_mouse.h"
+
 #include "vm_actor.h"
+#include "vm_device.h"
 #include "vm_effects.h"
 #include "vm_game.h"
 #include "vm_gui.h"
@@ -23,10 +26,30 @@ void game_init(void) BANKED {
 
 STATIC void game_update_modules(void) {
     // Update the input states.
+#if defined USE_SGB_MOUSE
+    if (device_type & DEVICE_TYPE_SGB) { // Use SGB features if available.
+        joypad_ex(&joypads);
+        mouse_buttons = 0;
+        sgb_mouse_input_update();
+        input_touch_pressed = mouse_buttons;
+        if (mouse_x_move < 0)      input_touch_position_x -= MIN(DIV2(-mouse_x_move), input_touch_position_x);
+        else if (mouse_x_move > 0) input_touch_position_x += MIN(DIV2( mouse_x_move), (DEVICE_SCREEN_PX_WIDTH - 1u) - input_touch_position_x);
+        if (mouse_y_move < 0)      input_touch_position_y -= MIN(DIV2(-mouse_y_move), input_touch_position_y);
+        else if (mouse_y_move > 0) input_touch_position_y += MIN(DIV2( mouse_y_move), (DEVICE_SCREEN_PX_HEIGHT - 1u) - input_touch_position_y);
+    } else { // Fall to use regular features, and or extension features.
+        joypads.joy0 = joypad();
+        if (device_type & DEVICE_TYPE_GBB) { // Ignore touch handling if extension features are not supported.
+            input_touch_position_x = *(UINT8 *)TOUCH_X_REG;
+            input_touch_position_y = *(UINT8 *)TOUCH_Y_REG;
+            input_touch_pressed    = *(UINT8 *)TOUCH_PRESSED_REG;
+        }
+    }
+#endif /* USE_SGB_MOUSE */
+
     INPUT_ACCEPT_BTN;
     game_has_input = input_button_previous ^ input_button_pressed; // Reset the input data, and set if some button's state has changed.
     game_has_input |= input_button_pressed; // Some button has been pressed.
-    if (device_type & DEVICE_TYPE_GBB) {
+    if (device_type & DEVICE_TYPE_WITH_TOUCH_SUPPORT) {
         INPUT_ACCEPT_TOUCH;
         game_has_input |= input_touch_state; // Touched.
     }
@@ -131,7 +154,7 @@ INLINE void game_poll_input_for_auto(void) {
         case INPUT_HANDLER_BTNU_SELECT:   if (INPUT_IS_BTN_UP(J_SELECT))                   handler = &input_handlers[input_handler_cursor]; break;
         case INPUT_HANDLER_BTNU_START:    if (INPUT_IS_BTN_UP(J_START))                    handler = &input_handlers[input_handler_cursor]; break;
         case INPUT_HANDLER_BTNU_ANY:      if (INPUT_IS_BTN_UP(0xFF))                       handler = &input_handlers[input_handler_cursor];
-            if (!(device_type & DEVICE_TYPE_GBB)) // Ignore touch handling if extension features are not supported.
+            if (!(device_type & DEVICE_TYPE_WITH_TOUCH_SUPPORT)) // Ignore touch handling if touch feature is not supported.
                 input_handler_cursor = input_handler_count;
 
             break;
@@ -159,8 +182,8 @@ INLINE void game_poll_input_for_auto(void) {
                 // Push the arguments if necessary.
                 if (is_touch) {
                     *(ctx->stack_ptr++) = is_touch;
-                    *(ctx->stack_ptr++) = *(UINT8 *)TOUCH_Y_REG;
-                    *(ctx->stack_ptr++) = *(UINT8 *)TOUCH_X_REG;
+                    *(ctx->stack_ptr++) = INPUT_TOUCH_Y;
+                    *(ctx->stack_ptr++) = INPUT_TOUCH_X;
                 }
 
                 break;
@@ -228,7 +251,7 @@ INLINE BOOLEAN game_poll_input_for_script(SCRIPT_CTX * THIS) {
         case INPUT_HANDLER_BTNU_SELECT:   if (INPUT_IS_BTN_UP(J_SELECT))                   handler = &input_handlers[input_handler_cursor]; break;
         case INPUT_HANDLER_BTNU_START:    if (INPUT_IS_BTN_UP(J_START))                    handler = &input_handlers[input_handler_cursor]; break;
         case INPUT_HANDLER_BTNU_ANY:      if (INPUT_IS_BTN_UP(0xFF))                       handler = &input_handlers[input_handler_cursor];
-            if (!(device_type & DEVICE_TYPE_GBB)) // Ignore touch handling if extension features are not supported.
+            if (!(device_type & DEVICE_TYPE_WITH_TOUCH_SUPPORT)) // Ignore touch handling if touch feature is not supported.
                 input_handler_cursor = input_handler_count;
 
             break;
@@ -266,8 +289,8 @@ INLINE BOOLEAN game_poll_input_for_script(SCRIPT_CTX * THIS) {
                 // Push the arguments if necessary.
                 if (is_touch) {
                     *(THIS->stack_ptr++) = is_touch;
-                    *(THIS->stack_ptr++) = *(UINT8 *)TOUCH_Y_REG;
-                    *(THIS->stack_ptr++) = *(UINT8 *)TOUCH_X_REG;
+                    *(THIS->stack_ptr++) = INPUT_TOUCH_Y;
+                    *(THIS->stack_ptr++) = INPUT_TOUCH_X;
                 }
 
                 break;
@@ -279,8 +302,8 @@ INLINE BOOLEAN game_poll_input_for_script(SCRIPT_CTX * THIS) {
                 // Push the arguments if necessary.
                 if (is_touch) {
                     *(THIS->stack_ptr++) = is_touch;
-                    *(THIS->stack_ptr++) = *(UINT8 *)TOUCH_Y_REG;
-                    *(THIS->stack_ptr++) = *(UINT8 *)TOUCH_X_REG;
+                    *(THIS->stack_ptr++) = INPUT_TOUCH_Y;
+                    *(THIS->stack_ptr++) = INPUT_TOUCH_X;
                 }
 
                 break;
@@ -297,8 +320,8 @@ INLINE BOOLEAN game_poll_input_for_script(SCRIPT_CTX * THIS) {
                 // Push the arguments if necessary.
                 if (is_touch) {
                     *(ctx->stack_ptr++) = is_touch;
-                    *(ctx->stack_ptr++) = *(UINT8 *)TOUCH_Y_REG;
-                    *(ctx->stack_ptr++) = *(UINT8 *)TOUCH_X_REG;
+                    *(ctx->stack_ptr++) = INPUT_TOUCH_Y;
+                    *(ctx->stack_ptr++) = INPUT_TOUCH_X;
                 }
 
                 break;

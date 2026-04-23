@@ -7,8 +7,10 @@
 
 #include <string.h>
 
+#include "utils/sgb_mouse.h"
 #include "utils/utils.h"
 
+#include "vm_device.h"
 #include "vm_input.h"
 
 BANKREF(VM_INPUT)
@@ -19,6 +21,12 @@ UINT8 input_touch_state;
 input_handler_t input_handlers[INPUT_HANDLER_COUNT];
 UINT8 input_handler_count;
 UINT8 input_handler_cursor;
+
+#if defined USE_SGB_MOUSE
+UINT8 input_touch_position_x;
+UINT8 input_touch_position_y;
+UINT8 input_touch_pressed;
+#endif /* USE_SGB_MOUSE */
 
 void input_init(void) BANKED {
     input_button_pressed            = 0;
@@ -32,11 +40,22 @@ void input_init(void) BANKED {
     }
     input_handler_count             = 0;
     input_handler_cursor            = INPUT_HANDLER_NONE;
+
+#if defined USE_SGB_MOUSE
+    input_touch_position_x = DIV2(DEVICE_SCREEN_PX_WIDTH);
+    input_touch_position_y = DIV2(DEVICE_SCREEN_PX_HEIGHT);
+    input_touch_pressed = 0;
+
+    if (device_type & DEVICE_TYPE_SGB) {
+        joypad_init(4, &joypads);
+        sgb_mouse_install();
+    }
+#endif /* USE_SGB_MOUSE */
 }
 
 void vm_btn(SCRIPT_CTX * THIS) OLDCALL BANKED {
     const UINT8 mask = (UINT8)*(--THIS->stack_ptr);
-    *(THIS->stack_ptr++) = joypad() & mask;
+    *(THIS->stack_ptr++) = INPUT_JOYPAD & mask;
 }
 
 void vm_btnd(SCRIPT_CTX * THIS) OLDCALL BANKED {
@@ -50,28 +69,28 @@ void vm_btnu(SCRIPT_CTX * THIS) OLDCALL BANKED {
 }
 
 void vm_touch(SCRIPT_CTX * THIS, BOOLEAN loc, INT16 idxX, INT16 idxY) OLDCALL BANKED {
-    if (device_type & DEVICE_TYPE_GBB) {
+    if (device_type & DEVICE_TYPE_WITH_TOUCH_SUPPORT) {
         if (loc) {
             INT16 * X, * Y;
             X = VM_REF_TO_PTR(idxX);
             Y = VM_REF_TO_PTR(idxY);
-            *X = *(UINT8 *)TOUCH_X_REG;
-            *Y = *(UINT8 *)TOUCH_Y_REG;
+            *X = INPUT_TOUCH_X;
+            *Y = INPUT_TOUCH_Y;
         }
-        *(THIS->stack_ptr++) = *(UINT8 *)TOUCH_PRESSED_REG;
+        *(THIS->stack_ptr++) = INPUT_TOUCH_PRESSED;
     } else {
         *(THIS->stack_ptr++) = 0;
     }
 }
 
 void vm_touchd(SCRIPT_CTX * THIS, BOOLEAN loc, INT16 idxX, INT16 idxY) OLDCALL BANKED {
-    if (device_type & DEVICE_TYPE_GBB) {
+    if (device_type & DEVICE_TYPE_WITH_TOUCH_SUPPORT) {
         if (loc) {
             INT16 * X, * Y;
             X = VM_REF_TO_PTR(idxX);
             Y = VM_REF_TO_PTR(idxY);
-            *X = *(UINT8 *)TOUCH_X_REG;
-            *Y = *(UINT8 *)TOUCH_Y_REG;
+            *X = INPUT_TOUCH_X;
+            *Y = INPUT_TOUCH_Y;
         }
         *(THIS->stack_ptr++) = INPUT_IS_TOUCH_DOWN;
     } else {
@@ -80,13 +99,13 @@ void vm_touchd(SCRIPT_CTX * THIS, BOOLEAN loc, INT16 idxX, INT16 idxY) OLDCALL B
 }
 
 void vm_touchu(SCRIPT_CTX * THIS, BOOLEAN loc, INT16 idxX, INT16 idxY) OLDCALL BANKED {
-    if (device_type & DEVICE_TYPE_GBB) {
+    if (device_type & DEVICE_TYPE_WITH_TOUCH_SUPPORT) {
         if (loc) {
             INT16 * X, * Y;
             X = VM_REF_TO_PTR(idxX);
             Y = VM_REF_TO_PTR(idxY);
-            *X = *(UINT8 *)TOUCH_X_REG;
-            *Y = *(UINT8 *)TOUCH_Y_REG;
+            *X = INPUT_TOUCH_X;
+            *Y = INPUT_TOUCH_Y;
         }
         *(THIS->stack_ptr++) = INPUT_IS_TOUCH_UP;
     } else {

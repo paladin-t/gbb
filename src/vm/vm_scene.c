@@ -564,6 +564,14 @@ void vm_load_scene(SCRIPT_CTX * THIS) OLDCALL BANKED {
     input_button_pressed = 0;
     input_button_previous = 0;
     input_touch_state = 0;
+
+#if defined USE_SGB_MOUSE
+    joypads.joy0 = 0;
+    input_touch_position_x = DIV2(DEVICE_SCREEN_PX_WIDTH);
+    input_touch_position_y = DIV2(DEVICE_SCREEN_PX_HEIGHT);
+    input_touch_pressed = 0;
+#endif /* USE_SGB_MOUSE */
+
     game_has_input = 0;
 
     // Clear the actors, triggers, projectiles and widgets.
