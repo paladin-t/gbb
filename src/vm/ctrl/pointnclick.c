@@ -29,8 +29,8 @@ STATIC UINT8 controller_behave_pointnclick_mouse(actor_t * actor, UINT8 * angle,
     UINT8 moving = POINTNCLICK_MOVING_MODE_NONE;
 
     do {
-        const UINT8 x = *(UINT8 *)TOUCH_X_REG;
-        const UINT8 y = *(UINT8 *)TOUCH_Y_REG;
+        const UINT8 x = INPUT_TOUCH_X;
+        const UINT8 y = INPUT_TOUCH_Y;
         if (x == 0xFF /* || y == 0xFF */)
             break;
 
@@ -79,8 +79,8 @@ STATIC UINT8 controller_behave_pointnclick_touch(actor_t * actor, UINT16 * out_x
     UINT8 moving = POINTNCLICK_MOVING_MODE_NONE;
 
     do {
-        const UINT8 x = *(UINT8 *)TOUCH_X_REG;
-        const UINT8 y = *(UINT8 *)TOUCH_Y_REG;
+        const UINT8 x = INPUT_TOUCH_X;
+        const UINT8 y = INPUT_TOUCH_Y;
         if (x == 0xFF /* || y == 0xFF */)
             break;
 
@@ -110,7 +110,7 @@ BOOLEAN controller_behave_pointnclick_player(actor_t * actor, UINT8 pointing) BA
     BOOLEAN confirmed = FALSE;
     if (pointing == CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER) {
         moving = POINTNCLICK_MOVING_MODE_NONE;
-    } else if (device_type & DEVICE_TYPE_GBB) { // Ignore touch handling if extension features are not supported.
+    } else if (device_type & DEVICE_TYPE_WITH_TOUCH_SUPPORT) { // Ignore touch handling if touch feature is not supported.
         if (pointing == CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER_WITH_MOUSE)
             moving = controller_behave_pointnclick_mouse(actor, &angle, &confirmed);
         else /* if (pointing == CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER_WITH_TOUCH) */

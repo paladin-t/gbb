@@ -4648,6 +4648,7 @@ public:
 
 		bool caseInsensitive = true;                              // Stores whether is running as case insensitive.
 		bool strictOn = true;                                     // Stores whether is running in strict mode.
+		bool kernelImplementedTouchApi = false;                   // Stores whether the kernel has implemented `touch` APIs for non-extension emulation.
 		Expect expect;                                            // Stores the syntax expectations.
 		Declaration declaration;                                  // Stores the declaration context.
 		Expression expression;                                    // Stores the expression context.
@@ -6885,6 +6886,9 @@ public:
 #if REPORT_MISUSING_EXTENSION_FEATURE_ENABLED
 		if ((ctx.compatibility & GBBASIC::Options::Strategies::Compatibilities::EXTENSION) != GBBASIC::Options::Strategies::Compatibilities::NONE)
 			return true;
+
+		if (ctx.kernelImplementedTouchApi) // The kernel has implemented `touch` APIs for non-extension emulation.
+			return true;                   // Ok.
 
 		if (onError) {
 			THROW_USING_EXTENSION_FEATURE_WITH_REGULAR_CARTRIDGE_ENABLE_EXTENSION_FEATURE_IN_PROJECT_PROPERTY(onError, tk);
@@ -40577,6 +40581,7 @@ private:
 		bool caseInsensitive = true;
 		bool strictOn = true;
 		bool declarationRequired = true;
+		bool kernelImplementedTouchApi = false;
 		bool optimizeCode = true;
 		bool optimizeAssets = true;
 
@@ -40636,6 +40641,8 @@ public:
 			return (bool)_options.strictOn;
 		if (key == "declaration_required")
 			return (bool)_options.declarationRequired;
+		if (key == "kernel_implemented_touch_api")
+			return (bool)_options.kernelImplementedTouchApi;
 		if (key == "index_base")
 			return (Variant::Long)_array.base;
 		if (key == "optimize_code")
@@ -40705,6 +40712,11 @@ public:
 		}
 		if (key == "declaration_required") {
 			_options.declarationRequired = (bool)val;
+
+			return true;
+		}
+		if (key == "kernel_implemented_touch_api") {
+			_options.kernelImplementedTouchApi = (bool)val;
 
 			return true;
 		}
@@ -41934,6 +41946,7 @@ bool compile(Program &program, const Options &options) {
 	const bool strictOn                                                        = strategies.strictOn;
 	const bool completeLineNumber                                              = strategies.completeLineNumber;
 	const bool declarationRequired                                             = strategies.declarationRequired;
+	const bool kernelImplementedTouchApi                                       = strategies.kernelImplementedTouchApi;
 	const int indexBase                                                        = Math::clamp(strategies.indexBase, 0, 1);
 	const int bootstrapBank_                                                   = strategies.bootstrapBank;
 	const int heapSize                                                         = Math::clamp(strategies.heapSize, 0, RAM_SIZE);
@@ -42041,6 +42054,7 @@ bool compile(Program &program, const Options &options) {
 	compiler.option("case_insensitive", caseInsensitive);
 	compiler.option("strict_on", strictOn);
 	compiler.option("declaration_required", declarationRequired);
+	compiler.option("kernel_implemented_touch_api", kernelImplementedTouchApi);
 	compiler.option("index_base", indexBase);
 	compiler.option("optimize_code", optimizeCode);
 	compiler.option("optimize_assets", optimizeAssets);

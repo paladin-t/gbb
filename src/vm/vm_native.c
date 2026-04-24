@@ -73,7 +73,7 @@ BOOLEAN wait_until_confirm(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
     }
     if (!FEATURE_AUTO_UPDATE_ENABLED /* && VM_IS_LOCKED */) { INPUT_ACCEPT_BTN; }
 
-    if (device_type & DEVICE_TYPE_GBB) { // Ignore touch handling if extension features are not supported.
+    if (device_type & DEVICE_TYPE_WITH_TOUCH_SUPPORT) { // Ignore touch handling if touch feature is not supported.
         if (INPUT_IS_TOUCH_UP & TOUCH_BUTTON_0) {
             input_touch_state = 0;
 

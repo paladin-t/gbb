@@ -6,17 +6,29 @@
 
 BANKREF_EXTERN(VM_INPUT)
 
+#if defined USE_SGB_MOUSE
+#   define INPUT_JOYPAD             joypads.joy0
+#   define INPUT_TOUCH_X            input_touch_position_x
+#   define INPUT_TOUCH_Y            input_touch_position_y
+#   define INPUT_TOUCH_PRESSED      input_touch_pressed
+#else /* USE_SGB_MOUSE */
+#   define INPUT_JOYPAD             joypad()
+#   define INPUT_TOUCH_X            (*(UINT8 *)TOUCH_X_REG)
+#   define INPUT_TOUCH_Y            (*(UINT8 *)TOUCH_Y_REG)
+#   define INPUT_TOUCH_PRESSED      (*(UINT8 *)TOUCH_PRESSED_REG)
+#endif /* USE_SGB_MOUSE */
+
 #define INPUT_IS_BTN_PRESSED(B)     (input_button_pressed & (B))
 #define INPUT_IS_BTN_DOWN(B)        ((input_button_pressed & (B)) & ~(input_button_previous & (B)))
 #define INPUT_IS_BTN_UP(B)          (~(input_button_pressed & (B)) & (input_button_previous & (B)))
 #define INPUT_IS_BTN_HOLD(B)        ((input_button_pressed & (B)) & (input_button_previous & (B)))
-#define INPUT_ACCEPT_BTN            do { input_button_previous = input_button_pressed; input_button_pressed = joypad(); } while (0)
+#define INPUT_ACCEPT_BTN            do { input_button_previous = input_button_pressed; input_button_pressed = INPUT_JOYPAD; } while (0)
 #define INPUT_CLEAR_BTN(B)          do { input_button_pressed &= ~(B); input_button_previous &= ~(B); } while (0)
 
 #define INPUT_IS_TOUCH_PRESSED      (input_touch_state & 0x0F)
 #define INPUT_IS_TOUCH_DOWN         ((input_touch_state & 0x0F) & ~(input_touch_state >> 4))
 #define INPUT_IS_TOUCH_UP           (~(input_touch_state & 0x0F) & (input_touch_state >> 4))
-#define INPUT_ACCEPT_TOUCH          do { input_touch_state = (input_touch_state << 4) | *(UINT8 *)TOUCH_PRESSED_REG; } while (0)
+#define INPUT_ACCEPT_TOUCH          do { input_touch_state = (input_touch_state << 4) | INPUT_TOUCH_PRESSED; } while (0)
 
 #define INPUT_HANDLER_BTN_UP        0
 #define INPUT_HANDLER_BTN_DOWN      1
@@ -65,6 +77,13 @@ extern UINT8 input_touch_state;
 extern input_handler_t input_handlers[INPUT_HANDLER_COUNT];
 extern UINT8 input_handler_count;
 extern UINT8 input_handler_cursor;
+
+#if defined USE_SGB_MOUSE
+extern joypads_t joypads; // Defined in the SGB mouse module.
+extern UINT8 input_touch_position_x;
+extern UINT8 input_touch_position_y;
+extern UINT8 input_touch_pressed;
+#endif /* USE_SGB_MOUSE */
 
 void input_init(void) BANKED;
 

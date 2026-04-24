@@ -64,6 +64,7 @@ if %rebuild%==1 (
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\scroll.o" "src\vm\utils\scroll.s"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\sfx_player.o" "src\vm\utils\sfx_player.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\sgb.o" "src\vm\utils\sgb.c"
+  call %gbdk%\lcc.exe %cflag% -c -o "output\vm\sgb_mouse.o" "src\vm\utils\sgb_mouse.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\sleep.o" "src\vm\utils\sleep.s"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\text.o" "src\vm\utils\text.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\timer_handler.o" "src\vm\utils\timer_handler.s"
@@ -149,6 +150,7 @@ set libobj=^
   "output\vm\scroll.o" ^
   "output\vm\sfx_player.o" ^
   "output\vm\sgb.o" ^
+  "output\vm\sgb_mouse.o" ^
   "output\vm\sleep.o" ^
   "output\vm\text.o" ^
   "output\vm\timer_handler.o" ^

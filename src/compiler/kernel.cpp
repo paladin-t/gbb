@@ -43,6 +43,7 @@ Kernel::Behaviour::Behaviour(const std::string &y, const std::string &id_, int v
 
 Kernel::Kernel() {
 	readonly(false);
+	featuresImplementedTouchApi(false);
 	bootstrapBank(0);
 	objectsMaxActorCount(ASSETS_ACTOR_MAX_COUNT);
 	objectsMaxTriggerCount(ASSETS_TRIGGER_MAX_COUNT);
@@ -114,6 +115,7 @@ bool Kernel::open(const char* path_) {
 	std::string kernelSymbols_;
 	std::string kernelAliases_;
 	std::string kernelSourceCode_;
+	bool featuresImplementedTouchApi_ = false;
 	int bootstrapBank_ = 0;
 	std::string memoryHeapSize_;
 	std::string memoryStackSize_;
@@ -157,6 +159,9 @@ bool Kernel::open(const char* path_) {
 		kernelAliases_ = "";
 	if (!Jpath::get(doc, kernelSourceCode_, "kernel", "source_code"))
 		kernelSourceCode_ = "";
+
+	if (!Jpath::get(doc, featuresImplementedTouchApi_, "features", "implemented_touch_api"))
+		featuresImplementedTouchApi_ = false;
 
 	if (!Jpath::get(doc, bootstrapBank_, "bootstrap", "bank")) // Required.
 		return false;
@@ -325,6 +330,7 @@ bool Kernel::open(const char* path_) {
 	kernelSymbols(kernelSymbols_);
 	kernelAliases(kernelAliases_);
 	kernelSourceCode(kernelSourceCode_);
+	featuresImplementedTouchApi(featuresImplementedTouchApi_);
 	bootstrapBank(bootstrapBank_);
 	memoryHeapSize(memoryHeapSize_);
 	memoryStackSize(memoryStackSize_);
@@ -365,6 +371,7 @@ bool Kernel::close(void) {
 	kernelSymbols().clear();
 	kernelAliases().clear();
 	kernelSourceCode().clear();
+	featuresImplementedTouchApi(false);
 	bootstrapBank(0);
 	memoryHeapSize().clear();
 	memoryStackSize().clear();
