@@ -740,6 +740,8 @@ void ProjectCreatingPopupBox::update(Workspace* ws) {
 				},
 				&ws->kernels(), n
 			);
+
+			Url(_theme->menu_MoreOfficialKernels().c_str(), "https://github.com/paladin-t/gbb/releases/latest");
 		}
 		PopID();
 
@@ -4903,6 +4905,10 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 			Dummy(ImVec2(14, 0));
 			SameLine();
 			Url(_theme->menu_GitHub().c_str(), "https://github.com/paladin-t/gbb/tree/main/src/vm");
+			SameLine();
+			Dummy(ImVec2(14, 0));
+			SameLine();
+			Url(_theme->menu_MoreOfficialKernels().c_str(), "https://github.com/paladin-t/gbb/releases/latest");
 
 			NewLine(3);
 		}

@@ -32,6 +32,7 @@ public:
 	};
 
 private:
+	int _order = 100;
 	std::string _name;
 	Text::Array _parts;
 
@@ -39,6 +40,8 @@ public:
 	Entry();
 	Entry(const char* name);
 	Entry(const std::string &name);
+	Entry(const char* name, int order);
+	Entry(const std::string &name, int order);
 
 	bool operator < (const Entry &other) const;
 

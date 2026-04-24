@@ -195,6 +195,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Library)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Manual)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Map)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_MoreOfficialKernels)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_MoveBackward)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_MoveForward)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Music)

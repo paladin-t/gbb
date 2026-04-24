@@ -395,6 +395,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Library("Library");
 	menu_Manual("Manual...");
 	menu_Map("Map");
+	menu_MoreOfficialKernels("More Official Kernels");
 	menu_MoveBackward("Move Backward");
 	menu_MoveForward("Move Forward");
 	menu_New("New");

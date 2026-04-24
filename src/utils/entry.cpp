@@ -35,7 +35,28 @@ Entry::Entry(const std::string &name) {
 	_parts = Text::split(_name, "/");
 }
 
+Entry::Entry(const char* name, int order) {
+	_order = order;
+
+	_name = name;
+
+	_parts = Text::split(_name, "/");
+}
+
+Entry::Entry(const std::string &name, int order) {
+	_order = order;
+
+	_name = name;
+
+	_parts = Text::split(_name, "/");
+}
+
 bool Entry::operator < (const Entry &other) const {
+	if (_order < other._order)
+		return -1;
+	else if (_order > other._order)
+		return 1;
+
 	return compare(*this, other, nullptr) < 0;
 }
 

@@ -6869,8 +6869,11 @@ void Workspace::loadLinks(void) {
 		std::string content;
 		if (!Jpath::get(doc, name, "links", i, "name") || !Jpath::get(doc, content, "links", i, "content"))
 			continue;
+		int order = 100;
+		if (!Jpath::get(doc, order, "links", i, "order"))
+			order = 100;
 
-		links()[Entry(name)] = content;
+		links()[Entry(name, order)] = content;
 	}
 }
 
