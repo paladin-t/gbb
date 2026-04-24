@@ -7,9 +7,9 @@
 - [About GB BASIC](#about-gb-basic)
   - [About This Repository](#about-this-repository)
   - [Why GB BASIC?](#why-gb-basic)
-  - [Programming Paradigms](#programming-paradigms)
   - [Features](#features)
   - [Specs](#specs)
+  - [Programming Paradigms](#programming-paradigms)
 - [Glance](#glance)
 - [Installation](#installation)
   - [Using Prebuilt](#using-prebuilt)
@@ -33,13 +33,8 @@ This repository contains the full source code of GB BASIC, including the [kernel
 
 GB BASIC is programmable in a brand new BASIC dialect. The integrated assets editors are intuitive to use. You can generate real ROMs and play on any GB emulator or hardware.
 
-## Programming Paradigms
-
-- Imperative paradigm
-  - Non-structured programming
-  - Concurrent processing approach
-- Declarative paradigm
-  - Data driven approach
+- **GB BASIC compiles fast**
+- **GB BASIC generates ROMs for various mappers, devices and emulators**
 
 ## Features
 
@@ -72,6 +67,14 @@ GB BASIC is programmable in a brand new BASIC dialect. The integrated assets edi
 - **Persistence**: supported
 - **RTC**: supported
 - **Serial port**: supported
+
+## Programming Paradigms
+
+- Imperative paradigm
+  - Non-structured programming
+  - Concurrent processing approach
+- Declarative paradigm
+  - Data driven approach
 
 # Glance
 
