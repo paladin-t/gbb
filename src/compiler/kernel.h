@@ -107,6 +107,7 @@ public:
 	GBBASIC_PROPERTY(std::string, kernelSymbols)
 	GBBASIC_PROPERTY(std::string, kernelAliases)
 	GBBASIC_PROPERTY(std::string, kernelSourceCode)
+	GBBASIC_PROPERTY(bool, featuresImplementedTouchApi)
 	GBBASIC_PROPERTY(int, bootstrapBank)
 	GBBASIC_PROPERTY(std::string, memoryHeapSize)
 	GBBASIC_PROPERTY(std::string, memoryStackSize)

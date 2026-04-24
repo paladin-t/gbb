@@ -5579,6 +5579,7 @@ void Workspace::compile(
 		std::string rom;
 		std::string sym;
 		std::string aliases;
+		bool featuresImplementedTouchApi = false;
 		int bootstrap = -1;
 		std::string heapSize;
 		std::string stackSize;
@@ -5586,12 +5587,13 @@ void Workspace::compile(
 			config = kernel->path();
 			std::string dir;
 			Path::split(kernel->path(), nullptr, nullptr, &dir);
-			rom       = Path::combine(dir.c_str(), kernel->kernelRom().c_str());
-			sym       = Path::combine(dir.c_str(), kernel->kernelSymbols().c_str());
-			aliases   = Path::combine(dir.c_str(), kernel->kernelAliases().c_str());
-			bootstrap = kernel->bootstrapBank();
-			heapSize  = kernel->memoryHeapSize();
-			stackSize = kernel->memoryStackSize();
+			rom                         = Path::combine(dir.c_str(), kernel->kernelRom().c_str());
+			sym                         = Path::combine(dir.c_str(), kernel->kernelSymbols().c_str());
+			aliases                     = Path::combine(dir.c_str(), kernel->kernelAliases().c_str());
+			featuresImplementedTouchApi = kernel->featuresImplementedTouchApi();
+			bootstrap                   = kernel->bootstrapBank();
+			heapSize                    = kernel->memoryHeapSize();
+			stackSize                   = kernel->memoryStackSize();
 		}
 
 		std::string cartType = PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED;
@@ -5786,6 +5788,7 @@ void Workspace::compile(
 		Text::Dictionary::const_iterator dcrOpt = arguments.find(COMPILER_DECLARATION_REQUIRED_OPTION_KEY);
 		if (dcrOpt != arguments.end())
 			Text::fromString(dcrOpt->second, options.strategies.declarationRequired);
+		options.strategies.kernelImplementedTouchApi = featuresImplementedTouchApi;
 		Text::Dictionary::const_iterator bootOpt = arguments.find(COMPILER_BOOTSTRAP_OPTION_KEY);
 		if (bootOpt != arguments.end())
 			Text::fromString(bootOpt->second, options.strategies.bootstrapBank);

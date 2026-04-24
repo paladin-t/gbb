@@ -938,6 +938,10 @@ struct Options {
 		 */
 		bool declarationRequired = true;
 		/**
+		 * @brief Whether the kernel has implemented `touch` APIs for non-extension emulation.
+		 */
+		bool kernelImplementedTouchApi = false;
+		/**
 		 * @brief The index base.
 		 */
 		int indexBase = 0;

@@ -13,6 +13,9 @@
     "aliases": "gbbvm.aliases.json",
     "source_code": "gbbvm.zip"
   },
+  "features": {
+    "implemented_touch_api": false
+  },
   "bootstrap": {
     "bank": 9
   },
