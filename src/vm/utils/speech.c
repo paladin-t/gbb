@@ -522,17 +522,22 @@ void speech_init(BOOLEAN init_aud_dev) SPEECH_API {
     speech_synth.pitch_target = 120;
     speech_synth.speed        = 5;
     speech_synth.intonation   = INTONE_STATEMENT;
+    speech_synth.volume       = 14;
 
     formant_init(init_aud_dev);
 }
 
-void speech_set_pitch(UINT16 pitch) SPEECH_API {
-    speech_synth.pitch_base = pitch;
+void speech_set_volume(UINT8 vol) SPEECH_API {
+    speech_synth.volume = vol;
 }
 
 void speech_set_speed(UINT8 speed) SPEECH_API {
     if (speed >= 1 && speed <= 10)
         speech_synth.speed = speed;
+}
+
+void speech_set_pitch(UINT16 pitch) SPEECH_API {
+    speech_synth.pitch_base = pitch;
 }
 
 void speech_set_intonation(UINT8 pattern) SPEECH_API {
@@ -591,7 +596,7 @@ void speech_stop(void) SPEECH_API {
     speech_synth.phoneme_cursor = 0;
 }
 
-void speech_update(UINT8 vol) SPEECH_API {
+void speech_update(void) SPEECH_API {
     switch (speech_synth.state) {
     case SYNTH_IDLE:
         // Do nothing.
@@ -648,7 +653,7 @@ void speech_update(UINT8 vol) SPEECH_API {
         break;
     case SYNTH_PLAYING:
         // Synthesize the current phoneme.
-        speech_synthesize_current_phoneme(vol);
+        speech_synthesize_current_phoneme(speech_synth.volume);
 
         // Count down.
         if (speech_synth.phoneme_timer > 0)

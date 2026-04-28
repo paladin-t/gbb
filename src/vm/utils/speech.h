@@ -85,6 +85,7 @@ typedef struct {
     UINT8 state;
     UINT8 speed;
     UINT8 intonation;
+    UINT8 volume;
 } SpeechSynth_t;
 
 /**
@@ -95,17 +96,23 @@ typedef struct {
 void speech_init(BOOLEAN init_aud_dev) SPEECH_API;
 
 /**
- * @brief Sets the base pitch.
+ * @brief Sets the output volume.
  *
- * @param pitch Base pitch in Hz (i.e. male~120, female~200, puerile~300), defaults to 120.
+ * @param vol The volume, defaults to 14.
  */
-void speech_set_pitch(UINT16 pitch) SPEECH_API;
+void speech_set_volume(UINT8 vol) SPEECH_API;
 /**
  * @brief Sets the speech speed.
  *
  * @param speed The speed factor (1 to 10), defaults to 5.
  */
 void speech_set_speed(UINT8 speed) SPEECH_API;
+/**
+ * @brief Sets the base pitch.
+ *
+ * @param pitch Base pitch in Hz (i.e. male~120, female~200, puerile~300), defaults to 120.
+ */
+void speech_set_pitch(UINT16 pitch) SPEECH_API;
 /**
  * @brief Sets the intonation pattern.
  *
@@ -134,10 +141,8 @@ UINT8 speech_play(UINT8 bank, const char * txt, UINT16 len) SPEECH_API;
 void speech_stop(void) SPEECH_API;
 /**
  * @brief Updates the synthesizer.
- *
- * @param vol The volume.
  */
-void speech_update(UINT8 vol) SPEECH_API;
+void speech_update(void) SPEECH_API;
 
 #endif /* USE_SPEECH */
 

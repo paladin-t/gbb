@@ -140,7 +140,7 @@ void audio_play_sound(UINT8 bank, const UINT8 * ptr, UINT8 priority) BANKED {
 void audio_update_speech(void) NONBANKED {
     if (speech_is_playing()) {
         hUGE_mute_mask = audio_mute_mask;
-        speech_update(14);
+        speech_update();
         if (!speech_is_playing()) {
             hUGE_mute_mask = AUDIO_MUTE_MASK_NONE;
             hUGE_reset_wave();

@@ -14341,7 +14341,7 @@ private:
 		Bytes::Ptr &bytes, Context::Stack &context,
 		const Asm::Instructions &INSTRUCTIONS,
 		int bank, int address,
-		bool invokerPopsArgs,
+		bool callerCleansUpArgs,
 		bool* ret /* nullable */,
 		Error::Handler onError
 	) {
@@ -14377,7 +14377,7 @@ private:
 				// Emit a `VM_INVOKE_FN` instruction.
 				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size());
 				args = fill(args, (Int16)(-(int)_children.size())); // Offset from `ARG0`.
-				args = fill(args, (UInt8)(invokerPopsArgs ? _children.size() : 0));
+				args = fill(args, (UInt8)(callerCleansUpArgs ? _children.size() : 0));
 				args = fill(args, (UInt16)address);
 				args = fill(args, (UInt8)bank);
 
@@ -14401,7 +14401,7 @@ private:
 		Bytes::Ptr &bytes, Context::Stack &context,
 		const Asm::Instructions &INSTRUCTIONS,
 		int bank, int address,
-		bool invokerPopsArgs,
+		bool callerCleansUpArgs,
 		bool* ret /* nullable */,
 		Error::Handler onError
 	) {
@@ -14460,9 +14460,9 @@ private:
 					writeChildren(bytes, context, Range((int)_children.size() - 1, 1), stk, onError);
 
 					// Emit a `VM_INVOKE_FN` instruction.
-					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size());
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)(_children.size() - 1));
 					args = fill(args, (Int16)(-(int)(_children.size() - 1))); // Offset from `ARG0`.
-					args = fill(args, (UInt8)(invokerPopsArgs ? (_children.size() - 1) : 0));
+					args = fill(args, (UInt8)(callerCleansUpArgs ? (_children.size() - 1) : 0));
 					args = fill(args, (UInt16)address);
 					args = fill(args, (UInt8)bank);
 
@@ -14528,7 +14528,7 @@ private:
 					// Emit a `VM_INVOKE_FN` instruction.
 					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size()); INC_COUNTER(stk, 2);
 					args = fill(args, (Int16)(-(int)_children.size())); // Offset from `ARG0`.
-					args = fill(args, (UInt8)0);
+					args = fill(args, (UInt8)0); // Callee cleans up the parameter stack.
 					args = fill(args, (UInt16)address);
 					args = fill(args, (UInt8)bank);
 
@@ -14544,12 +14544,12 @@ private:
 				// Using "Super" features.
 				usingSuperFeature(ctx, SEND_SGB_PACKET_FUNCTION_NAME);
 
-				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, false, &ok, onError);
+				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, &ok, onError);
 			} else if (caseSensitiveFunctionName == SET_SGB_BORDER_FUNCTION_NAME) { // `set_sgb_border`.
 				// Using "Super" features.
 				usingSuperFeature(ctx, SET_SGB_BORDER_FUNCTION_NAME);
 
-				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, false, &ok, onError);
+				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, &ok, onError);
 			} else {
 				spaclialized = false;
 			}
