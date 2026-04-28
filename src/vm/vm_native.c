@@ -9,8 +9,10 @@
 #include <string.h>
 
 #include "utils/sgb.h"
+#include "utils/speech.h"
 #include "utils/utils.h"
 
+#include "vm_audio.h"
 #include "vm_device.h"
 #include "vm_game.h"
 #include "vm_input.h"
@@ -31,7 +33,7 @@ BOOLEAN peek_banked(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL B
     const UINT16 val = word ?
         get_uint16(bank, (UINT8 *)addr) :
         get_uint8 (bank, (UINT8 *)addr);
-    *(THIS_->stack_ptr++) = val;
+    *(THIS_->stack_ptr++) = val; // Return the result.
 
     return TRUE;
 }
@@ -89,13 +91,12 @@ BOOLEAN wait_until_confirm(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
 
 // Sends a packet of bytes to SGB devices.
 BOOLEAN send_sgb_packet(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)THIS;
     (void)start;
-    (void)stack_frame;
 
-    SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
-    const UINT8 bank   = (UINT8)*(--THIS_->stack_ptr);
-    const UINT16 addr  = (UINT16)*(--THIS_->stack_ptr);
-    const UINT8 size   = (UINT8)*(--THIS_->stack_ptr);
+    const UINT8 bank   = (UINT8)stack_frame[2];
+    const UINT16 addr  = (UINT16)stack_frame[1];
+    const UINT8 size   = (UINT8)stack_frame[0];
 
     sgb_send_packet(bank, (UINT8 *)addr, size);
 
@@ -104,19 +105,18 @@ BOOLEAN send_sgb_packet(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCA
 
 // Sets border frame for SGB devices.
 BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)THIS;
     (void)start;
-    (void)stack_frame;
 
-    SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
-    const UINT8 palette_bank   = (UINT8)*(--THIS_->stack_ptr);
-    const UINT16 palette       = (UINT16)*(--THIS_->stack_ptr);
-    const UINT16 palette_size  = (UINT16)*(--THIS_->stack_ptr);
-    const UINT8 tiledata_bank  = (UINT8)*(--THIS_->stack_ptr);
-    const UINT16 tiledata      = (UINT16)*(--THIS_->stack_ptr);
-    const UINT16 tiledata_size = (UINT16)*(--THIS_->stack_ptr);
-    const UINT8 tilemap_bank   = (UINT8)*(--THIS_->stack_ptr);
-    const UINT16 tilemap       = (UINT16)*(--THIS_->stack_ptr);
-    const UINT16 tilemap_size  = (UINT16)*(--THIS_->stack_ptr);
+    const UINT8 palette_bank   = (UINT8)stack_frame[8];
+    const UINT16 palette       = (UINT16)stack_frame[7];
+    const UINT16 palette_size  = (UINT16)stack_frame[6];
+    const UINT8 tiledata_bank  = (UINT8)stack_frame[5];
+    const UINT16 tiledata      = (UINT16)stack_frame[4];
+    const UINT16 tiledata_size = (UINT16)stack_frame[3];
+    const UINT8 tilemap_bank   = (UINT8)stack_frame[2];
+    const UINT16 tilemap       = (UINT16)stack_frame[1];
+    const UINT16 tilemap_size  = (UINT16)stack_frame[0];
 
     sgb_set_border(
         palette_bank, (const UINT8 *)palette, palette_size,
@@ -126,6 +126,42 @@ BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCAL
 
     return TRUE;
 }
+
+#if defined USE_SPEECH
+// Sets the options of the speech synthesizer module.
+BOOLEAN set_speech_options(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)THIS;
+    (void)start;
+
+    const UINT8 volume = (UINT8)stack_frame[2];
+    const UINT8 speed  = (UINT8)stack_frame[1];
+    const UINT16 pitch = (UINT16)stack_frame[0];
+
+    speech_set_volume(volume);
+    speech_set_speed(speed);
+    speech_set_pitch(pitch);
+
+    return TRUE;
+}
+
+// Says something with the speech synthesizer module.
+BOOLEAN say(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)start;
+    (void)stack_frame;
+
+    SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
+    const UINT8 bank = THIS_->bank;
+    const UINT8 * pc = THIS_->PC;
+    const UINT16 len = get_uint16(bank, (UINT8 *)pc);
+    const UINT8 * str = pc + sizeof(UINT16);
+
+    audio_play_speech(bank, str, len);
+
+    THIS_->PC += sizeof(len) + len;
+
+    return TRUE;
+}
+#endif /* USE_SPEECH */
 
 // Triggers an error.
 BOOLEAN error(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.

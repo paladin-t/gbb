@@ -6,6 +6,7 @@
 #endif /* __SDCC */
 
 #include "utils/sfx_player.h"
+#include "utils/speech.h"
 #include "utils/utils.h"
 
 #include "vm_audio.h"
@@ -42,6 +43,10 @@ void audio_init(void) BANKED {
     // sfx_sound_init();
     sfx_reset_sample();
     sfx_sound_cut();
+
+#if defined USE_SPEECH
+    speech_init(FALSE);
+#endif /* USE_SPEECH */
 }
 
 void audio_update(void) NONBANKED {
@@ -84,7 +89,7 @@ void audio_update(void) NONBANKED {
 
 /**< Music. */
 
-void audio_play_music(UINT8 bank, UINT8 * music) BANKED {
+void audio_play_music(UINT8 bank, const UINT8 * music) BANKED {
     audio_music_playing = AUDIO_MUSIC_HALT_BANK;
 
     audio_music_next_song = (hUGESong_t *)music;
@@ -116,7 +121,7 @@ void audio_mute_all_channels(UINT8 mute) BANKED {
 
 /**< Sound. */
 
-void audio_play_sound(UINT8 bank, UINT8 * ptr, UINT8 priority) BANKED {
+void audio_play_sound(UINT8 bank, const UINT8 * ptr, UINT8 priority) BANKED {
     const UINT8 mute_mask = get_uint8(bank, ptr++);
     if (audio_sfx_priority > priority)
         return;
@@ -129,9 +134,36 @@ void audio_play_sound(UINT8 bank, UINT8 * ptr, UINT8 priority) BANKED {
     sfx_set_sample(bank, ptr);
 }
 
+/**< Speech. */
+
+#if defined USE_SPEECH
+void audio_update_speech(void) NONBANKED {
+    if (speech_is_playing()) {
+        hUGE_mute_mask = audio_mute_mask;
+        speech_update();
+        if (!speech_is_playing()) {
+            hUGE_mute_mask = AUDIO_MUTE_MASK_NONE;
+            hUGE_reset_wave();
+
+            audio_mute_mask = AUDIO_MUTE_MASK_NONE;
+            audio_sfx_priority = AUDIO_SFX_PRIORITY_MINIMAL;
+        }
+    }
+}
+
+void audio_play_speech(UINT8 bank, const UINT8 * ptr, UINT16 len) BANKED {
+    sfx_play_bank = SFX_STOP_BANK;
+    sfx_sound_cut_mask(audio_mute_mask);
+
+    audio_mute_mask = SPEECH_CHANNEL_MASK;
+    audio_sfx_priority = AUDIO_SFX_PRIORITY_HIGH;
+    speech_play(bank, (const char *)ptr, len);
+}
+#endif /* USE_SPEECH */
+
 /**< Instructions. */
 
-void vm_play(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * ptr) OLDCALL BANKED {
+void vm_play(SCRIPT_CTX * THIS, UINT8 bank, const UINT8 * ptr) OLDCALL BANKED {
     (void)THIS;
 
     audio_play_music(bank, ptr);
@@ -143,7 +175,7 @@ void vm_stop(SCRIPT_CTX * THIS) OLDCALL BANKED {
     audio_stop_music();
 }
 
-void vm_sound(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * ptr, UINT8 priority, UINT8 n) OLDCALL BANKED {
+void vm_sound(SCRIPT_CTX * THIS, UINT8 bank, const UINT8 * ptr, UINT8 priority, UINT8 n) OLDCALL BANKED {
     if (bank) {
         audio_play_sound(bank, ptr, priority);
     } else {

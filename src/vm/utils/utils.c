@@ -7,17 +7,17 @@
 
 /**< ROM banking. */
 
-UINT8 get_uint8(UINT8 bank, UINT8 * ptr) NONBANKED {
-    UINT8 _save = CURRENT_BANK;
+UINT8 get_uint8(UINT8 bank, const UINT8 * ptr) NONBANKED {
+    const UINT8 _save = CURRENT_BANK;
     SWITCH_ROM_BANK(bank);
-    UINT8 result = *ptr;
+    const UINT8 result = *ptr;
     SWITCH_ROM_BANK(_save);
 
     return result;
 }
 
-void get_chunk(UINT8 * dst, UINT8 bank, UINT8 * ptr, UINT8 size) NONBANKED {
-    UINT8 _save = CURRENT_BANK;
+void get_chunk(UINT8 * dst, UINT8 bank, const UINT8 * ptr, UINT8 size) NONBANKED {
+    const UINT8 _save = CURRENT_BANK;
     SWITCH_ROM_BANK(bank);
     while (size--)
         *dst++ = *ptr++;
@@ -25,28 +25,28 @@ void get_chunk(UINT8 * dst, UINT8 bank, UINT8 * ptr, UINT8 size) NONBANKED {
 }
 
 void call_v_bbp_oldcall(UINT8 a, UINT8 b, UINT8 bank, UINT8 * ptr, v_bbp_fn_oldcall func) NONBANKED {
-    UINT8 _save = CURRENT_BANK;
+    const UINT8 _save = CURRENT_BANK;
     SWITCH_ROM_BANK(bank);
     func(a, b, ptr);
     SWITCH_ROM_BANK(_save);
 }
 
 void call_v_bbbbpb_oldcall(UINT8 a, UINT8 b, UINT8 c, UINT8 d, UINT8 bank, UINT8 * ptr, UINT8 e, v_bbbbpb_fn_oldcall func) NONBANKED {
-    UINT8 _save = CURRENT_BANK;
+    const UINT8 _save = CURRENT_BANK;
     SWITCH_ROM_BANK(bank);
     func(a, b, c, d, ptr, e);
     SWITCH_ROM_BANK(_save);
 }
 
 void call_v_www(UINT16 a, UINT16 b, UINT16 c, UINT8 bank, v_www_fn func) NONBANKED {
-    UINT8 _save = CURRENT_BANK;
+    const UINT8 _save = CURRENT_BANK;
     SWITCH_ROM_BANK(bank);
     func(a, b, c);
     SWITCH_ROM_BANK(_save);
 }
 
 UINT8 call_b_bw(UINT8 a, UINT16 b, UINT8 bank, b_bw_fn func) NONBANKED {
-    UINT8 _save = CURRENT_BANK;
+    const UINT8 _save = CURRENT_BANK;
     SWITCH_ROM_BANK(bank);
     UINT8 ret = func(a, b);
     SWITCH_ROM_BANK(_save);

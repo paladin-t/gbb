@@ -21,7 +21,7 @@ void audio_update(void) NONBANKED; // UPDATE.
 
 /**< Music. */
 
-void audio_play_music(UINT8 bank, UINT8 * music) BANKED;
+void audio_play_music(UINT8 bank, const UINT8 * music) BANKED;
 #if AUDIO_PAUSE_ENABLED
 void audio_pause_music(BOOLEAN pause) BANKED;
 #endif /* AUDIO_PAUSE_ENABLED */
@@ -31,12 +31,19 @@ void audio_mute_all_channels(UINT8 mute) BANKED;
 
 /**< Sound. */
 
-void audio_play_sound(UINT8 bank, UINT8 * ptr, UINT8 priority) BANKED;
+void audio_play_sound(UINT8 bank, const UINT8 * ptr, UINT8 priority) BANKED;
+
+/**< Speech. */
+
+#if defined USE_SPEECH
+void audio_update_speech(void) NONBANKED; // UPDATE.
+void audio_play_speech(UINT8 bank, const UINT8 * ptr, UINT16 len) BANKED;
+#endif /* USE_SPEECH */
 
 /**< Instructions. */
 
-void vm_play(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * ptr) OLDCALL BANKED;
+void vm_play(SCRIPT_CTX * THIS, UINT8 bank, const UINT8 * ptr) OLDCALL BANKED;
 void vm_stop(SCRIPT_CTX * THIS) OLDCALL BANKED;
-void vm_sound(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * ptr, UINT8 priority, UINT8 n) OLDCALL BANKED;
+void vm_sound(SCRIPT_CTX * THIS, UINT8 bank, const UINT8 * ptr, UINT8 priority, UINT8 n) OLDCALL BANKED;
 
 #endif /* __VM_AUDIO_H__ */

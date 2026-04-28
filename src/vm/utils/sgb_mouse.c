@@ -2,11 +2,11 @@
 
 #if defined __SDCC
 #   pragma disable_warning 110
+#   include <gb/sgb.h>
 #else /* __SDCC */
 #   error "Not implemented."
 #endif /* __SDCC */
 
-#include <gb/sgb.h>
 #include <stdint.h>
 
 #include "sgb_mouse.h"

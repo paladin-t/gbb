@@ -2,7 +2,6 @@
 
 #if defined __SDCC
 #   pragma disable_warning 110
-
 #   include <gbdk/console.h>
 #else /* __SDCC */
 #   error "Not implemented."
@@ -628,8 +627,7 @@ void vm_unlock(SCRIPT_CTX * THIS) OLDCALL BANKED {
     --vm_lock_state;
 }
 
-// Invokes the C function at `<bank>:<fn>` until it returns true. Callee
-// cleanups the stack.
+// Invokes the C function at `<bank>:<fn>` until it returns true.
 void vm_invoke_fn(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * fn, UINT8 nparams, INT16 idx) OLDCALL BANKED {
     // Prepare.
     UINT16 * stack_frame = VM_REF_TO_PTR(idx);
@@ -919,6 +917,9 @@ void script_runner_init(void) BANKED {
         TMA_REG = (device_type & DEVICE_TYPE_CGB) ? 0x80 : 0xC0;
         TAC_REG = TACF_START | TACF_16KHZ;
         add_VBL(VBL_isr);
+#if defined USE_SPEECH
+        add_VBL(audio_update_speech);
+#endif /* USE_SPEECH */
         LYC_REG = 0;
         STAT_REG |= STATF_LYC;
         add_LCD(LCD_isr);
