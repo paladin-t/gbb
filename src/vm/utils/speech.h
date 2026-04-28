@@ -44,7 +44,8 @@ typedef enum {
     INTONE_STATEMENT,     // Declarative sentence - falling.
     INTONE_QUESTION,      // Interrogative sentence - rising.
     INTONE_EXCLAMATION,   // Exclamatory sentence - high falling.
-    INTONE_NEUTRAL        // Neutral - level tone.
+    INTONE_NEUTRAL,       // Neutral - level tone.
+    INTONE_AUTO           // Auto-detect from punctuation (default).
 } IntonationPattern_t;
 
 typedef struct {
@@ -98,7 +99,7 @@ void speech_init(BOOLEAN init_aud_dev) SPEECH_API;
 /**
  * @brief Sets the output volume.
  *
- * @param vol The volume, defaults to 14.
+ * @param vol The volume (0-15), prefers 0-14 in practice, defaults to 14.
  */
 void speech_set_volume(UINT8 vol) SPEECH_API;
 /**
@@ -110,15 +111,15 @@ void speech_set_speed(UINT8 speed) SPEECH_API;
 /**
  * @brief Sets the base pitch.
  *
- * @param pitch Base pitch in Hz (i.e. male~120, female~200, puerile~300), defaults to 120.
+ * @param pitch Base pitch in Hz (i.e. male~120, female~200, child~300), defaults to 120.
  */
 void speech_set_pitch(UINT16 pitch) SPEECH_API;
 /**
  * @brief Sets the intonation pattern.
  *
- * @param pattern The intonation pattern, defaults to `INTONE_STATEMENT`.
+ * @param pattern The intonation pattern, defaults to `INTONE_AUTO`.
  */
-void speech_set_intonation(UINT8 pattern) SPEECH_API;
+void speech_set_intonation(IntonationPattern_t pattern) SPEECH_API;
 
 /**
  * @brief Gets whether the synthesizer is playing.

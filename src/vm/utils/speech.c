@@ -59,7 +59,7 @@ typedef struct {
     UINT8 type;
     UINT8 freq;
     UINT8 duration;
-    UINT8 voiced;
+    BOOLEAN voiced;
 } Phoneme_t;
 
 /**
@@ -98,58 +98,58 @@ UINT16 phoneme_norm_to_freq(UINT8 norm, UINT16 f_min, UINT16 f_max) SPEECH_INTER
 SPEECH_INTERNAL_STATIC const Phoneme_t PHONEME_TABLE[PHONEME_TABLE_SIZE] = {
     //     Symbol,               type, freq, dur, voiced.
     // Vowels.
-    ['a'] = { 'a',  PHONEME_VOWEL,      180,  12,      1 }, // ae as in "cat".
-    ['A'] = { 'A',  PHONEME_VOWEL,      120,  14,      1 }, // A as in "father".
-    ['e'] = { 'e',  PHONEME_VOWEL,      160,  10,      1 }, // e as in "bed".
-    ['E'] = { 'E',  PHONEME_VOWEL,      100,  12,      1 }, // E as in "day".
-    ['i'] = { 'i',  PHONEME_VOWEL,       80,  10,      1 }, // I as in "bit".
-    ['I'] = { 'I',  PHONEME_VOWEL,       60,  14,      1 }, // i: as in "see".
-    ['o'] = { 'o',  PHONEME_VOWEL,      140,  12,      1 }, // O as in "hot".
-    ['O'] = { 'O',  PHONEME_VOWEL,      100,  14,      1 }, // oU as in "go".
-    ['u'] = { 'u',  PHONEME_VOWEL,       80,  10,      1 }, // U as in "put".
-    ['U'] = { 'U',  PHONEME_VOWEL,       60,  14,      1 }, // u: as in "too".
-    ['V'] = { 'V',  PHONEME_VOWEL,      140,  10,      1 }, // V as in "cup".
-    ['@'] = { '@',  PHONEME_VOWEL,      160,   8,      1 }, // @ as in "about".
+    ['a'] = { 'a',  PHONEME_VOWEL,      180,  12,   TRUE }, // ae as in "cat".
+    ['A'] = { 'A',  PHONEME_VOWEL,      120,  14,   TRUE }, // A as in "father".
+    ['e'] = { 'e',  PHONEME_VOWEL,      160,  10,   TRUE }, // e as in "bed".
+    ['E'] = { 'E',  PHONEME_VOWEL,      100,  12,   TRUE }, // E as in "day".
+    ['i'] = { 'i',  PHONEME_VOWEL,       80,  10,   TRUE }, // I as in "bit".
+    ['I'] = { 'I',  PHONEME_VOWEL,       60,  14,   TRUE }, // i: as in "see".
+    ['o'] = { 'o',  PHONEME_VOWEL,      140,  12,   TRUE }, // O as in "hot".
+    ['O'] = { 'O',  PHONEME_VOWEL,      100,  14,   TRUE }, // oU as in "go".
+    ['u'] = { 'u',  PHONEME_VOWEL,       80,  10,   TRUE }, // U as in "put".
+    ['U'] = { 'U',  PHONEME_VOWEL,       60,  14,   TRUE }, // u: as in "too".
+    ['V'] = { 'V',  PHONEME_VOWEL,      140,  10,   TRUE }, // V as in "cup".
+    ['@'] = { '@',  PHONEME_VOWEL,      160,   8,   TRUE }, // @ as in "about".
     // Diphthongs.
-    ['Y'] = { 'Y',  PHONEME_DIPHTHONG,  120,  16,      1 }, // aI as in "my".
-    ['W'] = { 'W',  PHONEME_DIPHTHONG,  100,  16,      1 }, // aU as in "how".
-    ['Q'] = { 'Q',  PHONEME_DIPHTHONG,  140,  14,      1 }, // OI as in "boy".
+    ['Y'] = { 'Y',  PHONEME_DIPHTHONG,  120,  16,   TRUE }, // aI as in "my".
+    ['W'] = { 'W',  PHONEME_DIPHTHONG,  100,  16,   TRUE }, // aU as in "how".
+    ['Q'] = { 'Q',  PHONEME_DIPHTHONG,  140,  14,   TRUE }, // OI as in "boy".
     // Nasals (voiced consonants).
-    ['m'] = { 'm',  PHONEME_CONSONANT,  120,   8,      1 },
-    ['n'] = { 'n',  PHONEME_CONSONANT,  140,   8,      1 },
-    ['N'] = { 'N',  PHONEME_CONSONANT,  140,   8,      1 }, // N as in "sing".
+    ['m'] = { 'm',  PHONEME_CONSONANT,  120,   8,   TRUE },
+    ['n'] = { 'n',  PHONEME_CONSONANT,  140,   8,   TRUE },
+    ['N'] = { 'N',  PHONEME_CONSONANT,  140,   8,   TRUE }, // N as in "sing".
     // Liquids.
-    ['l'] = { 'l',  PHONEME_CONSONANT,  100,   6,      1 },
-    ['r'] = { 'r',  PHONEME_CONSONANT,   80,   6,      1 },
+    ['l'] = { 'l',  PHONEME_CONSONANT,  100,   6,   TRUE },
+    ['r'] = { 'r',  PHONEME_CONSONANT,   80,   6,   TRUE },
     // Glides.
-    ['w'] = { 'w',  PHONEME_CONSONANT,   60,   4,      1 },
-    ['j'] = { 'j',  PHONEME_CONSONANT,   60,   4,      1 }, // y.
+    ['w'] = { 'w',  PHONEME_CONSONANT,   60,   4,   TRUE },
+    ['j'] = { 'j',  PHONEME_CONSONANT,   60,   4,   TRUE }, // y.
     // Plosives.
-    ['p'] = { 'p',  PHONEME_CONSONANT,    0,   4,      0 },
-    ['b'] = { 'b',  PHONEME_CONSONANT,   80,   4,      1 },
-    ['t'] = { 't',  PHONEME_CONSONANT,    0,   4,      0 },
-    ['d'] = { 'd',  PHONEME_CONSONANT,  100,   4,      1 },
-    ['k'] = { 'k',  PHONEME_CONSONANT,    0,   4,      0 },
-    ['g'] = { 'g',  PHONEME_CONSONANT,   80,   4,      1 },
+    ['p'] = { 'p',  PHONEME_CONSONANT,    0,   4,  FALSE },
+    ['b'] = { 'b',  PHONEME_CONSONANT,   80,   4,   TRUE },
+    ['t'] = { 't',  PHONEME_CONSONANT,    0,   4,  FALSE },
+    ['d'] = { 'd',  PHONEME_CONSONANT,  100,   4,   TRUE },
+    ['k'] = { 'k',  PHONEME_CONSONANT,    0,   4,  FALSE },
+    ['g'] = { 'g',  PHONEME_CONSONANT,   80,   4,   TRUE },
     // Fricatives.
-    ['f'] = { 'f',  PHONEME_CONSONANT,    0,   8,      0 },
-    ['v'] = { 'v',  PHONEME_CONSONANT,   80,   8,      1 },
-    ['T'] = { 'T',  PHONEME_CONSONANT,    0,   6,      0 }, // th as in "think".
-    ['D'] = { 'D',  PHONEME_CONSONANT,  100,   6,      1 }, // th as in "this".
-    ['s'] = { 's',  PHONEME_CONSONANT,    0,   8,      0 },
-    ['z'] = { 'z',  PHONEME_CONSONANT,   80,   8,      1 },
-    ['S'] = { 'S',  PHONEME_CONSONANT,    0,   8,      0 }, // sh as in "ship".
-    ['Z'] = { 'Z',  PHONEME_CONSONANT,   80,   8,      1 }, // zh as in "vision".
-    ['h'] = { 'h',  PHONEME_CONSONANT,   60,   4,      0 },
+    ['f'] = { 'f',  PHONEME_CONSONANT,    0,   8,  FALSE },
+    ['v'] = { 'v',  PHONEME_CONSONANT,   80,   8,   TRUE },
+    ['T'] = { 'T',  PHONEME_CONSONANT,    0,   6,  FALSE }, // th as in "think".
+    ['D'] = { 'D',  PHONEME_CONSONANT,  100,   6,   TRUE }, // th as in "this".
+    ['s'] = { 's',  PHONEME_CONSONANT,    0,   8,  FALSE },
+    ['z'] = { 'z',  PHONEME_CONSONANT,   80,   8,   TRUE },
+    ['S'] = { 'S',  PHONEME_CONSONANT,    0,   8,  FALSE }, // sh as in "ship".
+    ['Z'] = { 'Z',  PHONEME_CONSONANT,   80,   8,   TRUE }, // zh as in "vision".
+    ['h'] = { 'h',  PHONEME_CONSONANT,   60,   4,  FALSE },
     // Affricates.
-    ['C'] = { 'C',  PHONEME_CONSONANT,    0,  10,      0 }, // ch as in "church".
-    ['J'] = { 'J',  PHONEME_CONSONANT,   80,  10,      1 }, // j as in "judge".
+    ['C'] = { 'C',  PHONEME_CONSONANT,    0,  10,  FALSE }, // ch as in "church".
+    ['J'] = { 'J',  PHONEME_CONSONANT,   80,  10,   TRUE }, // j as in "judge".
     // Specials.
-    [' '] = { ' ',  PHONEME_SILENCE,      0,   4,      0 },
-    ['.'] = { '.',  PHONEME_SILENCE,      0,  12,      0 },
-    [','] = { ',',  PHONEME_SILENCE,      0,   8,      0 },
-    ['!'] = { '!',  PHONEME_SILENCE,      0,  10,      0 },
-    ['?'] = { '?',  PHONEME_SILENCE,      0,  10,      0 }
+    [' '] = { ' ',  PHONEME_SILENCE,      0,   4,  FALSE },
+    ['.'] = { '.',  PHONEME_SILENCE,      0,  12,  FALSE },
+    [','] = { ',',  PHONEME_SILENCE,      0,   8,  FALSE },
+    ['!'] = { '!',  PHONEME_SILENCE,      0,  10,  FALSE },
+    ['?'] = { '?',  PHONEME_SILENCE,      0,  10,  FALSE }
 };
 
 typedef struct {
@@ -159,7 +159,7 @@ typedef struct {
 } GraphemeRule_t;
 
 SPEECH_INTERNAL_STATIC const GraphemeRule_t PHONEME_GRAPHEME_RULES[] = {
-    // Digraphs (matched first).
+    // Digraphs.
     { "th",      2, "T"      }, { "TH", 2, "T"  }, { "Th", 2, "T"  },
     { "sh",      2, "S"      }, { "SH", 2, "S"  }, { "Sh", 2, "S"  },
     { "ch",      2, "C"      }, { "CH", 2, "C"  }, { "Ch", 2, "C"  },
@@ -167,7 +167,7 @@ SPEECH_INTERNAL_STATIC const GraphemeRule_t PHONEME_GRAPHEME_RULES[] = {
     { "ck",      2, "k"      }, { "CK", 2, "k"  },
     { "ph",      2, "f"      }, { "PH", 2, "f"  }, { "Ph", 2, "f"  },
     { "wh",      2, "w"      }, { "WH", 2, "w"  }, { "Wh", 2, "w"  },
-    // Vowel combinations.
+    // Vowel combinations (2 chars).
     { "ee",      2, "I"      }, { "EE", 2, "I"  }, { "Ee", 2, "I"  },
     { "oo",      2, "U"      }, { "OO", 2, "U"  }, { "Oo", 2, "U"  },
     { "ou",      2, "W"      }, { "OU", 2, "W"  }, { "Ou", 2, "W"  },
@@ -184,88 +184,52 @@ SPEECH_INTERNAL_STATIC const GraphemeRule_t PHONEME_GRAPHEME_RULES[] = {
     { "ur",      2, "@r"     }, { "UR", 2, "@r" }, { "Ur", 2, "@r" },
     { "ar",      2, "Ar"     }, { "AR", 2, "Ar" }, { "Ar", 2, "Ar" },
     { "or",      2, "Or"     }, { "OR", 2, "Or" }, { "Or", 2, "Or" },
-    // Common words.
-    { "hello",   5, "h@lO"   },
-    { "Hello",   5, "h@lO"   },
-    { "world",   5, "w@rld"  },
-    { "World",   5, "w@rld"  },
-    { "how",     3, "hW"     },
-    { "How",     3, "hW"     },
-    { "nice",    4, "nYs"    },
-    { "Nice",    4, "nYs"    },
-    { "meet",    4, "mIt"    },
-    { "Meet",    4, "mIt"    },
-    { "thank",   5, "TNk"    },
-    { "Thank",   5, "TNk"    },
-    { "very",    4, "v@rI"   },
-    { "Very",    4, "v@rI"   },
-    { "much",    4, "mVC"    },
-    { "Much",    4, "mVC"    },
-    { "good",    4, "gUd"    },
-    { "Good",    4, "gUd"    },
-    { "bye",     3, "bY"     },
-    { "Bye",     3, "bY"     },
-    { "welcome", 7, "w@lk@m" },
-    { "Welcome", 7, "w@lk@m" },
-    { "game",    4, "gEm"    },
-    { "Game",    4, "gEm"    },
-    { "the",     3, "D@"     },
-    { "The",     3, "D@"     },
-    { "and",     3, "nd"     },
-    { "And",     3, "nd"     },
-    { "is",      2, "Iz"     },
-    { "Is",      2, "Iz"     },
-    { "it",      2, "It"     },
-    { "It",      2, "It"     },
-    { "to",      2, "tU"     },
-    { "To",      2, "tU"     },
-    { "of",      2, "Vf"     },
-    { "Of",      2, "Vf"     },
-    { "you",     3, "jU"     },
-    { "You",     3, "jU"     },
-    { "we",      2, "wI"     },
-    { "We",      2, "wI"     },
-    { "he",      2, "hI"     },
-    { "He",      2, "hI"     },
-    { "she",     3, "SI"     },
-    { "She",     3, "SI"     },
-    { "that",    4, "Dt"     },
-    { "That",    4, "Dt"     },
-    { "this",    4, "Ds"     },
-    { "This",    4, "Ds"     },
-    { "with",    4, "wIT"    },
-    { "With",    4, "wIT"    },
-    { "have",    4, "hv"     },
-    { "Have",    4, "hv"     },
-    { "for",     3, "fOr"    },
-    { "For",     3, "fOr"    },
-    { "not",     3, "nt"     },
-    { "Not",     3, "nt"     },
-    { "are",     3, "Ar"     },
-    { "Are",     3, "Ar"     },
-    { "but",     3, "bVt"    },
-    { "But",     3, "bVt"    },
-    { "all",     3, "Ol"     },
-    { "All",     3, "Ol"     },
-    { "can",     3, "kn"     },
-    { "Can",     3, "kn"     },
-    { "her",     3, "h@r"    },
-    { "Her",     3, "h@r"    },
-    { "was",     3, "wz"     },
-    { "Was",     3, "wz"     },
-    { "one",     3, "wVn"    },
-    { "One",     3, "wVn"    },
-    { "our",     3, "Wr"     },
-    { "Our",     3, "Wr"     },
-    { "out",     3, "Wt"     },
-    { "Out",     3, "Wt"     },
-    // Suffix rules.
-    { "ing",     3, "IN"     },
-    { "tion",    4, "S@n"    },
+    // Suffix rules (2 chars).
     { "ed",      2, "d"      },
     { "es",      2, "z"      },
     { "ly",      2, "lI"     },
+    // Suffix rules (3-4 chars).
+    { "ing",     3, "IN"     },
     { "est",     3, "Ist"    },
+    { "tion",    4, "S@n"    },
+    // Common words.
+    { "is",      2, "Iz"     }, { "Is",      2, "Iz"     },
+    { "it",      2, "It"     }, { "It",      2, "It"     },
+    { "to",      2, "tU"     }, { "To",      2, "tU"     },
+    { "of",      2, "Vf"     }, { "Of",      2, "Vf"     },
+    { "she",     3, "SI"     }, { "She",     3, "SI"     },
+    { "the",     3, "D@"     }, { "The",     3, "D@"     },
+    { "how",     3, "hW"     }, { "How",     3, "hW"     },
+    { "are",     3, "Ar"     }, { "Are",     3, "Ar"     },
+    { "but",     3, "bVt"    }, { "But",     3, "bVt"    },
+    { "not",     3, "nt"     }, { "Not",     3, "nt"     },
+    { "all",     3, "Ol"     }, { "All",     3, "Ol"     },
+    { "can",     3, "kn"     }, { "Can",     3, "kn"     },
+    { "her",     3, "h@r"    }, { "Her",     3, "h@r"    },
+    { "was",     3, "wz"     }, { "Was",     3, "wz"     },
+    { "one",     3, "wVn"    }, { "One",     3, "wVn"    },
+    { "our",     3, "Wr"     }, { "Our",     3, "Wr"     },
+    { "out",     3, "Wt"     }, { "Out",     3, "Wt"     },
+    { "and",     3, "nd"     }, { "And",     3, "nd"     },
+    { "for",     3, "fOr"    }, { "For",     3, "fOr"    },
+    { "you",     3, "jU"     }, { "You",     3, "jU"     },
+    { "bye",     3, "bY"     }, { "Bye",     3, "bY"     },
+    { "that",    4, "Dt"     }, { "That",    4, "Dt"     },
+    { "this",    4, "Ds"     }, { "This",    4, "Ds"     },
+    { "with",    4, "wIT"    }, { "With",    4, "wIT"    },
+    { "have",    4, "hv"     }, { "Have",    4, "hv"     },
+    { "nice",    4, "nYs"    }, { "Nice",    4, "nYs"    },
+    { "meet",    4, "mIt"    }, { "Meet",    4, "mIt"    },
+    { "very",    4, "v@rI"   }, { "Very",    4, "v@rI"   },
+    { "much",    4, "mVC"    }, { "Much",    4, "mVC"    },
+    { "good",    4, "gUd"    }, { "Good",    4, "gUd"    },
+    { "game",    4, "gEm"    }, { "Game",    4, "gEm"    },
+    { "hello",   5, "h@lO"   }, { "Hello",   5, "h@lO"   },
+    { "world",   5, "w@rld"  }, { "World",   5, "w@rld"  },
+    { "thank",   5, "TNk"    }, { "Thank",   5, "TNk"    },
+    { "welcome", 7, "w@lk@m" }, { "Welcome", 7, "w@lk@m" },
+    { "we",      2, "wI"     }, { "We",      2, "wI"     },
+    { "he",      2, "hI"     }, { "He",      2, "hI"     },
     // NULL terminator.
     { NULL,      0, NULL     }
 };
@@ -407,7 +371,8 @@ void formant_mute(void) SPEECH_INTERNAL_API {
 
 void formant_synthesize_voiced(UINT16 f0, UINT16 f1, UINT8 vol) SPEECH_INTERNAL_API {
     if (f0 > 0) {
-        formant_set_freq(DIV2(f0) + DIV2(f1) * f0 / 180);
+        const UINT16 freq = DIV2(f0) + DIV128((UINT32)DIV2(f1) * f0);
+        formant_set_freq(freq);
         formant_set_volume(vol);
     } else {
         NR22_REG = 0x00;
@@ -417,7 +382,8 @@ void formant_synthesize_voiced(UINT16 f0, UINT16 f1, UINT8 vol) SPEECH_INTERNAL_
 void formant_synthesize_unvoiced(UINT16 f0, UINT16 f1, UINT8 vol) SPEECH_INTERNAL_API {
     f1 /= 3;
     if (f1 > 0) {
-        formant_set_freq(DIV2(f1) + DIV2(f0) * f1 / 180);
+        const UINT16 freq = DIV2(f1) + DIV128((UINT32)DIV2(f0) * f1);
+        formant_set_freq(freq);
         formant_set_volume(vol);
     } else {
         NR22_REG = 0x00;
@@ -438,7 +404,7 @@ void formant_synthesize_silence(void) SPEECH_INTERNAL_API {
 SPEECH_STATIC SpeechSynth_t speech_synth;
 
 // Sine lookup table for pitch jitter.
-SPEECH_STATIC const INT8 SPEECH_SINE_TABLE[8] = { 0, 4, 7, 5, 0, -5, -7, -4 }; // 8-point sine wave, range -5 to +5.
+SPEECH_STATIC const INT8 SPEECH_SINE_TABLE[8] = { 0, 4, 7, 5, 0, -5, -7, -4 }; // 8-point sine wave, range -7 to +7.
 
 SPEECH_STATIC UINT16 speech_get_pitch_target(UINT16 pos, UINT16 total) {
     // Prepare.
@@ -476,13 +442,13 @@ SPEECH_STATIC UINT16 speech_get_pitch_target(UINT16 pos, UINT16 total) {
 }
 
 SPEECH_STATIC void speech_update_formants(void) {
-    // Linear interpolation transition.
+    // Linear interpolation transition of frequency.
     if (speech_synth.freq_state != speech_synth.freq_target) {
         const INT16 diff = (INT16)speech_synth.freq_target - (INT16)speech_synth.freq_state;
         speech_synth.freq_state = (UINT16)((INT16)speech_synth.freq_state + DIV4(diff));
     }
 
-    // Pitch transition.
+    // Linear interpolation transition of pitch.
     if (speech_synth.pitch_state != speech_synth.pitch_target) {
         const INT16 diff = (INT16)speech_synth.pitch_target - (INT16)speech_synth.pitch_state;
         speech_synth.pitch_state = (UINT16)((INT16)speech_synth.pitch_state + DIV2(diff));
@@ -521,14 +487,14 @@ void speech_init(BOOLEAN init_aud_dev) SPEECH_API {
     speech_synth.pitch_state  = 120;
     speech_synth.pitch_target = 120;
     speech_synth.speed        = 5;
-    speech_synth.intonation   = INTONE_STATEMENT;
+    speech_synth.intonation   = INTONE_AUTO;
     speech_synth.volume       = 14;
 
     formant_init(init_aud_dev);
 }
 
 void speech_set_volume(UINT8 vol) SPEECH_API {
-    speech_synth.volume = vol;
+    speech_synth.volume = MIN(vol, 15); // Clamp to 0-15 to.
 }
 
 void speech_set_speed(UINT8 speed) SPEECH_API {
@@ -538,10 +504,14 @@ void speech_set_speed(UINT8 speed) SPEECH_API {
 
 void speech_set_pitch(UINT16 pitch) SPEECH_API {
     speech_synth.pitch_base = pitch;
+
+    // Also update current pitch state and target so the change takes effect immediately, even during playback.
+    speech_synth.pitch_state = pitch;
+    speech_synth.pitch_target = pitch;
 }
 
-void speech_set_intonation(UINT8 pattern) SPEECH_API {
-    speech_synth.intonation = pattern;
+void speech_set_intonation(IntonationPattern_t pattern) SPEECH_API {
+    speech_synth.intonation = (UINT8)pattern;
 }
 
 BOOLEAN speech_is_playing(void) SPEECH_API {
@@ -573,15 +543,17 @@ UINT8 speech_play(UINT8 bank, const char * txt, UINT16 len) SPEECH_API {
     );
     speech_synth.phoneme_cursor = 0;
 
-    // Detect intonation, based on the ending punctuation.
-    if (speech_synth.text_length > 0) {
+    // Auto-detect intonation from ending punctuation, but only if the user hasn't explicitly set a pattern.
+    if (speech_synth.intonation == INTONE_AUTO) {
         const char last = get_uint8(speech_synth.text_bank, (UINT8 *)speech_synth.text_address + speech_synth.text_length - 1);
-        if (last == '?')
+        if (last == '.')
+            speech_synth.intonation = INTONE_STATEMENT;
+        else if (last == '?')
             speech_synth.intonation = INTONE_QUESTION;
         else if (last == '!')
             speech_synth.intonation = INTONE_EXCLAMATION;
-        else if (last == '.')
-            speech_synth.intonation = INTONE_STATEMENT;
+        else
+            speech_synth.intonation = INTONE_NEUTRAL;
     }
 
     // Reset the state.
