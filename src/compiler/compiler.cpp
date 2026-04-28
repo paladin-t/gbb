@@ -30491,7 +30491,10 @@ public:
 
 			// Conditional compilation.
 			ADD_STATEMENT("#if",               node<NodePreprocessorIf>(),                 Token::Types::PREPROCESSOR,   false);
-			// TODO
+			ADD_STATEMENT("#else",             NODE /* for syntax assistance */,           Token::Types::PREPROCESSOR,   false);
+			ADD_STATEMENT("#elseif",           NODE /* for syntax assistance */,           Token::Types::PREPROCESSOR,   false);
+			ADD_STATEMENT("#end",              NODE /* for syntax assistance */,           Token::Types::PREPROCESSOR,   false);
+			ADD_STATEMENT("#endif",            NODE /* for syntax assistance */,           Token::Types::PREPROCESSOR,   false);
 
 			// Diagnostic outputs.
 			ADD_STATEMENT("#message",          node<NodePreprocessorMessage>(),            Token::Types::PREPROCESSOR,   false);

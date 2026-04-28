@@ -52,10 +52,8 @@ Entry::Entry(const std::string &name, int order) {
 }
 
 bool Entry::operator < (const Entry &other) const {
-	if (_order < other._order)
-		return -1;
-	else if (_order > other._order)
-		return 1;
+	if (_order != other._order)
+		return _order < other._order;
 
 	return compare(*this, other, nullptr) < 0;
 }
