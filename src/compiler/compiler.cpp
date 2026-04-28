@@ -14254,6 +14254,9 @@ public:
 };
 
 class NodeCall : public Node {
+private:
+	std::string _type;
+
 public:
 	NodeCall() {
 	}
@@ -14261,6 +14264,10 @@ public:
 	}
 
 	NODE_TYPE(Types::CALL)
+
+	virtual void options(const IDictionary::Ptr &options) override {
+		_type = (std::string)options->get("type");
+	}
 
 	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
 		const Generator_Void_Void generator = [&] (void) -> void {
@@ -14310,7 +14317,8 @@ public:
 			// Emit the invoking.
 			if (generateSpecialized(bytes, context, INSTRUCTIONS, caseSensitiveFunctionName, bank, address, nullptr, onError)) // Specialized for this known function.
 				return;
-			// TODO
+			if (generateString(bytes, context, INSTRUCTIONS, bank, address, true, nullptr, onError))
+				return;
 			if (generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, nullptr, onError))
 				return;
 		};
@@ -14348,11 +14356,6 @@ private:
 			if (_children.empty()) {
 				// Set the stack footprint guard.
 				VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
-				COUNTER_GUARD(ctx, stk);
-
-				// Emit the evaluations.
-				if (!_children.empty())
-					writeChildren(bytes, context, Range(0, (int)_children.size() - 1), stk, onError);
 
 				// Emit a `VM_INVOKE_FN` instruction.
 				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
@@ -14369,8 +14372,7 @@ private:
 				COUNTER_GUARD(ctx, stk);
 
 				// Emit the evaluations.
-				if (!_children.empty())
-					writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
+				writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
 
 				// Emit a `VM_INVOKE_FN` instruction.
 				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size());
@@ -14386,6 +14388,92 @@ private:
 			}
 
 			ok = true;
+		};
+
+		generator();
+
+		if (ret)
+			*ret = ok;
+
+		return true;
+	}
+	bool generateString(
+		Bytes::Ptr &bytes, Context::Stack &context,
+		const Asm::Instructions &INSTRUCTIONS,
+		int bank, int address,
+		bool invokerPopsArgs,
+		bool* ret /* nullable */,
+		Error::Handler onError
+	) {
+		if (_type != "string")
+			return false;
+
+		bool ok = false;
+
+		if (ret)
+			*ret = false;
+
+		auto generator = [&] (void) -> void {
+			Context &ctx = context.top();
+
+			Token::Ptr strtk = nullptr;
+			std::string str;
+			if (!isString(context, 0, &str, &strtk)) {
+				CHECK_FOR_STRING(onError, strtk);
+			} else {
+				if (_children.empty()) {
+					THROW_TOO_FEW_ARGUMENTS(onError);
+				} else if (_children.size() == 1) {
+					// Set the stack footprint guard.
+					VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
+
+					// Writing layout:
+					//   the `VM_INVOKE_FN` instruction
+					//   the string length
+					//   the string in ASCII, without termination point
+
+					// TODO
+
+					// Emit a `VM_INVOKE_FN` instruction.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
+					args = fill(args, (Int16)0);
+					args = fill(args, (UInt8)0);
+					args = fill(args, (UInt16)address);
+					args = fill(args, (UInt8)bank);
+
+					// Check the stack footprint.
+					CHECK_COUNTER(ctx, onError);
+				} else if (_children.size() <= 255) {
+					// Set the stack footprint guard.
+					VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
+					COUNTER_GUARD(ctx, stk);
+
+					// Writing layout:
+					//   argument evaluations
+					//   the `VM_INVOKE_FN` instruction
+					//   the string length
+					//   the string in ASCII, without termination point
+
+					// TODO
+
+					// Emit the evaluations.
+					writeChildren(bytes, context, Range((int)_children.size() - 1, 1), stk, onError);
+
+					// Emit a `VM_INVOKE_FN` instruction.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size());
+					args = fill(args, (Int16)(-(int)(_children.size() - 1))); // Offset from `ARG0`.
+					args = fill(args, (UInt8)(invokerPopsArgs ? (_children.size() - 1) : 0));
+					args = fill(args, (UInt16)address);
+					args = fill(args, (UInt8)bank);
+
+					// Check the stack footprint.
+					CHECK_COUNTER(ctx, onError);
+				} else {
+					THROW_TOO_MANY_ARGUMENTS(onError);
+				}
+
+				ok = true;
+			}
 		};
 
 		generator();
@@ -30310,6 +30398,49 @@ private:
 		}
 	};
 
+	struct NativeFunctionTable {
+	public:
+		struct Entry {
+			std::string type;
+			std::string syntax;
+
+			Entry() {
+			}
+			Entry(const std::string &y, const std::string &syn) : type(y), syntax(syn) {
+			}
+		};
+
+		typedef std::function<void(const std::string &, const Entry &)> Enumerator;
+
+	private:
+		typedef std::map<std::string, Entry> Dictionary;
+
+	private:
+		Dictionary _dictionary;
+
+	public:
+		NativeFunctionTable() {
+		}
+
+		bool add(const std::string &key, const Entry &entry) {
+			const std::pair<Dictionary::iterator, bool> ret = _dictionary.insert(std::make_pair(key, entry));
+			GBBASIC_ASSERT(ret.second && "Failed to add function.");
+
+			return ret.second;
+		}
+		void foreach(Enumerator enumerator) const {
+			for (Dictionary::const_iterator it = _dictionary.begin(); it != _dictionary.end(); ++it)
+				enumerator(it->first, it->second);
+		}
+		const Entry* find(const std::string &key) const {
+			Dictionary::const_iterator it = _dictionary.find(key);
+			if (it == _dictionary.end())
+				return nullptr;
+
+			return &it->second;
+		}
+	};
+
 	struct State {
 		int index = 0;
 		Token::Array tokens;
@@ -30387,6 +30518,7 @@ private:
 	Options _options;
 	StatementDictionary _statements;
 	Text::Array _statementsWithReturned;
+	NativeFunctionTable _nativeFunctions;
 	Text::Array _stackArguments;
 
 	Token::Array _tokens;
@@ -30465,22 +30597,9 @@ public:
 
 		#define ADD_STATEMENT(ID, CTOR, Y, RET)   addStatement((ID), (CTOR), (Y), (RET))
 		#define ADD_BUILTIN(ID, VAL)              builtins.add((ID), (VAL), anyCase)
-		#define ADD_FUNCTION(ID, INST)            functions.add((ID), (INST))
-		#define ADD_OPERATOR(ID, INST)            operators.add((ID), (INST))
-
-		// Load the kernel config.
-		// TODO
-		bool kernelConfigLoaded = false;
-		rapidjson::Document kernelConfigDoc;
-		do {
-			if (!kernelConfig)
-				break;
-
-			if (!Json::fromString(kernelConfigDoc, kernelConfig))
-				break;
-
-			kernelConfigLoaded = true;
-		} while (false);
+		#define ADD_FUNCTION(ID, FUNC)            functions.add((ID), (FUNC))
+		#define ADD_OPERATOR(ID, OP)              operators.add((ID), (OP))
+		#define ADD_NATIVE_FUNCTION(ID, FUNC)     _nativeFunctions.add((ID), (FUNC))
 
 		// Add the statements for the parser.
 		// This information is used by the parser to understand the tokens.
@@ -31045,44 +31164,6 @@ public:
 			ADD_BUILTIN("SYS_TIME",                                  BuiltinTable::Entry(DEVICE_QUERY_SYS_TIME)                       );
 			ADD_BUILTIN("DIV_REG",                                   BuiltinTable::Entry(DEVICE_QUERY_DIV_REG)                        );
 			ADD_BUILTIN("PLATFORM_FLAGS",                            BuiltinTable::Entry(DEVICE_QUERY_PLATFORM_FLAGS)                 );
-
-			// Process entries from the kernel.
-			if (kernelConfigLoaded) {
-				// Prepare.
-				const rapidjson::Document &doc = kernelConfigDoc;
-
-				// Controllers from the kernel.
-				int n = Jpath::count(doc, "behaviours");
-				for (int i = 0; i < n; ++i) {
-					if (Jpath::typeOf(doc, "behaviours", i, "syntax") != Jpath::STRING)
-						continue;
-
-					std::string sid, sval;
-					if (!Jpath::get(doc, sid, "behaviours", i, "syntax") || !Jpath::get(doc, sval, "behaviours", i, "value"))
-						continue;
-					int val = -1;
-					if (!Text::fromString(sval, val))
-						continue;
-
-					ADD_BUILTIN(sid, BuiltinTable::Entry(val));
-				}
-
-				// Properties from the kernel.
-				n = Jpath::count(doc, "properties");
-				for (int i = 0; i < n; ++i) {
-					if (Jpath::typeOf(doc, "properties", i, "syntax") != Jpath::STRING)
-						continue;
-
-					std::string sid, sval;
-					if (!Jpath::get(doc, sid, "properties", i, "syntax") || !Jpath::get(doc, sval, "properties", i, "value"))
-						continue;
-					int val = -1;
-					if (!Text::fromString(sval, val))
-						continue;
-
-					ADD_BUILTIN(sid, BuiltinTable::Entry(val));
-				}
-			}
 		} while (false);
 
 		// Add the function entries for the compiler.
@@ -31174,11 +31255,73 @@ public:
 			ADD_OPERATOR("max",      OperatorTable::Entry(Op::Types::MAX           ));
 		} while (false);
 
+		// Process entries from the kernel.
+		do {
+			// Prepare.
+			if (!kernelConfig)
+				break;
+
+			// Load the kernel config.
+			rapidjson::Document doc;
+			if (!Json::fromString(doc, kernelConfig))
+				break;
+
+			// Controllers from the kernel.
+			int n = Jpath::count(doc, "behaviours");
+			for (int i = 0; i < n; ++i) {
+				if (Jpath::typeOf(doc, "behaviours", i, "syntax") != Jpath::STRING)
+					continue;
+
+				std::string sid, sval;
+				if (!Jpath::get(doc, sid, "behaviours", i, "syntax") || !Jpath::get(doc, sval, "behaviours", i, "value"))
+					continue;
+				int val = -1;
+				if (!Text::fromString(sval, val))
+					continue;
+
+				ADD_BUILTIN(sid, BuiltinTable::Entry(val)); // Add builtin.
+			}
+
+			// Properties from the kernel.
+			n = Jpath::count(doc, "properties");
+			for (int i = 0; i < n; ++i) {
+				if (Jpath::typeOf(doc, "properties", i, "syntax") != Jpath::STRING)
+					continue;
+
+				std::string sid, sval;
+				if (!Jpath::get(doc, sid, "properties", i, "syntax") || !Jpath::get(doc, sval, "properties", i, "value"))
+					continue;
+				int val = -1;
+				if (!Text::fromString(sval, val))
+					continue;
+
+				ADD_BUILTIN(sid, BuiltinTable::Entry(val)); // Add builtin.
+			}
+
+			// Native functions from the kernel.
+			n = Jpath::count(doc, "natives");
+			for (int i = 0; i < n; ++i) {
+				if (Jpath::typeOf(doc, "natives", i, "syntax") != Jpath::STRING)
+					continue;
+
+				std::string sid;
+				if (!Jpath::get(doc, sid, "natives", i, "syntax"))
+					continue;
+
+				std::string y;
+				if (!Jpath::get(doc, y, "natives", i, "type"))
+					y = "generic";
+
+				ADD_NATIVE_FUNCTION(sid, NativeFunctionTable::Entry(y, sid)); // Add native function.
+			}
+		} while (false);
+
 		// Finish.
 		#undef ADD_STATEMENT
 		#undef ADD_BUILTIN
 		#undef ADD_FUNCTION
 		#undef ADD_OPERATOR
+		#undef ADD_NATIVE_FUNCTION
 	}
 
 	Statement* addStatement(const std::string &name, Statement::Handler func, Token::Types type, bool returned) {
@@ -31253,6 +31396,7 @@ public:
 		_ast                       = parse(
 			                             _tokens, page,
 			                             _statements, _statementsWithReturned,
+			                             _nativeFunctions,
 			                             _stackArguments,
 			                             identifiers,
 			                             array, data,
@@ -31933,6 +32077,7 @@ private:
 	static Node::Ptr parse(
 		const Token::Array &tokens, int page,
 		const StatementDictionary &statements, const Text::Array &returned,
+		const NativeFunctionTable &nativeFunctions,
 		const Text::Array &stackArguments,
 		IdentifierTable &identifiers,
 		Node::Context::Array &array,
@@ -33331,11 +33476,14 @@ private:
 				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
 			}
 
+			const NativeFunctionTable::Entry* entry = nativeFunctions.find(name);
+			const std::string type = entry ? entry->type : "generic";
+
 			Node::Ptr node = createNode(
 				"call", id->data(),
 				{
-					{ "allow_call", true }
-					// TODO
+					{ "allow_call", true },
+					{ "type", type }
 				}
 			);
 			if (!node) return false;
@@ -40053,10 +40201,14 @@ private:
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
 
+				const NativeFunctionTable::Entry* entry = nativeFunctions.find(name);
+				const std::string type = entry ? entry->type : "generic";
+
 				Node::Ptr node = createNode(
 					name, id ? id->data() : "_",
 					{
-						{ "allow_call", true }
+						{ "allow_call", true },
+						{ "type", type }
 					}
 				);
 				if (!node) return false;

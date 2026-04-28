@@ -452,27 +452,35 @@
   ],
   "natives": [
     {
+      "type": "generic",
       "syntax": "peek_banked"
     },
     {
+      "type": "generic",
       "syntax": "clear_text"
     },
     {
+      "type": "generic",
       "syntax": "wait_for"
     },
     {
+      "type": "generic",
       "syntax": "wait_until_confirm"
     },
     {
+      "type": "generic",
       "syntax": "send_sgb_packet"
     },
     {
+      "type": "generic",
       "syntax": "set_sgb_border"
     },
     {
+      "type": "generic",
       "syntax": "error"
     },
     {
+      "type": "generic",
       "syntax": "camera_shake"
     }
   ]
