@@ -9,8 +9,10 @@
 #include <string.h>
 
 #include "utils/sgb.h"
+#include "utils/speech.h"
 #include "utils/utils.h"
 
+#include "vm_audio.h"
 #include "vm_device.h"
 #include "vm_game.h"
 #include "vm_input.h"
@@ -126,6 +128,19 @@ BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCAL
 
     return TRUE;
 }
+
+#if defined USE_SPEECH
+// Says something.
+BOOLEAN say(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)THIS;
+    (void)start;
+    (void)stack_frame;
+
+    audio_play_speech(BANK(VM_NATIVE), (UINT8 *)"Hello World!", 12);
+
+    return TRUE;
+}
+#endif /* USE_SPEECH */
 
 // Triggers an error.
 BOOLEAN error(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.

@@ -33,6 +33,13 @@ void audio_mute_all_channels(UINT8 mute) BANKED;
 
 void audio_play_sound(UINT8 bank, UINT8 * ptr, UINT8 priority) BANKED;
 
+/**< Speech. */
+
+#if defined USE_SPEECH
+void audio_update_speech(void) NONBANKED; // UPDATE.
+void audio_play_speech(UINT8 bank, UINT8 * ptr, UINT16 len) BANKED;
+#endif /* USE_SPEECH */
+
 /**< Instructions. */
 
 void vm_play(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * ptr) OLDCALL BANKED;

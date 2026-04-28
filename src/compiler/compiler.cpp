@@ -14310,6 +14310,7 @@ public:
 			// Emit the invoking.
 			if (generateSpecialized(bytes, context, INSTRUCTIONS, caseSensitiveFunctionName, bank, address, nullptr, onError)) // Specialized for this known function.
 				return;
+			// TODO
 			if (generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, nullptr, onError))
 				return;
 		};
@@ -30468,6 +30469,7 @@ public:
 		#define ADD_OPERATOR(ID, INST)            operators.add((ID), (INST))
 
 		// Load the kernel config.
+		// TODO
 		bool kernelConfigLoaded = false;
 		rapidjson::Document kernelConfigDoc;
 		do {
@@ -30489,6 +30491,7 @@ public:
 
 			// Conditional compilation.
 			ADD_STATEMENT("#if",               node<NodePreprocessorIf>(),                 Token::Types::PREPROCESSOR,   false);
+			// TODO
 
 			// Diagnostic outputs.
 			ADD_STATEMENT("#message",          node<NodePreprocessorMessage>(),            Token::Types::PREPROCESSOR,   false);
@@ -33329,6 +33332,7 @@ private:
 				"call", id->data(),
 				{
 					{ "allow_call", true }
+					// TODO
 				}
 			);
 			if (!node) return false;

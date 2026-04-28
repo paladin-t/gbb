@@ -11,25 +11,25 @@
 
 // Static is dummy when compiling is autobanked, to avoid runtime panic.
 #define STATIC
-#define INLINE                                     inline
+#define INLINE                                   inline
 
-#define COUNTOF(A)                                 (sizeof(A) / sizeof(*(A)))
+#define COUNTOF(A)                               (sizeof(A) / sizeof(*(A)))
 
-#define SWAP_UINT16(A, B)                          do { UINT16 T = (A); (A) = (B); (B) = (T); } while (0)
+#define SWAP_UINT16(A, B)                        do { UINT16 T = (A); (A) = (B); (B) = (T); } while (0)
 
-#define SET_FLAG(N, F)                             ((N) |=  (F))
-#define CLR_FLAG(N, F)                             ((N) &= ~(F))
-#define TGL_FLAG(N, F)                             ((N) ^=  (F))
-#define CHK_FLAG(N, F)                             ((N) &   (F))
+#define SET_FLAG(N, F)                           ((N) |=  (F))
+#define CLR_FLAG(N, F)                           ((N) &= ~(F))
+#define TGL_FLAG(N, F)                           ((N) ^=  (F))
+#define CHK_FLAG(N, F)                           ((N) &   (F))
 
 /**< ROM banking. */
 
-#define SWITCH_ROM_BANK(B)                         SWITCH_ROM(B)
+#define SWITCH_ROM_BANK(B)                       SWITCH_ROM(B)
 
-#define ASSET_SOURCE_STACK                         0
-#define ASSET_SOURCE_READ                          1
-#define ASSET_SOURCE_DATA                          2
-#define ASSET_SOURCE_FAR                           3
+#define ASSET_SOURCE_STACK                       0
+#define ASSET_SOURCE_READ                        1
+#define ASSET_SOURCE_DATA                        2
+#define ASSET_SOURCE_FAR                         3
 
 UINT8 get_uint8(UINT8 bank, UINT8 * ptr) NONBANKED;
 void get_chunk(UINT8 * dst, UINT8 bank, UINT8 * ptr, UINT8 size) NONBANKED;
