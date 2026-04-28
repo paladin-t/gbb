@@ -89,7 +89,7 @@ void audio_update(void) NONBANKED {
 
 /**< Music. */
 
-void audio_play_music(UINT8 bank, UINT8 * music) BANKED {
+void audio_play_music(UINT8 bank, const UINT8 * music) BANKED {
     audio_music_playing = AUDIO_MUSIC_HALT_BANK;
 
     audio_music_next_song = (hUGESong_t *)music;
@@ -121,7 +121,7 @@ void audio_mute_all_channels(UINT8 mute) BANKED {
 
 /**< Sound. */
 
-void audio_play_sound(UINT8 bank, UINT8 * ptr, UINT8 priority) BANKED {
+void audio_play_sound(UINT8 bank, const UINT8 * ptr, UINT8 priority) BANKED {
     const UINT8 mute_mask = get_uint8(bank, ptr++);
     if (audio_sfx_priority > priority)
         return;
@@ -151,7 +151,7 @@ void audio_update_speech(void) NONBANKED {
     }
 }
 
-void audio_play_speech(UINT8 bank, UINT8 * ptr, UINT16 len) BANKED {
+void audio_play_speech(UINT8 bank, const UINT8 * ptr, UINT16 len) BANKED {
     sfx_play_bank = SFX_STOP_BANK;
     sfx_sound_cut_mask(audio_mute_mask);
 
@@ -163,7 +163,7 @@ void audio_play_speech(UINT8 bank, UINT8 * ptr, UINT16 len) BANKED {
 
 /**< Instructions. */
 
-void vm_play(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * ptr) OLDCALL BANKED {
+void vm_play(SCRIPT_CTX * THIS, UINT8 bank, const UINT8 * ptr) OLDCALL BANKED {
     (void)THIS;
 
     audio_play_music(bank, ptr);
@@ -175,7 +175,7 @@ void vm_stop(SCRIPT_CTX * THIS) OLDCALL BANKED {
     audio_stop_music();
 }
 
-void vm_sound(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * ptr, UINT8 priority, UINT8 n) OLDCALL BANKED {
+void vm_sound(SCRIPT_CTX * THIS, UINT8 bank, const UINT8 * ptr, UINT8 priority, UINT8 n) OLDCALL BANKED {
     if (bank) {
         audio_play_sound(bank, ptr, priority);
     } else {

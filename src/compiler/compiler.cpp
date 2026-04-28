@@ -14432,14 +14432,16 @@ private:
 					//   the string length
 					//   the string in ASCII, without termination point
 
-					// TODO
-
 					// Emit a `VM_INVOKE_FN` instruction.
 					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
 					args = fill(args, (Int16)0);
 					args = fill(args, (UInt8)0);
 					args = fill(args, (UInt16)address);
 					args = fill(args, (UInt8)bank);
+
+					// Emit the string.
+					emit(bytes, context, (UInt16)str.length(), Endians::LITTLE);
+					emit(bytes, context, (const Byte*)str.c_str(), str.length());
 
 					// Check the stack footprint.
 					CHECK_COUNTER(ctx, onError);
@@ -14454,8 +14456,6 @@ private:
 					//   the string length
 					//   the string in ASCII, without termination point
 
-					// TODO
-
 					// Emit the evaluations.
 					writeChildren(bytes, context, Range((int)_children.size() - 1, 1), stk, onError);
 
@@ -14465,6 +14465,10 @@ private:
 					args = fill(args, (UInt8)(invokerPopsArgs ? (_children.size() - 1) : 0));
 					args = fill(args, (UInt16)address);
 					args = fill(args, (UInt8)bank);
+
+					// Emit the string.
+					emit(bytes, context, (UInt16)str.length(), Endians::LITTLE);
+					emit(bytes, context, (const Byte*)str.c_str(), str.length());
 
 					// Check the stack footprint.
 					CHECK_COUNTER(ctx, onError);

@@ -132,11 +132,18 @@ BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCAL
 #if defined USE_SPEECH
 // Says something.
 BOOLEAN say(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
-    (void)THIS;
     (void)start;
     (void)stack_frame;
 
-    audio_play_speech(BANK(VM_NATIVE), (UINT8 *)"Hello World!", 12);
+    SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
+    const UINT8 bank = THIS_->bank;
+    const UINT8 * pc = THIS_->PC;
+    const UINT16 len = get_uint16(bank, (UINT8 *)pc);
+    const UINT8 * str = pc + sizeof(UINT16);
+
+    audio_play_speech(bank, str, len);
+
+    THIS_->PC += sizeof(len) + len;
 
     return TRUE;
 }

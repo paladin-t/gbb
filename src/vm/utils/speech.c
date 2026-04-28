@@ -17,9 +17,6 @@
 
 #warning "Message: Compiling with speech synthesizer."
 
-#include "vm_device.h" // TODO
-#include "utils/text.h"
-
 /*
 ** {===========================================================================
 ** Common
@@ -296,30 +293,6 @@ UINT8 phoneme_text_to_next_phoneme(UINT8 bank, const char * txt, UINT16 len, UIN
         const UINT8 buf_len = MIN(SPEECH_TEXT_BUFFER_MAX_LENGTH - 1, len - in_pos);
         get_chunk(buf, bank, (UINT8 *)txt + in_pos, buf_len);
         buf[buf_len] = '\0';
-
-        // TODO
-        // unsigned char tmp[80];
-        // unsigned char * fmt = tmp;
-        // const unsigned char * str = ">say ";
-        // while (*str)
-        //     *fmt++ = *str++;
-        // fmt += uint16_to_hex((UINT16)txt, fmt);
-        // *fmt++ = ',';
-        // fmt += int16_to_str(in_pos, fmt);
-        // *fmt++ = ',';
-        // const char * ptr = buf;
-        // while (*ptr)
-        //     *fmt++ = *ptr++;
-        // *fmt++ = '\0';
-        // UINT8 * reg = (UINT8 *)TRANSFER_STATUS_REG;
-        // while (*reg != TRANSFER_STATUS_READY) { /* Do nothing. */ }
-        // *reg = TRANSFER_STATUS_BUSY;
-        // fmt = (unsigned char *)(TRANSFER_ADDRESS);
-        // str = tmp;
-        // while (*str)
-        //     *fmt++ = *str++;
-        // *fmt++ = '\0';
-        // *reg = TRANSFER_STATUS_FILLED;
 
         // Try to match.
         BOOLEAN matched = FALSE;
