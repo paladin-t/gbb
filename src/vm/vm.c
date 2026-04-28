@@ -917,9 +917,6 @@ void script_runner_init(void) BANKED {
         TMA_REG = (device_type & DEVICE_TYPE_CGB) ? 0x80 : 0xC0;
         TAC_REG = TACF_START | TACF_16KHZ;
         add_VBL(VBL_isr);
-#if defined USE_SPEECH
-        add_VBL(audio_update_speech);
-#endif /* USE_SPEECH */
         LYC_REG = 0;
         STAT_REG |= STATF_LYC;
         add_LCD(LCD_isr);

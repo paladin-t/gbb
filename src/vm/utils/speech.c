@@ -362,6 +362,7 @@ void formant_init(BOOLEAN init_aud_dev) SPEECH_INTERNAL_API {
     }
     NR21_REG = 0x40;
     NR22_REG = 0x00;
+    NR23_REG = 0x00;
     NR24_REG = 0x80;
 }
 
@@ -526,6 +527,12 @@ UINT8 speech_play(UINT8 bank, const char * txt, UINT16 len) SPEECH_API {
     // Check the buffer.
     if (!txt || len == 0)
         return 2; // Empty buffer.
+
+    // Reset the registers.
+    NR21_REG = 0x40;
+    NR22_REG = 0x00;
+    NR23_REG = 0x00;
+    NR24_REG = 0x80;
 
     // Set the text.
     speech_synth.text_bank = bank;

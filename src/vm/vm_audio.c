@@ -152,6 +152,13 @@ void audio_update_speech(void) NONBANKED {
 }
 
 void audio_play_speech(UINT8 bank, const UINT8 * ptr, UINT16 len) BANKED {
+    if (!FEATURE_SPEECH_ISR_INSTALLED) {
+        FEATURE_SPEECH_ISR_INSTALL;
+        CRITICAL {
+            add_VBL(audio_update_speech);
+        }
+    }
+
     sfx_play_bank = SFX_STOP_BANK;
     sfx_sound_cut_mask(audio_mute_mask);
 
