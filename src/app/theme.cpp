@@ -489,6 +489,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Animations("Animations");
 	dialogPrompt_Arbitrary("Arbitrary");
 	dialogPrompt_Artist("Artist");
+	dialogPrompt_AssetPageNotAdded("Asset page not added");
 	dialogPrompt_Behave("Behave");
 	dialogPrompt_Behaviour("Behaviour");
 	dialogPrompt_BitCount("Bit count");

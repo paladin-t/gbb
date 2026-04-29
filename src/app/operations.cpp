@@ -2330,7 +2330,7 @@ promise::Promise Operations::fileImportExamples(Window* wnd, Renderer* rnd, Work
 		std::string defaultPath = exampleDirectory;
 		do {
 			DirectoryInfo::Ptr dirInfo = DirectoryInfo::make(exampleDirectory.c_str());
-			FileInfos::Ptr fileInfos = dirInfo->getFiles("*." GBBASIC_RICH_PROJECT_EXT, false);
+			FileInfos::Ptr fileInfos = dirInfo->getFiles(WORKSPACE_EXAMPLE_PROJECT_FILTER, true);
 			if (fileInfos->count() == 0)
 				break;
 
@@ -2520,7 +2520,7 @@ promise::Promise Operations::fileImportExampleForNotepad(Window* wnd, Renderer* 
 		std::string defaultPath = exampleDirectory;
 		do {
 			DirectoryInfo::Ptr dirInfo = DirectoryInfo::make(exampleDirectory.c_str());
-			FileInfos::Ptr fileInfos = dirInfo->getFiles("*." GBBASIC_RICH_PROJECT_EXT, false);
+			FileInfos::Ptr fileInfos = dirInfo->getFiles(WORKSPACE_EXAMPLE_PROJECT_FILTER, true);
 			if (fileInfos->count() == 0)
 				break;
 
@@ -2967,35 +2967,40 @@ promise::Promise Operations::fontAddPage(Window* wnd, Renderer* rnd, Workspace* 
 
 						std::string content;
 						content.assign((const char*)RES_TEXT_FONT_CONTENT, GBBASIC_COUNTOF(RES_TEXT_FONT_CONTENT));
-						prj->addFontPage(copy, embed, path, size, content, true);
+						const bool added = prj->addFontPage(copy, embed, path, size, content, true);
 						prj->hasDirtyAsset(true);
 
 						FontAssets::Entry* entry = prj->getFont(prj->fontPageCount() - 1);
-						if (entry->bitmapData.empty()) { // Is TTF.
-							int size_ = -1;
-							int offset = 0;
-							if (FontAssets::calculateBestFit(*entry, &size_, &offset)) {
-								// Do nothing.
-							} else {
-								size_ = prj->preferencesFontSize().y > 0 ? prj->preferencesFontSize().y : GBBASIC_FONT_DEFAULT_SIZE;
-								offset = prj->preferencesFontOffset();
+						if (entry) {
+							if (entry->bitmapData.empty()) { // Is TTF.
+								int size_ = -1;
+								int offset = 0;
+								if (FontAssets::calculateBestFit(*entry, &size_, &offset)) {
+									// Do nothing.
+								} else {
+									size_ = prj->preferencesFontSize().y > 0 ? prj->preferencesFontSize().y : GBBASIC_FONT_DEFAULT_SIZE;
+									offset = prj->preferencesFontOffset();
+								}
+								size_ = Math::clamp(size_, GBBASIC_FONT_MIN_SIZE, GBBASIC_FONT_MAX_SIZE);
+								offset = Math::clamp(offset, -GBBASIC_FONT_MAX_SIZE, GBBASIC_FONT_MAX_SIZE);
+								if (entry->size.y != size_ || entry->offset != offset) {
+									entry->size = Math::Vec2i(-1, size_);
+									entry->offset = offset;
+									entry->cleanup();
+									entry->touch();
+								}
+							} else { // Is bitmap-based.
+								entry->offset = 0;
 							}
-							size_ = Math::clamp(size_, GBBASIC_FONT_MIN_SIZE, GBBASIC_FONT_MAX_SIZE);
-							offset = Math::clamp(offset, -GBBASIC_FONT_MAX_SIZE, GBBASIC_FONT_MAX_SIZE);
-							if (entry->size.y != size_ || entry->offset != offset) {
-								entry->size = Math::Vec2i(-1, size_);
-								entry->offset = offset;
-								entry->cleanup();
-								entry->touch();
-							}
-						} else { // Is bitmap-based.
-							entry->offset = 0;
+							entry->isTwoBitsPerPixel = prj->preferencesFontIsTwoBitsPerPixel();
+							entry->preferFullWord = prj->preferencesFontPreferFullWord();
+							entry->preferFullWordForNonAscii = prj->preferencesFontPreferFullWordForNonAscii();
 						}
-						entry->isTwoBitsPerPixel = prj->preferencesFontIsTwoBitsPerPixel();
-						entry->preferFullWord = prj->preferencesFontPreferFullWord();
-						entry->preferFullWordForNonAscii = prj->preferencesFontPreferFullWordForNonAscii();
 
-						ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::FONT);
+						if (added)
+							ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::FONT);
+						else
+							ws->bubble(ws->theme()->dialogPrompt_AssetPageNotAdded(), nullptr);
 
 						df.resolve(true);
 					}
@@ -3110,10 +3115,13 @@ promise::Promise Operations::codeAddPage(Window* wnd, Renderer* rnd, Workspace* 
 				return;
 			}
 
-			prj->addCodePage("");
+			const bool added = prj->addCodePage("");
 			prj->hasDirtyAsset(true);
 
-			ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::CODE);
+			if (added)
+				ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::CODE);
+			else
+				ws->bubble(ws->theme()->dialogPrompt_AssetPageNotAdded(), nullptr);
 
 			df.resolve(true);
 		}
@@ -3216,10 +3224,13 @@ promise::Promise Operations::tilesAddPage(Window* wnd, Renderer* rnd, Workspace*
 			TilesAssets::Entry default_(rnd, prj->paletteGetter());
 			default_.toString(str, nullptr);
 
-			prj->addTilesPage(str, true);
+			const bool added = prj->addTilesPage(str, true);
 			prj->hasDirtyAsset(true);
 
-			ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::TILES);
+			if (added)
+				ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::TILES);
+			else
+				ws->bubble(ws->theme()->dialogPrompt_AssetPageNotAdded(), nullptr);
 
 			df.resolve(true);
 		}
@@ -3321,14 +3332,17 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 									preferedName = tilesEntry->name;
 							}
 
-							prj->addMapPage(str, true, preferedName.empty() ? nullptr : preferedName.c_str());
+							const bool added = prj->addMapPage(str, true, preferedName.empty() ? nullptr : preferedName.c_str());
 							MapAssets::Entry* mapEntry = prj->getMap(prj->mapPageCount() - 1);
 							mapEntry->allowFlip = allowFlip;
 							mapEntry->localPaletteEnabled = fillLocalPalette;
 
 							prj->hasDirtyAsset(true);
 
-							ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::MAP);
+							if (added)
+								ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::MAP);
+							else
+								ws->bubble(ws->theme()->dialogPrompt_AssetPageNotAdded(), nullptr);
 
 							df.resolve(true);
 						} else if (path) { // From image file.
@@ -3425,9 +3439,12 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 									std::string tilesStr;
 									tiles.toString(tilesStr, nullptr);
 
-									prj->addTilesPage(tilesStr, true);
+									const bool added = prj->addTilesPage(tilesStr, true);
 
-									ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::TILES);
+									if (added)
+										ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::TILES);
+									else
+										ws->bubble(ws->theme()->dialogPrompt_AssetPageNotAdded(), nullptr);
 								}
 
 								// Add map asset.
@@ -3442,14 +3459,17 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 									preferedName = name;
 #endif /* Platform macro. */
 
-								prj->addMapPage(mapStr, true, preferedName.empty() ? nullptr : preferedName.c_str());
+								const bool added = prj->addMapPage(mapStr, true, preferedName.empty() ? nullptr : preferedName.c_str());
 								MapAssets::Entry* mapEntry = prj->getMap(prj->mapPageCount() - 1);
 								mapEntry->allowFlip = allowFlip;
 								mapEntry->localPaletteEnabled = fillLocalPalette;
 								if (mapEntry->localPaletteEnabled)
 									mapEntry->localPalette = palette;
 
-								ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::MAP);
+								if (added)
+									ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::MAP);
+								else
+									ws->bubble(ws->theme()->dialogPrompt_AssetPageNotAdded(), nullptr);
 
 								// Resolve.
 								prj->hasDirtyAsset(true);
@@ -3544,10 +3564,13 @@ promise::Promise Operations::musicAddPage(Window* wnd, Renderer* rnd, Workspace*
 			MusicAssets::Entry default_;
 			default_.toString(str, nullptr);
 
-			prj->addMusicPage(str, true);
+			const bool added = prj->addMusicPage(str, true);
 			prj->hasDirtyAsset(true);
 
-			ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::MUSIC);
+			if (added)
+				ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::MUSIC);
+			else
+				ws->bubble(ws->theme()->dialogPrompt_AssetPageNotAdded(), nullptr);
 
 			df.resolve(true);
 		}
@@ -3626,10 +3649,13 @@ promise::Promise Operations::sfxAddPage(Window* wnd, Renderer* rnd, Workspace* w
 			SfxAssets::Entry default_;
 			default_.toString(str, nullptr);
 
-			prj->addSfxPage(str, true, shift, modifier);
+			const bool added = prj->addSfxPage(str, true, shift, modifier);
 			prj->hasDirtyAsset(true);
 
-			ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::SFX);
+			if (added)
+				ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::SFX);
+			else
+				ws->bubble(ws->theme()->dialogPrompt_AssetPageNotAdded(), nullptr);
 
 			df.resolve(true);
 		}
@@ -3699,10 +3725,13 @@ promise::Promise Operations::actorAddPage(Window* wnd, Renderer* rnd, Workspace*
 			ActorAssets::Entry default_(rnd, prj->preferencesActorUses8x16Sprites(), prj->paletteGetter(), prj->behaviourSerializer(), prj->behaviourParser());
 			default_.toString(str, nullptr);
 
-			prj->addActorPage(str, true);
+			const bool added = prj->addActorPage(str, true);
 			prj->hasDirtyAsset(true);
 
-			ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::ACTOR);
+			if (added)
+				ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::ACTOR);
+			else
+				ws->bubble(ws->theme()->dialogPrompt_AssetPageNotAdded(), nullptr);
 
 			df.resolve(true);
 		}
@@ -3811,12 +3840,15 @@ promise::Promise Operations::sceneAddPage(Window* wnd, Renderer* rnd, Workspace*
 								preferedName = mapEntry->name;
 						}
 
-						prj->addScenePage(str, true, preferedName.empty() ? nullptr : preferedName.c_str());
+						const bool added = prj->addScenePage(str, true, preferedName.empty() ? nullptr : preferedName.c_str());
 						prj->hasDirtyAsset(true);
 
 						prj->preferencesSceneUseGravity(useGravity);
 
-						ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::SCENE);
+						if (added)
+							ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::SCENE);
+						else
+							ws->bubble(ws->theme()->dialogPrompt_AssetPageNotAdded(), nullptr);
 
 						df.resolve(true);
 					}

@@ -1513,7 +1513,7 @@ bool Workspace::load(Window* wnd, Renderer* rnd, const int* wndWidth, const int*
 
 		// Reload the example projects.
 		DirectoryInfo::Ptr dirInfo = DirectoryInfo::make(WORKSPACE_EXAMPLE_PROJECTS_DIR);
-		FileInfos::Ptr fileInfos = dirInfo->getFiles("*." GBBASIC_RICH_PROJECT_EXT ";" "*." GBBASIC_PLAIN_PROJECT_EXT, true);
+		FileInfos::Ptr fileInfos = dirInfo->getFiles(WORKSPACE_EXAMPLE_PROJECT_FILTER, true);
 		for (int i = 0; i < fileInfos->count(); ++i) {
 			FileInfo::Ptr fileInfo = fileInfos->get(i);
 
@@ -1521,6 +1521,12 @@ bool Workspace::load(Window* wnd, Renderer* rnd, const int* wndWidth, const int*
 			path = Path::absoluteOf(path);
 			const int i_ = i + (int)regularProjects.size();
 			Jpath::set(doc, doc, path, "projects", i_, "path");
+
+			std::string ext;
+			Path::split(path, nullptr, &ext, nullptr);
+			const bool isBin = ext == GBBASIC_CLASSIC_ROM_EXT || ext == GBBASIC_COLORED_ROM_EXT || ext == "zip";
+			const std::string type = isBin ? "rom" : "basic";
+			Jpath::set(doc, doc, type, "projects", i_, "content_type");
 		}
 
 		// Set the example revision.
@@ -5628,7 +5634,7 @@ void Workspace::compile(
 		GBBASIC::Program program;
 		GBBASIC::Options options;
 
-		if (project) {
+		if (project && project->assets()) {
 			AssetsBundle::Ptr assets(new AssetsBundle());
 			project->assets()->clone(
 				assets.get(),
@@ -5732,8 +5738,10 @@ void Workspace::compile(
 			options.superFeatures.border = borderImage;
 			options.superFeatures.palettes = GBBASIC::Options::SuperFeatures::Palettes(project->superPalettes().begin(), project->superPalettes().end());
 
-			options.backgroundPalettes = project->backgroundPalettes();
-			options.spritePalettes = project->spritePalettes();
+			if (project->assets()) {
+				options.backgroundPalettes = project->backgroundPalettes();
+				options.spritePalettes = project->spritePalettes();
+			}
 		}
 		Text::Dictionary::const_iterator titOpt = arguments.find(COMPILER_TITLE_OPTION_KEY);
 		if (titOpt != arguments.end()) {
@@ -6637,7 +6645,7 @@ void Workspace::loadExamples(Window* wnd, Renderer* rnd) {
 	exampleCount(0);
 
 	DirectoryInfo::Ptr dirInfo = DirectoryInfo::make(WORKSPACE_EXAMPLE_PROJECTS_DIR);
-	FileInfos::Ptr fileInfos = dirInfo->getFiles("*." GBBASIC_RICH_PROJECT_EXT ";" "*." GBBASIC_PLAIN_PROJECT_EXT, true);
+	FileInfos::Ptr fileInfos = dirInfo->getFiles(WORKSPACE_EXAMPLE_PROJECT_FILTER, true);
 
 	exampleCount(fileInfos->count());
 
@@ -11269,10 +11277,12 @@ void Workspace::code(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 	const float statusBarHeight = ImGui::GetTextLineHeightWithSpacing() + style.FramePadding.y * 2;
 	do {
 		// Prepare.
+		CodeAssets::Entry* entry = prj->getCode(prj->activeMajorCodeIndex());
 		ImGuiWindowFlags flags = WORKSPACE_WND_FLAGS_CONTENT;
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 		const float width = dual ? (float)rnd->width() - codeEditorMinorWidth() : (float)rnd->width();
-		const float height = (float)rnd->height() - (marginTop + marginBottom) - statusBarHeight;
+		const float height = (float)rnd->height() - (marginTop + marginBottom) +
+			(!!entry ? -statusBarHeight : 0.0f);
 #else /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 		const float width = (float)rnd->width();
 		const float height = (float)rnd->height() - (marginTop + marginBottom);
@@ -11291,7 +11301,6 @@ void Workspace::code(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 		);
 
 		// Show and update the editor window.
-		CodeAssets::Entry* entry = prj->getCode(prj->activeMajorCodeIndex());
 		if (!entry)
 			flags |= ImGuiWindowFlags_NoScrollWithMouse;
 		EditorCode* editor = nullptr;
@@ -11303,7 +11312,8 @@ void Workspace::code(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 				prj->activeMajorCodeIndex(0);
 				entry = prj->getCode(prj->activeMajorCodeIndex());
 			}
-			editor = (EditorCode*)entry->editor;
+			if (entry)
+				editor = (EditorCode*)entry->editor;
 
 			// Open new editor if necessary.
 			if (!editor) {
@@ -11318,18 +11328,22 @@ void Workspace::code(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 
 			// Update the editor.
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
-			if (editor->isToolBarVisible()) {
+			if (editor && editor->isToolBarVisible()) {
 				minWidth = Math::max(minWidth, (float)EDITOR_CODE_WITH_TOOL_BAR_MIN_WIDTH);
 			}
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 
-			editor->update(
-				wnd, rnd,
-				this,
-				prj->title().c_str(),
-				0, marginTop, width, height,
-				delta
-			);
+			if (editor) {
+				editor->update(
+					wnd, rnd,
+					this,
+					prj->title().c_str(),
+					0, marginTop, width, height,
+					delta
+				);
+			} else {
+				blank(wnd, rnd, marginTop, marginBottom, Categories::CODE);
+			}
 
 			// Finish.
 			ImGui::End();
@@ -11345,11 +11359,13 @@ void Workspace::code(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 				ImGuiCond_Always
 			);
 			if (ImGui::Begin("#St", nullptr, WORKSPACE_WND_FLAGS_CONTENT | ImGuiWindowFlags_AlwaysAutoResize)) {
-				editor->renderStatus(
-					wnd, rnd,
-					this,
-					0, marginTop + height, (float)rnd->width(), statusBarHeight
-				);
+				if (editor) {
+					editor->renderStatus(
+						wnd, rnd,
+						this,
+						0, marginTop + height, (float)rnd->width(), statusBarHeight
+					);
+				}
 
 				ImGui::End();
 			}
@@ -11914,6 +11930,11 @@ void Workspace::blank(Window* wnd, Renderer* rnd, float marginTop, float marginB
 				Operations::fontAddPage(wnd, rnd, this);
 
 				break;
+			case Categories::CODE:
+				// Possibly is working with an invalid/non-editable project.
+				// Do nothing.
+
+				break;
 			case Categories::TILES:
 				Operations::tilesAddPage(wnd, rnd, this);
 
@@ -12163,6 +12184,9 @@ void Workspace::importMusic(Window* wnd, Renderer* rnd) {
 
 		const Project::Ptr &prj = currentProject();
 		MusicAssets::Entry* entry = prj->getMusic(prj->activeMusicIndex());
+		if (!entry)
+			return;
+
 		Editable* editor = entry->editor;
 		if (editor) {
 			GBBASIC_ASSERT(false && "Impossible.");

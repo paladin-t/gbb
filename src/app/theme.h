@@ -289,6 +289,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Animations)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Arbitrary)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Artist)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_AssetPageNotAdded)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Behave)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Behaviour)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_BitCount)

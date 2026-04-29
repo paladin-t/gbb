@@ -2316,6 +2316,9 @@ private:
 				return false;
 			}
 
+			if (!_project->assets())
+				return false;
+
 			const SfxAssets &assets_ = _project->assets()->sfx;
 			const int index = assets_.count();
 

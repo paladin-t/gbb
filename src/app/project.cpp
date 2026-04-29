@@ -767,6 +767,9 @@ int Project::fontPageCount(void) const {
 }
 
 bool Project::addGlobalFontPages(const char* fontConfigPath, WarningOrErrorHandler onWarningOrError) {
+	if (!assets())
+		return false;
+
 	if (!fontConfigPath)
 		return false;
 
@@ -830,6 +833,9 @@ void Project::makeFontEntry(FontAssets::Entry &entry, bool toBeCopied, bool toBe
 }
 
 bool Project::addFontPage(bool toBeCopied, bool toBeEmbedded, const std::string &path_, const Math::Vec2i* size, const std::string &content_, bool isNew) {
+	if (!assets())
+		return false;
+
 	FontAssets &assets_ = assets()->fonts;
 	FontAssets::Entry entry_;
 	makeFontEntry(entry_, toBeCopied, toBeEmbedded, path_, size, content_, true);
@@ -896,12 +902,18 @@ void Project::clearFontPages(void) {
 }
 
 const FontAssets::Entry* Project::getFont(int index) const {
+	if (!assets())
+		return nullptr;
+
 	FontAssets &assets_ = assets()->fonts;
 
 	return assets_.get(index);
 }
 
 FontAssets::Entry* Project::getFont(int index) {
+	if (!assets())
+		return nullptr;
+
 	FontAssets &assets_ = assets()->fonts;
 
 	return assets_.get(index);
@@ -952,6 +964,9 @@ int Project::codePageCount(void) const {
 }
 
 bool Project::addCodePage(const std::string &val) {
+	if (!assets())
+		return false;
+
 	CodeAssets &assets_ = assets()->code;
 	const bool result = assets_.add(val);
 	for (int i = 0; i < assets_.count(); ++i) {
@@ -981,12 +996,18 @@ bool Project::removeCodePage(int index) {
 }
 
 const CodeAssets::Entry* Project::getCode(int index) const {
+	if (!assets())
+		return nullptr;
+
 	CodeAssets &assets_ = assets()->code;
 
 	return assets_.get(index);
 }
 
 CodeAssets::Entry* Project::getCode(int index) {
+	if (!assets())
+		return nullptr;
+
 	CodeAssets &assets_ = assets()->code;
 
 	return assets_.get(index);
@@ -1002,6 +1023,9 @@ int Project::tilesPageCount(void) const {
 }
 
 bool Project::addTilesPage(const std::string &val, bool isNew) {
+	if (!assets())
+		return false;
+
 	TilesAssets &assets_ = assets()->tiles;
 	const bool result = assets_.add(TilesAssets::Entry(renderer(), val, paletteGetter()));
 	if (result && isNew) {
@@ -1037,12 +1061,18 @@ bool Project::removeTilesPage(int index) {
 }
 
 const TilesAssets::Entry* Project::getTiles(int index) const {
+	if (!assets())
+		return nullptr;
+
 	TilesAssets &assets_ = assets()->tiles;
 
 	return assets_.get(index);
 }
 
 TilesAssets::Entry* Project::getTiles(int index) {
+	if (!assets())
+		return nullptr;
+
 	TilesAssets &assets_ = assets()->tiles;
 
 	return assets_.get(index);
@@ -1099,6 +1129,9 @@ int Project::mapPageCount(void) const {
 }
 
 bool Project::addMapPage(const std::string &val, bool isNew, const char* preferedName) {
+	if (!assets())
+		return false;
+
 	MapAssets &assets_ = assets()->maps;
 	const bool result = assets_.add(MapAssets::Entry(val, tilesGetter(), attributesTexture()));
 	if (result && isNew) {
@@ -1138,12 +1171,18 @@ bool Project::removeMapPage(int index) {
 }
 
 const MapAssets::Entry* Project::getMap(int index) const {
+	if (!assets())
+		return nullptr;
+
 	MapAssets &assets_ = assets()->maps;
 
 	return assets_.get(index);
 }
 
 MapAssets::Entry* Project::getMap(int index) {
+	if (!assets())
+		return nullptr;
+
 	MapAssets &assets_ = assets()->maps;
 
 	return assets_.get(index);
@@ -1212,6 +1251,9 @@ int Project::musicPageCount(void) const {
 }
 
 bool Project::addMusicPage(const std::string &val, bool isNew) {
+	if (!assets())
+		return false;
+
 	MusicAssets &assets_ = assets()->music;
 	const bool result = assets_.add(MusicAssets::Entry(val));
 	if (result && isNew) {
@@ -1254,12 +1296,18 @@ bool Project::removeMusicPage(int index) {
 }
 
 const MusicAssets::Entry* Project::getMusic(int index) const {
+	if (!assets())
+		return nullptr;
+
 	MusicAssets &assets_ = assets()->music;
 
 	return assets_.get(index);
 }
 
 MusicAssets::Entry* Project::getMusic(int index) {
+	if (!assets())
+		return nullptr;
+
 	MusicAssets &assets_ = assets()->music;
 
 	return assets_.get(index);
@@ -1390,6 +1438,9 @@ int Project::sfxPageCount(void) const {
 }
 
 bool Project::addSfxPage(const std::string &val, bool isNew, bool insertBefore, bool insertAfter) {
+	if (!assets())
+		return false;
+
 	SfxAssets &assets_ = assets()->sfx;
 	bool result = false;
 	if (isNew) {
@@ -1444,12 +1495,18 @@ bool Project::removeSfxPage(int index) {
 }
 
 const SfxAssets::Entry* Project::getSfx(int index) const {
+	if (!assets())
+		return nullptr;
+
 	SfxAssets &assets_ = assets()->sfx;
 
 	return assets_.get(index);
 }
 
 SfxAssets::Entry* Project::getSfx(int index) {
+	if (!assets())
+		return nullptr;
+
 	SfxAssets &assets_ = assets()->sfx;
 
 	return assets_.get(index);
@@ -1527,6 +1584,9 @@ int Project::actorPageCount(void) const {
 }
 
 bool Project::addActorPage(const std::string &val, bool isNew) {
+	if (!assets())
+		return false;
+
 	ActorAssets &assets_ = assets()->actors;
 	const bool result = assets_.add(ActorAssets::Entry(renderer(), val, paletteGetter(), behaviourSerializer(), behaviourParser()));
 	if (result && isNew) {
@@ -1562,12 +1622,18 @@ bool Project::removeActorPage(int index) {
 }
 
 const ActorAssets::Entry* Project::getActor(int index) const {
+	if (!assets())
+		return nullptr;
+
 	ActorAssets &assets_ = assets()->actors;
 
 	return assets_.get(index);
 }
 
 ActorAssets::Entry* Project::getActor(int index) {
+	if (!assets())
+		return nullptr;
+
 	ActorAssets &assets_ = assets()->actors;
 
 	return assets_.get(index);
@@ -1624,6 +1690,9 @@ int Project::scenePageCount(void) const {
 }
 
 bool Project::addScenePage(const std::string &val, bool isNew, const char* preferedName) {
+	if (!assets())
+		return false;
+
 	SceneAssets &assets_ = assets()->scenes;
 	const bool result = assets_.add(SceneAssets::Entry(val, mapGetter(), actorGetter(), propertiesTexture(), actorsTexture()));
 	if (result && isNew) {
@@ -1663,12 +1732,18 @@ bool Project::removeScenePage(int index) {
 }
 
 const SceneAssets::Entry* Project::getScene(int index) const {
+	if (!assets())
+		return nullptr;
+
 	SceneAssets &assets_ = assets()->scenes;
 
 	return assets_.get(index);
 }
 
 SceneAssets::Entry* Project::getScene(int index) {
+	if (!assets())
+		return nullptr;
+
 	SceneAssets &assets_ = assets()->scenes;
 
 	return assets_.get(index);
