@@ -962,6 +962,8 @@ bool Theme::open(class Renderer* rnd) {
 	windowSearchResult_GlobalSearch("Global search");
 	windowSearchResult_MatchWholeWords("Match whole words");
 
+	windowKernelDocument("Kernel Document");
+
 	windowActivities("Activities");
 	windowActivities_Activities("Activities:");
 	windowActivities_ContentInfo(

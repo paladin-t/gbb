@@ -4739,8 +4739,90 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait
 		);
 }
 
+std::string Workspace::getDocumentPath(int index, std::string* name_) const {
+	if (name_)
+		name_->clear();
+
+	if (kernels().empty())
+		return "";
+
+	if (index < 0 || index >= (int)kernels().size())
+		return "";
+
+	const GBBASIC::Kernel::Ptr &krnl = kernels()[index];
+	const std::string src = krnl->kernelDocumentPath(name_);
+
+	return src;
+}
+
 void Workspace::viewDocument(Window* wnd, Renderer* rnd, int index, bool wait, KernelDocumentViewedHandler viewed, KernelDocumentViewedHandler canceled) {
-	// TODO
+	if (kernels().empty()) {
+		const std::string msg = "No valid kernel.";
+		error(msg.c_str());
+
+		if (canceled)
+			canceled();
+
+		return;
+	}
+
+	std::string name;
+	const std::string doc = getDocumentPath(index, &name);
+	if (!Path::fileExists(doc.c_str())) {
+		const std::string msg = "Cannot find document \"" + doc + "\".";
+		error(msg.c_str());
+
+		if (canceled)
+			canceled();
+
+		return;
+	}
+
+	auto next = [wnd, rnd, this, viewed, name, doc] (promise::Defer df) -> void {
+		ImGui::DocumentPopupBox::ConfirmedHandler confirm(
+			[wnd, rnd, this, df] (void) -> void {
+				WORKSPACE_AUTO_CLOSE_POPUP(this)
+
+				delay(
+					[wnd, rnd, this, df] (void) -> void {
+						showInstalledKernels(wnd, rnd, nullptr);
+
+						df.resolve(true);
+					},
+					"VIEWED README"
+				);
+			},
+			nullptr
+		);
+		std::string txt;
+		File::Ptr file(File::create());
+		if (file->open(doc.c_str(), Stream::READ)) {
+			file->readString(txt);
+			file->close();
+		}
+		popupBox(
+			ImGui::PopupBox::Ptr(
+				new ImGui::DocumentPopupBox(
+					rnd,
+					theme()->windowKernelDocument(), name,
+					txt,
+					this,
+					confirm,
+					theme()->generic_Ok().c_str()
+				)
+			)
+		);
+	};
+
+	promise::Promise begin = wait ?
+		Operations::popupWait(wnd, rnd, this, true, theme()->dialogPrompt_Ejecting().c_str(), true, false) :
+		Operations::always(wnd, rnd, this);
+	begin
+		.then(
+			[next] (void) -> promise::Promise {
+				return promise::newPromise(next);
+			}
+		);
 }
 
 void Workspace::toggleDocument(const char* path) {

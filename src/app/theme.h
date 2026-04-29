@@ -724,6 +724,8 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowSearchResult_GlobalSearch)
 	GBBASIC_PROPERTY_READONLY(std::string, windowSearchResult_MatchWholeWords)
 
+	GBBASIC_PROPERTY_READONLY(std::string, windowKernelDocument)
+
 	GBBASIC_PROPERTY_READONLY(std::string, windowActivities)
 	GBBASIC_PROPERTY_READONLY(std::string, windowActivities_Activities)
 	GBBASIC_PROPERTY_READONLY(std::string, windowActivities_ContentInfo)

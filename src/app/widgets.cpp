@@ -4705,304 +4705,6 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 	}
 }
 
-InstalledKernelsPopupBox::InstalledKernelsPopupBox(
-	Renderer* rnd,
-	Theme* theme,
-	const std::string &title, const char* prompt,
-	GBBASIC::Kernel::Array &kernels,
-	const ConfirmedHandler &confirm, const AddedHandler &add, const RemovedHandler &remove,
-	const char* confirmTxt, const char* addTxt, const char* removeTxt,
-	SourceCodeEjectingHandler ejectSourceCode,
-	DocumentViewingHandler viewDocument
-) : _renderer(rnd),
-	_theme(theme),
-	_title(title),
-	_kernels(kernels),
-	_confirmedHandler(confirm), _addedHandler(add), _removedHandler(remove),
-	_ejectSourceCode(ejectSourceCode),
-	_viewDocument(viewDocument)
-{
-	if (prompt)
-		_promptText = prompt;
-
-	if (confirmTxt)
-		_confirmText = confirmTxt;
-
-	if (addTxt)
-		_addText = addTxt;
-	if (removeTxt)
-		_removeText = removeTxt;
-}
-
-InstalledKernelsPopupBox::~InstalledKernelsPopupBox() {
-}
-
-void InstalledKernelsPopupBox::update(Workspace* ws) {
-	ImGuiIO &io = GetIO();
-	ImGuiStyle &style = GetStyle();
-
-	bool isOpen = true;
-	bool toConfirm = false;
-	bool toAdd = false;
-	int toRemove = -1;
-	int toViewReadme = -1;
-	int toEject = -1;
-
-	if (_init.begin()) {
-		OpenPopup(_title);
-
-		const ImVec2 pos = io.DisplaySize/* * io.DisplayFramebufferScale*/ * 0.5f;
-		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-	}
-
-	const float width = Math::clamp(_renderer->width() * 0.8f, 310.0f, 480.0f);
-	const float height = Math::min(width, _renderer->height() * 0.8f - 84.0f);
-	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
-	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
-		const char* remove = _removeText.empty() ? "Uninstall" : _removeText.c_str();
-
-		TextUnformatted(ws->theme()->windowInstalledKernels_Kernels());
-		{
-			VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(1, 1));
-
-			BeginChild("@Kr", ImVec2(width - style.WindowPadding.x * 1.7f, height), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
-			{
-				const GBBASIC::Kernel::Array &kernels = ws->kernels();
-				if (_kernelTitles.size() != kernels.size()) {
-					_kernelTitles.clear();
-
-					for (int i = 0; i < (int)kernels.size(); ++i) {
-						const GBBASIC::Kernel::Ptr &krnl = kernels[i];
-						const Localization::Dictionary &name = krnl->title();
-						const char* title = Localization::get(name);
-						if (!title)
-							title = "Unnamed";
-						const int used = ws->getKernelUsedCountByProjects(i);
-						const std::string title_ = Text::format(
-							_theme->windowInstalledKernels_KernelTitleUsed(),
-							{
-								std::string(title), Text::toString(used)
-							}
-						);
-						_kernelTitles.push_back(title_);
-					}
-					_kernelTitles.shrink_to_fit();
-				}
-				for (int i = 0; i < (int)kernels.size(); ++i) {
-					const GBBASIC::Kernel::Ptr &krnl = kernels[i];
-					const Localization::Dictionary &desc = krnl->description();
-					const char* tooltip = Localization::get(desc);
-
-					PushID(krnl->id());
-					{
-						VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(0, 0));
-
-						const ImVec2 spos = GetCursorScreenPos();
-						const ImVec2 pos = GetCursorPos();
-						const ImVec2 size(width - style.ChildBorderSize - style.ScrollbarSize - style.WindowPadding.x, 19.0f);
-						const float buttonPos = width - style.WindowPadding.x * 1.7f - 13 * 2 * 4 + 2;
-						Dummy(
-							size,
-							GetStyleColorVec4(IsMouseHoveringRect(spos, spos + size) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg)
-						);
-						SetCursorPos(pos);
-
-						AlignTextToFramePadding();
-						TextUnformatted(_kernelTitles[i]);
-						SameLine();
-
-						if (tooltip && *tooltip && IsMouseHoveringRect(spos, spos + ImVec2(buttonPos, 19.0f))) {
-							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
-
-							SetTooltip(tooltip);
-						}
-
-						SetCursorPosX(buttonPos);
-
-						Dummy(ImVec2(4, 0));
-						SameLine();
-
-						if (krnl->kernelDocument().empty()) {
-							BeginDisabled();
-							{
-								ImageButton(_theme->iconDocument()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_ViewReadme().c_str());
-							}
-							EndDisabled();
-						} else {
-							if (ImageButton(_theme->iconDocument()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_ViewReadme().c_str())) {
-								toViewReadme = i;
-							}
-						}
-						SameLine();
-
-						if (!_viewDocument || krnl->url().empty()) {
-							BeginDisabled();
-							{
-								ImageButton(_theme->iconExternal()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_Url().c_str());
-							}
-							EndDisabled();
-						} else {
-							if (ImageButton(_theme->iconExternal()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_Url().c_str())) {
-								const std::string osstr = Unicode::toOs(krnl->url());
-
-								Platform::surf(osstr.c_str());
-							}
-						}
-						SameLine();
-
-						if (!_ejectSourceCode || krnl->kernelSourceCode().empty()) {
-							BeginDisabled();
-							{
-								ImageButton(_theme->iconCode()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_EjectSourceCodeVm().c_str());
-							}
-							EndDisabled();
-						} else {
-							if (ImageButton(_theme->iconCode()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_EjectSourceCodeVm().c_str())) {
-								toEject = i;
-							}
-						}
-						SameLine();
-
-						if (krnl->readonly()) {
-							BeginDisabled();
-							{
-								ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE));
-							}
-							EndDisabled();
-						} else {
-							bool removed = false;
-							if (_tobeUninstalledKernelIndex == i) {
-								ImGui::PushStyleColor(ImGuiCol_Button, _theme->style()->dangerButtonColor);
-								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, _theme->style()->dangerButtonHoveredColor);
-								ImGui::PushStyleColor(ImGuiCol_ButtonActive, _theme->style()->dangerButtonActiveColor);
-								{
-									removed = ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, remove);
-								}
-								ImGui::PopStyleColor(3);
-							} else {
-								removed = ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, remove);
-							}
-							if (removed) {
-								if (/* _tobeUninstalledKernelIndex == -1 || */ _tobeUninstalledKernelIndex != i) {
-									_tobeUninstalledKernelIndex = i;
-								} else {
-									toRemove = _tobeUninstalledKernelIndex;
-									_tobeUninstalledKernelIndex = -1;
-								}
-							}
-						}
-					}
-					PopID();
-				}
-			}
-			EndChild();
-
-			if (_tobeUninstalledKernelIndex >= 1) {
-				const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[_tobeUninstalledKernelIndex];
-				const Localization::Dictionary &name = krnl->title();
-				const char* title = Localization::get(name);
-
-				Text(_theme->WindowInstalledKernels_ClickAgainToUninstall().c_str(), title);
-
-				if (!_promptText.empty())
-					_promptText.clear();
-			}
-
-			if (!_promptText.empty()) {
-				TextUnformatted(_promptText);
-			}
-
-			NewLine(2);
-
-			Url(_theme->menu_Howto().c_str(), "https://paladin-t.github.io/kits/gbb/learn/creating-a-custom-kernel.html");
-			SameLine();
-			Dummy(ImVec2(14, 0));
-			SameLine();
-			Url(_theme->menu_GitHub().c_str(), "https://github.com/paladin-t/gbb/tree/main/src/vm");
-			SameLine();
-			Dummy(ImVec2(14, 0));
-			SameLine();
-			Url(_theme->menu_MoreOfficialKernels().c_str(), "https://github.com/paladin-t/gbb/releases/latest");
-
-			NewLine(3);
-		}
-
-		const char* confirm = _confirmText.c_str();
-		const char* add = _addText.empty() ? "Install" : _addText.c_str();
-
-		if (_confirmText.empty()) {
-			confirm = "Ok";
-		}
-
-		CentralizeButton(2);
-
-		if ((Button(confirm, ImVec2(WIDGETS_BUTTON_WIDTH, 0)) || IsKeyReleased(SDL_SCANCODE_RETURN) || IsKeyReleased(SDL_SCANCODE_ESCAPE)) && _init.end()) {
-			toConfirm = true;
-
-			CloseCurrentPopup();
-		}
-
-		SameLine();
-		if (Button(add, ImVec2(WIDGETS_BUTTON_WIDTH, 0)) && _init.end()) {
-			toAdd = true;
-		}
-
-		if (!_init.begin() && !_init.end())
-			CentralizeWindow();
-
-		EnsureWindowVisible();
-
-		EndPopup();
-	}
-
-	if (isOpen)
-		_init.update();
-
-	if (toConfirm) {
-		_init.reset();
-
-		if (!_confirmedHandler.empty()) {
-			_confirmedHandler();
-
-			return;
-		}
-	}
-	if (toAdd) {
-		_init.reset();
-
-		_kernelTitles.clear();
-		_promptText.clear();
-		_tobeUninstalledKernelIndex = -1;
-
-		if (!_addedHandler.empty()) {
-			_addedHandler();
-		}
-	}
-	if (toRemove >= 1) {
-		_kernelTitles.clear();
-		_promptText.clear();
-		_tobeUninstalledKernelIndex = -1;
-
-		if (!_removedHandler.empty()) {
-			_removedHandler(toRemove);
-		}
-	}
-	if (toViewReadme >= 0) {
-		if (_viewDocument) {
-			_viewDocument(toViewReadme);
-
-			return;
-		}
-	}
-	if (toEject >= 0) {
-		if (_ejectSourceCode) {
-			_ejectSourceCode(toEject);
-
-			return;
-		}
-	}
-}
-
 PreferencesPopupBox::PreferencesPopupBox(
 	Renderer* rnd,
 	Input* input, Theme* theme,
@@ -5396,6 +5098,396 @@ void PreferencesPopupBox::update(Workspace*) {
 	}
 }
 
+InstalledKernelsPopupBox::InstalledKernelsPopupBox(
+	Renderer* rnd,
+	Theme* theme,
+	const std::string &title, const char* prompt,
+	GBBASIC::Kernel::Array &kernels,
+	const ConfirmedHandler &confirm, const AddedHandler &add, const RemovedHandler &remove,
+	const char* confirmTxt, const char* addTxt, const char* removeTxt,
+	SourceCodeEjectingHandler ejectSourceCode,
+	DocumentViewingHandler viewDocument
+) : _renderer(rnd),
+	_theme(theme),
+	_title(title),
+	_kernels(kernels),
+	_confirmedHandler(confirm), _addedHandler(add), _removedHandler(remove),
+	_ejectSourceCode(ejectSourceCode),
+	_viewDocument(viewDocument)
+{
+	if (prompt)
+		_promptText = prompt;
+
+	if (confirmTxt)
+		_confirmText = confirmTxt;
+
+	if (addTxt)
+		_addText = addTxt;
+	if (removeTxt)
+		_removeText = removeTxt;
+}
+
+InstalledKernelsPopupBox::~InstalledKernelsPopupBox() {
+}
+
+void InstalledKernelsPopupBox::update(Workspace* ws) {
+	ImGuiIO &io = GetIO();
+	ImGuiStyle &style = GetStyle();
+
+	bool isOpen = true;
+	bool toConfirm = false;
+	bool toAdd = false;
+	int toRemove = -1;
+	int toViewReadme = -1;
+	int toEject = -1;
+
+	if (_init.begin()) {
+		OpenPopup(_title);
+
+		const ImVec2 pos = io.DisplaySize/* * io.DisplayFramebufferScale*/ * 0.5f;
+		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	}
+
+	const float width = Math::clamp(_renderer->width() * 0.8f, 310.0f, 480.0f);
+	const float height = Math::min(width, _renderer->height() * 0.8f - 84.0f);
+	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
+	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
+		const char* remove = _removeText.empty() ? "Uninstall" : _removeText.c_str();
+
+		TextUnformatted(ws->theme()->windowInstalledKernels_Kernels());
+		{
+			VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(1, 1));
+
+			BeginChild("@Kr", ImVec2(width - style.WindowPadding.x * 1.7f, height), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
+			{
+				const GBBASIC::Kernel::Array &kernels = ws->kernels();
+				if (_kernelTitles.size() != kernels.size()) {
+					_kernelTitles.clear();
+
+					for (int i = 0; i < (int)kernels.size(); ++i) {
+						const GBBASIC::Kernel::Ptr &krnl = kernels[i];
+						const Localization::Dictionary &name = krnl->title();
+						const char* title = Localization::get(name);
+						if (!title)
+							title = "Unnamed";
+						const int used = ws->getKernelUsedCountByProjects(i);
+						const std::string title_ = Text::format(
+							_theme->windowInstalledKernels_KernelTitleUsed(),
+							{
+								std::string(title), Text::toString(used)
+							}
+						);
+						_kernelTitles.push_back(title_);
+					}
+					_kernelTitles.shrink_to_fit();
+				}
+				for (int i = 0; i < (int)kernels.size(); ++i) {
+					const GBBASIC::Kernel::Ptr &krnl = kernels[i];
+					const Localization::Dictionary &desc = krnl->description();
+					const char* tooltip = Localization::get(desc);
+
+					PushID(krnl->id());
+					{
+						VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(0, 0));
+
+						const ImVec2 spos = GetCursorScreenPos();
+						const ImVec2 pos = GetCursorPos();
+						const ImVec2 size(width - style.ChildBorderSize - style.ScrollbarSize - style.WindowPadding.x, 19.0f);
+						const float buttonPos = width - style.WindowPadding.x * 1.7f - 13 * 2 * 4 + 2;
+						Dummy(
+							size,
+							GetStyleColorVec4(IsMouseHoveringRect(spos, spos + size) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg)
+						);
+						SetCursorPos(pos);
+
+						AlignTextToFramePadding();
+						TextUnformatted(_kernelTitles[i]);
+						SameLine();
+
+						if (tooltip && *tooltip && IsMouseHoveringRect(spos, spos + ImVec2(buttonPos, 19.0f))) {
+							VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+							SetTooltip(tooltip);
+						}
+
+						SetCursorPosX(buttonPos);
+
+						Dummy(ImVec2(4, 0));
+						SameLine();
+
+						if (krnl->kernelDocument().empty()) {
+							BeginDisabled();
+							{
+								ImageButton(_theme->iconDocument()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_ViewReadme().c_str());
+							}
+							EndDisabled();
+						} else {
+							if (ImageButton(_theme->iconDocument()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_ViewReadme().c_str())) {
+								toViewReadme = i;
+							}
+						}
+						SameLine();
+
+						if (!_viewDocument || krnl->url().empty()) {
+							BeginDisabled();
+							{
+								ImageButton(_theme->iconExternal()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_Url().c_str());
+							}
+							EndDisabled();
+						} else {
+							if (ImageButton(_theme->iconExternal()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_Url().c_str())) {
+								const std::string osstr = Unicode::toOs(krnl->url());
+
+								Platform::surf(osstr.c_str());
+							}
+						}
+						SameLine();
+
+						if (!_ejectSourceCode || krnl->kernelSourceCode().empty()) {
+							BeginDisabled();
+							{
+								ImageButton(_theme->iconCode()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_EjectSourceCodeVm().c_str());
+							}
+							EndDisabled();
+						} else {
+							if (ImageButton(_theme->iconCode()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_EjectSourceCodeVm().c_str())) {
+								toEject = i;
+							}
+						}
+						SameLine();
+
+						if (krnl->readonly()) {
+							BeginDisabled();
+							{
+								ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE));
+							}
+							EndDisabled();
+						} else {
+							bool removed = false;
+							if (_tobeUninstalledKernelIndex == i) {
+								ImGui::PushStyleColor(ImGuiCol_Button, _theme->style()->dangerButtonColor);
+								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, _theme->style()->dangerButtonHoveredColor);
+								ImGui::PushStyleColor(ImGuiCol_ButtonActive, _theme->style()->dangerButtonActiveColor);
+								{
+									removed = ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, remove);
+								}
+								ImGui::PopStyleColor(3);
+							} else {
+								removed = ImageButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, remove);
+							}
+							if (removed) {
+								if (/* _tobeUninstalledKernelIndex == -1 || */ _tobeUninstalledKernelIndex != i) {
+									_tobeUninstalledKernelIndex = i;
+								} else {
+									toRemove = _tobeUninstalledKernelIndex;
+									_tobeUninstalledKernelIndex = -1;
+								}
+							}
+						}
+					}
+					PopID();
+				}
+			}
+			EndChild();
+
+			if (_tobeUninstalledKernelIndex >= 1) {
+				const GBBASIC::Kernel::Ptr &krnl = ws->kernels()[_tobeUninstalledKernelIndex];
+				const Localization::Dictionary &name = krnl->title();
+				const char* title = Localization::get(name);
+
+				Text(_theme->WindowInstalledKernels_ClickAgainToUninstall().c_str(), title);
+
+				if (!_promptText.empty())
+					_promptText.clear();
+			}
+
+			if (!_promptText.empty()) {
+				TextUnformatted(_promptText);
+			}
+
+			NewLine(2);
+
+			Url(_theme->menu_Howto().c_str(), "https://paladin-t.github.io/kits/gbb/learn/creating-a-custom-kernel.html");
+			SameLine();
+			Dummy(ImVec2(14, 0));
+			SameLine();
+			Url(_theme->menu_GitHub().c_str(), "https://github.com/paladin-t/gbb/tree/main/src/vm");
+			SameLine();
+			Dummy(ImVec2(14, 0));
+			SameLine();
+			Url(_theme->menu_MoreOfficialKernels().c_str(), "https://github.com/paladin-t/gbb/releases/latest");
+
+			NewLine(3);
+		}
+
+		const char* confirm = _confirmText.c_str();
+		const char* add = _addText.empty() ? "Install" : _addText.c_str();
+
+		if (_confirmText.empty()) {
+			confirm = "Ok";
+		}
+
+		CentralizeButton(2);
+
+		if ((Button(confirm, ImVec2(WIDGETS_BUTTON_WIDTH, 0)) || IsKeyReleased(SDL_SCANCODE_RETURN) || IsKeyReleased(SDL_SCANCODE_ESCAPE)) && _init.end()) {
+			toConfirm = true;
+
+			CloseCurrentPopup();
+		}
+
+		SameLine();
+		if (Button(add, ImVec2(WIDGETS_BUTTON_WIDTH, 0)) && _init.end()) {
+			toAdd = true;
+		}
+
+		if (!_init.begin() && !_init.end())
+			CentralizeWindow();
+
+		EnsureWindowVisible();
+
+		EndPopup();
+	}
+
+	if (isOpen)
+		_init.update();
+
+	if (toConfirm) {
+		_init.reset();
+
+		if (!_confirmedHandler.empty()) {
+			_confirmedHandler();
+
+			return;
+		}
+	}
+	if (toAdd) {
+		_init.reset();
+
+		_kernelTitles.clear();
+		_promptText.clear();
+		_tobeUninstalledKernelIndex = -1;
+
+		if (!_addedHandler.empty()) {
+			_addedHandler();
+		}
+	}
+	if (toRemove >= 1) {
+		_kernelTitles.clear();
+		_promptText.clear();
+		_tobeUninstalledKernelIndex = -1;
+
+		if (!_removedHandler.empty()) {
+			_removedHandler(toRemove);
+		}
+	}
+	if (toViewReadme >= 0) {
+		if (_viewDocument) {
+			_viewDocument(toViewReadme);
+
+			return;
+		}
+	}
+	if (toEject >= 0) {
+		if (_ejectSourceCode) {
+			_ejectSourceCode(toEject);
+
+			return;
+		}
+	}
+}
+
+DocumentPopupBox::DocumentPopupBox(
+	Renderer* rnd,
+	const std::string &title, const std::string &subTitle,
+	const std::string &content,
+	Workspace* /* ws */,
+	const ConfirmedHandler &confirm,
+	const char* confirmTxt
+) : _renderer(rnd),
+	_title(title), _subTitle(subTitle),
+	_content(content),
+	_confirmedHandler(confirm)
+{
+	if (confirmTxt)
+		_confirmText = confirmTxt;
+}
+
+DocumentPopupBox::~DocumentPopupBox() {
+}
+
+void DocumentPopupBox::update(Workspace* /* ws */) {
+	ImGuiIO &io = GetIO();
+
+	bool isOpen = true;
+	bool toConfirm = false;
+	bool toCancel = false;
+
+	if (_init.begin()) {
+		OpenPopup(_title);
+
+		const ImVec2 pos = io.DisplaySize/* * io.DisplayFramebufferScale*/ * 0.5f;
+		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	}
+
+	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 480.0f);
+	const float height = Math::clamp(_renderer->height() * 0.5f, 64.0f, 720.0f);
+	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
+	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
+		TextUnformatted(_subTitle);
+
+		const float border = GetCursorPosX();
+		InputTextMultiline(
+			"##Ipt",
+			(char*)_content.c_str(), _content.length(),
+			ImVec2(width - border * 2, height),
+			ImGuiInputTextFlags_ReadOnly
+		);
+
+		const char* confirm = _confirmText.c_str();
+
+		if (_confirmText.empty()) {
+			confirm = "Ok";
+		}
+
+		CentralizeButton();
+
+		if (Button(confirm, ImVec2(WIDGETS_BUTTON_WIDTH, 0)) || IsKeyReleased(SDL_SCANCODE_RETURN) || IsKeyReleased(SDL_SCANCODE_Y)) {
+			toConfirm = true;
+
+			CloseCurrentPopup();
+		}
+
+		if (IsKeyReleased(SDL_SCANCODE_ESCAPE)) {
+			toCancel = true;
+
+			CloseCurrentPopup();
+		}
+
+		if (!_init.begin() && !_init.end())
+			CentralizeWindow();
+
+		EnsureWindowVisible();
+
+		EndPopup();
+	}
+
+	if (isOpen)
+		_init.update();
+
+	if (!isOpen)
+		toCancel = true;
+
+	if (toConfirm || toCancel) {
+		_init.reset();
+
+		if (!_confirmedHandler.empty()) {
+			_confirmedHandler();
+
+			return;
+		}
+	}
+}
+
 ActivitiesPopupBox::ActivitiesPopupBox(
 	Renderer* rnd,
 	const std::string &title,
@@ -5407,7 +5499,7 @@ ActivitiesPopupBox::ActivitiesPopupBox(
 	_confirmedHandler(confirm)
 {
 	const Activities &activities = ws->activities();
-	 _activities = Text::format(
+	_activities = Text::format(
 		ws->theme()->windowActivities_ContentInfo(),
 		{
 			Text::toNumberWithCommas    (activities.opened.to_string()),

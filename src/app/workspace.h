@@ -951,6 +951,7 @@ public:
 	void showAbout(Renderer* rnd);
 	std::string getSourceCodePath(int index, std::string* name /* nullable */) const;
 	void ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait, KernelEjectionHandler ejected /* nullable */, KernelEjectionHandler canceled /* nullable */);
+	std::string getDocumentPath(int index, std::string* name /* nullable */) const;
 	void viewDocument(Window* wnd, Renderer* rnd, int index, bool wait, KernelDocumentViewedHandler viewed /* nullable */, KernelDocumentViewedHandler canceled /* nullable */);
 	void toggleDocument(const char* path /* nullable */);
 

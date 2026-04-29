@@ -975,6 +975,60 @@ public:
 	virtual void update(Workspace* ws) override;
 };
 
+class PreferencesPopupBox : public PopupBox {
+public:
+	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, Settings &> {
+		using Handler::Handler;
+	};
+	struct CanceledHandler : public Handler<CanceledHandler, void> {
+		using Handler::Handler;
+	};
+	struct AppliedHandler : public Handler<AppliedHandler, void, Settings &> {
+		using Handler::Handler;
+	};
+
+	typedef std::function<bool(void)> BoolGetter;
+
+private:
+	Renderer* _renderer = nullptr; // Foreign.
+	Input* _input = nullptr; // Foreign.
+	Theme* _theme = nullptr; // Foreign.
+	std::string _title;
+	Settings &_settings; // Foreign.
+	Settings _settingsShadow;
+	BoolGetter _getBorderlessWritable = nullptr;
+	BoolGetter _getBorderless = nullptr;
+	bool _toDeviceTab = false;
+	bool _activeClassicPaletteShowColorPicker = false;
+	int _activeClassicPaletteIndex = -1;
+	int _activeGamepadIndex = -1;
+	int _activeButtonIndex = -1;
+
+	ConfirmedHandler _confirmedHandler = nullptr;
+	std::string _confirmText;
+	CanceledHandler _canceledHandler = nullptr;
+	std::string _cancelText;
+	AppliedHandler _appliedHandler = nullptr;
+	std::string _applyText;
+
+	Initializer _init;
+
+public:
+	PreferencesPopupBox(
+		Renderer* rnd,
+		Input* input, Theme* theme,
+		const std::string &title,
+		Settings &settings,
+		BoolGetter getBorderlessWritable, BoolGetter getBorderless,
+		const std::string &tab,
+		const ConfirmedHandler &confirm, const CanceledHandler &cancel, const AppliedHandler &apply,
+		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */, const char* applyTxt /* nullable */
+	);
+	virtual ~PreferencesPopupBox() override;
+
+	virtual void update(Workspace* ws) override;
+};
+
 class InstalledKernelsPopupBox : public PopupBox {
 public:
 	struct ConfirmedHandler : public Handler<ConfirmedHandler, void> {
@@ -1026,56 +1080,33 @@ public:
 	virtual void update(Workspace* ws) override;
 };
 
-class PreferencesPopupBox : public PopupBox {
+class DocumentPopupBox : public PopupBox {
 public:
-	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, Settings &> {
+	struct ConfirmedHandler : public Handler<ConfirmedHandler, void> {
 		using Handler::Handler;
 	};
-	struct CanceledHandler : public Handler<CanceledHandler, void> {
-		using Handler::Handler;
-	};
-	struct AppliedHandler : public Handler<AppliedHandler, void, Settings &> {
-		using Handler::Handler;
-	};
-
-	typedef std::function<bool(void)> BoolGetter;
 
 private:
 	Renderer* _renderer = nullptr; // Foreign.
-	Input* _input = nullptr; // Foreign.
-	Theme* _theme = nullptr; // Foreign.
 	std::string _title;
-	Settings &_settings; // Foreign.
-	Settings _settingsShadow;
-	BoolGetter _getBorderlessWritable = nullptr;
-	BoolGetter _getBorderless = nullptr;
-	bool _toDeviceTab = false;
-	bool _activeClassicPaletteShowColorPicker = false;
-	int _activeClassicPaletteIndex = -1;
-	int _activeGamepadIndex = -1;
-	int _activeButtonIndex = -1;
+	std::string _subTitle;
+	std::string _content;
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;
-	CanceledHandler _canceledHandler = nullptr;
-	std::string _cancelText;
-	AppliedHandler _appliedHandler = nullptr;
-	std::string _applyText;
 
 	Initializer _init;
 
 public:
-	PreferencesPopupBox(
+	DocumentPopupBox(
 		Renderer* rnd,
-		Input* input, Theme* theme,
-		const std::string &title,
-		Settings &settings,
-		BoolGetter getBorderlessWritable, BoolGetter getBorderless,
-		const std::string &tab,
-		const ConfirmedHandler &confirm, const CanceledHandler &cancel, const AppliedHandler &apply,
-		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */, const char* applyTxt /* nullable */
+		const std::string &title, const std::string &subTitle,
+		const std::string &content,
+		Workspace* ws,
+		const ConfirmedHandler &confirm,
+		const char* confirmTxt /* nullable */
 	);
-	virtual ~PreferencesPopupBox() override;
+	virtual ~DocumentPopupBox() override;
 
 	virtual void update(Workspace* ws) override;
 };
