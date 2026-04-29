@@ -4712,13 +4712,15 @@ InstalledKernelsPopupBox::InstalledKernelsPopupBox(
 	GBBASIC::Kernel::Array &kernels,
 	const ConfirmedHandler &confirm, const AddedHandler &add, const RemovedHandler &remove,
 	const char* confirmTxt, const char* addTxt, const char* removeTxt,
-	SourceCodeEjectingHandler ejectSourceCode
+	SourceCodeEjectingHandler ejectSourceCode,
+	DocumentViewingHandler viewDocument
 ) : _renderer(rnd),
 	_theme(theme),
 	_title(title),
 	_kernels(kernels),
 	_confirmedHandler(confirm), _addedHandler(add), _removedHandler(remove),
-	_ejectSourceCode(ejectSourceCode)
+	_ejectSourceCode(ejectSourceCode),
+	_viewDocument(viewDocument)
 {
 	if (prompt)
 		_promptText = prompt;
@@ -4743,6 +4745,7 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 	bool toConfirm = false;
 	bool toAdd = false;
 	int toRemove = -1;
+	int toViewReadme = -1;
 	int toEject = -1;
 
 	if (_init.begin()) {
@@ -4752,7 +4755,7 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	}
 
-	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 480.0f);
+	const float width = Math::clamp(_renderer->width() * 0.8f, 310.0f, 480.0f);
 	const float height = Math::min(width, _renderer->height() * 0.8f - 84.0f);
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
@@ -4797,7 +4800,7 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 						const ImVec2 spos = GetCursorScreenPos();
 						const ImVec2 pos = GetCursorPos();
 						const ImVec2 size(width - style.ChildBorderSize - style.ScrollbarSize - style.WindowPadding.x, 19.0f);
-						const float buttonPos = width - style.WindowPadding.x * 1.7f - 13 * 6 - 3;
+						const float buttonPos = width - style.WindowPadding.x * 1.7f - 13 * 2 * 4 + 2;
 						Dummy(
 							size,
 							GetStyleColorVec4(IsMouseHoveringRect(spos, spos + size) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg)
@@ -4819,7 +4822,20 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 						Dummy(ImVec2(4, 0));
 						SameLine();
 
-						if (krnl->url().empty()) {
+						if (krnl->kernelDocument().empty()) {
+							BeginDisabled();
+							{
+								ImageButton(_theme->iconDocument()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_ViewReadme().c_str());
+							}
+							EndDisabled();
+						} else {
+							if (ImageButton(_theme->iconDocument()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_ViewReadme().c_str())) {
+								toViewReadme = i;
+							}
+						}
+						SameLine();
+
+						if (!_viewDocument || krnl->url().empty()) {
 							BeginDisabled();
 							{
 								ImageButton(_theme->iconExternal()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_Url().c_str());
@@ -4834,20 +4850,18 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 						}
 						SameLine();
 
-						if (_ejectSourceCode) {
-							if (krnl->kernelSourceCode().empty()) {
-								BeginDisabled();
-								{
-									ImageButton(_theme->iconCode()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_EjectSourceCodeVm().c_str());
-								}
-								EndDisabled();
-							} else {
-								if (ImageButton(_theme->iconCode()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_EjectSourceCodeVm().c_str())) {
-									toEject = i;
-								}
+						if (!_ejectSourceCode || krnl->kernelSourceCode().empty()) {
+							BeginDisabled();
+							{
+								ImageButton(_theme->iconCode()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_EjectSourceCodeVm().c_str());
 							}
-							SameLine();
+							EndDisabled();
+						} else {
+							if (ImageButton(_theme->iconCode()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE), false, _theme->tooltip_EjectSourceCodeVm().c_str())) {
+								toEject = i;
+							}
 						}
+						SameLine();
 
 						if (krnl->readonly()) {
 							BeginDisabled();
@@ -4971,6 +4985,13 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 
 		if (!_removedHandler.empty()) {
 			_removedHandler(toRemove);
+		}
+	}
+	if (toViewReadme >= 0) {
+		if (_viewDocument) {
+			_viewDocument(toViewReadme);
+
+			return;
 		}
 	}
 	if (toEject >= 0) {

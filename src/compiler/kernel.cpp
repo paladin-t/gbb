@@ -87,6 +87,27 @@ std::string Kernel::kernelSourceCodePath(std::string* name_) const {
 	return src;
 }
 
+std::string Kernel::kernelDocumentPath(std::string* name_) const {
+	if (name_)
+		name_->clear();
+
+	const std::string &path_ = path();
+	const std::string &srcPath = kernelDocument();
+	if (path_.empty() || srcPath.empty())
+		return "";
+
+	std::string dir;
+	Path::split(path_, nullptr, nullptr, &dir);
+
+	std::string src = Path::combine(dir.c_str(), srcPath.c_str());
+	src = Path::absoluteOf(src);
+
+	if (name_)
+		*name_ = srcPath;
+
+	return src;
+}
+
 bool Kernel::open(const char* path_) {
 	// Read from file.
 	File::Ptr file(File::create());
@@ -115,6 +136,7 @@ bool Kernel::open(const char* path_) {
 	std::string kernelSymbols_;
 	std::string kernelAliases_;
 	std::string kernelSourceCode_;
+	std::string kernelDocument_;
 	bool featuresImplementedTouchApi_ = false;
 	int bootstrapBank_ = 0;
 	std::string memoryHeapSize_;
@@ -159,6 +181,8 @@ bool Kernel::open(const char* path_) {
 		kernelAliases_ = "";
 	if (!Jpath::get(doc, kernelSourceCode_, "kernel", "source_code"))
 		kernelSourceCode_ = "";
+	if (!Jpath::get(doc, kernelDocument_, "kernel", "document"))
+		kernelDocument_ = "";
 
 	if (!Jpath::get(doc, featuresImplementedTouchApi_, "features", "implemented_touch_api"))
 		featuresImplementedTouchApi_ = false;
@@ -330,6 +354,7 @@ bool Kernel::open(const char* path_) {
 	kernelSymbols(kernelSymbols_);
 	kernelAliases(kernelAliases_);
 	kernelSourceCode(kernelSourceCode_);
+	kernelDocument(kernelDocument_);
 	featuresImplementedTouchApi(featuresImplementedTouchApi_);
 	bootstrapBank(bootstrapBank_);
 	memoryHeapSize(memoryHeapSize_);
@@ -341,11 +366,16 @@ bool Kernel::open(const char* path_) {
 	projectileAnimationIndex(projectileAnimationIndex_);
 	behaviours(behaviours_);
 
-	// Reset the kernel source code if file doesn't exist.
+	// Reset the paths if files don't exist.
 	if (!kernelSourceCode().empty()) {
 		const std::string krnlSrcCodePath = kernelSourceCodePath(nullptr);
 		if (krnlSrcCodePath.empty() || !Path::fileExists(krnlSrcCodePath.c_str()))
 			kernelSourceCode().clear();
+	}
+	if (!kernelDocument().empty()) {
+		const std::string krnlSrcCodePath = kernelDocumentPath(nullptr);
+		if (krnlSrcCodePath.empty() || !Path::fileExists(krnlSrcCodePath.c_str()))
+			kernelDocument().clear();
 	}
 
 	// Setup the entry.
@@ -371,6 +401,7 @@ bool Kernel::close(void) {
 	kernelSymbols().clear();
 	kernelAliases().clear();
 	kernelSourceCode().clear();
+	kernelDocument().clear();
 	featuresImplementedTouchApi(false);
 	bootstrapBank(0);
 	memoryHeapSize().clear();

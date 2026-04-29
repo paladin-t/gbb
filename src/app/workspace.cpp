@@ -4430,6 +4430,17 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd, const char* pro
 			showInstalledKernels(wnd, rnd, nullptr);
 		}
 	);
+	ImGui::InstalledKernelsPopupBox::DocumentViewingHandler viewDocument = std::bind(
+		&Workspace::viewDocument, this,
+		wnd, rnd,
+		std::placeholders::_1, true,
+		[wnd, rnd, this] (void) -> void {
+			showInstalledKernels(wnd, rnd, nullptr);
+		},
+		[wnd, rnd, this] (void) -> void {
+			showInstalledKernels(wnd, rnd, nullptr);
+		}
+	);
 	popupBox(
 		ImGui::PopupBox::Ptr(
 			new ImGui::InstalledKernelsPopupBox(
@@ -4439,7 +4450,8 @@ void Workspace::showInstalledKernels(Window* wnd, Renderer* rnd, const char* pro
 				kernels(),
 				confirm, add, remove,
 				theme()->generic_Ok().c_str(), theme()->generic_Install().c_str(), theme()->generic_Uninstall().c_str(),
-				ejectSourceCode
+				ejectSourceCode,
+				viewDocument
 			)
 		)
 	);
@@ -4725,6 +4737,10 @@ void Workspace::ejectSourceCode(Window* wnd, Renderer* rnd, int index, bool wait
 				return promise::newPromise(next);
 			}
 		);
+}
+
+void Workspace::viewDocument(Window* wnd, Renderer* rnd, int index, bool wait, KernelDocumentViewedHandler viewed, KernelDocumentViewedHandler canceled) {
+	// TODO
 }
 
 void Workspace::toggleDocument(const char* path) {

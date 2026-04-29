@@ -1076,6 +1076,7 @@ bool Theme::open(class Renderer* rnd) {
 		"(For the current frame only)"
 	);
 	tooltip_View("View");
+	tooltip_ViewReadme("View README");
 	tooltip_Warning("Warning");
 	tooltip_WhetherToBuildThisLayer("Whether to build this layer");
 

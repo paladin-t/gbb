@@ -988,6 +988,7 @@ public:
 	};
 
 	typedef std::function<void(int)> SourceCodeEjectingHandler;
+	typedef std::function<void(int)> DocumentViewingHandler;
 
 private:
 	Renderer* _renderer = nullptr; // Foreign.
@@ -1005,6 +1006,7 @@ private:
 	RemovedHandler _removedHandler = nullptr;
 	std::string _removeText;
 	SourceCodeEjectingHandler _ejectSourceCode = nullptr;
+	DocumentViewingHandler _viewDocument = nullptr;
 
 	Initializer _init;
 
@@ -1016,7 +1018,8 @@ public:
 		GBBASIC::Kernel::Array &kernels,
 		const ConfirmedHandler &confirm, const AddedHandler &add, const RemovedHandler &remove,
 		const char* confirmTxt /* nullable */, const char* addTxt /* nullable */, const char* removeTxt /* nullable */,
-		SourceCodeEjectingHandler ejectSourceCode /* nullable */
+		SourceCodeEjectingHandler ejectSourceCode /* nullable */,
+		DocumentViewingHandler viewDocument /* nullable */
 	);
 	virtual ~InstalledKernelsPopupBox() override;
 

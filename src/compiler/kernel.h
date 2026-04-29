@@ -107,6 +107,7 @@ public:
 	GBBASIC_PROPERTY(std::string, kernelSymbols)
 	GBBASIC_PROPERTY(std::string, kernelAliases)
 	GBBASIC_PROPERTY(std::string, kernelSourceCode)
+	GBBASIC_PROPERTY(std::string, kernelDocument)
 	GBBASIC_PROPERTY(bool, featuresImplementedTouchApi)
 	GBBASIC_PROPERTY(int, bootstrapBank)
 	GBBASIC_PROPERTY(std::string, memoryHeapSize)
@@ -133,6 +134,7 @@ public:
 	virtual bool clone(Object** ptr) const override;
 
 	std::string kernelSourceCodePath(std::string* name_ /* nullable */) const;
+	std::string kernelDocumentPath(std::string* name_ /* nullable */) const;
 
 	bool open(const char* path);
 	bool close(void);

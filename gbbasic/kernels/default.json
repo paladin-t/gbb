@@ -11,7 +11,8 @@
     "rom": "gbbvm.gb",
     "symbols": "gbbvm.sym",
     "aliases": "gbbvm.aliases.json",
-    "source_code": "gbbvm.zip"
+    "source_code": "gbbvm.zip",
+    "document": null
   },
   "features": {
     "implemented_touch_api": false

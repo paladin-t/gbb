@@ -806,6 +806,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ViaClipboard)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ViaClipboardForTheCurrentFrameOnly)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_View)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ViewReadme)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_Warning)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_WhetherToBuildThisLayer)
 
