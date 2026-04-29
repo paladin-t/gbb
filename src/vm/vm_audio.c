@@ -166,6 +166,23 @@ void audio_play_speech(UINT8 bank, const UINT8 * ptr, UINT16 len) BANKED {
     audio_sfx_priority = AUDIO_SFX_PRIORITY_HIGH;
     speech_play(bank, (const char *)ptr, len);
 }
+
+void audio_hush_speech(void) BANKED {
+    speech_stop();
+
+    hUGE_mute_mask = AUDIO_MUTE_MASK_NONE;
+    hUGE_reset_wave();
+
+    audio_mute_mask = AUDIO_MUTE_MASK_NONE;
+    audio_sfx_priority = AUDIO_SFX_PRIORITY_MINIMAL;
+
+    if (FEATURE_SPEECH_ISR_INSTALLED) {
+        CRITICAL {
+            remove_VBL(audio_update_speech);
+        }
+        FEATURE_SPEECH_ISR_UNINSTALL;
+    }
+}
 #endif /* USE_SPEECH */
 
 /**< Instructions. */

@@ -129,7 +129,7 @@ BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCAL
 
 #if defined USE_SPEECH
 // Sets the options of the speech synthesizer module.
-BOOLEAN set_speech_options(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+BOOLEAN tune(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS;
     (void)start;
 
@@ -144,7 +144,7 @@ BOOLEAN set_speech_options(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
     return TRUE;
 }
 
-// Says something with the speech synthesizer module.
+// Says something with the speech synthesizer module, installs a necessary ISR.
 BOOLEAN say(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)start;
     (void)stack_frame;
@@ -158,6 +158,17 @@ BOOLEAN say(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { 
     audio_play_speech(bank, str, len);
 
     THIS_->PC += sizeof(len) + len;
+
+    return TRUE;
+}
+
+// Stops speech playback, and uninstalls its ISR.
+BOOLEAN hush(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)THIS;
+    (void)start;
+    (void)stack_frame;
+
+    audio_hush_speech();
 
     return TRUE;
 }

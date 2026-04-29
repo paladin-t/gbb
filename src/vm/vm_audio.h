@@ -38,6 +38,7 @@ void audio_play_sound(UINT8 bank, const UINT8 * ptr, UINT8 priority) BANKED;
 #if defined USE_SPEECH
 void audio_update_speech(void) NONBANKED; // UPDATE.
 void audio_play_speech(UINT8 bank, const UINT8 * ptr, UINT16 len) BANKED;
+void audio_hush_speech(void) BANKED;
 #endif /* USE_SPEECH */
 
 /**< Instructions. */
