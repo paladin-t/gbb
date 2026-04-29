@@ -495,7 +495,7 @@ void speech_init(BOOLEAN init_aud_dev) SPEECH_API {
 }
 
 void speech_set_volume(UINT8 vol) SPEECH_API {
-    speech_synth.volume = MIN(vol, 15); // Clamp to 0-15 to.
+    speech_synth.volume = MIN(vol, 15); // Clamp to 0-15.
 }
 
 void speech_set_speed(UINT8 speed) SPEECH_API {
