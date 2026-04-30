@@ -32,10 +32,10 @@ STATIC void game_update_modules(void) {
         mouse_buttons = 0;
         sgb_mouse_input_update();
         input_touch_pressed = mouse_buttons;
-        if (mouse_x_move < 0)      input_touch_position_x -= MIN(DIV2(-mouse_x_move), input_touch_position_x);
-        else if (mouse_x_move > 0) input_touch_position_x += MIN(DIV2( mouse_x_move), (DEVICE_SCREEN_PX_WIDTH - 1u) - input_touch_position_x);
-        if (mouse_y_move < 0)      input_touch_position_y -= MIN(DIV2(-mouse_y_move), input_touch_position_y);
-        else if (mouse_y_move > 0) input_touch_position_y += MIN(DIV2( mouse_y_move), (DEVICE_SCREEN_PX_HEIGHT - 1u) - input_touch_position_y);
+        if      (mouse_x_move < 0) input_touch_position_x -= MIN(MAX(DIV2(-mouse_x_move), 1), input_touch_position_x);
+        else if (mouse_x_move > 0) input_touch_position_x += MIN(MAX(DIV2( mouse_x_move), 1), (DEVICE_SCREEN_PX_WIDTH - 1u) - input_touch_position_x);
+        if      (mouse_y_move < 0) input_touch_position_y -= MIN(MAX(DIV2(-mouse_y_move), 1), input_touch_position_y);
+        else if (mouse_y_move > 0) input_touch_position_y += MIN(MAX(DIV2( mouse_y_move), 1), (DEVICE_SCREEN_PX_HEIGHT - 1u) - input_touch_position_y);
     } else { // Fall to use regular features, and or extension features.
         joypads.joy0 = joypad();
         if (device_type & DEVICE_TYPE_GBB) { // Ignore touch handling if extension features are not supported.
