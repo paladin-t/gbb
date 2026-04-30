@@ -833,8 +833,11 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Debug_Compiler("Compiler:");
 	windowPreferences_Debug_Debugger("Debugger:");
 	windowPreferences_Debug_Emulation("Emulation:");
+	windowPreferences_Debug_EnableLogging("Enable logging");
 	windowPreferences_Debug_EnableOnscreenDebug("Enable onscreen debug");
 	windowPreferences_Debug_EnableVramDebugger("Enable VRAM debugger");
+	windowPreferences_Debug_Log("Log:");
+	windowPreferences_Debug_Path("Path");
 	windowPreferences_Debug_ShowAstEnabled("Show AST");
 	windowPreferences_Device_Classic("Classic");
 	windowPreferences_Device_ClassicWithExtension("Classic with extension");

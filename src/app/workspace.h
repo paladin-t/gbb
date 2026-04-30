@@ -630,6 +630,9 @@ public:
 	GBBASIC_PROPERTY(bool, consoleHasError)
 	GBBASIC_FIELD(Mutex, consoleLock)
 
+	GBBASIC_PROPERTY_READONLY(File::Ptr, logFile)
+	GBBASIC_FIELD(Mutex, logLock)
+
 	GBBASIC_PROPERTY_READONLY_PTR(class Editable, searchResultTextBox)
 	GBBASIC_PROPERTY(bool, searchResultVisible)
 	GBBASIC_PROPERTY(std::string, searchResultPattern)
@@ -723,6 +726,10 @@ public:
 	virtual void debug(const char* msg) override;
 	void debug(void);
 	virtual void cursor(Device::CursorTypes mode) override;
+
+	bool isLogFileOpened(void);
+	bool openLogFile(void);
+	bool closeLogFile(void);
 
 	void run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom, bool traceless);
 	virtual bool running(void) const override;

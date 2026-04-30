@@ -996,6 +996,7 @@ private:
 	std::string _title;
 	Settings &_settings; // Foreign.
 	Settings _settingsShadow;
+	char _logPathBuffer[GBBASIC_MAX_PATH]; // Fixed size.
 	BoolGetter _getBorderlessWritable = nullptr;
 	BoolGetter _getBorderless = nullptr;
 	bool _toDeviceTab = false;

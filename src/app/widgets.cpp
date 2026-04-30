@@ -1980,7 +1980,7 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 			if (BeginTabItem(_theme->tabPreferences_Debug(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
 				TextUnformatted(_theme->windowPreferences_Debug_Emulation());
 
-				Checkbox(_theme->windowPreferences_Debug_EnableOnscreenDebug(), &_settings.debugOnscreenDebugEnabled);
+				Checkbox(_theme->windowPreferences_Debug_EnableOnscreenDebug(), &_settings.debugOnscreenShellEnabled);
 
 				EndTabItem();
 			}
@@ -4723,6 +4723,10 @@ PreferencesPopupBox::PreferencesPopupBox(
 {
 	_settingsShadow = _settings;
 
+	const std::string &logPath = _settingsShadow.debugLogPath;
+	memset(_logPathBuffer, 0, sizeof(_logPathBuffer));
+	memcpy(_logPathBuffer, logPath.c_str(), Math::min(sizeof(_logPathBuffer) - 1, logPath.length()));
+
 	if (tab == "device")
 		_toDeviceTab = true;
 
@@ -4849,11 +4853,37 @@ void PreferencesPopupBox::update(Workspace*) {
 
 				TextUnformatted(_theme->windowPreferences_Debug_Emulation());
 
-				Checkbox(_theme->windowPreferences_Debug_EnableOnscreenDebug(), &_settingsShadow.debugOnscreenDebugEnabled);
+				Checkbox(_theme->windowPreferences_Debug_EnableOnscreenDebug(), &_settingsShadow.debugOnscreenShellEnabled);
 
 				TextUnformatted(_theme->windowPreferences_Debug_Debugger());
 
-				Checkbox(_theme->windowPreferences_Debug_EnableVramDebugger(), &_settingsShadow.debugVramDebugEnabled);
+				Checkbox(_theme->windowPreferences_Debug_EnableVramDebugger(), &_settingsShadow.debugVramInspectorEnabled);
+
+				Separator();
+
+				TextUnformatted(_theme->windowPreferences_Debug_Log());
+
+				Checkbox(_theme->windowPreferences_Debug_EnableLogging(), &_settingsShadow.debugLogEnabled);
+
+				PushID("#Log");
+				{
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowPreferences_Debug_Path());
+					SameLine();
+
+					SetNextItemWidth(GetContentRegionAvail().x);
+					if (_settingsShadow.debugLogEnabled) {
+						if (InputText("", _logPathBuffer, sizeof(_logPathBuffer), ImGuiInputTextFlags_AutoSelectAll))
+							_settingsShadow.debugLogPath = _logPathBuffer;
+					} else {
+						BeginDisabled();
+						{
+							InputText("", _logPathBuffer, sizeof(_logPathBuffer), ImGuiInputTextFlags_AutoSelectAll);
+						}
+						EndDisabled();
+					}
+				}
+				PopID();
 
 				EndTabItem();
 			}

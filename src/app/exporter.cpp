@@ -82,7 +82,7 @@ Exporter::Settings &Exporter::Settings::operator = (const Settings &other) {
 	inputOnscreenGamepadScale = other.inputOnscreenGamepadScale;
 	inputOnscreenGamepadPadding = other.inputOnscreenGamepadPadding;
 
-	debugOnscreenDebugEnabled = other.debugOnscreenDebugEnabled;
+	debugOnscreenShellEnabled = other.debugOnscreenShellEnabled;
 
 	return *this;
 }
@@ -124,7 +124,7 @@ bool Exporter::Settings::operator != (const Settings &other) const {
 		return true;
 	}
 
-	if (debugOnscreenDebugEnabled != other.debugOnscreenDebugEnabled) {
+	if (debugOnscreenShellEnabled != other.debugOnscreenShellEnabled) {
 		return true;
 	}
 
@@ -180,7 +180,7 @@ bool Exporter::Settings::toString(std::string &val, bool pretty) const {
 	Jpath::set(doc, doc, inputOnscreenGamepadPadding.x, "input", "onscreen_gamepad", "padding", 0);
 	Jpath::set(doc, doc, inputOnscreenGamepadPadding.y, "input", "onscreen_gamepad", "padding", 1);
 
-	Jpath::set(doc, doc, debugOnscreenDebugEnabled, "debug", "onscreen_debug_enabled");
+	Jpath::set(doc, doc, debugOnscreenShellEnabled, "debug", "onscreen_shell", "enabled");
 
 	Json::toString(doc, val, pretty);
 
@@ -246,7 +246,7 @@ bool Exporter::Settings::fromString(const std::string &val) {
 	Jpath::get(doc, inputOnscreenGamepadPadding.x, "input", "onscreen_gamepad", "padding", 0);
 	Jpath::get(doc, inputOnscreenGamepadPadding.y, "input", "onscreen_gamepad", "padding", 1);
 
-	Jpath::get(doc, debugOnscreenDebugEnabled, "debug", "onscreen_debug_enabled");
+	Jpath::get(doc, debugOnscreenShellEnabled, "debug", "onscreen_shell", "enabled");
 
 	return true;
 }

@@ -72,8 +72,10 @@ Settings &Settings::operator = (const Settings &other) {
 	mainGlobalSearch = other.mainGlobalSearch;
 
 	debugShowAstEnabled = other.debugShowAstEnabled;
-	debugOnscreenDebugEnabled = other.debugOnscreenDebugEnabled;
-	debugVramDebugEnabled = other.debugVramDebugEnabled;
+	debugOnscreenShellEnabled = other.debugOnscreenShellEnabled;
+	debugVramInspectorEnabled = other.debugVramInspectorEnabled;
+	debugLogEnabled = other.debugLogEnabled;
+	debugLogPath = other.debugLogPath;
 
 	deviceType = other.deviceType;
 	devicePreferSgb = other.devicePreferSgb;
@@ -138,8 +140,10 @@ bool Settings::operator != (const Settings &other) const {
 	}
 
 	if (debugShowAstEnabled != other.debugShowAstEnabled ||
-		debugOnscreenDebugEnabled != other.debugOnscreenDebugEnabled ||
-		debugVramDebugEnabled != other.debugVramDebugEnabled
+		debugOnscreenShellEnabled != other.debugOnscreenShellEnabled ||
+		debugVramInspectorEnabled != other.debugVramInspectorEnabled ||
+		debugLogEnabled != other.debugLogEnabled ||
+		debugLogPath != other.debugLogPath
 	) {
 		return true;
 	}

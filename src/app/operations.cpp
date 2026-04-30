@@ -1127,10 +1127,12 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 			const std::string fontConfigPath_ = fontConfigPath;
 
 			auto next = [wnd, rnd, ws, prj, allowBin, fontConfigPath_] (promise::Defer df) -> void {
+				// Prepare.
 #if defined OPERATIONS_GBBASIC_TIME_STAT_ENABLED
 				const long long start = DateTime::ticks();
 #endif /* OPERATIONS_GBBASIC_TIME_STAT_ENABLED */
 
+				// Initialize the project helpers.
 				Texture::Ptr attribtex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
 				Texture::Ptr propstex(ws->theme()->textureByte(), [] (Texture*) -> void { /* Do nothing. */ });
 				Texture::Ptr actorstex(ws->theme()->textureActors(), [] (Texture*) -> void { /* Do nothing. */ });
@@ -1141,16 +1143,22 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 				prj->behaviourSerializer(std::bind(&Workspace::serializeKernelBehaviour, ws, std::placeholders::_1));
 				prj->behaviourParser(std::bind(&Workspace::parseKernelBehaviour, ws, std::placeholders::_1));
 
+				// Initialize log file.
+				ws->openLogFile();
+
+				// Initialize the console.
 				ws->clear();
 
 				ws->print(GBBASIC_TITLE " v" GBBASIC_VERSION_STRING);
 				ws->print("");
 				ws->print("Ready.");
 
+				// Initialize the kernel.
 				const int oldKrnlIdx = ws->activeKernelIndex();
 				const int kernelIdx = ws->getValidKernelIndex(prj.get());
 				ws->activeKernelIndex(kernelIdx);
 
+				// Load the project file.
 				if (!prj->loaded() && !prj->load(allowBin, fontConfigPath_.c_str(), std::bind(operationsHandleWarningOrError, ws, std::placeholders::_1, std::placeholders::_2))) {
 					df.reject();
 
@@ -1185,6 +1193,7 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 
 				FileMonitor::unuse(prj->path());
 
+				// Finish.
 #if defined OPERATIONS_GBBASIC_TIME_STAT_ENABLED
 				const long long end = DateTime::ticks();
 				const long long diff = end - start;
@@ -1230,6 +1239,7 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 			fileAskSave(wnd, rnd, ws, true)
 				.then(
 					[wnd, rnd, ws, df] (bool ok) -> void {
+						// Prepare.
 						Project::Ptr &prj = ws->currentProject();
 						if (!prj->close(false)) {
 							df.reject();
@@ -1237,8 +1247,10 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 							return;
 						}
 
+						// Dispose the analyzing result.
 						ws->clearAnalyzingResult();
 
+						// Dispose the project helpers.
 						if (!prj->exists()) { // Not saved or doesn't exist on disk.
 							int tobeRemoved = -1;
 							for (int i = 0; i < (int)ws->projects().size(); ++i) {
@@ -1261,6 +1273,7 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 						prj->behaviourSerializer(nullptr);
 						prj->behaviourParser(nullptr);
 
+						// Dispose the workspace states.
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 						ws->destroyMinorCodeEditor();
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
@@ -1282,12 +1295,17 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 
 						ws->clear();
 
+						// Process log file.
+						ws->closeLogFile();
+
 						if (ws->showRecentProjects()) {
 							ws->sortProjects();
 						}
 
+						// Dispose the specified window title.
 						ws->refreshWindowTitle(wnd);
 
+						// Finish.
 						FileMonitor::dump();
 
 						df.resolve(ok);

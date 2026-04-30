@@ -1779,56 +1779,98 @@ void Workspace::clear(void) {
 }
 
 bool Workspace::print(const char* msg) {
-	LockGuard<decltype(consoleLock())> guard(consoleLock());
+	do {
+		LockGuard<decltype(consoleLock())> guard(consoleLock());
 
-	const bool withConsole = consoleVisible();
-	if (withConsole) {
-		EditorConsole* editor = (EditorConsole*)consoleTextBox();
-		editor->appendText(msg, theme()->style()->messageColor);
-		editor->appendText("\n", theme()->style()->messageColor);
-		editor->moveBottom();
-	}
+		const bool withConsole = consoleVisible();
+		if (withConsole) {
+			EditorConsole* editor = (EditorConsole*)consoleTextBox();
+			editor->appendText(msg, theme()->style()->messageColor);
+			editor->appendText("\n", theme()->style()->messageColor);
+			editor->moveBottom();
+		}
+	} while (false);
 
 	const std::string osstr = Unicode::toOs(msg);
 	fprintf(stdout, "%s\n", osstr.c_str());
+
+	do {
+		LockGuard<decltype(logLock())> guard(logLock());
+
+		if (!logFile())
+			break;
+
+		std::string tm;
+		DateTime::now(tm);
+		const std::string log = "[MESSAGE " + tm + "] " + osstr + "\n";
+		logFile()->writeString(log);
+	} while (false);
 
 	return true;
 }
 
 bool Workspace::warn(const char* msg) {
-	LockGuard<decltype(consoleLock())> guard(consoleLock());
+	do {
+		LockGuard<decltype(consoleLock())> guard(consoleLock());
 
-	const bool withConsole = consoleVisible();
-	if (withConsole) {
-		EditorConsole* editor = (EditorConsole*)consoleTextBox();
-		editor->appendText(msg, theme()->style()->warningColor);
-		editor->appendText("\n", theme()->style()->warningColor);
-		editor->moveBottom();
-	}
+		const bool withConsole = consoleVisible();
+		if (withConsole) {
+			EditorConsole* editor = (EditorConsole*)consoleTextBox();
+			editor->appendText(msg, theme()->style()->warningColor);
+			editor->appendText("\n", theme()->style()->warningColor);
+			editor->moveBottom();
+		}
 
-	consoleHasWarning(true);
+		consoleHasWarning(true);
+	} while (false);
 
 	const std::string osstr = Unicode::toOs(msg);
 	fprintf(stderr, "%s\n", osstr.c_str());
+
+	do {
+		LockGuard<decltype(logLock())> guard(logLock());
+
+		if (!logFile())
+			break;
+
+		std::string tm;
+		DateTime::now(tm);
+		const std::string log = "[WARN " + tm + "] " + osstr + "\n";
+		logFile()->writeString(log);
+	} while (false);
 
 	return true;
 }
 
 bool Workspace::error(const char* msg) {
-	LockGuard<decltype(consoleLock())> guard(consoleLock());
+	do {
+		LockGuard<decltype(consoleLock())> guard(consoleLock());
 
-	const bool withConsole = consoleVisible();
-	if (withConsole) {
-		EditorConsole* editor = (EditorConsole*)consoleTextBox();
-		editor->appendText(msg, theme()->style()->errorColor);
-		editor->appendText("\n", theme()->style()->errorColor);
-		editor->moveBottom();
-	}
+		const bool withConsole = consoleVisible();
+		if (withConsole) {
+			EditorConsole* editor = (EditorConsole*)consoleTextBox();
+			editor->appendText(msg, theme()->style()->errorColor);
+			editor->appendText("\n", theme()->style()->errorColor);
+			editor->moveBottom();
+		}
 
-	consoleHasError(true);
+		consoleHasError(true);
+	} while (false);
 
 	const std::string osstr = Unicode::toOs(msg);
 	fprintf(stderr, "%s\n", osstr.c_str());
+
+	do {
+		LockGuard<decltype(logLock())> guard(logLock());
+
+		if (!logFile())
+			break;
+
+		std::string tm;
+		DateTime::now(tm);
+		const std::string log = "[ERROR " + tm + "] " + osstr + "\n";
+		logFile()->writeString(log);
+	} while (false);
 
 	return true;
 }
@@ -1872,6 +1914,18 @@ void Workspace::debug(const char* msg) {
 	fprintf(stdout, "%s\n", osstr.c_str());
 
 	do {
+		LockGuard<decltype(logLock())> guard(logLock());
+
+		if (!logFile())
+			break;
+
+		std::string tm;
+		DateTime::now(tm);
+		const std::string log = "[DEBUG " + tm + "] " + osstr + "\n";
+		logFile()->writeString(log);
+	} while (false);
+
+	do {
 		LockGuard<decltype(onscreenDebuggerLock())> guard(onscreenDebuggerLock());
 
 		onscreenDebuggerMessages().add(msg);
@@ -1887,6 +1941,51 @@ void Workspace::debug(void) {
 
 void Workspace::cursor(Device::CursorTypes mode) {
 	canvasCursorMode(mode);
+}
+
+bool Workspace::isLogFileOpened(void) {
+	LockGuard<decltype(logLock())> guard(logLock());
+
+	return !!logFile();
+}
+
+bool Workspace::openLogFile(void) {
+	if (!settings().debugLogEnabled) // Log is not enabled.
+		return false; // Ignore.
+
+	LockGuard<decltype(logLock())> guard(logLock());
+
+	if (logFile()) // A log file aldready exists.
+		return true; // Ignore.
+
+	logFile(File::Ptr(File::create()));
+	if (!logFile())
+		return false;
+
+	if (!logFile()->open(settings().debugLogPath.c_str(), Stream::WRITE)) {
+		logFile(nullptr);
+
+		return false;
+	}
+
+	return true;
+}
+
+bool Workspace::closeLogFile(void) {
+	LockGuard<decltype(logLock())> guard(logLock());
+
+	if (!logFile())
+		return true;
+
+	if (!logFile()->close()) {
+		logFile(nullptr);
+
+		return false;
+	}
+
+	logFile(nullptr);
+
+	return true;
 }
 
 void Workspace::run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom, bool traceless) {
@@ -2743,7 +2842,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 
 			const bool on = !!(int)(intptr_t)evt->user.data1;
 
-			settings().debugVramDebugEnabled = on;
+			settings().debugVramInspectorEnabled = on;
 		}
 
 		break;
@@ -4513,6 +4612,14 @@ void Workspace::showPreferences(Window* wnd, Renderer* rnd, const char* tab) {
 					prj->minorCodeEditor()->post(Editable::SET_SHOW_SPACES, sets.mainShowWhiteSpaces);
 				}
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
+			}
+
+			if (prj && sets.debugLogEnabled != settings().debugLogEnabled) {
+				settings().debugLogEnabled = sets.debugLogEnabled;
+				if (!isLogFileOpened() && sets.debugLogEnabled)
+					openLogFile();
+				else if (isLogFileOpened() && !sets.debugLogEnabled)
+					closeLogFile();
 			}
 
 			input()->config(sets.inputGamepads, INPUT_GAMEPAD_COUNT);
@@ -6466,9 +6573,15 @@ bool Workspace::loadConfig(Window*, Renderer*, const rapidjson::Document &doc) {
 	Jpath::get(doc, settings().mainMatchWholeWords, "main", "match_whole_words");
 	Jpath::get(doc, settings().mainGlobalSearch, "main", "global_search");
 
-	Jpath::get(doc, settings().debugShowAstEnabled, "debug", "show_ast_enabled");
-	Jpath::get(doc, settings().debugOnscreenDebugEnabled, "debug", "onscreen_debug_enabled");
-	Jpath::get(doc, settings().debugVramDebugEnabled, "debug", "vram_debug_enabled");
+	Jpath::get(doc, settings().debugShowAstEnabled, "debug", "show_ast", "enabled");
+	Jpath::get(doc, settings().debugOnscreenShellEnabled, "debug", "onscreen_shell", "enabled");
+	Jpath::get(doc, settings().debugVramInspectorEnabled, "debug", "vram_inspector", "enabled");
+	Jpath::get(doc, settings().debugLogEnabled, "debug", "log", "enabled");
+	if (!Jpath::get(doc, settings().debugLogPath, "debug", "log", "path")) {
+		const std::string writableDir = Path::writableDirectory();
+		const std::string logPath = Path::combine(writableDir.c_str(), "log.txt");
+		settings().debugLogPath = logPath;
+	}
 
 	Jpath::get(doc, settings().deviceType, "device", "type");
 	Jpath::get(doc, settings().devicePreferSgb, "device", "prefer_sgb");
@@ -6557,9 +6670,11 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 	Jpath::set(doc, doc, settings().mainMatchWholeWords, "main", "match_whole_words");
 	Jpath::set(doc, doc, settings().mainGlobalSearch, "main", "global_search");
 
-	Jpath::set(doc, doc, settings().debugShowAstEnabled, "debug", "show_ast_enabled");
-	Jpath::set(doc, doc, settings().debugOnscreenDebugEnabled, "debug", "onscreen_debug_enabled");
-	Jpath::set(doc, doc, settings().debugVramDebugEnabled, "debug", "vram_debug_enabled");
+	Jpath::set(doc, doc, settings().debugShowAstEnabled, "debug", "show_ast", "enabled");
+	Jpath::set(doc, doc, settings().debugOnscreenShellEnabled, "debug", "onscreen_shell", "enabled");
+	Jpath::set(doc, doc, settings().debugVramInspectorEnabled, "debug", "vram_inspector", "enabled");
+	Jpath::set(doc, doc, settings().debugLogEnabled, "debug", "log", "enabled");
+	Jpath::set(doc, doc, settings().debugLogPath, "debug", "log", "path");
 
 	Jpath::set(doc, doc, settings().deviceType, "device", "type");
 	Jpath::set(doc, doc, settings().devicePreferSgb, "device", "prefer_sgb");
@@ -11949,8 +12064,8 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			settings().emulatorMuted, settings().emulatorSpeed, settings().emulatorPreferedSpeed,
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
-			settings().debugOnscreenDebugEnabled,
-			vramDebugger(), settings().debugVramDebugEnabled, vramDebuggerPreviewPaletteBits(), vramDebuggerShowGrids(),
+			settings().debugOnscreenShellEnabled,
+			vramDebugger(), settings().debugVramInspectorEnabled, vramDebuggerPreviewPaletteBits(), vramDebuggerShowGrids(),
 			vramDebuggerPreviousOuterWidth(), vramDebuggerWidth(), vramDebuggerHeight(), vramDebuggerResizing(), vramDebuggerResetting(),
 			canvasCursorMode(),
 			!!popupBox(),

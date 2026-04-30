@@ -62,8 +62,10 @@ struct Settings {
 	bool mainGlobalSearch = false;
 
 	bool debugShowAstEnabled = false;
-	bool debugOnscreenDebugEnabled = true;
-	bool debugVramDebugEnabled = true;
+	bool debugOnscreenShellEnabled = true;
+	bool debugVramInspectorEnabled = true;
+	bool debugLogEnabled = false;
+	std::string debugLogPath;
 
 	unsigned deviceType = 0;
 	bool devicePreferSgb = false;

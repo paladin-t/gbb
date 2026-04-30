@@ -72,7 +72,7 @@ public:
 		float inputOnscreenGamepadScale = 1.0f;
 		Math::Vec2<float> inputOnscreenGamepadPadding = Math::Vec2<float>(8.0f, 12.0f);
 
-		bool debugOnscreenDebugEnabled = true;
+		bool debugOnscreenShellEnabled = true;
 
 		Settings();
 		Settings(const Settings &) = delete;
