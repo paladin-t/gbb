@@ -1988,6 +1988,17 @@ bool Workspace::closeLogFile(void) {
 	return true;
 }
 
+bool Workspace::flushLogFile(void) {
+	LockGuard<decltype(logLock())> guard(logLock());
+
+	if (!logFile())
+		return false;
+
+	logFile()->flush();
+
+	return true;
+}
+
 void Workspace::run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom, bool traceless) {
 	Operations::projectRun(wnd, rnd, this, rom, nullptr, traceless)
 		.fail(
@@ -13189,6 +13200,8 @@ void Workspace::stopProject(Window* wnd, Renderer* rnd, bool immediate) {
 					const Project::Ptr &prj = currentProject();
 
 					Operations::projectSaveSram(wnd, rnd, this, prj, sram, immediate);
+
+					flushLogFile();
 				}
 			}
 		);

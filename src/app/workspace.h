@@ -730,6 +730,7 @@ public:
 	bool isLogFileOpened(void);
 	bool openLogFile(void);
 	bool closeLogFile(void);
+	bool flushLogFile(void);
 
 	void run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom, bool traceless);
 	virtual bool running(void) const override;

@@ -1144,6 +1144,8 @@ promise::Promise Operations::fileOpen(Window* wnd, Renderer* rnd, Workspace* ws,
 				prj->behaviourParser(std::bind(&Workspace::parseKernelBehaviour, ws, std::placeholders::_1));
 
 				// Initialize log file.
+				if (ws->isLogFileOpened())
+					ws->closeLogFile();
 				ws->openLogFile();
 
 				// Initialize the console.
