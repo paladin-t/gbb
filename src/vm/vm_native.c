@@ -9,7 +9,12 @@
 #include <string.h>
 
 #include "utils/sgb.h"
-#include "utils/speech.h"
+#if defined USE_SGB_MOUSE
+#   include "utils/sgb_mouse.h"
+#endif /* USE_SGB_MOUSE */
+#if defined USE_SPEECH
+#   include "utils/speech.h"
+#endif /* USE_SPEECH */
 #include "utils/utils.h"
 
 #include "vm_audio.h"
@@ -126,6 +131,26 @@ BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCAL
 
     return TRUE;
 }
+
+#if defined USE_SGB_MOUSE
+// Gets whether an SGB mouse has been installed.
+BOOLEAN is_sgb_mouse_installed(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)start;
+    (void)stack_frame;
+
+    SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
+    BOOLEAN ret = FALSE;
+    if (device_type & DEVICE_TYPE_SGB) { // Use SGB features if available.
+        joypad_ex(&joypads);
+        ret =
+            (joypads.npads == 4) &&
+            ((joypads.joy3 & SNES_MOUSE_IS_CONNECTED_MASK) == SNES_MOUSE_IS_CONNECTED);
+    }
+    *(THIS_->stack_ptr++) = ret; // Return the result.
+
+    return TRUE;
+}
+#endif /* USE_SGB_MOUSE */
 
 #if defined USE_SPEECH
 // Sets the options of the speech synthesizer module.

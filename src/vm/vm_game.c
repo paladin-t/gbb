@@ -5,7 +5,9 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
-#include "utils/sgb_mouse.h"
+#if defined USE_SGB_MOUSE
+#   include "utils/sgb_mouse.h"
+#endif /* USE_SGB_MOUSE */
 
 #include "vm_actor.h"
 #include "vm_device.h"

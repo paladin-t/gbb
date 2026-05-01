@@ -6,7 +6,9 @@
 #endif /* __SDCC */
 
 #include "utils/sfx_player.h"
-#include "utils/speech.h"
+#if defined USE_SPEECH
+#   include "utils/speech.h"
+#endif /* USE_SPEECH */
 #include "utils/utils.h"
 
 #include "vm_audio.h"

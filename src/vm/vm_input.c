@@ -7,7 +7,9 @@
 
 #include <string.h>
 
-#include "utils/sgb_mouse.h"
+#if defined USE_SGB_MOUSE
+#   include "utils/sgb_mouse.h"
+#endif /* USE_SGB_MOUSE */
 #include "utils/utils.h"
 
 #include "vm_device.h"
