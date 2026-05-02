@@ -30522,6 +30522,7 @@ private:
 	Options _options;
 	StatementDictionary _statements;
 	Text::Array _statementsWithReturned;
+	Macros _kernelMacros;
 	NativeFunctionTable _nativeFunctions;
 	Text::Array _stackArguments;
 
@@ -30603,6 +30604,7 @@ public:
 		#define ADD_BUILTIN(ID, VAL)              builtins.add((ID), (VAL), anyCase)
 		#define ADD_FUNCTION(ID, FUNC)            functions.add((ID), (FUNC))
 		#define ADD_OPERATOR(ID, OP)              operators.add((ID), (OP))
+		#define ADD_MACRO(ID, VAL)                _kernelMacros[(ID)] = (VAL)
 		#define ADD_NATIVE_FUNCTION(ID, FUNC)     _nativeFunctions.add((ID), (FUNC))
 
 		// Add the statements for the parser.
@@ -31302,6 +31304,28 @@ public:
 				ADD_BUILTIN(sid, BuiltinTable::Entry(val)); // Add builtin.
 			}
 
+			// Macros from the kernel.
+			n = Jpath::count(doc, "macros");
+			for (int i = 0; i < n; ++i) {
+				if (Jpath::typeOf(doc, "macros", i, "syntax") != Jpath::STRING)
+					continue;
+
+				std::string sid, sval;
+				if (!Jpath::get(doc, sid, "macros", i, "syntax"))
+					continue;
+				const bool hasVal = Jpath::get(doc, sval, "macros", i, "value");
+				Variant var = nullptr;
+				if (hasVal) {
+					int val = -1;
+					if (Text::fromString(sval, val))
+						var = val;
+					else
+						var = sval;
+				}
+
+				ADD_MACRO(sid, var);
+			}
+
 			// Native functions from the kernel.
 			n = Jpath::count(doc, "natives");
 			for (int i = 0; i < n; ++i) {
@@ -31325,6 +31349,7 @@ public:
 		#undef ADD_BUILTIN
 		#undef ADD_FUNCTION
 		#undef ADD_OPERATOR
+		#undef ADD_MACRO
 		#undef ADD_NATIVE_FUNCTION
 	}
 
@@ -31392,6 +31417,11 @@ public:
 			onError(err, msg, loc);
 		};
 
+		// Merge the macros.
+		Macros preDefinedMacros_ = _kernelMacros;
+		for (const Macros::value_type &kv : preDefinedMacros)
+			preDefinedMacros_[kv.first] = kv.second;
+
 		// Preprocess, linearize, tokenize, sort and parse the source code.
 		const std::string code     = preprocess(src);
 		const Text::Array lines    = linearize(code, _lineNumberWidth, _options);
@@ -31412,7 +31442,7 @@ public:
 			                             macroStackReferences,
 			                             macroStrings,
 			                             macros,
-			                             preDefinedMacros,
+			                             preDefinedMacros_,
 			                             _options,
 			                             onPrint,
 			                             gotError
@@ -42685,6 +42715,19 @@ void identifiers(const char* kernelConfigPath, IdentifierHandler handler) {
 				continue;
 			int val = -1;
 			if (!Text::fromString(sval, val))
+				continue;
+
+			handler(sid, "constant");
+		}
+
+		// Macros from the kernel.
+		n = Jpath::count(doc, "macros");
+		for (int i = 0; i < n; ++i) {
+			if (Jpath::typeOf(doc, "macros", i, "syntax") != Jpath::STRING)
+				continue;
+
+			std::string sid, sval;
+			if (!Jpath::get(doc, sid, "macros", i, "syntax"))
 				continue;
 
 			handler(sid, "constant");

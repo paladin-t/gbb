@@ -451,6 +451,8 @@
   ],
   "properties": [
   ],
+  "macros": [
+  ],
   "natives": [
     {
       "type": "generic",
