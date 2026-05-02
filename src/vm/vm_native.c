@@ -27,10 +27,10 @@ BANKREF(VM_NATIVE)
 
 // Gets the value at the specific banked memory address.
 BOOLEAN peek_banked(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
-    (void)start;
-    (void)stack_frame;
+    (void)start; (void)stack_frame;
 
     SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
+
     const UINT8 bank   = (UINT8)*(--THIS_->stack_ptr);
     const UINT16 addr  = (UINT16)*(--THIS_->stack_ptr);
     const BOOLEAN word = (BOOLEAN)*(--THIS_->stack_ptr);
@@ -45,9 +45,7 @@ BOOLEAN peek_banked(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL B
 
 // Clears the screen for the text mode.
 BOOLEAN clear_text(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
-    (void)THIS;
-    (void)start;
-    (void)stack_frame;
+    (void)THIS; (void)start; (void)stack_frame;
 
     cls();
 
@@ -96,12 +94,11 @@ BOOLEAN wait_until_confirm(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
 
 // Sends a packet of bytes to SGB devices.
 BOOLEAN send_sgb_packet(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
-    (void)THIS;
-    (void)start;
+    (void)THIS; (void)start;
 
-    const UINT8 bank   = (UINT8)stack_frame[2];
-    const UINT16 addr  = (UINT16)stack_frame[1];
-    const UINT8 size   = (UINT8)stack_frame[0];
+    const UINT8 bank  = (UINT8) stack_frame[2];
+    const UINT16 addr = (UINT16)stack_frame[1];
+    const UINT8 size  = (UINT8) stack_frame[0];
 
     sgb_send_packet(bank, (UINT8 *)addr, size);
 
@@ -110,16 +107,15 @@ BOOLEAN send_sgb_packet(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCA
 
 // Sets border frame for SGB devices.
 BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
-    (void)THIS;
-    (void)start;
+    (void)THIS; (void)start;
 
-    const UINT8 palette_bank   = (UINT8)stack_frame[8];
+    const UINT8 palette_bank   = (UINT8) stack_frame[8];
     const UINT16 palette       = (UINT16)stack_frame[7];
     const UINT16 palette_size  = (UINT16)stack_frame[6];
-    const UINT8 tiledata_bank  = (UINT8)stack_frame[5];
+    const UINT8 tiledata_bank  = (UINT8) stack_frame[5];
     const UINT16 tiledata      = (UINT16)stack_frame[4];
     const UINT16 tiledata_size = (UINT16)stack_frame[3];
-    const UINT8 tilemap_bank   = (UINT8)stack_frame[2];
+    const UINT8 tilemap_bank   = (UINT8) stack_frame[2];
     const UINT16 tilemap       = (UINT16)stack_frame[1];
     const UINT16 tilemap_size  = (UINT16)stack_frame[0];
 
@@ -135,10 +131,10 @@ BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCAL
 #if defined USE_SGB_MOUSE
 // Gets whether an SGB mouse has been installed.
 BOOLEAN is_sgb_mouse_installed(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
-    (void)start;
-    (void)stack_frame;
+    (void)THIS;
 
     SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
+
     BOOLEAN ret = FALSE;
     if (device_type & DEVICE_TYPE_SGB) { // Use SGB features if available.
         joypad_ex(&joypads);
@@ -155,11 +151,10 @@ BOOLEAN is_sgb_mouse_installed(POINTER THIS, BOOLEAN start, UINT16 * stack_frame
 #if defined USE_SPEECH
 // Sets the options of the speech synthesizer module.
 BOOLEAN tune(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
-    (void)THIS;
-    (void)start;
+    (void)THIS; (void)start;
 
-    const UINT8 volume = (UINT8)stack_frame[2];
-    const UINT8 speed  = (UINT8)stack_frame[1];
+    const UINT8 volume = (UINT8) stack_frame[2];
+    const UINT8 speed  = (UINT8) stack_frame[1];
     const UINT16 pitch = (UINT16)stack_frame[0];
 
     speech_set_volume(volume);
@@ -171,13 +166,13 @@ BOOLEAN tune(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED {
 
 // Says something with the speech synthesizer module, installs a necessary ISR.
 BOOLEAN say(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
-    (void)start;
-    (void)stack_frame;
+    (void)start; (void)stack_frame;
 
     SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
-    const UINT8 bank = THIS_->bank;
-    const UINT8 * pc = THIS_->PC;
-    const UINT16 len = get_uint16(bank, (UINT8 *)pc);
+
+    const UINT8 bank  = THIS_->bank;
+    const UINT8 * pc  = THIS_->PC;
+    const UINT16 len  = get_uint16(bank, (UINT8 *)pc);
     const UINT8 * str = pc + sizeof(UINT16);
 
     audio_play_speech(bank, str, len);
@@ -189,9 +184,7 @@ BOOLEAN say(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { 
 
 // Stops speech playback, and uninstalls its ISR.
 BOOLEAN hush(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
-    (void)THIS;
-    (void)start;
-    (void)stack_frame;
+    (void)THIS; (void)start; (void)stack_frame;
 
     audio_hush_speech();
 
@@ -201,9 +194,7 @@ BOOLEAN hush(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED {
 
 // Triggers an error.
 BOOLEAN error(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
-    (void)THIS;
-    (void)start;
-    (void)stack_frame;
+    (void)THIS; (void)start; (void)stack_frame;
 
 #if defined __SDCC && defined NINTENDO
 __asm
