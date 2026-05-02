@@ -89,6 +89,7 @@ if %rebuild%==1 (
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\platformer.o" "src\vm\ctrl\platformer.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\pointnclick.o" "src\vm\ctrl\pointnclick.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\topdown.o" "src\vm\ctrl\topdown.c"
+  call %gbdk%\lcc.exe %cflag% -c -o "output\vm\shooting.o" "src\vm\ctrl\shooting.c"
   echo Ok.
   @echo,
 ) else (
@@ -166,7 +167,8 @@ set ctrlobj=^
   "output\vm\navigation.o" ^
   "output\vm\platformer.o" ^
   "output\vm\pointnclick.o" ^
-  "output\vm\topdown.o"
+  "output\vm\topdown.o" ^
+  "output\vm\shooting.o"
 set dataobj="output\vm\%bootstrap%.o" ^
   "output\vm\%builtin%.o"
 @echo on

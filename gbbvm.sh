@@ -107,6 +107,7 @@ if [ $rebuild -eq 1 ]; then
   "$gbdk/lcc" $cflag -c -o "output/vm/platformer.o" "src/vm/ctrl/platformer.c"
   "$gbdk/lcc" $cflag -c -o "output/vm/pointnclick.o" "src/vm/ctrl/pointnclick.c"
   "$gbdk/lcc" $cflag -c -o "output/vm/topdown.o" "src/vm/ctrl/topdown.c"
+  "$gbdk/lcc" $cflag -c -o "output/vm/shooting.o" "src/vm/ctrl/shooting.c"
   echo "Ok."
   echo
 else
@@ -188,6 +189,7 @@ ctrlobj=(
   "output/vm/platformer.o"
   "output/vm/pointnclick.o"
   "output/vm/topdown.o"
+  "output/vm/shooting.o"
 )
 
 dataobj=(

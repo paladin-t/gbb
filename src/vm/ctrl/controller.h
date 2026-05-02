@@ -9,6 +9,9 @@
 #include "platformer.h"
 #include "pointnclick.h"
 #include "topdown.h"
+#if defined USE_SHOOTING
+#   include "shooting.h"
+#endif /* USE_SHOOTING */
 
 #define CONTROLLER_ALWAYS_BEHAVE                                 0x80
 #define CONTROLLER_RIGIDLY_BEHAVE                                0x40
@@ -26,6 +29,11 @@
 #define CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER                  0x09
 #   define CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER_WITH_MOUSE   (0x0A | CONTROLLER_ALWAYS_BEHAVE)
 #   define CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER_WITH_TOUCH   (0x0B | CONTROLLER_ALWAYS_BEHAVE)
+#if defined USE_SHOOTING
+#   define CONTROLLER_BEHAVIOUR_SHOOTING_PLAYER                  0x0C
+#   define CONTROLLER_BEHAVIOUR_SHOOTING_MOVE                    0x0D
+#   define CONTROLLER_BEHAVIOUR_SHOOTING_IDLE                    0x0E
+#endif /* USE_SHOOTING */
 
 #define CONTROLLER_MOVABLE_FLAG_NONE                             0x00
 #define CONTROLLER_MOVABLE_FLAG_COLLISIONS                       0x01
@@ -67,6 +75,16 @@ INLINE BOOLEAN controller_behave_actor(actor_t * actor, UINT8 bhvr) {
         return controller_behave_pointnclick_player(actor, CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER_WITH_MOUSE);
     case CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER_WITH_TOUCH & ~CONTROLLER_BEHAVIOUR_OPTIONS:
         return controller_behave_pointnclick_player(actor, CONTROLLER_BEHAVIOUR_POINTNCLICK_PLAYER_WITH_TOUCH);
+
+    // Scroll Shooting.
+#if defined USE_SHOOTING
+    case CONTROLLER_BEHAVIOUR_SHOOTING_PLAYER:
+        return controller_behave_shooting_player(actor);
+    case CONTROLLER_BEHAVIOUR_SHOOTING_MOVE:
+        return controller_behave_shooting_move(actor);
+    case CONTROLLER_BEHAVIOUR_SHOOTING_IDLE:
+        return controller_behave_shooting_idle(actor);
+#endif /* USE_SHOOTING */
 
     // Others.
     default:
