@@ -16,38 +16,46 @@
 
 BANKREF_EXTERN(VM_ACTOR)
 
-#define ACTOR_IMPLEMENT_MOVE_WITH_FUNCTION_ENABLED         1
-#define ACTOR_IMPLEMENT_AUTO_ALIGNING_ON_BLOCKED_ENABLED   1
-#define ACTOR_IMPLEMENT_AUTO_ALIGNING_WITH_TURN_ENABLED    1
+#ifndef ACTOR_IMPLEMENT_MOVE_WITH_FUNCTION_ENABLED
+#   define ACTOR_IMPLEMENT_MOVE_WITH_FUNCTION_ENABLED         1
+#endif /* ACTOR_IMPLEMENT_MOVE_WITH_FUNCTION_ENABLED */
+#ifndef ACTOR_IMPLEMENT_AUTO_ALIGNING_ON_BLOCKED_ENABLED
+#   define ACTOR_IMPLEMENT_AUTO_ALIGNING_ON_BLOCKED_ENABLED   1
+#endif /* ACTOR_IMPLEMENT_AUTO_ALIGNING_ON_BLOCKED_ENABLED */
+#ifndef ACTOR_IMPLEMENT_AUTO_ALIGNING_WITH_TURN_ENABLED
+#   define ACTOR_IMPLEMENT_AUTO_ALIGNING_WITH_TURN_ENABLED    1
+#endif /* ACTOR_IMPLEMENT_AUTO_ALIGNING_WITH_TURN_ENABLED */
 
-#define ACTOR_MAX_COUNT                                    21
-#define ACTOR_MAX_ANIMATIONS                               8
+#ifndef ACTOR_MAX_COUNT
+#   define ACTOR_MAX_COUNT                                    21
+#endif /* ACTOR_MAX_COUNT */
+#define ACTOR_MAX_ANIMATIONS                                  8
 
-#define ACTOR_TEMPLATE_NONE                                0xFF
-#define ACTOR_TEMPLATE_ANY                                 ACTOR_TEMPLATE_NONE
+#define ACTOR_TEMPLATE_NONE                                   0xFF
+#define ACTOR_TEMPLATE_ANY                                    ACTOR_TEMPLATE_NONE
 
-#define ACTOR_MOTION_MOVE                                  0x0F
-#   define ACTOR_MOTION_MOVE_X                             0x03
-#       define ACTOR_MOTION_MOVE_LEFT                      0x01
-#       define ACTOR_MOTION_MOVE_RIGHT                     0x02
-#   define ACTOR_MOTION_MOVE_Y                             0x0C
-#       define ACTOR_MOTION_MOVE_UP                        0x04
-#       define ACTOR_MOTION_MOVE_DOWN                      0x08
-#define ACTOR_MOTION_RELATIVE                              0x40
-#define ACTOR_MOTION_NO_BLOCKING                           0x80
+#define ACTOR_MOTION_MOVE                                     0x0F
+#   define ACTOR_MOTION_MOVE_X                                0x03
+#       define ACTOR_MOTION_MOVE_LEFT                         0x01
+#       define ACTOR_MOTION_MOVE_RIGHT                        0x02
+#   define ACTOR_MOTION_MOVE_Y                                0x0C
+#       define ACTOR_MOTION_MOVE_UP                           0x04
+#       define ACTOR_MOTION_MOVE_DOWN                         0x08
+#define ACTOR_MOTION_RELATIVE                                 0x40
+#define ACTOR_MOTION_NO_BLOCKING                              0x80
 
-#define ACTOR_DEACTIVE_DISTANCE                            2
-#define ACTOR_DEFAULT_MOVE_SPEED                           FROM_SCREEN(1)
+#define ACTOR_DEACTIVE_DISTANCE                               2
+#define ACTOR_DEFAULT_MOVE_SPEED                              FROM_SCREEN(1)
 
-#define ACTOR_ANIMATION_INTERVAL                           15
-#define ACTOR_ANIMATION_PAUSED                             255
-#define ACTOR_ANIMATION_DEFAULT_INDEX                      0
-#define ACTOR_ANIMATION_TO_IDLE_INDEX                      16
-#define ACTOR_ANIMATION_TO_MOVING_INDEX                    17
+#define ACTOR_ANIMATION_INTERVAL                              15
+#define ACTOR_ANIMATION_PAUSED                                255
+#define ACTOR_ANIMATION_DEFAULT_INDEX                         0
+#define ACTOR_ANIMATION_TO_IDLE_INDEX                         16
+#define ACTOR_ANIMATION_TO_MOVING_INDEX                       17
 
-#define ACTOR_COLLIDED_COOLDOWN_FRAMES                     20
+#define ACTOR_COLLIDED_COOLDOWN_FRAMES                        20
 
-#define ACTOR_DELTA(ACTOR, DM, C)                          ((DM) == 0 ? (ACTOR)->position.C : (ACTOR)->position.C + (DM) * MUL2((ACTOR)->move_speed) /* A little bit ahead. */)
+#define ACTOR_DELTA(ACTOR, DM, C)                             ((DM) == 0 ? (ACTOR)->position.C : (ACTOR)->position.C + (DM) * MUL2((ACTOR)->move_speed) /* A little bit ahead. */)
 
 #define ACTOR_DL_PUSH_HEAD(HEAD, TAIL, ITEM) \
     (ITEM)->prev = NULL; \

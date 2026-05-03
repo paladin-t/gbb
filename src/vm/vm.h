@@ -100,17 +100,17 @@ typedef struct SCRIPT_CTX {
 } SCRIPT_CTX;
 
 // Total stack size of all VM threads.
-#if !defined VM_TOTAL_CONTEXT_STACK_SIZE
+#ifndef VM_TOTAL_CONTEXT_STACK_SIZE
 #   define VM_TOTAL_CONTEXT_STACK_SIZE   1024
 #endif /* VM_TOTAL_CONTEXT_STACK_SIZE */
 // Maximum number of concurrent running VM threads.
-#if !defined VM_MAX_CONTEXTS
+#ifndef VM_MAX_CONTEXTS
 #   define VM_MAX_CONTEXTS               16
 #endif /* VM_MAX_CONTEXTS */
 // Stack size of each VM thread.
 #define VM_CONTEXT_STACK_SIZE            (VM_TOTAL_CONTEXT_STACK_SIZE / VM_MAX_CONTEXTS)
 // Number of shared variables.
-#if !defined VM_HEAP_SIZE
+#ifndef VM_HEAP_SIZE
 #   define VM_HEAP_SIZE                  1024
 #endif /* VM_HEAP_SIZE */
 

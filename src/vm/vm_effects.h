@@ -7,9 +7,9 @@
 
 BANKREF_EXTERN(VM_EFFECTS)
 
-#define EFFECTS_PULSE                 1
-#define EFFECTS_PARALLAX              2
-#define EFFECTS_WOBBLE                3
+#define EFFECTS_PULSE      1
+#define EFFECTS_PARALLAX   2
+#define EFFECTS_WOBBLE     3
 
 #define EFFECTS_PARALLAX_STEP(START, END, SHIFT) \
     { \

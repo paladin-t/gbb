@@ -7,7 +7,9 @@
 
 BANKREF_EXTERN(VM_TRIGGER)
 
-#define TRIGGER_MAX_COUNT          31
+#ifndef TRIGGER_MAX_COUNT
+#   define TRIGGER_MAX_COUNT       31
+#endif /* TRIGGER_MAX_COUNT */
 #define TRIGGER_NONE               0xFF
 
 #define TRIGGER_HAS_NONE           0x00
