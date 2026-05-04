@@ -9,7 +9,6 @@
 #include <string.h>
 
 #include "vm_actor.h"
-#include "vm_device.h"
 #include "vm_effects.h"
 #include "vm_game.h"
 #include "vm_graphics.h"
@@ -405,6 +404,7 @@ STATIC void scene_load_actors(UINT8 base_tile) {
 }
 
 STATIC void scene_load_triggers(void) {
+#if USE_TRIGGER
     const UINT8 n = scene_count_triggers();
     trigger_dim(n);
     for (UINT8 i = 0; i != n; ++i) {
@@ -425,6 +425,7 @@ STATIC void scene_load_triggers(void) {
         triggers[i].hit_handler_bank    = cb_bank;
         triggers[i].hit_handler_address = cb_address;
     }
+#endif /* USE_TRIGGER */
 }
 
 void vm_def_scene(SCRIPT_CTX * THIS, UINT8 src) OLDCALL BANKED {
@@ -565,7 +566,7 @@ void vm_load_scene(SCRIPT_CTX * THIS) OLDCALL BANKED {
     input_button_previous = 0;
     input_touch_state = 0;
 
-#if defined USE_SGB_MOUSE
+#if USE_SGB_MOUSE
     joypads.joy0 = 0;
     input_touch_position_x = DIV2(DEVICE_SCREEN_PX_WIDTH);
     input_touch_position_y = DIV2(DEVICE_SCREEN_PX_HEIGHT);
@@ -578,15 +579,21 @@ void vm_load_scene(SCRIPT_CTX * THIS) OLDCALL BANKED {
     if (clear_objects) {
         actor_init();
 
+#if USE_TRIGGER
         trigger_init();
+#endif /* USE_TRIGGER */
 
+#if USE_PROJECTILE
         projectile_init();
+#endif /* USE_PROJECTILE */
 
         gui_init();
     }
 
     // Reset the effects.
+#if USE_EFFECTS
     effects_init();
+#endif /* USE_EFFECTS */
 
     // Just clear the scene and ignore loading if no layer enabled,
     // or always load with all of the layers with the code below.

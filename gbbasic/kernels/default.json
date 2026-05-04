@@ -331,8 +331,8 @@
     {
       "type": "none",
       "id": "none",
-      "value": "0x00",
       "syntax": "NONE_BEHAVIOUR",
+      "value": "0x00",
       "name": {
         "english": "None"
       },
@@ -341,8 +341,8 @@
     {
       "type": "player",
       "id": "plpl",
-      "value": "0x01",
       "syntax": "PLATFORMER_PLAYER_BEHAVIOUR",
+      "value": "0x01",
       "name": {
         "english": "Platformer Player"
       },
@@ -351,8 +351,8 @@
     {
       "type": "npc",
       "id": "plmv",
-      "value": "0x02",
       "syntax": "PLATFORMER_MOVE_BEHAVIOUR",
+      "value": "0x02",
       "name": {
         "english": "Platformer Move"
       },
@@ -361,8 +361,8 @@
     {
       "type": "npc",
       "id": "plid",
-      "value": "0x03",
       "syntax": "PLATFORMER_IDLE_BEHAVIOUR",
+      "value": "0x03",
       "name": {
         "english": "Platformer Idle"
       },
@@ -371,8 +371,8 @@
     {
       "type": "player",
       "id": "tdpl",
-      "value": "0x05",
       "syntax": "TOPDOWN_PLAYER_BEHAVIOUR",
+      "value": "0x05",
       "name": {
         "english": "Topdown Player"
       },
@@ -381,8 +381,8 @@
     {
       "type": "player",
       "id": "tdrp",
-      "value": "0x45",
       "syntax": null,
+      "value": "0x45",
       "name": {
         "english": "Topdown Rigid Player"
       },
@@ -391,8 +391,8 @@
     {
       "type": "npc",
       "id": "tdmv",
-      "value": "0x07",
       "syntax": "TOPDOWN_MOVE_BEHAVIOUR",
+      "value": "0x07",
       "name": {
         "english": "Topdown Move"
       },
@@ -401,8 +401,8 @@
     {
       "type": "npc",
       "id": "tdrm",
-      "value": "0x47",
       "syntax": null,
+      "value": "0x47",
       "name": {
         "english": "Topdown Rigid Move"
       },
@@ -411,8 +411,8 @@
     {
       "type": "npc",
       "id": "tdid",
-      "value": "0x08",
       "syntax": "TOPDOWN_IDLE_BEHAVIOUR",
+      "value": "0x08",
       "name": {
         "english": "Topdown Idle"
       },
@@ -421,8 +421,8 @@
     {
       "type": "player",
       "id": "pcpl",
-      "value": "0x09",
       "syntax": "POINTNCLICK_PLAYER_BEHAVIOUR",
+      "value": "0x09",
       "name": {
         "english": "Point&Click Player"
       },
@@ -431,8 +431,8 @@
     {
       "type": "player",
       "id": "pcpm",
-      "value": "0x8A",
       "syntax": "POINTNCLICK_PLAYER_WITH_MOUSE_BEHAVIOUR",
+      "value": "0x8A",
       "name": {
         "english": "Point&Click Player with Mouse"
       },
@@ -441,8 +441,8 @@
     {
       "type": "player",
       "id": "pcpt",
-      "value": "0x8B",
       "syntax": "POINTNCLICK_PLAYER_WITH_TOUCH_BEHAVIOUR",
+      "value": "0x8B",
       "name": {
         "english": "Point&Click Player with Touch"
       },
@@ -452,6 +452,34 @@
   "properties": [
   ],
   "macros": [
+    {
+      "syntax": "HAS_PROJECTILE",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_EMOTE",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_TRIGGER",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_EFFECTS",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_PLATFORMER",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_TOPDOWN",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_POINTNCLICK",
+      "value": "1"
+    }
   ],
   "natives": [
     {

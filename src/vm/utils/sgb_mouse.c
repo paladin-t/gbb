@@ -11,7 +11,7 @@
 
 #include "sgb_mouse.h"
 
-#if defined USE_SGB_MOUSE
+#if USE_SGB_MOUSE
 
 #warning "Message: Compiling using SGB mouse."
 

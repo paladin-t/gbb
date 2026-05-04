@@ -6,6 +6,8 @@
 
 BANKREF(VM_TRIGGER)
 
+#if USE_TRIGGER
+
 trigger_t triggers[TRIGGER_MAX_COUNT];
 UINT8 trigger_count = 0;
 static UINT8 trigger_last_tile_x;
@@ -175,3 +177,22 @@ void vm_on_trigger(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * pc) OLDCALL BANKED {
         triggers[trigger].hit_handler_address   = NULL;
     }
 }
+
+#else /* USE_TRIGGER */
+
+void vm_def_trigger(SCRIPT_CTX * THIS, UINT8 src) OLDCALL BANKED {
+    (void)THIS;
+    (void)src;
+
+    // Do nothing.
+}
+
+void vm_on_trigger(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * pc) OLDCALL BANKED {
+    (void)THIS;
+    (void)bank;
+    (void)pc;
+
+    // Do nothing.
+}
+
+#endif /* USE_TRIGGER */

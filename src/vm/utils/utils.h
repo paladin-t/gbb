@@ -7,6 +7,8 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
+#include "speech.h"
+
 /**< Common. */
 
 // Static is dummy when compiling is autobanked, to avoid runtime panic.
@@ -101,7 +103,7 @@ UINT8 call_b_bw(UINT8 a, UINT16 b, UINT8 bank, b_bw_fn func) NONBANKED;
 #define FEATURE_RTC                              0x10
 #define FEATURE_EFFECT_PULSE                     0x20
 #define FEATURE_EFFECT_PARALLAX                  0x40
-#if defined USE_SPEECH
+#if USE_SPEECH
 #   define FEATURE_SPEECH_ISR_INSTALLATION       0x80
 #endif /* USE_SPEECH */
 
@@ -126,7 +128,7 @@ UINT8 call_b_bw(UINT8 a, UINT16 b, UINT8 bank, b_bw_fn func) NONBANKED;
 #define FEATURE_EFFECT_PARALLAX_ENABLED          (feature_states &   FEATURE_EFFECT_PARALLAX)
 #define FEATURE_EFFECT_PARALLAX_ENABLE           (feature_states |=  FEATURE_EFFECT_PARALLAX)
 #define FEATURE_EFFECT_PARALLAX_DISABLE          (feature_states &= ~FEATURE_EFFECT_PARALLAX)
-#if defined USE_SPEECH
+#if USE_SPEECH
 #   define FEATURE_SPEECH_ISR_INSTALLED          (feature_states &   FEATURE_SPEECH_ISR_INSTALLATION)
 #   define FEATURE_SPEECH_ISR_INSTALL            (feature_states |=  FEATURE_SPEECH_ISR_INSTALLATION)
 #   define FEATURE_SPEECH_ISR_UNINSTALL          (feature_states &= ~FEATURE_SPEECH_ISR_INSTALLATION)

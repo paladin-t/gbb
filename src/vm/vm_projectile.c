@@ -14,6 +14,8 @@
 
 BANKREF(VM_PROJECTILE)
 
+#if USE_PROJECTILE
+
 #define PROJECTILE_START_INDEPENDENTLY   0x00
 #define PROJECTILE_START_WITH_ACTOR      0x01
 #define PROJECTILE_START_ON_ACTOR        0x02
@@ -695,3 +697,34 @@ void vm_set_projectile_prop(SCRIPT_CTX * THIS, UINT8 src) OLDCALL BANKED {
         break;
     }
 }
+
+#else /* USE_PROJECTILE */
+
+void vm_def_projectile(SCRIPT_CTX * THIS, UINT8 src) OLDCALL BANKED {
+    (void)THIS;
+    (void)src;
+
+    // Do nothing.
+}
+
+void vm_start_projectile(SCRIPT_CTX * THIS, UINT8 op) OLDCALL BANKED {
+    (void)THIS;
+    (void)op;
+
+    // Do nothing.
+}
+
+void vm_get_projectile_prop(SCRIPT_CTX * THIS) OLDCALL BANKED {
+    (void)THIS;
+
+    // Do nothing.
+}
+
+void vm_set_projectile_prop(SCRIPT_CTX * THIS, UINT8 src) OLDCALL BANKED {
+    (void)THIS;
+    (void)src;
+
+    // Do nothing.
+}
+
+#endif /* USE_PROJECTILE */

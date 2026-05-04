@@ -7,6 +7,12 @@
 
 BANKREF_EXTERN(VM_EFFECTS)
 
+#ifndef USE_EFFECTS
+#   define USE_EFFECTS 1
+#endif /* USE_EFFECTS */
+
+#if USE_EFFECTS
+
 #define EFFECTS_PULSE      1
 #define EFFECTS_PARALLAX   2
 #define EFFECTS_WOBBLE     3
@@ -46,6 +52,8 @@ void effects_parallax_sync(void) NAKED NONBANKED; // UPDATE.
 
 void effects_wobble_sync(void) BANKED; // UPDATE.
 void effects_wobble_update(void) BANKED; // UPDATE.
+
+#endif /* USE_EFFECTS */
 
 void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED;
 

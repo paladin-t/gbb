@@ -13,7 +13,7 @@
 #include "speech.h"
 #include "utils.h"
 
-#if defined USE_SPEECH
+#if USE_SPEECH
 
 #warning "Message: Compiling with speech synthesizer."
 

@@ -7,12 +7,8 @@
 
 #include <string.h>
 
-#if defined USE_SGB_MOUSE
-#   include "utils/sgb_mouse.h"
-#endif /* USE_SGB_MOUSE */
 #include "utils/utils.h"
 
-#include "vm_device.h"
 #include "vm_input.h"
 
 BANKREF(VM_INPUT)
@@ -24,7 +20,7 @@ input_handler_t input_handlers[INPUT_HANDLER_COUNT];
 UINT8 input_handler_count;
 UINT8 input_handler_cursor;
 
-#if defined USE_SGB_MOUSE
+#if USE_SGB_MOUSE
 UINT8 input_touch_position_x;
 UINT8 input_touch_position_y;
 UINT8 input_touch_pressed;
@@ -43,7 +39,7 @@ void input_init(void) BANKED {
     input_handler_count             = 0;
     input_handler_cursor            = INPUT_HANDLER_NONE;
 
-#if defined USE_SGB_MOUSE
+#if USE_SGB_MOUSE
     input_touch_position_x = DIV2(DEVICE_SCREEN_PX_WIDTH);
     input_touch_position_y = DIV2(DEVICE_SCREEN_PX_HEIGHT);
     input_touch_pressed = 0;

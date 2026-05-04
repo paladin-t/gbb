@@ -9,16 +9,9 @@
 #include <string.h>
 
 #include "utils/sgb.h"
-#if defined USE_SGB_MOUSE
-#   include "utils/sgb_mouse.h"
-#endif /* USE_SGB_MOUSE */
-#if defined USE_SPEECH
-#   include "utils/speech.h"
-#endif /* USE_SPEECH */
 #include "utils/utils.h"
 
 #include "vm_audio.h"
-#include "vm_device.h"
 #include "vm_game.h"
 #include "vm_input.h"
 #include "vm_native.h"
@@ -128,7 +121,7 @@ BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCAL
     return TRUE;
 }
 
-#if defined USE_SGB_MOUSE
+#if USE_SGB_MOUSE
 // Gets whether an SGB mouse has been installed.
 BOOLEAN is_sgb_mouse_installed(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS;
@@ -148,7 +141,7 @@ BOOLEAN is_sgb_mouse_installed(POINTER THIS, BOOLEAN start, UINT16 * stack_frame
 }
 #endif /* USE_SGB_MOUSE */
 
-#if defined USE_SPEECH
+#if USE_SPEECH
 // Sets the options of the speech synthesizer module.
 BOOLEAN tune(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start;

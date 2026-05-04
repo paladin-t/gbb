@@ -16,6 +16,8 @@
 #include "navigation.h"
 #include "topdown.h"
 
+#if USE_TOPDOWN
+
 #define TOPDOWN_ACT_BUTTON   J_A
 
 #define TOPDOWN_ALIGNED_TO_TILE(A) \
@@ -207,6 +209,7 @@ BOOLEAN controller_behave_topdown_player(actor_t * actor) BANKED {
     BOOLEAN moving = TRUE;
     if (TOPDOWN_ALIGNED_TO_TILE(actor)) { // Aligned to tile.
         // Check for trigger collisions.
+#if USE_TRIGGER
         if (trigger_activate_at_intersection(&actor->bounds, &actor->position, FALSE)) {
             if (!TOPDOWN_ALIGNED_TO_TILE(actor)) { // Not aligned to tile.
                 actor->behaviour = CONTROLLER_BEHAVIOUR_TOPDOWN_PLAYER_ARBITRARY; // Transfer to the arbitrary behaviour.
@@ -215,6 +218,7 @@ BOOLEAN controller_behave_topdown_player(actor_t * actor) BANKED {
 
             return FALSE;
         }
+#endif /* USE_TRIGGER */
 
         // Update the actor.
         moving = controller_behave_topdown_player_update(actor);
@@ -229,8 +233,10 @@ BOOLEAN controller_behave_topdown_player(actor_t * actor) BANKED {
 
 BOOLEAN controller_behave_topdown_player_arbitrary(actor_t * actor, UINT8 rigid) BANKED {
     // Check for trigger collisions.
+#if USE_TRIGGER
     if (trigger_activate_at_intersection(&actor->bounds, &actor->position, FALSE))
         return FALSE;
+#endif /* USE_TRIGGER */
 
     // Update the actor.
     BOOLEAN moving = controller_behave_topdown_player_update(actor);
@@ -377,3 +383,5 @@ BOOLEAN controller_behave_topdown_idle(actor_t * actor) BANKED {
 
     return FALSE;
 }
+
+#endif /* USE_TOPDOWN */

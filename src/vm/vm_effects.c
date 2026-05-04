@@ -14,6 +14,8 @@
 
 BANKREF(VM_EFFECTS)
 
+#if USE_EFFECTS
+
 static UINT8 effects_pulse_ticks;
 static UINT8 effects_pulse_interval;
 UINT8 effects_pulse_bank;
@@ -227,3 +229,13 @@ void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
         break;
     }
 }
+
+#else /* USE_EFFECTS */
+
+void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
+    (void)THIS;
+
+    // Do nothing.
+}
+
+#endif /* USE_EFFECTS */

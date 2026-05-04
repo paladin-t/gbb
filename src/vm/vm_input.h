@@ -6,7 +6,7 @@
 
 BANKREF_EXTERN(VM_INPUT)
 
-#if defined USE_SGB_MOUSE
+#if USE_SGB_MOUSE
 #   define INPUT_JOYPAD             joypads.joy0
 #   define INPUT_TOUCH_X            input_touch_position_x
 #   define INPUT_TOUCH_Y            input_touch_position_y
@@ -78,7 +78,7 @@ extern input_handler_t input_handlers[INPUT_HANDLER_COUNT];
 extern UINT8 input_handler_count;
 extern UINT8 input_handler_cursor;
 
-#if defined USE_SGB_MOUSE
+#if USE_SGB_MOUSE
 extern joypads_t joypads; // Defined in the SGB mouse module.
 extern UINT8 input_touch_position_x;
 extern UINT8 input_touch_position_y;

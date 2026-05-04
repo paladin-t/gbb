@@ -15,6 +15,11 @@
 #include "vm_graphics.h"
 #include "vm_scene.h"
 
+#if !USE_PLATFORMER && !USE_TOPDOWN && !USE_POINTNCLICK && !USE_SHOOTING
+#   pragma disable_warning 110
+#   pragma disable_warning 126
+#endif /* !USE_PLATFORMER && !USE_TOPDOWN && !USE_POINTNCLICK && !USE_SHOOTING */
+
 BANKREF(VM_ACTOR)
 
 #define ACTOR_THREADING_BEGIN       1
@@ -170,9 +175,11 @@ INLINE BOOLEAN actor_move_camera(actor_t * actor) {
 
 void actor_update(void) BANKED {
     // Update the emote actor if there's any.
+#if USE_EMOTE
     if (emote_actor) {
         emote_update();
     }
+#endif /* USE_EMOTE */
 
     // Update the actors.
     actor_t * actor = actor_active_tail;

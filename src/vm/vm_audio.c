@@ -6,9 +6,6 @@
 #endif /* __SDCC */
 
 #include "utils/sfx_player.h"
-#if defined USE_SPEECH
-#   include "utils/speech.h"
-#endif /* USE_SPEECH */
 #include "utils/utils.h"
 
 #include "vm_audio.h"
@@ -46,7 +43,7 @@ void audio_init(void) BANKED {
     sfx_reset_sample();
     sfx_sound_cut();
 
-#if defined USE_SPEECH
+#if USE_SPEECH
     speech_init(FALSE);
 #endif /* USE_SPEECH */
 }
@@ -138,7 +135,7 @@ void audio_play_sound(UINT8 bank, const UINT8 * ptr, UINT8 priority) BANKED {
 
 /**< Speech. */
 
-#if defined USE_SPEECH
+#if USE_SPEECH
 void audio_update_speech(void) NONBANKED {
     if (speech_is_playing()) {
         hUGE_mute_mask = audio_mute_mask;

@@ -17,6 +17,8 @@
 #include "navigation.h"
 #include "platformer.h"
 
+#if USE_PLATFORMER
+
 #define PLATFORMER_ACT_BUTTON    J_A
 #define PLATFORMER_JUMP_BUTTON   J_A
 #define PLATFORMER_RUN_BUTTON    J_B
@@ -28,8 +30,10 @@ BOOLEAN controller_behave_platformer_player(actor_t * actor) BANKED {
     BOOLEAN moving = FALSE;
 
     // Check for trigger collisions.
+#if USE_TRIGGER
     if (trigger_activate_at_intersection(&actor->bounds, &actor->position, FALSE))
         return FALSE;
+#endif /* USE_TRIGGER */
 
     // Move, walk and climb.
     BOOLEAN grounded = FALSE;
@@ -371,3 +375,5 @@ BOOLEAN controller_behave_platformer_idle(actor_t * actor) BANKED {
 
     return FALSE;
 }
+
+#endif /* USE_PLATFORMER */

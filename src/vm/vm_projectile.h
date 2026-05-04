@@ -15,6 +15,12 @@
 
 BANKREF_EXTERN(VM_PROJECTILE)
 
+#ifndef USE_PROJECTILE
+#   define USE_PROJECTILE 1
+#endif /* USE_PROJECTILE */
+
+#if USE_PROJECTILE
+
 #ifndef PROJECTILE_DEF_MAX_COUNT
 #   define PROJECTILE_DEF_MAX_COUNT         5
 #endif /* PROJECTILE_DEF_MAX_COUNT */
@@ -80,6 +86,8 @@ UINT8 projectile_free_count(void) BANKED;
 
 UINT8 projectile_def(UINT8 type, UINT8 base_tile, UINT8 bank, UINT8 * ptr) BANKED;
 projectile_t * projectile_start(UINT8 index, UINT16 x, UINT16 y, UINT8 angle, UINT8 flags) BANKED;
+
+#endif /* USE_PROJECTILE */
 
 void vm_def_projectile(SCRIPT_CTX * THIS, UINT8 src) OLDCALL BANKED;
 void vm_start_projectile(SCRIPT_CTX * THIS, UINT8 op) OLDCALL BANKED;

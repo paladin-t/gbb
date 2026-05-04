@@ -7,6 +7,12 @@
 
 BANKREF_EXTERN(VM_TRIGGER)
 
+#ifndef USE_TRIGGER
+#   define USE_TRIGGER 1
+#endif /* USE_TRIGGER */
+
+#if USE_TRIGGER
+
 #ifndef TRIGGER_MAX_COUNT
 #   define TRIGGER_MAX_COUNT       31
 #endif /* TRIGGER_MAX_COUNT */
@@ -46,6 +52,8 @@ UINT8 trigger_at_intersection(const boundingbox_t * bb, const upoint16_t * offse
 // Runs script for the trigger at the specific position if this intersection was the most
 // recently activated trigger area or the player has just left the previous one.
 BOOLEAN trigger_activate_at_intersection(const boundingbox_t * bb, const upoint16_t * offset, BOOLEAN force) BANKED;
+
+#endif /* USE_TRIGGER */
 
 void vm_def_trigger(SCRIPT_CTX * THIS, UINT8 src) OLDCALL BANKED;
 void vm_on_trigger(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * pc) OLDCALL BANKED; // Start.

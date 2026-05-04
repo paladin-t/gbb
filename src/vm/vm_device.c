@@ -298,8 +298,12 @@ void vm_option(SCRIPT_CTX * THIS) OLDCALL BANKED {
 
         break;
     case DEVICE_OPTION_ACTIVE_TRIGGERS:
+#if USE_TRIGGER
         trigger_dim((UINT8)val);
         *(THIS->stack_ptr++) = TRUE;
+#else /* USE_TRIGGER */
+        *(THIS->stack_ptr++) = FALSE;
+#endif /* USE_TRIGGER */
 
         break;
     case DEVICE_OPTION_SOUND_ENABLED:
@@ -524,6 +528,7 @@ void vm_query(SCRIPT_CTX * THIS) OLDCALL BANKED {
         *(THIS->stack_ptr++) = actor_active_count();
 
         break;
+#if USE_PROJECTILE
     case DEVICE_QUERY_MAX_PROJECTILES:
         *(THIS->stack_ptr++) = PROJECTILE_MAX_COUNT;
 
@@ -536,6 +541,21 @@ void vm_query(SCRIPT_CTX * THIS) OLDCALL BANKED {
         *(THIS->stack_ptr++) = projectile_free_count();
 
         break;
+#else /* USE_PROJECTILE */
+    case DEVICE_QUERY_MAX_PROJECTILES:
+        *(THIS->stack_ptr++) = 0;
+
+        break;
+    case DEVICE_QUERY_ACTIVE_PROJECTILES:
+        *(THIS->stack_ptr++) = 0;
+
+        break;
+    case DEVICE_QUERY_FREE_PROJECTILES:
+        *(THIS->stack_ptr++) = 0;
+
+        break;
+#endif /* USE_PROJECTILE */
+#if USE_TRIGGER
     case DEVICE_QUERY_MAX_TRIGGERS:
         *(THIS->stack_ptr++) = TRIGGER_MAX_COUNT;
 
@@ -548,6 +568,20 @@ void vm_query(SCRIPT_CTX * THIS) OLDCALL BANKED {
         *(THIS->stack_ptr++) = TRIGGER_MAX_COUNT - trigger_count;
 
         break;
+#else /* USE_TRIGGER */
+    case DEVICE_QUERY_MAX_TRIGGERS:
+        *(THIS->stack_ptr++) = 0;
+
+        break;
+    case DEVICE_QUERY_ACTIVE_TRIGGERS:
+        *(THIS->stack_ptr++) = 0;
+
+        break;
+    case DEVICE_QUERY_FREE_TRIGGERS:
+        *(THIS->stack_ptr++) = 0;
+
+        break;
+#endif /* USE_TRIGGER */
     case DEVICE_QUERY_SERIAL_STATUS:
         if (_io_status == IO_IDLE)
             *(THIS->stack_ptr++) = SERIAL_IDLE;

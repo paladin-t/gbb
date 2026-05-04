@@ -1,6 +1,8 @@
 #ifndef __VM_DEVICE_H__
 #define __VM_DEVICE_H__
 
+#include "utils/sgb_mouse.h"
+
 #include "vm.h"
 
 BANKREF_EXTERN(VM_DEVICE)
@@ -74,7 +76,7 @@ BANKREF_EXTERN(VM_DEVICE_EXT)
 #define DEVICE_TYPE_AGB                     0x08
 #define DEVICE_TYPE_GBB                     0x80
 #define DEVICE_TYPE_AP                      0x40
-#if defined USE_SGB_MOUSE
+#if USE_SGB_MOUSE
 #   define DEVICE_TYPE_WITH_TOUCH_SUPPORT  (DEVICE_TYPE_GBB | DEVICE_TYPE_SGB)
 #else /* USE_SGB_MOUSE */
 #   define DEVICE_TYPE_WITH_TOUCH_SUPPORT   DEVICE_TYPE_GBB

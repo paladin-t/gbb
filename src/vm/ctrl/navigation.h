@@ -234,7 +234,7 @@ INLINE UINT8 navigation_get_blocking_fall_pos(actor_t * actor, INT16 dy, UINT16 
     return SCENE_PROPERTY_EMPTY_GRID;
 }
 
-#if defined USE_SHOOTING
+#if USE_SHOOTING
 INLINE UINT8 navigation_get_blocking_up_pos_in_scene(actor_t * actor, INT16 dy, UINT16 * out_y) {
     const INT16 pos_x = TO_SCREEN(actor->position.x);
     const INT16 pos_y = TO_SCREEN(actor->position.y);

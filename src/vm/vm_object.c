@@ -18,7 +18,11 @@ void vm_object_is(SCRIPT_CTX * THIS, UINT8 type) OLDCALL BANKED {
 
         break;
     case OBJECT_TYPE_PROJECTILE:
+#if USE_PROJECTILE
         *(THIS->stack_ptr++) = ptr >= (UINT16)(&projectiles[0]) && ptr <= (UINT16)(&projectiles[PROJECTILE_MAX_COUNT - 1]);
+#else /* USE_PROJECTILE */
+        *(THIS->stack_ptr++) = FALSE;
+#endif /* USE_PROJECTILE */
 
         break;
     default:

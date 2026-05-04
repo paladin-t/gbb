@@ -9,7 +9,11 @@
 
 #include <stdint.h>
 
-#if defined USE_SPEECH
+#ifndef USE_SPEECH
+#   define USE_SPEECH 0
+#endif /* USE_SPEECH */
+
+#if USE_SPEECH
 
 #ifndef SPEECH_BANKED
 #   define SPEECH_BANKED              1

@@ -65,7 +65,12 @@ void actor_delete(actor_t * actor) BANKED {
     }
 
     // Reset the hardware sprites if there's no object left.
-    if (!actor_active_head && !projectile_active_head) {
+    if (
+        !actor_active_head
+#if USE_PROJECTILE
+         && !projectile_active_head
+#endif /* USE_PROJECTILE */
+    ) {
         actor_hardware_sprite_count = device_object_sprite_base;
         for (UINT8 i = actor_hardware_sprite_count; i != MAX_HARDWARE_SPRITES; ++i) {
             hide_sprite(i);

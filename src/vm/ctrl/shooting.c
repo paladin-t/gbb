@@ -17,7 +17,8 @@
 #include "navigation.h"
 #include "shooting.h"
 
-#if defined USE_SHOOTING
+#if USE_SHOOTING
+
 #define SHOOTING_ACT_BUTTON   J_A
 
 UINT8 shooter_direction;
@@ -130,8 +131,10 @@ BOOLEAN controller_behave_shooting_player(actor_t * actor) BANKED {
 
     if (IS_FRAME_ODD) {
         // Check for trigger collisions.
+#if USE_TRIGGER
         if (trigger_activate_at_intersection(&actor->bounds, &actor->position, FALSE))
             return FALSE;
+#endif /* USE_TRIGGER */
 
         // Check for actor collisions.
         actor_t * hit_actor = actor_hits(&actor->bounds, &actor->position, actor, FALSE);
@@ -217,4 +220,5 @@ BOOLEAN controller_behave_shooting_move(actor_t * actor) BANKED {
 
     return FALSE;
 }
+
 #endif /* USE_SHOOTING */

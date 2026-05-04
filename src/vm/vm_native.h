@@ -7,6 +7,9 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
+#include "utils/sgb_mouse.h"
+#include "utils/speech.h"
+
 #include "vm.h"
 
 BANKREF_EXTERN(VM_NATIVE)
@@ -21,11 +24,11 @@ BOOLEAN wait_until_confirm(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
 BOOLEAN send_sgb_packet(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED; // INVOKABLE.
 BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED; // INVOKABLE.
 
-#if defined USE_SGB_MOUSE
+#if USE_SGB_MOUSE
 BOOLEAN is_sgb_mouse_installed(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED; // INVOKABLE.
 #endif /* USE_SGB_MOUSE */
 
-#if defined USE_SPEECH
+#if USE_SPEECH
 BOOLEAN tune(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED; // INVOKABLE.
 BOOLEAN say(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED; // INVOKABLE.
 BOOLEAN hush(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED; // INVOKABLE.

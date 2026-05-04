@@ -8,7 +8,6 @@
 #endif /* __SDCC */
 
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <rand.h>
@@ -863,6 +862,7 @@ void VBL_isr(void) NONBANKED {
     }
 }
 
+#if USE_EFFECTS
 void LCD_isr(void) NONBANKED {
     if (FEATURE_EFFECT_PARALLAX_ENABLED) {
         effects_parallax_sync();
@@ -870,6 +870,7 @@ void LCD_isr(void) NONBANKED {
         effects_wobble_sync();
     }
 }
+#endif /* USE_EFFECTS */
 
 STATIC void reset_contexts(BOOLEAN reset) {
     if (reset) {
@@ -901,16 +902,24 @@ void script_runner_init(void) BANKED {
                    // The following modules' initialization routines do not depend on each other.
     actor_init();
     audio_init();
+#if USE_EFFECTS
     effects_init();
+#endif /* USE_EFFECTS */
+#if USE_EMOTE
     emote_init();
+#endif /* USE_EMOTE */
     game_init();
     graphics_init();
     gui_init();
     input_init();
     persistence_init();
+#if USE_PROJECTILE
     projectile_init();
+#endif /* USE_PROJECTILE */
     scene_init();
+#if USE_TRIGGER
     trigger_init();
+#endif /* USE_TRIGGER */
 
     // Setup the interrupts.
     CRITICAL {
@@ -919,7 +928,9 @@ void script_runner_init(void) BANKED {
         add_VBL(VBL_isr);
         LYC_REG = 0;
         STAT_REG |= STATF_LYC;
+#if USE_EFFECTS
         add_LCD(LCD_isr);
+#endif /* USE_EFFECTS */
     }
     set_interrupts(DEVICE_ISR_DEFAULT);
 

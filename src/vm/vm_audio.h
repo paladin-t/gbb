@@ -3,6 +3,8 @@
 
 #include "drv/hUGE/player-gbdk/hUGEDriver.h"
 
+#include "utils/speech.h"
+
 #include "vm.h"
 
 BANKREF_EXTERN(VM_AUDIO)
@@ -35,7 +37,7 @@ void audio_play_sound(UINT8 bank, const UINT8 * ptr, UINT8 priority) BANKED;
 
 /**< Speech. */
 
-#if defined USE_SPEECH
+#if USE_SPEECH
 void audio_update_speech(void) NONBANKED; // UPDATE.
 void audio_play_speech(UINT8 bank, const UINT8 * ptr, UINT16 len) BANKED;
 void audio_hush_speech(void) BANKED;

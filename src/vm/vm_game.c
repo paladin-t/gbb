@@ -5,12 +5,7 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
-#if defined USE_SGB_MOUSE
-#   include "utils/sgb_mouse.h"
-#endif /* USE_SGB_MOUSE */
-
 #include "vm_actor.h"
-#include "vm_device.h"
 #include "vm_effects.h"
 #include "vm_game.h"
 #include "vm_gui.h"
@@ -28,7 +23,7 @@ void game_init(void) BANKED {
 
 STATIC void game_update_modules(void) {
     // Update the input states.
-#if defined USE_SGB_MOUSE
+#if USE_SGB_MOUSE
     if (device_type & DEVICE_TYPE_SGB) { // Use SGB features if available.
         joypad_ex(&joypads);
         mouse_buttons = 0;
@@ -64,10 +59,12 @@ STATIC void game_update_modules(void) {
     }
 
     // Update the projectiles.
+#if USE_PROJECTILE
     if (projectile_active_head) {
         projectile_update();
         has_objects = TRUE;
     }
+#endif /* USE_PROJECTILE */
 
     // Update the actor collision.
     actor_handle_collision();
@@ -89,11 +86,13 @@ STATIC void game_update_modules(void) {
     }
 
     // Update the graphics effects.
+#if USE_EFFECTS
     if (effects_pulse_bank) {
         effects_pulse_update();
     } else if (effects_wobble) {
         effects_wobble_update();
     }
+#endif /* USE_EFFECTS */
 
     // Tick the game time.
     ++game_time;

@@ -9,6 +9,8 @@
 
 BANKREF(VM_EMOTE)
 
+#if USE_EMOTE
+
 #define EMOTE_SPRITE_TILE_COUNT    4
 #define EMOTE_TOTAL_FRAME_COUNT    60
 #define EMOTE_BOUNCE_FRAME_COUNT   15
@@ -476,3 +478,14 @@ void vm_emote(SCRIPT_CTX * THIS, UINT8 src) OLDCALL BANKED {
         ++emote_timer;
     }
 }
+
+#else /* USE_EMOTE */
+
+void vm_emote(SCRIPT_CTX * THIS, UINT8 src) OLDCALL BANKED {
+    (void)THIS;
+    (void)src;
+
+    // Do nothing.
+}
+
+#endif /* USE_EMOTE */

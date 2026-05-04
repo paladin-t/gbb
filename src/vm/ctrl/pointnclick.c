@@ -16,6 +16,8 @@
 #include "controller.h"
 #include "pointnclick.h"
 
+#if USE_POINTNCLICK
+
 #define POINTNCLICK_ACT_BUTTON                J_A
 
 #define POINTNCLICK_ANIMATION_CURSOR          0
@@ -170,6 +172,7 @@ BOOLEAN controller_behave_pointnclick_player(actor_t * actor, UINT8 pointing) BA
         }
     }
 
+#if USE_TRIGGER
     // Check for trigger collisions.
     const UINT8 hit_trigger = trigger_at_intersection(&actor->bounds, &actor->position);
     const BOOLEAN is_hover_trigger = hit_trigger != TRIGGER_NONE && triggers[hit_trigger].hit_handler_bank && triggers[hit_trigger].hit_handler_flags & TRIGGER_HAS_ENTER_SCRIPT;
@@ -199,6 +202,31 @@ BOOLEAN controller_behave_pointnclick_player(actor_t * actor, UINT8 pointing) BA
             moving = POINTNCLICK_MOVING_MODE_NONE;
         }
     }
+#else /* USE_TRIGGER */
+    // Check collision with another actor.
+    actor_t * hit_actor = actor_in_front_of_actor(actor, 0, FALSE);
+    const BOOLEAN is_hover_actor = hit_actor && hit_actor->hit_handler_bank != 0;
+
+    // Set cursor animation.
+    if (is_hover_actor) {
+        actor_set_animation(actor, POINTNCLICK_ANIMATION_CURSOR_HOVER);
+    } else {
+        actor_set_animation(actor, POINTNCLICK_ANIMATION_CURSOR);
+    }
+
+    // Interact with another actor.
+    if (INPUT_IS_BTN_UP(POINTNCLICK_ACT_BUTTON) || confirmed) {
+        if (!VM_IS_LOCKED) {
+            if (is_hover_actor) {
+                if (actor->hit_handler_bank != 0)
+                    actor_begin_hit_thread(actor, hit_actor);
+                if (hit_actor->hit_handler_bank != 0)
+                    actor_begin_hit_thread(hit_actor, actor);
+            }
+            moving = POINTNCLICK_MOVING_MODE_NONE;
+        }
+    }
+#endif /* USE_TRIGGER */
 
     // Check whether the camera need to be moved.
     if (moving && actor == actor_following_target)
@@ -206,3 +234,5 @@ BOOLEAN controller_behave_pointnclick_player(actor_t * actor, UINT8 pointing) BA
 
     return FALSE;
 }
+
+#endif /* USE_POINTNCLICK */

@@ -9,7 +9,11 @@
 
 #include <stdbool.h>
 
-#if defined USE_SGB_MOUSE
+#ifndef USE_SGB_MOUSE
+#   define USE_SGB_MOUSE 0
+#endif /* USE_SGB_MOUSE */
+
+#if USE_SGB_MOUSE
 
 // In SGB Player 2.
 #define SNES_MOUSE_X_DIR               0b10000000u // .7: 1=left, 0=right, 6..0: movement.
