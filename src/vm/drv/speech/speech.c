@@ -11,7 +11,7 @@
 #include <string.h>
 
 #include "speech.h"
-#include "utils.h"
+#include "../../utils/utils.h"
 
 #if USE_SPEECH
 

@@ -5,7 +5,7 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
-#include "utils/sfx_player.h"
+#include "drv/sfx/sfx_player.h"
 #include "utils/utils.h"
 
 #include "vm_audio.h"

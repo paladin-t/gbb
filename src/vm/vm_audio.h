@@ -2,8 +2,7 @@
 #define __VM_AUDIO_H__
 
 #include "drv/hUGE/player-gbdk/hUGEDriver.h"
-
-#include "utils/speech.h"
+#include "drv/speech/speech.h"
 
 #include "vm.h"
 

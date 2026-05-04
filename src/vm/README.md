@@ -25,17 +25,29 @@ The GBVM is licensed under the MIT License.
 "hUGEDriver is dedicated to the public domain."
 ```
 
+#### "drv/sfx"
+
+* [untoxa/VGM2GBSFX](https://github.com/untoxa/VGM2GBSFX)
+
+The SFX player is licensed under the MIT License.
+
+#### "drv/sgb_mouse"
+
+* [bbbbbr/gameboy_qr_paint](https://github.com/bbbbbr/gameboy_qr_paint/)
+
+The SGB mouse module is licensed under the MIT License.
+
+#### "drv/speech"
+
+* [paladin-t/gb-speech](https://github.com/paladin-t/gb-speech)
+
+The speech module is licensed under the MIT License.
+
 #### "utils/crash_handler.s"
 
 * [ISSOtm/gb-starter-kit](https://github.com/ISSOtm/gb-starter-kit/)
 
 The crash handler is licensed under the zlib License.
-
-#### "utils/sfx_player.c", "utils/sfx_player.h"
-
-* [untoxa/VGM2GBSFX](https://github.com/untoxa/VGM2GBSFX)
-
-The SFX player is licensed under the MIT License.
 
 #### Functions form GBDK-2020
 

@@ -7,7 +7,7 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
-#include "speech.h"
+#include "../drv/speech/speech.h"
 
 /**< Common. */
 

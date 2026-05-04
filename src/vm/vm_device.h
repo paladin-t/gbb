@@ -1,7 +1,7 @@
 #ifndef __VM_DEVICE_H__
 #define __VM_DEVICE_H__
 
-#include "utils/sgb_mouse.h"
+#include "drv/sgb_mouse/sgb_mouse.h"
 
 #include "vm.h"
 

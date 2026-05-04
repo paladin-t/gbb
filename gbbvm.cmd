@@ -58,15 +58,15 @@ if not exist "output\vm" (
 )
 if %rebuild%==1 (
   call :COLOR 3F "1. Compile the libs..."
+  call %gbdk%\lcc.exe %cflag% -c -o "output\vm\sfx_player.o" "src\vm\drv\sfx\sfx_player.c"
+  call %gbdk%\lcc.exe %cflag% -c -o "output\vm\sgb_mouse.o" "src\vm\drv\sgb_mouse\sgb_mouse.c"
+  call %gbdk%\lcc.exe %cflag% -c -o "output\vm\speech.o" "src\vm\drv\speech\speech.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\exception.o" "src\vm\utils\exception.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\font.o" "src\vm\utils\font.s"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\graphics.o" "src\vm\utils\graphics.s"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\scroll.o" "src\vm\utils\scroll.s"
-  call %gbdk%\lcc.exe %cflag% -c -o "output\vm\sfx_player.o" "src\vm\utils\sfx_player.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\sgb.o" "src\vm\utils\sgb.c"
-  call %gbdk%\lcc.exe %cflag% -c -o "output\vm\sgb_mouse.o" "src\vm\utils\sgb_mouse.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\sleep.o" "src\vm\utils\sleep.s"
-  call %gbdk%\lcc.exe %cflag% -c -o "output\vm\speech.o" "src\vm\utils\speech.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\text.o" "src\vm\utils\text.c"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\timer_handler.o" "src\vm\utils\timer_handler.s"
   call %gbdk%\lcc.exe %cflag% -c -o "output\vm\utils.o" "src\vm\utils\utils.c"
@@ -146,15 +146,15 @@ if %rebuild%==1 (
 
 call :COLOR 3F "5. Link..."
 set libobj=^
+  "output\vm\sfx_player.o" ^
+  "output\vm\sgb_mouse.o" ^
+  "output\vm\speech.o" ^
   "output\vm\exception.o" ^
   "output\vm\font.o" ^
   "output\vm\graphics.o" ^
   "output\vm\scroll.o" ^
-  "output\vm\sfx_player.o" ^
   "output\vm\sgb.o" ^
-  "output\vm\sgb_mouse.o" ^
   "output\vm\sleep.o" ^
-  "output\vm\speech.o" ^
   "output\vm\text.o" ^
   "output\vm\timer_handler.o" ^
   "output\vm\utils.o" ^

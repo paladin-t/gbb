@@ -7,8 +7,8 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
-#include "utils/sgb_mouse.h"
-#include "utils/speech.h"
+#include "drv/sgb_mouse/sgb_mouse.h"
+#include "drv/speech/speech.h"
 
 #include "vm.h"
 
