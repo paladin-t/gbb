@@ -75,8 +75,8 @@ mkdir -p "output/vm"
 
 if [ $rebuild -eq 1 ]; then
   color_echo "3F" "1. Compile the libs..."
+  "$gbdk/lcc" $cflag -c -o "output/vm/sgb_mouse.o" "src/vm/drv/mouse/sgb_mouse.c"
   "$gbdk/lcc" $cflag -c -o "output/vm/sfx_player.o" "src/vm/drv/sfx/sfx_player.c"
-  "$gbdk/lcc" $cflag -c -o "output/vm/sgb_mouse.o" "src/vm/drv/sgb_mouse/sgb_mouse.c"
   "$gbdk/lcc" $cflag -c -o "output/vm/speech.o" "src/vm/drv/speech/speech.c"
   "$gbdk/lcc" $cflag -c -o "output/vm/exception.o" "src/vm/utils/exception.c"
   "$gbdk/lcc" $cflag -c -o "output/vm/font.o" "src/vm/utils/font.s"
@@ -164,8 +164,8 @@ fi
 
 color_echo "3F" "5. Link..."
 libobj=(
-  "output/vm/sfx_player.o"
   "output/vm/sgb_mouse.o"
+  "output/vm/sfx_player.o"
   "output/vm/speech.o"
   "output/vm/exception.o"
   "output/vm/font.o"

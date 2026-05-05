@@ -25,17 +25,17 @@ The GBVM is licensed under the MIT License.
 "hUGEDriver is dedicated to the public domain."
 ```
 
+#### "drv/mouse"
+
+* [bbbbbr/gameboy_qr_paint](https://github.com/bbbbbr/gameboy_qr_paint/)
+
+The SGB mouse module is licensed under the MIT License.
+
 #### "drv/sfx"
 
 * [untoxa/VGM2GBSFX](https://github.com/untoxa/VGM2GBSFX)
 
 The SFX player is licensed under the MIT License.
-
-#### "drv/sgb_mouse"
-
-* [bbbbbr/gameboy_qr_paint](https://github.com/bbbbbr/gameboy_qr_paint/)
-
-The SGB mouse module is licensed under the MIT License.
 
 #### "drv/speech"
 
