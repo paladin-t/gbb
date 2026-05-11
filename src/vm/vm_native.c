@@ -85,6 +85,17 @@ BOOLEAN wait_until_confirm(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
     return FALSE;
 }
 
+// Rumbles the cartridge.
+BOOLEAN rumble(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)THIS;
+    (void)start;
+    (void)stack_frame;
+
+    // TODO
+
+    return FALSE;
+}
+
 // Sends a packet of bytes to SGB devices.
 BOOLEAN send_sgb_packet(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start;

@@ -918,6 +918,10 @@ struct Options {
 		 * @brief Whether include an RTC chip.
 		 */
 		bool cartridgeHasRtc = true;
+		/**
+		 * @brief Whether include a rumble motor.
+		 */
+		bool cartridgeHasRumble = false;
 
 		/**< Parser and compiler strategies. */
 

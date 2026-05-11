@@ -500,6 +500,10 @@
     },
     {
       "type": "generic",
+      "syntax": "rumble"
+    },
+    {
+      "type": "generic",
       "syntax": "send_sgb_packet"
     },
     {
