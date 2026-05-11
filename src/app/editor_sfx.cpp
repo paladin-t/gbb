@@ -2515,7 +2515,7 @@ private:
 							const bool ret = job.device->update(
 								nullptr, nullptr,
 								SETUP_STEP,
-								nullptr, nullptr,
+								nullptr, nullptr, nullptr,
 								false, nullptr,
 								nullptr,
 								nullptr
@@ -2536,7 +2536,7 @@ private:
 					const bool ret = job.device->update(
 						nullptr, nullptr,
 						STEP,
-						nullptr, nullptr,
+						nullptr, nullptr, nullptr,
 						false, nullptr,
 						nullptr,
 						callback

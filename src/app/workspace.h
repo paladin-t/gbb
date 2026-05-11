@@ -613,6 +613,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(bool, canvasIntegerScale)
 	GBBASIC_PROPERTY_READONLY(Texture::Ptr, canvasTexture)
 	GBBASIC_PROPERTY_READONLY(Texture::Ptr, canvasTextureForBorderFrame)
+	GBBASIC_PROPERTY(bool, resetCanvasBorderFrame)
 	GBBASIC_PROPERTY_READONLY(bool, canvasHovering)
 	GBBASIC_PROPERTY(std::string, canvasCartridgeStatusText)
 	GBBASIC_PROPERTY(std::string, canvasDeviceStatusText)

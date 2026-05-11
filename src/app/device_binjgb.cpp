@@ -1056,7 +1056,7 @@ bool DeviceBinjgb::close(Bytes::Ptr sram) {
 bool DeviceBinjgb::update(
 	class Window* wnd, class Renderer* rnd,
 	double delta,
-	class Texture* texture, class Texture* textureForBorderFrame,
+	class Texture* texture, class Texture* textureForBorderFrame, bool* resetBorderFrame,
 	bool allowInput, const KeyboardModifiers* keyMods,
 	bool* isNewFrame,
 	AudioHandler handleAudio
@@ -1092,7 +1092,7 @@ bool DeviceBinjgb::update(
 	// Update with paused content.
 	if (_emulatorPaused) {
 		if (texture) {
-			updateVideo(wnd, rnd, delta, texture, textureForBorderFrame, isSgb);
+			updateVideo(wnd, rnd, delta, texture, textureForBorderFrame, resetBorderFrame, isSgb);
 
 			endRendering();
 		}
@@ -1140,7 +1140,7 @@ bool DeviceBinjgb::update(
 			}
 
 			if (texture) {
-				updateVideo(wnd, rnd, delta, texture, textureForBorderFrame, isSgb);
+				updateVideo(wnd, rnd, delta, texture, textureForBorderFrame, resetBorderFrame, isSgb);
 			}
 
 			const Ticks ticks = emulator_get_duty_ticks(_emulator);
@@ -1309,7 +1309,7 @@ void DeviceBinjgb::setBwPalette(PaletteType type, u32 white, u32 light_gray, u32
 void DeviceBinjgb::updateVideo(
 	class Window*, class Renderer* rnd,
 	double delta,
-	class Texture* texture, class Texture* textureForBorderFrame,
+	class Texture* texture, class Texture* textureForBorderFrame, bool* resetBorderFrame,
 	bool isSgb
 ) {
 	constexpr const int BYTES = SDL_BYTESPERPIXEL(SDL_PIXELFORMAT_ABGR8888);
@@ -1340,6 +1340,11 @@ void DeviceBinjgb::updateVideo(
 		case SgbFadeOperations::NONE:
 			if (memcmp(_sgbBorderVideoBuffer, sframe, sizeof(_sgbBorderVideoBuffer)) != 0) {
 				_sgbBorderFade = SgbFadeOperations::FADEOUT;
+			} else if (resetBorderFrame && *resetBorderFrame) {
+				_sgbBorderFade = SgbFadeOperations::NONE;
+				_sgbBorderFadeTicks = 0;
+				blend(tex, 1);
+				*resetBorderFrame = false;
 			}
 
 			break;

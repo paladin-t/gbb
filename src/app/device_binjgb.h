@@ -143,7 +143,7 @@ public:
 	virtual bool update(
 		class Window* wnd, class Renderer* rnd,
 		double delta,
-		class Texture* texture, class Texture* textureForBorderFrame,
+		class Texture* texture, class Texture* textureForBorderFrame, bool* resetBorderFrame,
 		bool allowInput, const KeyboardModifiers* keyMods,
 		bool* isNewFrame,
 		AudioHandler handleAudio
@@ -168,7 +168,7 @@ private:
 	void updateVideo(
 		class Window* wnd, class Renderer* rnd,
 		double delta,
-		class Texture* texture, class Texture* textureForBorderFrame,
+		class Texture* texture, class Texture* textureForBorderFrame, bool* resetBorderFrame,
 		bool isSgb
 	);
 	void updateAudio(

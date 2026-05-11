@@ -290,7 +290,7 @@ public:
 	virtual bool update(
 		class Window* wnd, class Renderer* rnd,
 		double delta,
-		class Texture* texture /* nullable */, class Texture* textureForBorderFrame /* nullable */,
+		class Texture* texture /* nullable */, class Texture* textureForBorderFrame /* nullable */, bool* resetBorderFrame,
 		bool allowInput, const KeyboardModifiers* keyMods /* nullable */,
 		bool* isNewFrame /* nullable */,
 		AudioHandler handleAudio /* nullable */

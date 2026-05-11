@@ -559,6 +559,7 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 
 	canvasFixRatio(true);
 	canvasIntegerScale(true);
+	resetCanvasBorderFrame(false);
 	canvasHovering(false);
 	canvasCursorMode(Device::CursorTypes::POINTER);
 
@@ -2076,7 +2077,8 @@ void Workspace::focusGained(Window*, Renderer* rnd) {
 }
 
 void Workspace::renderTargetsReset(Window*, Renderer*) {
-	// Do nothing.
+	if (canvasDevice())
+		resetCanvasBorderFrame(true);
 }
 
 void Workspace::moved(Window* wnd, Renderer* /* rnd */, const Math::Vec2i &wndPos) {
@@ -5103,7 +5105,7 @@ void Workspace::updateAudioDevice(Window* wnd, Renderer* rnd, double delta, unsi
 	audioDevice()->update(
 		wnd, rnd,
 		delta,
-		nullptr, nullptr,
+		nullptr, nullptr, nullptr,
 		false, nullptr,
 		nullptr,
 		handleAudio
@@ -7162,7 +7164,7 @@ bool Workspace::execute(Window* wnd, Renderer* rnd, double delta, unsigned* fpsR
 	canvasDevice()->update(
 		wnd, rnd,
 		delta,
-		canvasTexture().get(), canvasTextureForBorderFrame().get(),
+		canvasTexture().get(), canvasTextureForBorderFrame().get(), &resetCanvasBorderFrame(),
 		!popupBox() && !menuOpened(), &keyMods,
 		isNewFrame,
 		audioHandler
