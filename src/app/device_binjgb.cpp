@@ -1195,6 +1195,11 @@ bool DeviceBinjgb::update(
 		}
 	}
 
+	// Process the rumble.
+	if (cartridgeHasRumble()) {
+		// TODO
+	}
+
 	// Process the streaming and shell command area.
 	processStreaming(wnd, rnd);
 	processShellCommand(wnd, rnd);

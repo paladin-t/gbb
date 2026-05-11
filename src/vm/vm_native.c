@@ -8,6 +8,7 @@
 
 #include <string.h>
 
+#include "utils/rumble.h"
 #include "utils/sgb.h"
 #include "utils/utils.h"
 
