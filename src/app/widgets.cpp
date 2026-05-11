@@ -1510,6 +1510,7 @@ RomBuildSettingsPopupBox::RomBuildSettingsPopupBox(
 	_cartType = _project->cartridgeType();
 	_sramType = _project->sramType();
 	_hasRtc = _project->hasRtc();
+	_hasRumble = _project->hasRumble();
 }
 
 RomBuildSettingsPopupBox::~RomBuildSettingsPopupBox() {
@@ -1529,7 +1530,7 @@ void RomBuildSettingsPopupBox::update(Workspace*) {
 		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	}
 
-	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 380.0f);
+	const float width = Math::clamp(_renderer->width() * 0.8f, 310.0f, 380.0f);
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, _canceledHandler.empty() ? nullptr : &isOpen, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
 		AlignTextToFramePadding();
@@ -1591,16 +1592,40 @@ void RomBuildSettingsPopupBox::update(Workspace*) {
 		}
 		PopID();
 
-		PushID("#HasRtc");
+		PushID("#Misc");
 		{
 			SameLine();
-			TextUnformatted(_theme->windowBuildingSettings_Rtc());
+			TextUnformatted(_theme->windowBuildingSettings_Misc());
 
 			SameLine();
 
-			bool pref = _hasRtc;
-			if (Checkbox(_theme->generic_Enabled(), &pref))
-				_hasRtc = pref;
+			if (!_hasRtc && _hasRumble) {
+				BeginDisabled();
+				{
+					bool pref = false;
+					Checkbox(_theme->windowBuildingSettings_Rtc(), &pref);
+				}
+				EndDisabled();
+			} else {
+				bool pref = _hasRtc;
+				if (Checkbox(_theme->windowBuildingSettings_Rtc(), &pref))
+					_hasRtc = pref;
+			}
+
+			SameLine();
+
+			if (_hasRtc && !_hasRumble) {
+				BeginDisabled();
+				{
+					bool pref = false;
+					Checkbox(_theme->windowBuildingSettings_Rumble(), &pref);
+				}
+				EndDisabled();
+			} else {
+				bool pref = _hasRumble;
+				if (Checkbox(_theme->windowBuildingSettings_Rumble(), &pref))
+					_hasRumble = pref;
+			}
 		}
 		PopID();
 
@@ -1640,7 +1665,7 @@ void RomBuildSettingsPopupBox::update(Workspace*) {
 		_init.reset();
 
 		if (!_confirmedHandler.empty()) {
-			_confirmedHandler(_cartType.c_str(), _sramType.c_str(), _hasRtc);
+			_confirmedHandler(_cartType.c_str(), _sramType.c_str(), _hasRtc, _hasRumble);
 
 			return;
 		}
@@ -3567,7 +3592,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 		SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	}
 
-	const float width = Math::clamp(_renderer->width() * 0.8f, 290.0f, 480.0f);
+	const float width = Math::clamp(_renderer->width() * 0.8f, 310.0f, 480.0f);
 	SetNextWindowSize(ImVec2(width, 0), ImGuiCond_Always);
 	if (BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
 		Project* prj = _projectShadow;
@@ -3728,16 +3753,40 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				}
 				PopID();
 
-				PushID("#HasRtc");
+				PushID("#Misc");
 				{
 					SameLine();
-					TextUnformatted(_theme->windowProjectProperty_Project_Rtc());
+					TextUnformatted(_theme->windowProjectProperty_Project_Misc());
 
 					SameLine();
 
-					bool pref = prj->hasRtc();
-					if (Checkbox(_theme->generic_Enabled(), &pref))
-						prj->hasRtc(pref);
+					if (!prj->hasRtc() && prj->hasRumble()) {
+						BeginDisabled();
+						{
+							bool pref = false;
+							Checkbox(_theme->windowProjectProperty_Project_Rtc(), &pref);
+						}
+						EndDisabled();
+					} else {
+						bool pref = prj->hasRtc();
+						if (Checkbox(_theme->windowProjectProperty_Project_Rtc(), &pref))
+							prj->hasRtc(pref);
+					}
+
+					SameLine();
+
+					if (prj->hasRtc() && !prj->hasRumble()) {
+						BeginDisabled();
+						{
+							bool pref = false;
+							Checkbox(_theme->windowProjectProperty_Project_Rumble(), &pref);
+						}
+						EndDisabled();
+					} else {
+						bool pref = prj->hasRumble();
+						if (Checkbox(_theme->windowProjectProperty_Project_Rumble(), &pref))
+							prj->hasRumble(pref);
+					}
 				}
 				PopID();
 
@@ -4611,6 +4660,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			prj->cartridgeType()           != _project->cartridgeType()        ||
 			prj->sramType()                != _project->sramType()             ||
 			prj->hasRtc()                  != _project->hasRtc()               ||
+			prj->hasRumble()               != _project->hasRumble()            ||
 			prj->description()             != _project->description()          ||
 			prj->author()                  != _project->author()               ||
 			prj->genre()                   != _project->genre()                ||

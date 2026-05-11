@@ -395,7 +395,7 @@ public:
 
 class RomBuildSettingsPopupBox : public PopupBox {
 public:
-	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, const char*, const char*, bool> {
+	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, const char*, const char*, bool, bool> {
 		using Handler::Handler;
 	};
 	struct CanceledHandler : public Handler<CanceledHandler, void> {
@@ -410,6 +410,7 @@ private:
 	std::string _cartType;
 	std::string _sramType;
 	bool _hasRtc = false;
+	bool _hasRumble = false;
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;

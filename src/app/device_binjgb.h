@@ -81,6 +81,7 @@ public:
 	virtual int cartridgeRomSize(int* banks) const override;
 	virtual int cartridgeSramSize(int* banks) const override;
 	virtual bool cartridgeHasRtc(void) const override;
+	virtual bool cartridgeHasRumble(void) const override;
 
 	virtual DeviceTypes deviceType(void) const override;
 	virtual DeviceTypes enabledDeviceType(void) const override;

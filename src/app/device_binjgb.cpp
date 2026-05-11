@@ -443,6 +443,12 @@ bool DeviceBinjgb::cartridgeHasRtc(void) const {
 		_cartridgeMbcType == 0x10;   // MBC3 + TIMER + RAM + BATTERY.
 }
 
+bool DeviceBinjgb::cartridgeHasRumble(void) const {
+	return
+		_cartridgeMbcType == 0x1c || // MBC5 + RUMBLE.
+		_cartridgeMbcType == 0x1e;   // MBC5 + RUMBLE + RAM + BATTERY.
+}
+
 Device::DeviceTypes DeviceBinjgb::deviceType(void) const {
 	return _deviceType;
 }

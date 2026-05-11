@@ -72,6 +72,7 @@ Project::Project(class Window* wnd, Renderer* rnd, class Workspace* ws) {
 	contentType(ContentTypes::BASIC);
 	fileSync(FileSync::Ptr(FileSync::create()));
 	hasRtc(false);
+	hasRumble(false);
 	version("1.0.0");
 	runOnOpen(false);
 	caseInsensitive(true);
@@ -153,6 +154,7 @@ Project &Project::operator = (const Project &other) {
 	cartridgeType(other.cartridgeType());
 	sramType(other.sramType());
 	hasRtc(other.hasRtc());
+	hasRumble(other.hasRumble());
 	description(other.description());
 	author(other.author());
 	genre(other.genre());
@@ -2051,6 +2053,8 @@ bool Project::open(const char* path_) {
 
 			const std::string cartCode = header.getCartridgeTypeCode();
 			hasRtc(cartCode == "0f" || cartCode == "10");
+
+			hasRumble(cartCode == "1c" || cartCode == "1e");
 		}
 		header.unload();
 		description("");
@@ -2125,6 +2129,7 @@ bool Project::open(const char* path_) {
 		cartridgeType(PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION);
 		sramType("0");
 		hasRtc(false);
+		hasRumble(false);
 		description("");
 		author("");
 		genre("");
@@ -2597,6 +2602,7 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		cartridgeType(PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_EXTENSION);
 		sramType("0");
 		hasRtc(false);
+		hasRumble(false);
 		description("");
 		author("");
 		genre("");
@@ -2900,6 +2906,14 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 		hasRtc(false);
 
 		const std::string msg = Text::format("The project information has no \"has_rtc\" field, falls to \"{0}\".", { Text::toString(hasRtc()) });
+		report(msg.c_str(), true);
+	}
+
+	hasRumble(false);
+	if (!Jpath::get(doc, hasRumble(), "has_rumble")) {
+		hasRumble(false);
+
+		const std::string msg = Text::format("The project information has no \"has_rumble\" field, falls to \"{0}\".", { Text::toString(hasRumble()) });
 		report(msg.c_str(), true);
 	}
 
@@ -3237,6 +3251,8 @@ bool Project::saveInformation(std::string &content) {
 	Jpath::set(doc, doc, sramType(), "sram_type");
 
 	Jpath::set(doc, doc, hasRtc(), "has_rtc");
+
+	Jpath::set(doc, doc, hasRumble(), "has_rumble");
 
 	Jpath::set(doc, doc, description(), "description");
 

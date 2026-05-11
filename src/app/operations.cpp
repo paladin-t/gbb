@@ -885,10 +885,10 @@ promise::Promise Operations::popupRomBuildSettings(Window*, Renderer* rnd, Works
 			}
 
 			ImGui::RomBuildSettingsPopupBox::ConfirmedHandler confirm(
-				[ws, df] (const char* cartType, const char* sramType, bool hasRtc) -> void {
+				[ws, df] (const char* cartType, const char* sramType, bool hasRtc, bool hasRumble) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
-					df.resolve(true, cartType, sramType, hasRtc);
+					df.resolve(true, cartType, sramType, hasRtc, hasRumble);
 				},
 				nullptr
 			);
@@ -1019,6 +1019,7 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			prj->cartridgeType(PROJECT_CARTRIDGE_TYPE_CLASSIC PROJECT_CARTRIDGE_TYPE_SEPARATOR PROJECT_CARTRIDGE_TYPE_COLORED);
 			prj->sramType(PROJECT_SRAM_TYPE_32KB);
 			prj->hasRtc(false);
+			prj->hasRumble(false);
 			prj->caseInsensitive(true);
 			prj->strictOn(true);
 			prj->optimize(true);
@@ -4253,7 +4254,7 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 	);
 }
 
-promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspace* ws, const char* cartType_, const char* sramType_, bool* hasRtc_, const char* fontConfigPath, bool useInRam) {
+promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspace* ws, const char* cartType_, const char* sramType_, bool* hasRtc_, bool* hasRumble_, const char* fontConfigPath, bool useInRam) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
 			// Prepare.
@@ -4356,6 +4357,9 @@ promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspac
 			const bool hasRtc =
 				hasRtc_ ? *hasRtc_ :
 					prj_->hasRtc();
+			const bool hasRumble =
+				hasRumble_ ? *hasRumble_ :
+					prj_->hasRumble();
 			const bool caseInsensitive = prj_->caseInsensitive();
 			const bool strictOn = prj_->strictOn();
 			const bool optimize = prj_->optimize();
@@ -4375,6 +4379,7 @@ promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspac
 			arguments[COMPILER_CART_TYPE_OPTION_KEY]                        = cartType;
 			arguments[COMPILER_RAM_TYPE_OPTION_KEY]                         = sramType;
 			arguments[COMPILER_RTC_OPTION_KEY]                              = Text::toString(hasRtc);
+			arguments[COMPILER_RUMBLE_OPTION_KEY]                           = Text::toString(hasRumble);
 			arguments[COMPILER_CASE_INSENSITIVE_OPTION_KEY]                 = Text::toString(caseInsensitive);
 			arguments[COMPILER_STRICT_ON_OPTION_KEY]                        = Text::toString(strictOn);
 			// Do not: `arguments[COMPILER_EXPLICIT_LINE_NUMBER_OPTION_KEY] = "";`.
@@ -4663,6 +4668,7 @@ promise::Promise Operations::projectRun(Window* wnd, Renderer* rnd, Workspace* w
 			const Device::DeviceTypes edev = ws->canvasDevice()->enabledDeviceType();
 			const int sram_ = ws->canvasDevice()->cartridgeSramSize(nullptr);
 			const int rtc = ws->canvasDevice()->cartridgeHasRtc();
+			const int rumble = ws->canvasDevice()->cartridgeHasRumble();
 			const std::string cartFlag = std::string(cgb ? "COLOR" : "GRAY");
 			const std::string sgbFlag = std::string(sgb ? "[SGB]" : "");
 			const std::string devFlag = std::string(
@@ -4690,7 +4696,8 @@ promise::Promise Operations::projectRun(Window* wnd, Renderer* rnd, Workspace* w
 						std::string(ext ? "YES" : "NO"),
 						devFlag,
 						std::string(sram_ ? "YES" : "NO"),
-						std::string(rtc ? "YES" : "NO")
+						std::string(rtc ? "YES" : "NO"),
+						std::string(rumble ? "YES" : "NO")
 					}
 				)
 			);

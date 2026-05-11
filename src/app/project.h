@@ -97,6 +97,7 @@ public:
 	GBBASIC_PROPERTY             (std::string,                   cartridgeType                                    ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   sramType                                         ) // Serialized in project.
 	GBBASIC_PROPERTY             (bool,                          hasRtc                                           ) // Serialized in project.
+	GBBASIC_PROPERTY             (bool,                          hasRumble                                        ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   description                                      ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   author                                           ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   genre                                            ) // Serialized in project.
