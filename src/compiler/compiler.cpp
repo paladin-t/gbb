@@ -700,7 +700,7 @@ namespace GBBASIC {
 #ifndef DEVICE_TRIGGER
 #	define DEVICE_TRIGGER
 #	define DEVICE_TRIGGER_ACTIVE_TRIGGERS                           0x3d
-#endif /* DEVICE_RTC */
+#endif /* DEVICE_TRIGGER */
 
 #ifndef DEVICE_RTC
 #	define DEVICE_RTC
@@ -709,6 +709,14 @@ namespace GBBASIC {
 #	define DEVICE_RTC_HOUR                                          0x63
 #	define DEVICE_RTC_DAY                                           0x64
 #endif /* DEVICE_RTC */
+
+#ifndef DEVICE_RUMBLE
+#	define DEVICE_RUMBLE
+#	define RUMBLE_INTENSITY_LOW                                     0x01
+#	define RUMBLE_INTENSITY_MEDIUM                                  0x02
+#	define RUMBLE_INTENSITY_HIGH                                    0x03
+#	define RUMBLE_INTENSITY_MAX                                     0xff
+#endif /* DEVICE_RUMBLE */
 
 #ifndef DEVICE_OPTIONS
 #	define DEVICE_OPTIONS
@@ -14564,7 +14572,37 @@ private:
 					THROW_USING_RUMBLE_FEATURE_BUT_CARTRIDGE_DOES_NOT_HAVE_THIS_FUNCTION_ENABLED(onError);
 				}
 
-				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, &ok, onError);
+				// Set the stack footprint guard.
+				VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
+				COUNTER_GUARD(ctx, stk);
+
+				// Check the children.
+				if (_children.size() < 1) {
+					THROW_TOO_FEW_ARGUMENTS(onError);
+				} else if (_children.size() == 1 || _children.size() == 2) {
+					// Do nothing.
+				} else {
+					THROW_TOO_MANY_ARGUMENTS(onError);
+				}
+
+				// Emit the evaluations.
+				if (_children.size() == 2) {
+					writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
+				} else {
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+					args = fill(args, (UInt16)RUMBLE_INTENSITY_MAX);
+					writeChildren(bytes, context, Range(0), stk, onError);
+				}
+
+				// Emit a `VM_INVOKE_FN` instruction.
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * 2);
+				args = fill(args, (Int16)(-2)); // Offset from `ARG0`.
+				args = fill(args, (UInt8)2);
+				args = fill(args, (UInt16)address);
+				args = fill(args, (UInt8)bank);
+
+				// Check the stack footprint.
+				CHECK_COUNTER(ctx, onError);
 			} else if (caseSensitiveFunctionName == SEND_SGB_PACKET_FUNCTION_NAME) { // `send_sgb_packet`.
 				// Using "Super" features.
 				usingSuperFeature(ctx, SEND_SGB_PACKET_FUNCTION_NAME);
