@@ -90,7 +90,7 @@ public:
 	static promise::Promise kernelInstall(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise kernelUninstall(Window* wnd, Renderer* rnd, Workspace* ws, int index);
 
-	static promise::Promise projectCompile(Window* wnd, Renderer* rnd, Workspace* ws, const char* cartType /* nullable */, const char* sramType /* nullable */, bool* hasRtc /* nullable */, const char* fontConfigPath, bool useInRam);
+	static promise::Promise projectCompile(Window* wnd, Renderer* rnd, Workspace* ws, const char* cartType /* nullable */, const char* sramType /* nullable */, bool* hasRtc /* nullable */, bool* hasRumble /* nullable */, const char* fontConfigPath, bool useInRam);
 	static promise::Promise projectDump(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, const char* path);
 	static promise::Promise projectBuild(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, Exporter::Ptr ex); // Shows save file dialog if necessary.
 	static promise::Promise projectRun(Window* wnd, Renderer* rnd, Workspace* ws, Bytes::Ptr rom, Bytes::Ptr sram, bool traceless);

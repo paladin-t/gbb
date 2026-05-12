@@ -8,6 +8,7 @@
 
 #include <string.h>
 
+#include "utils/rumble.h"
 #include "utils/sgb.h"
 #include "utils/utils.h"
 
@@ -83,6 +84,30 @@ BOOLEAN wait_until_confirm(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
     ((SCRIPT_CTX *)THIS)->waitable = TRUE; // No input, wait.
 
     return FALSE;
+}
+
+// Rumbles the cartridge.
+BOOLEAN rumble(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
+
+    if (start) {
+        const UINT16 frames = stack_frame[1];
+        *THIS_->stack_ptr = frames + 1;
+    }
+
+    const UINT8 mask = (UINT8)stack_frame[0];
+    rumble_start(mask);
+
+    --*THIS_->stack_ptr;
+    if (*THIS_->stack_ptr != 0) {
+        THIS_->waitable = TRUE;
+
+        return FALSE;
+    }
+
+    rumble_stop();
+
+    return TRUE;
 }
 
 // Sends a packet of bytes to SGB devices.

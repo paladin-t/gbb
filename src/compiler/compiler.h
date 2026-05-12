@@ -71,6 +71,9 @@
 #ifndef COMPILER_RTC_OPTION_KEY
 #	define COMPILER_RTC_OPTION_KEY "c"
 #endif /* COMPILER_RTC_OPTION_KEY */
+#ifndef COMPILER_RUMBLE_OPTION_KEY
+#	define COMPILER_RUMBLE_OPTION_KEY "w"
+#endif /* COMPILER_RUMBLE_OPTION_KEY */
 #ifndef COMPILER_STACK_SIZE_OPTION_KEY
 #	define COMPILER_STACK_SIZE_OPTION_KEY "k"
 #endif /* COMPILER_STACK_SIZE_OPTION_KEY */
@@ -918,6 +921,10 @@ struct Options {
 		 * @brief Whether include an RTC chip.
 		 */
 		bool cartridgeHasRtc = true;
+		/**
+		 * @brief Whether include a rumble motor.
+		 */
+		bool cartridgeHasRumble = false;
 
 		/**< Parser and compiler strategies. */
 

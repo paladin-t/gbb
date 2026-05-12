@@ -1154,7 +1154,7 @@ private:
 	void validateProject(const Project* prj);
 	void launchProject(
 		Window* wnd, Renderer* rnd,
-		const char* cartType /* nullable */, const char* sramType /* nullable */, bool* hasRtc /* nullable */,
+		const char* cartType /* nullable */, const char* sramType /* nullable */, bool* hasRtc /* nullable */, bool* hasRumble /* nullable */,
 		bool toRun_, int toExport_
 	);
 	void runProject(Window* wnd, Renderer* rnd, Bytes::Ptr rom);

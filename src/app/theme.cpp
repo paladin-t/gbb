@@ -799,7 +799,9 @@ bool Theme::open(class Renderer* rnd) {
 	windowBuildingSettings("Build Settings");
 	windowBuildingSettings_Cart("Cart");
 	windowBuildingSettings_CartridgeTypeOfOutputRom("Cartridge type of output ROM:");
-	windowBuildingSettings_Rtc ("RTC");
+	windowBuildingSettings_Misc("Misc");
+	windowBuildingSettings_Rtc("RTC");
+	windowBuildingSettings_Rumble("Rumble");
 	windowBuildingSettings_Sram("SRAM");
 	windowBuildingSettings_Sram_None("0KB (None)");
 
@@ -875,7 +877,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowProjectProperty("Property");
 	windowProjectProperty_Project_Title("  Title");    windowProjectProperty_Project_Path("Path ");
 	windowProjectProperty_Project_Kernel(" Kernel");   windowProjectProperty_Project_Cart("Cart ");
-	windowProjectProperty_Project_Sram("   SRAM");      windowProjectProperty_Project_Rtc("RTC  ");
+	windowProjectProperty_Project_Sram("   SRAM");     windowProjectProperty_Project_Misc("Misc ");  windowProjectProperty_Project_Rtc("RTC");  windowProjectProperty_Project_Rumble("Rumble");
 	windowProjectProperty_Project_Desc("   Desc");
 	windowProjectProperty_Project_Author(" Author");  windowProjectProperty_Project_Genre("Genre");
 	windowProjectProperty_Project_Version("Version");   windowProjectProperty_Project_Url("URL  ");
@@ -1300,11 +1302,12 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_AlternativeSpeed("Alternative speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
 	tooltipEmulator_NormalSpeed("Normal speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
 	tooltipEmulator_StatusNote(
-		"Cartridge flag: {0}\n"
-		"Cartridge ext.: {1}\n"
-		"   Device flag: {2}\n"
-		"Cartridge SRAM: {3}\n"
-		"Cartridge RTC : {4}"
+		"Cartridge flag   : {0}\n"
+		"Cartridge ext.   : {1}\n"
+		"   Device flag   : {2}\n"
+		"Cartridge SRAM   : {3}\n"
+		"Cartridge RTC    : {4}\n"
+		"Cartridge rumble : {5}"
 	);
 	tooltipEmulator_ToggleOnscreenGamepad("Toggle onscreen gamepad");
 	tooltipEmulator_VramDebugger_Map(

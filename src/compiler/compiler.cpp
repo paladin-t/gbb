@@ -301,6 +301,9 @@ namespace GBBASIC {
 #ifndef CLEAR_TEXT_FUNCTION_NAME
 #	define CLEAR_TEXT_FUNCTION_NAME "clear_text" // DOC: ROM SCHEMA.
 #endif /* CLEAR_TEXT_FUNCTION_NAME */
+#ifndef RUMBLE_FUNCTION_NAME
+#	define RUMBLE_FUNCTION_NAME "rumble" // DOC: ROM SCHEMA.
+#endif /* RUMBLE_FUNCTION_NAME */
 #ifndef SEND_SGB_PACKET_FUNCTION_NAME
 #	define SEND_SGB_PACKET_FUNCTION_NAME "send_sgb_packet" // DOC: ROM SCHEMA.
 #endif /* SEND_SGB_PACKET_FUNCTION_NAME */
@@ -697,7 +700,7 @@ namespace GBBASIC {
 #ifndef DEVICE_TRIGGER
 #	define DEVICE_TRIGGER
 #	define DEVICE_TRIGGER_ACTIVE_TRIGGERS                           0x3d
-#endif /* DEVICE_RTC */
+#endif /* DEVICE_TRIGGER */
 
 #ifndef DEVICE_RTC
 #	define DEVICE_RTC
@@ -706,6 +709,14 @@ namespace GBBASIC {
 #	define DEVICE_RTC_HOUR                                          0x63
 #	define DEVICE_RTC_DAY                                           0x64
 #endif /* DEVICE_RTC */
+
+#ifndef DEVICE_RUMBLE
+#	define DEVICE_RUMBLE
+#	define RUMBLE_INTENSITY_LOW                                     0x01
+#	define RUMBLE_INTENSITY_MEDIUM                                  0x02
+#	define RUMBLE_INTENSITY_HIGH                                    0x03
+#	define RUMBLE_INTENSITY_MAX                                     0xff
+#endif /* DEVICE_RUMBLE */
 
 #ifndef DEVICE_OPTIONS
 #	define DEVICE_OPTIONS
@@ -3903,6 +3914,13 @@ namespace GBBASIC {
 			throwUsingRtcFeatureButCartridgeDoesNotHaveThisFunctionEnabled(ON_ERROR); \
 		} while (false)
 #endif /* THROW_USING_RTC_FEATURE_BUT_CARTRIDGE_DOES_NOT_HAVE_THIS_FUNCTION_ENABLED */
+#ifndef THROW_USING_RUMBLE_FEATURE_BUT_CARTRIDGE_DOES_NOT_HAVE_THIS_FUNCTION_ENABLED
+	// As warning.
+#	define THROW_USING_RUMBLE_FEATURE_BUT_CARTRIDGE_DOES_NOT_HAVE_THIS_FUNCTION_ENABLED(ON_ERROR) \
+		do { \
+			throwUsingRumbleFeatureButCartridgeDoesNotHaveThisFunctionEnabled(ON_ERROR); \
+		} while (false)
+#endif /* THROW_USING_RUMBLE_FEATURE_BUT_CARTRIDGE_DOES_NOT_HAVE_THIS_FUNCTION_ENABLED */
 
 #ifndef CHECK_FOR_INTEGER_OR_IDENTIFIER
 #	define CHECK_FOR_INTEGER_OR_IDENTIFIER(ON_ERROR, TK) \
@@ -4618,6 +4636,8 @@ public:
 		int sramType = 0x03;
 		// Const. Whether the cartridge has RTC feature.
 		bool cartridgeHasRtc = true;
+		// Const. Whether the cartridge has rumble feature.
+		bool cartridgeHasRumble = false;
 		// Const. The index of the start ROM bank.
 		int startBank = 0;
 		// Const. The size of a ROM bank.
@@ -7214,6 +7234,12 @@ public:
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
 		const Error err("Using RTC feature but cartridge does not have this function enabled", true); // Warning.
+		onError(err, err.format(), tk->begin());
+	}
+	void throwUsingRumbleFeatureButCartridgeDoesNotHaveThisFunctionEnabled(Error::Handler onError, Token::Ptr tk = nullptr) const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("Using rumble feature but cartridge does not have this function enabled", true); // Warning.
 		onError(err, err.format(), tk->begin());
 	}
 
@@ -14540,6 +14566,43 @@ private:
 				}
 
 				ok = true;
+			} else if (caseSensitiveFunctionName == RUMBLE_FUNCTION_NAME) { // `rumble`.
+				// Using "Rumble" features.
+				if (!ctx.cartridgeHasRumble) { // No rumble.
+					THROW_USING_RUMBLE_FEATURE_BUT_CARTRIDGE_DOES_NOT_HAVE_THIS_FUNCTION_ENABLED(onError);
+				}
+
+				// Set the stack footprint guard.
+				VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
+				COUNTER_GUARD(ctx, stk);
+
+				// Check the children.
+				if (_children.size() < 1) {
+					THROW_TOO_FEW_ARGUMENTS(onError);
+				} else if (_children.size() == 1 || _children.size() == 2) {
+					// Do nothing.
+				} else {
+					THROW_TOO_MANY_ARGUMENTS(onError);
+				}
+
+				// Emit the evaluations.
+				if (_children.size() == 2) {
+					writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
+				} else {
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+					args = fill(args, (UInt16)RUMBLE_INTENSITY_MAX);
+					writeChildren(bytes, context, Range(0), stk, onError);
+				}
+
+				// Emit a `VM_INVOKE_FN` instruction.
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * 2);
+				args = fill(args, (Int16)(-2)); // Offset from `ARG0`.
+				args = fill(args, (UInt8)2);
+				args = fill(args, (UInt16)address);
+				args = fill(args, (UInt8)bank);
+
+				// Check the stack footprint.
+				CHECK_COUNTER(ctx, onError);
 			} else if (caseSensitiveFunctionName == SEND_SGB_PACKET_FUNCTION_NAME) { // `send_sgb_packet`.
 				// Using "Super" features.
 				usingSuperFeature(ctx, SEND_SGB_PACKET_FUNCTION_NAME);
@@ -40766,6 +40829,7 @@ private:
 		GBBASIC::Options::Strategies::Compatibilities compatibility = GBBASIC::Options::Strategies::Compatibilities::CLASSIC | GBBASIC::Options::Strategies::Compatibilities::COLORED;
 		int sramType = 0x03;
 		bool cartridgeHasRtc = true;
+		bool cartridgeHasRumble = false;
 		int bankSize = 0;
 		int bank = 0;
 		int startAddress = 0;
@@ -40818,6 +40882,8 @@ public:
 			return (Variant::Long)_options.sramType;
 		if (key == "has_rtc")
 			return (bool)_options.cartridgeHasRtc;
+		if (key == "has_rumble")
+			return (bool)_options.cartridgeHasRumble;
 		if (key == "bank_size")
 			return (Variant::Long)_options.bankSize;
 		if (key == "bank")
@@ -40865,6 +40931,11 @@ public:
 		}
 		if (key == "has_rtc") {
 			_options.cartridgeHasRtc = (bool)val;
+
+			return true;
+		}
+		if (key == "has_rumble") {
+			_options.cartridgeHasRumble = (bool)val;
 
 			return true;
 		}
@@ -41082,6 +41153,7 @@ private:
 		context.top().compatibility                   =  options.compatibility;
 		context.top().sramType                        =  options.sramType;
 		context.top().cartridgeHasRtc                 =  options.cartridgeHasRtc;
+		context.top().cartridgeHasRumble              =  options.cartridgeHasRumble;
 		context.top().startBank                       =  options.bank;
 		context.top().bankSize                        =  options.bankSize;
 		context.top().startAddress                    =  options.startAddress;
@@ -41222,6 +41294,7 @@ private:
 		bool trimUnusedBanks = false;
 		int sramType = 0x03;
 		bool cartridgeHasRtc = true;
+		bool cartridgeHasRumble = false;
 		int romMaxSize = 0;
 		int bankSize = 0;
 		int bank = 0;
@@ -41256,6 +41329,8 @@ public:
 			return (Variant::Long)_options.sramType;
 		if (key == "has_rtc")
 			return (bool)_options.cartridgeHasRtc;
+		if (key == "has_rumble")
+			return (bool)_options.cartridgeHasRumble;
 		if (key == "rom_max_size")
 			return (Variant::Long)_options.romMaxSize;
 		if (key == "bank_size")
@@ -41295,6 +41370,11 @@ public:
 		}
 		if (key == "has_rtc") {
 			_options.cartridgeHasRtc = (bool)val;
+
+			return true;
+		}
+		if (key == "has_rumble") {
+			_options.cartridgeHasRumble = (bool)val;
 
 			return true;
 		}
@@ -41709,19 +41789,28 @@ private:
 			//   1B MBC5 + RAM + BATTERY            1C MBC5 + RUMBLE           1D MBC5 + RUMBLE + RAM
 			//   1E MBC5 + RUMBLE + RAM + BATTERY   FC POCKET CAMERA           FD Bandai TAMA5
 			//   FE HuC3                            FF HuC1 + RAM + BATTERY
+			const bool cartridgeHasRumble = options.cartridgeHasRumble;
+			std::string cartTypeCode = "1b" /* Defaults to MBC5 + RAM + BATTERY */;
 			if (cartridgeHasRtc) {
-				header.setCartridgeTypeCode(
-					sramType == 0x00 ?
-						"0f" /* MBC3 + TIMER + BATTERY */ :
-						"10" /* MBC3 + TIMER + RAM + BATTERY */
-				);
+				if (sramType == 0x00) {
+					cartTypeCode     = "0f" /* MBC3 + TIMER + BATTERY */;
+				} else {
+					cartTypeCode     = "10" /* MBC3 + TIMER + RAM + BATTERY */;
+				}
 			} else {
-				header.setCartridgeTypeCode(
-					sramType == 0x00 ?
-						"19" /* MBC5 */ :
-						"1b" /* MBC5 + RAM + BATTERY */
-				);
+				if (sramType == 0x00) {
+					if (cartridgeHasRumble)
+						cartTypeCode = "1c" /* MBC5 + RUMBLE */;
+					else
+						cartTypeCode = "19" /* MBC5 */;
+				} else {
+					if (cartridgeHasRumble)
+						cartTypeCode = "1e" /* MBC5 + RUMBLE + RAM + BATTERY */;
+					else
+						cartTypeCode = "1b" /* MBC5 + RAM + BATTERY */;
+				}
 			}
+			header.setCartridgeTypeCode(cartTypeCode);
 
 			// Set the correct header checksum.
 			const std::string headerChecksum = header.getCorrectHeaderChecksum();
@@ -42135,6 +42224,7 @@ bool compile(Program &program, const Options &options) {
 	const Options::Strategies::Compatibilities compatibility                   = strategies.compatibility;
 	const int sramType                                                         = Math::clamp(strategies.sramType, 0x00, 0x04);
 	const bool cartridgeHasRtc                                                 = strategies.cartridgeHasRtc;
+	const bool cartridgeHasRumble                                              = strategies.cartridgeHasRumble;
 	const bool caseInsensitive                                                 = strategies.caseInsensitive;
 	const bool strictOn                                                        = strategies.strictOn;
 	const bool completeLineNumber                                              = strategies.completeLineNumber;
@@ -42239,6 +42329,7 @@ bool compile(Program &program, const Options &options) {
 	compiler.option("compatibility", (Variant::Long)compatibility);
 	compiler.option("sram_type", sramType);
 	compiler.option("has_rtc", cartridgeHasRtc);
+	compiler.option("has_rumble", cartridgeHasRumble);
 	compiler.option("bank_size", bankSize);
 	compiler.option("bank", bootstrapBank);
 	compiler.option("start_address", bootstrapAddress);
@@ -42258,6 +42349,7 @@ bool compile(Program &program, const Options &options) {
 	programmer.option("trim_unused_banks", true);
 	programmer.option("sram_type", sramType);
 	programmer.option("has_rtc", cartridgeHasRtc);
+	programmer.option("has_rumble", cartridgeHasRumble);
 	programmer.option("rom_max_size", romMaxSize);
 	programmer.option("bank_size", bankSize);
 	programmer.option("bank", bootstrapBank);
