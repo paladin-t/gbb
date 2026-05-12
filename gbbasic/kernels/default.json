@@ -453,6 +453,22 @@
   ],
   "macros": [
     {
+      "syntax": "RUMBLE_INTENSITY_LOW",
+      "value": "0x01"
+    },
+    {
+      "syntax": "RUMBLE_INTENSITY_MEDIUM",
+      "value": "0x02"
+    },
+    {
+      "syntax": "RUMBLE_INTENSITY_HIGH",
+      "value": "0x03"
+    },
+    {
+      "syntax": "RUMBLE_INTENSITY_MAX",
+      "value": "0xff"
+    },
+    {
       "syntax": "HAS_PROJECTILE",
       "value": "1"
     },

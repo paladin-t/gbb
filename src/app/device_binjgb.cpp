@@ -213,21 +213,19 @@
 */
 
 #define RAM_BANKS_ONLY     0x0f
+#define RAM_BANK_REG       0x4000
 
 #define RTC_TIMER_STOP     0b01000000
-
 #define RTC_VALUE_SEC      0x08
 #define RTC_VALUE_MIN      0x09
 #define RTC_VALUE_HOUR     0x0a
 #define RTC_VALUE_DAY      0x0b
 #define RTC_VALUE_FLAGS    0x0c
-
 #define RTC_SELECT_REG     0x4000
 #define RTC_LATCH_REG      0x6000
 #define RTC_VALUE_REG      0xa000
 
-#define SWITCH_RAM(E, B)   emulator_write_u8_raw((E), 0x4000, (B))
-
+#define SWITCH_RAM(E, B)   emulator_write_u8_raw((E), RAM_BANK_REG, (B))
 #define ENABLED_RAM(E)     (emulator_read_u8_raw((E), 0x0000) == 0x0a)
 #define ENABLE_RAM(E)      emulator_write_u8_raw((E), 0x0000, 0x0a)
 #define DISABLE_RAM(E)     emulator_write_u8_raw((E), 0x0000, 0x00)
@@ -1197,7 +1195,7 @@ bool DeviceBinjgb::update(
 
 	// Process the rumble.
 	if (cartridgeHasRumble()) {
-		// TODO
+		// Not supported yet.
 	}
 
 	// Process the streaming and shell command area.
