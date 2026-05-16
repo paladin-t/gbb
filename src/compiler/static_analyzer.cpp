@@ -41,6 +41,7 @@ private:
 		RamLocation::Dictionary ramAllocations;
 		PagedPreprocessorBranches pagedPreprocessorBranches;
 		CodePageName::Array codePageNames;
+		std::string errors;
 
 		Result() {
 		}
@@ -56,6 +57,7 @@ private:
 	RamLocation::Dictionary _ramAllocations;
 	PagedPreprocessorBranches _pagedPreprocessorBranches;
 	CodePageName::Array _codePageNames;
+	std::string _errors;
 
 public:
 	StaticAnalyzerImpl(AnalyzeHandler analyzeHandler) : _analyzeHandler(analyzeHandler) {
@@ -121,6 +123,8 @@ public:
 				std::swap(_codePageNames, result->codePageNames);
 				_codePageNames.shrink_to_fit();
 
+				std::swap(_errors, result->errors);
+
 				if (diff) {
 					if (++_languageDefinitionRevision == 0)
 						_languageDefinitionRevision = 1;
@@ -172,6 +176,13 @@ public:
 		return &_codePageNames[page];
 	}
 
+	virtual const std::string* getErrors(void) const override {
+		if (_errors.empty())
+			return nullptr;
+
+		return &_errors;
+	}
+
 	virtual void clear(void) override {
 		_languageDefinitionRevision = 1;
 		_macrosDefinitions.clear();
@@ -179,6 +190,7 @@ public:
 		_ramAllocations.clear();
 		_pagedPreprocessorBranches.clear();
 		_codePageNames.clear();
+		_errors.clear();
 	}
 
 private:
@@ -190,6 +202,7 @@ private:
 		const std::string sym = Path::combine(dir.c_str(), krnl->kernelSymbols().c_str());
 		const std::string aliases = Path::combine(dir.c_str(), krnl->kernelAliases().c_str());
 		const int bootstrapBank = krnl->bootstrapBank();
+		std::string &errors = result->errors;
 
 		Program program;
 		Options options;
@@ -212,7 +225,7 @@ private:
 		options.onPrint = [] (const std::string &msg) -> void {
 			fprintf(stdout, "[ANALYZER INFO] %s\n", msg.c_str());
 		};
-		options.onError = [&program] (const std::string &msg, bool isWarning, int page, int row, int column) -> void {
+		options.onError = [&errors, &program] (const std::string &msg, bool isWarning, int page, int row, int column) -> void {
 			std::string msg_;
 			if (row != -1 || column != -1) {
 				if (page != -1) {
@@ -227,6 +240,10 @@ private:
 				msg_ += ": ";
 			}
 			msg_ += msg;
+
+			if (!isWarning)
+				errors += "  " + msg_ + "\n";
+
 			if (isWarning)
 				fprintf(stderr, "[ANALYZER WARNING] %s\n", msg_.c_str());
 			else
@@ -242,6 +259,9 @@ private:
 			   load(program, options) &&
 			compile(program, options);
 		(void)codeIsOk;
+
+		if (!errors.empty())
+			errors = "Errors:\n" + errors;
 
 		doAnalyzeMacroDefinitions(result, program);
 

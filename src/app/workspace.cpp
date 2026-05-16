@@ -5333,6 +5333,13 @@ const std::string &Workspace::getAnalyzedCodeInformation(void) {
 	if (!staticAnalyzer())
 		return analyzedCodeInformation();
 
+	const std::string* errors = staticAnalyzer()->getErrors();
+	if (errors && !errors->empty()) {
+		_analyzedCodeInformation = *errors;
+
+		return analyzedCodeInformation();
+	}
+
 	int heapAllocCount = 0;
 	int heapAllocBytes = 0;
 	int heapAllocDetails[(unsigned)GBBASIC::RamLocation::Usages::COUNT];
