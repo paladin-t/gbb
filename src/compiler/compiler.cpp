@@ -33104,7 +33104,7 @@ private:
 
 			return n;
 		};
-		auto TypedNumbers = [&] (State &q, Node::Array &children, std::function<void(const Token::Ptr &, const Token::Ptr &)> iterater) -> int { // Numbers with optional types.
+		auto TypedNumbers = [&] (State &q, Node::Array &children, std::function<void(const Token::Ptr &, const Token::Ptr &)> iterater) -> int { // Numbers, numbers with optional types, or constant function calls.
 			int n = 0;
 			unexpectedCommas = -1;
 			for (EVER) {
@@ -33122,6 +33122,46 @@ private:
 					} else {
 						if (!maybe(Token::Types::NUMBER)(q1)) break;
 					}
+				} else if (must(Token::Types::KEYWORD, "asc")(q1)) {
+					auto toNum = [] (const std::string &txt) -> Token::Ptr {
+						if (txt.length() != 1) return nullptr;
+						union {
+							UInt8 byte;
+							std::string::value_type char_;
+						} u;
+						u.char_ = txt.front();
+						const int val = u.byte;
+
+						Token::Ptr tk(new Token());
+						tk
+							->type(Token::Types::INTEGER)
+							->data(val)
+							->text(Text::toString(val));
+
+						return tk;
+					};
+
+					Token::Ptr tk = nullptr;
+					if (must(Token::Types::OPERATOR, "(")(q1)) {
+						if (!forward(Token::Types::OPERATOR, ")")(q1.index)) {
+							Token::Ptr id = nullptr;
+							std::string txt;
+							if (!(id = must(Token::Types::STRING)(q1))) return false;
+							txt = (std::string)id->data();
+							tk = toNum(txt);
+							if (!tk) return false;
+						}
+						if (!must(Token::Types::OPERATOR, ")")(q1)) return false;
+					} else {
+						Token::Ptr id = nullptr;
+						std::string txt;
+						if (!(id = must(Token::Types::STRING)(q1))) return false;
+						txt = (std::string)id->data();
+						tk = toNum(txt);
+						if (!tk) return false;
+					}
+					q1.tokens.clear();
+					q1.tokens.push_back(tk);
 				} else {
 					break;
 				}
