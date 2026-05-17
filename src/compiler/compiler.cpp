@@ -35498,7 +35498,7 @@ private:
 
 					id->data(idName);
 				} else {
-					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(r, name); }
+					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()); }
 				}
 
 				if (n != 1) return throwInvalidSyntax(r);
@@ -35573,13 +35573,13 @@ private:
 
 					id->data(idName);
 				} else if(stackNRef) {
-					if (let) { return throwIdHasBeenAlreadyDeclared(r, name); }
+					if (let) { return throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()); }
 					id
 						->type(Token::Types::OPERATOR)
 						->text(stackNRef->alias->text())
 						->parse(false);
 				} else {
-					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(r, name); }
+					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()); }
 				}
 
 				Node::Ptr node = createNode(
@@ -35642,7 +35642,7 @@ private:
 
 					id->data(idName);
 				} else {
-					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(r, name); }
+					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()); }
 				}
 
 				Node::Ptr node = createNode(
@@ -35696,7 +35696,7 @@ private:
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
 
-				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(r, name); }
+				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()); }
 
 				if (dimensions.bounds.size() > DIMENSION_MAX_COUNT) return throwTooManyDimensions(r);
 
@@ -37535,7 +37535,7 @@ private:
 				if (!must(Token::Types::KEYWORD, "def")(q)) return false;
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 				else name = (std::string)id->data();
-				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, name); }
+				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
 				if (must(Token::Types::OPERATOR, "=")(q)) {
 					r = q.index;
 					if (!Parameters(q, children, false)) return false;
@@ -37597,7 +37597,7 @@ private:
 				{
 					if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 					else name = (std::string)id->data();
-					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, name); }
+					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
 					if (!must(Token::Types::OPERATOR, "(")(q)) return false;
 					Parameters(q, children, false);
 					CHECK_UNEXPECTED(q);
@@ -37693,7 +37693,7 @@ private:
 				if (!must(Token::Types::KEYWORD, "def")(q)) return false;
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 				else name = (std::string)id->data();
-				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, name); }
+				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
 				if (must(Token::Types::OPERATOR, "=")(q)) {
 					if (forward(Token::Types::IDENTIFIER, "nothing")(q.index)) {
 						ignore(Token::Types::IDENTIFIER)(q);
@@ -37795,7 +37795,7 @@ private:
 				if (!must(Token::Types::KEYWORD, "def")(q)) return false;
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 				else name = (std::string)id->data();
-				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, name); }
+				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
 				if (must(Token::Types::OPERATOR, "=")(q)) {
 					r = q.index;
 					if (!Parameters(q, children, false)) return false;
@@ -37856,7 +37856,7 @@ private:
 				if (!must(Token::Types::KEYWORD, "def")(q)) return false;
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 				else name = (std::string)id->data();
-				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, name); }
+				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
 				if (must(Token::Types::OPERATOR, "=")(q)) {
 					if (!References(q, children)) return false;
 					CHECK_UNEXPECTED(q);
@@ -37915,7 +37915,7 @@ private:
 				if (!must(Token::Types::KEYWORD, "def")(q)) return false;
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 				else name = (std::string)id->data();
-				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, name); }
+				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
 				if (must(Token::Types::OPERATOR, "=")(q)) {
 					r = q.index;
 					if (!Arguments(q, children)) return false;
@@ -37975,7 +37975,7 @@ private:
 				{
 					if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 					else name = (std::string)id->data();
-					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, name); }
+					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
 					if (must(Token::Types::OPERATOR, "(")(q)) return false;
 					Parameters(q, children, false);
 					CHECK_UNEXPECTED(q);
