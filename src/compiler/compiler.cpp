@@ -32613,7 +32613,7 @@ private:
 			const Prompt prompt(msg);
 			onPrint_(prompt, prompt.format(), &loc);
 
-			return false;
+			return true;
 		};
 		auto promptMessage = [&] (const char* const msg, int index) -> bool {
 			Token::Ptr tk = tokens[index];
@@ -32628,6 +32628,28 @@ private:
 		auto promptDiagnosticMessage = [&] (int index, const std::string &msg) -> bool {
 			return promptMessage(msg.c_str(), index);
 		};
+
+		typedef std::stack<bool> IgnoringErrorStack;
+
+		IgnoringErrorStack ignoreErrors;
+		ignoreErrors.push(false);
+		auto beginIgnoringError = [&] (void) -> auto {
+			return [&] (void) -> void {
+				ignoreErrors.push(true);
+			};
+		};
+		auto endIgnoringError = [&] (void) -> auto {
+			return [&] (void) -> void {
+				ignoreErrors.pop();
+			};
+		};
+
+		#define THROW_PARSER_ERROR(E) \
+			do { \
+				if (!ignoreErrors.empty() && ignoreErrors.top()) \
+					break; \
+				return (E); \
+			} while (false)
 
 		int warnings = 0;
 		int errors = 0;
@@ -32762,7 +32784,7 @@ private:
 			do { \
 				if (unexpectedCommas > 0) { \
 					unexpectedCommas = 0; \
-					return throwUnexpectedComma((Q).index); \
+					THROW_PARSER_ERROR(throwUnexpectedComma((Q).index)); \
 				} \
 			} while (false);
 
@@ -32965,11 +32987,11 @@ private:
 					}
 					if (q1.index == q.index && (id = must(Token::Types::OPERATOR)(q1))) {
 						const std::string name = (std::string)id->data();
-						if (!Text::startsWith(name, "stack", true)) return throwInvalidSyntax(q1.index);
+						if (!Text::startsWith(name, "stack", true)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 						const std::string idxTxt = name.substr(5 /* after "stack" */);
 						int idx = -1;
-						if (!Text::fromString(idxTxt, idx)) return throwInvalidSyntax(q1.index);
-						if (idx < 0 || idx >= COMPILER_STACK_ARGUMENT_MAX_COUNT) return throwInvalidSyntax(q1.index);
+						if (!Text::fromString(idxTxt, idx)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+						if (idx < 0 || idx >= COMPILER_STACK_ARGUMENT_MAX_COUNT) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					}
 				}
 
@@ -33037,11 +33059,11 @@ private:
 						}
 						if (q1.index == q.index && (id = must(Token::Types::OPERATOR)(q1))) {
 							const std::string name = (std::string)id->data();
-							if (!Text::startsWith(name, "stack", true)) return throwInvalidSyntax(q1.index);
+							if (!Text::startsWith(name, "stack", true)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 							const std::string idxTxt = name.substr(5 /* after "stack" */);
 							int idx = -1;
-							if (!Text::fromString(idxTxt, idx)) return throwInvalidSyntax(q1.index);
-							if (idx < 0 || idx >= COMPILER_STACK_ARGUMENT_MAX_COUNT) return throwInvalidSyntax(q1.index);
+							if (!Text::fromString(idxTxt, idx)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+							if (idx < 0 || idx >= COMPILER_STACK_ARGUMENT_MAX_COUNT) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 						}
 					}
 				}
@@ -33344,10 +33366,10 @@ private:
 
 			if (!(id = must(Token::Types::OPERATOR)(q))) return false;
 			else name = (std::string)id->data();
-			if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+			if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 			Arguments(q, children_);
 			CHECK_UNEXPECTED(q);
-			if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+			if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 			Node::Ptr node = createNode(
 				"math", name,
@@ -33370,10 +33392,10 @@ private:
 
 			if (!must(Token::Types::OPERATOR, "rnd")(q)) return false;
 			if (forward(Token::Types::OPERATOR, "(")(q.index)) {
-				if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				Arguments(q, children_);
 				CHECK_UNEXPECTED(q);
-				if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -33400,19 +33422,19 @@ private:
 			if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 			else name = (std::string)id->data();
 			const int r = q.index;
-			if (!must(Token::Types::OPERATOR, "[")(q)) return throwInvalidSyntax(q.index);
+			if (!must(Token::Types::OPERATOR, "[")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 			Arguments(q, children_);
 			CHECK_UNEXPECTED(q);
-			if (!must(Token::Types::OPERATOR, "]")(q)) return throwInvalidSyntax(q.index);
+			if (!must(Token::Types::OPERATOR, "]")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 			const Node::MacroIdentifierAliasTable::Entry* idAlias = macroIdentifierAliases.find(name); // FEAT: MACRO.
 			if (idAlias) {
 				const std::string idName = idAlias->name;
 				const IdentifierTable::Entry* idEntry = identifiers.find(idName);
 				if (!idEntry)
-					return throwIdHasNotBeenDeclared(r, idName);
+					THROW_PARSER_ERROR(throwIdHasNotBeenDeclared(r, idName));
 				if (idEntry->type != IdentifierTable::Entry::Types::DIM)
-					return throwInvalidSyntax(r);
+					THROW_PARSER_ERROR(throwInvalidSyntax(r));
 
 				id->data(idName);
 			}
@@ -33449,10 +33471,10 @@ private:
 				if (forward(Token::Types::KEYWORD, "len")(q1.index)) {
 					any()(q1);
 				}
-				if (!must(Token::Types::OPERATOR, "(")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, "(")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 				Arguments(q1, children_);
 				CHECK_UNEXPECTED(q1);
-				if (!must(Token::Types::OPERATOR, ")")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, ")")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 			{
 				const int n = (int)children_.size();
@@ -33464,7 +33486,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -33506,7 +33528,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -33548,7 +33570,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -33591,7 +33613,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -33634,7 +33656,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			const NativeFunctionTable::Entry* entry = nativeFunctions.find(name);
@@ -33679,7 +33701,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -33836,7 +33858,7 @@ private:
 			const std::string key = "stack" + Text::toString(index);
 
 			if (!must(Token::Types::OPERATOR, key)(q)) return false;
-			if (forward(Token::Types::OPERATOR, "(")(q.index)) return throwInvalidSyntax(q.index);
+			if (forward(Token::Types::OPERATOR, "(")(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 			Node::Ptr node = createNode(
 				"math", key,
@@ -33869,10 +33891,10 @@ private:
 				} else if (forward(Token::Types::KEYWORD, "height")(q1.index)) {
 					any()(q1);
 				}
-				if (!must(Token::Types::OPERATOR, "(")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, "(")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 				Arguments(q1, children_);
 				CHECK_UNEXPECTED(q1);
-				if (!must(Token::Types::OPERATOR, ")")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, ")")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 			{
 				const int n = (int)children_.size();
@@ -33884,7 +33906,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -33915,10 +33937,10 @@ private:
 			if (!(id = must(Token::Types::SYMBOL)(q1))) return false;
 			else name = (std::string)id->data();
 			if (name == "map" || name == "window" || name == "sprite") {
-				if (!must(Token::Types::OPERATOR, "(")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, "(")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 				Arguments(q1, children_);
 				CHECK_UNEXPECTED(q1);
-				if (!must(Token::Types::OPERATOR, ")")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, ")")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 			{
 				const int n = (int)children_.size();
@@ -33930,7 +33952,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -33964,10 +33986,10 @@ private:
 				if (forward(Token::Types::KEYWORD, "property")(q1.index)) {
 					any()(q1);
 				}
-				if (!must(Token::Types::OPERATOR, "(")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, "(")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 				Arguments(q1, children_);
 				CHECK_UNEXPECTED(q1);
-				if (!must(Token::Types::OPERATOR, ")")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, ")")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 			{
 				const int n = (int)children_.size();
@@ -33979,7 +34001,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -34010,10 +34032,10 @@ private:
 			if (!(id = must(Token::Types::SYMBOL)(q1))) return false;
 			else name = (std::string)id->data();
 			if (name == "actor") {
-				if (!must(Token::Types::OPERATOR, "(")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, "(")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 				Arguments(q1, children_);
 				CHECK_UNEXPECTED(q1);
-				if (!must(Token::Types::OPERATOR, ")")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, ")")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 			{
 				const int n = (int)children_.size();
@@ -34025,7 +34047,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -34056,10 +34078,10 @@ private:
 			if (!(id = must(Token::Types::SYMBOL)(q1))) return false;
 			else name = (std::string)id->data();
 			if (name == "projectile") {
-				if (!must(Token::Types::OPERATOR, "(")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, "(")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 				Arguments(q1, children_);
 				CHECK_UNEXPECTED(q1);
-				if (!must(Token::Types::OPERATOR, ")")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, ")")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 			{
 				const int n = (int)children_.size();
@@ -34071,7 +34093,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -34105,10 +34127,10 @@ private:
 				if (forward(Token::Types::KEYWORD, "bankof")(q1.index)) {
 					any()(q1);
 				}
-				if (!must(Token::Types::OPERATOR, "(")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, "(")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 				Arguments(q1, children_);
 				CHECK_UNEXPECTED(q1);
-				if (!must(Token::Types::OPERATOR, ")")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, ")")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 			{
 				const int n = (int)children_.size();
@@ -34120,7 +34142,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -34154,10 +34176,10 @@ private:
 				if (forward(Token::Types::KEYWORD, "addressof")(q1.index)) {
 					any()(q1);
 				}
-				if (!must(Token::Types::OPERATOR, "(")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, "(")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 				Arguments(q1, children_);
 				CHECK_UNEXPECTED(q1);
-				if (!must(Token::Types::OPERATOR, ")")(q1)) return throwInvalidSyntax(q1.index);
+				if (!must(Token::Types::OPERATOR, ")")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 			{
 				const int n = (int)children_.size();
@@ -34169,7 +34191,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -34200,7 +34222,7 @@ private:
 			if (!must(Token::Types::KEYWORD)(q1)) return false;
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -34241,7 +34263,7 @@ private:
 				CHECK_UNEXPECTED(q1);
 			}
 			maybe(Token::Types::OPERATOR, ";")(q1);
-			if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+			if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 
 			Node::Ptr node = createNode(
 				"new", id->data(),
@@ -34281,7 +34303,7 @@ private:
 			}
 			if (expEol) {
 				maybe(Token::Types::OPERATOR, ";")(q1);
-				if (!EndOfLine(q1)) return throwInvalidSyntax(q1.index);
+				if (!EndOfLine(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -34336,9 +34358,9 @@ private:
 				end(q1);
 				q.index = q1.index;
 			} else {
-				return throwInvalidSyntax(q.index);
+				THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 			}
-			if (!ignore(Token::Types::OPERATOR, ",")(q)) return throwInvalidSyntax(q.index);
+			if (!ignore(Token::Types::OPERATOR, ",")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 			if (!(id = must(Token::Types::SYMBOL)(q))) return false;
 			else name = (std::string)id->data();
 			if (name == "rect" || name == "point") {
@@ -34367,7 +34389,7 @@ private:
 				end(q1);
 				q.index = q1.index;
 			} else {
-				return throwInvalidSyntax(q.index);
+				THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 			}
 
 			Node::Ptr node = createNode(
@@ -35046,7 +35068,7 @@ private:
 				};
 				NodeExpression::IdentifierChecker idIsMacro = idHasBeenDefinedAsMacro;
 
-				if (tooManyNestedStructures()) return throwTooManyNestedStructures(index);
+				if (tooManyNestedStructures()) THROW_PARSER_ERROR(throwTooManyNestedStructures(index));
 
 				if (!must(Token::Types::INTEGER)(q)) return false;
 				{
@@ -35059,38 +35081,49 @@ private:
 					q1.index = q.index;
 
 					Node::Array children_;
-					if (!Expression(q1, children_)) return throwInvalidSyntax(q1.index);
+					if (!Expression(q1, children_)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 
-					if (children_.size() != 1) return throwInvalidExpression(q1.index);
+					if (children_.size() != 1) THROW_PARSER_ERROR(throwInvalidExpression(q1.index));
 					const Node::Ptr &expr = children_.front();
-					if (!expr->get(conditionValue.ref(), "evaluated", &idIsVar, &idIsMacro)) return throwNonConstantExpression(q1.index); // Evaluate the expression.
+					if (!expr->get(conditionValue.ref(), "evaluated", &idIsVar, &idIsMacro)) THROW_PARSER_ERROR(throwNonConstantExpression(q1.index)); // Evaluate the expression.
 
 					q.index = q1.index;
 
 					ignore(Token::Types::COMMENT)(q);
-					if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+					if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				{
 					// Branch chunk of `#IF`.
 					Node::Ptr do_(new NodeDo());
-					cursor = q.index;
-					prologue(cursor, nullptr, &branch.beginLine, nullptr);
-					for (EVER) {
-						const bool stp = stop(PREPROCESSOR_IF_STOPS, cursor, 2);
-						if (stp)
-							break;
+					auto branchChunk = [&] (void) -> bool {
+						cursor = q.index;
+						prologue(cursor, nullptr, &branch.beginLine, nullptr);
+						for (EVER) {
+							const bool stp = stop(PREPROCESSOR_IF_STOPS, cursor, 2);
+							if (stp)
+								break;
 
-						Combinator::Options sub = opts;
-						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
-					}
-					epilogue(cursor, nullptr, &branch.endLine, nullptr);
+							Combinator::Options sub = opts;
+							if (!StatementN(do_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
+						}
+						epilogue(cursor, nullptr, &branch.endLine, nullptr);
+
+						return true;
+					};
 					if ((bool)conditionValue) {
+						if (!branchChunk())
+							return false;
+
 						// Add the chunk of code for later pass.
 						// Mark this branch as alive.
 						branch.isAlive = true;
 						activatedBranch = true;
 						children.push_back(do_);
 					} else {
+						PROC_GUARD(beginIgnoringError(), endIgnoringError());
+
+						branchChunk();
+
 						// Ignore the chunk of code of the condition wasn't satisfied.
 						// Mark this branch as dead.
 						branch.isAlive = false;
@@ -35116,48 +35149,59 @@ private:
 						State q1 = begin();
 						q1.index = q.index;
 
-						if (!LineNumber(q1, opts)) return throwInvalidSyntax(q.index);
+						if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						if (pairedElseIf) {
 							next(q1); next(q1); // `#ELSE IF`.
 						} else {
 							next(q1); // `#ELSEIF`.
 						}
 						prologue(q1.index, &branch.page, &branch.conditionLine, nullptr);
-						if (forward(Token::Types::END_OF_LINE)(q1.index)) return throwInvalidSyntax(q1.index);
+						if (forward(Token::Types::END_OF_LINE)(q1.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 
 						Node::Array children_;
-						if (!Expression(q1, children_)) return throwInvalidSyntax(q.index);
+						if (!Expression(q1, children_)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-						if (children_.size() != 1) return throwInvalidExpression(q1.index);
+						if (children_.size() != 1) THROW_PARSER_ERROR(throwInvalidExpression(q1.index));
 						const Node::Ptr &expr = children_.front();
-						if (!expr->get(conditionValue.ref(), "evaluated", &idIsVar, &idIsMacro)) return throwNonConstantExpression(q1.index); // Evaluate the expression.
+						if (!expr->get(conditionValue.ref(), "evaluated", &idIsVar, &idIsMacro)) THROW_PARSER_ERROR(throwNonConstantExpression(q1.index)); // Evaluate the expression.
 
 						q.index = q1.index;
 
 						ignore(Token::Types::COMMENT)(q);
-						if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+						if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					}
 
 					// Branch chunk of `#ELSE IF`.
 					Node::Ptr do_(new NodeDo());
-					cursor = q.index;
-					prologue(cursor, nullptr, &branch.beginLine, nullptr);
-					for (EVER) {
-						const bool stp = stop(PREPROCESSOR_IF_STOPS, cursor, 2);
-						if (stp)
-							break;
+					auto branchChunk = [&] (void) -> bool {
+						cursor = q.index;
+						prologue(cursor, nullptr, &branch.beginLine, nullptr);
+						for (EVER) {
+							const bool stp = stop(PREPROCESSOR_IF_STOPS, cursor, 2);
+							if (stp)
+								break;
 
-						Combinator::Options sub = opts;
-						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
-					}
-					epilogue(cursor, nullptr, &branch.endLine, nullptr);
+							Combinator::Options sub = opts;
+							if (!StatementN(do_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
+						}
+						epilogue(cursor, nullptr, &branch.endLine, nullptr);
+
+						return true;
+					};
 					if ((bool)conditionValue && !activatedBranch) {
+						if (!branchChunk())
+							return false;
+
 						// Add the chunk of code for later pass.
 						// Mark this branch as alive.
 						branch.isAlive = true;
 						activatedBranch = true;
 						children.push_back(do_);
 					} else {
+						PROC_GUARD(beginIgnoringError(), endIgnoringError());
+
+						branchChunk();
+
 						// Ignore the chunk of code of the condition wasn't satisfied.
 						// Mark this branch as dead.
 						branch.isAlive = false;
@@ -35172,35 +35216,46 @@ private:
 						State q1 = begin();
 						q1.index = q.index;
 
-						if (!LineNumber(q1, opts)) return throwInvalidSyntax(q.index);
+						if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						prologue(q1.index, &branch.page, &branch.conditionLine, nullptr);
 						next(q1); // `#ELSE`.
 						ignore(Token::Types::COMMENT)(q1);
-						if (!ignore(Token::Types::END_OF_LINE)(q1)) return throwInvalidSyntax(q1.index);
+						if (!ignore(Token::Types::END_OF_LINE)(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 
 						q.index = q1.index;
 					}
 
 					// Branch chunk of `#ELSE`.
 					Node::Ptr do_(new NodeDo());
-					cursor = q.index;
-					prologue(cursor, nullptr, &branch.beginLine, nullptr);
-					for (EVER) {
-						const bool stp = stop(PREPROCESSOR_IF_STOPS, cursor, 2);
-						if (stp)
-							break;
+					auto branchChunk = [&] (void) -> bool {
+						cursor = q.index;
+						prologue(cursor, nullptr, &branch.beginLine, nullptr);
+						for (EVER) {
+							const bool stp = stop(PREPROCESSOR_IF_STOPS, cursor, 2);
+							if (stp)
+								break;
 
-						Combinator::Options sub = opts;
-						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
-					}
-					epilogue(cursor, nullptr, &branch.endLine, nullptr);
+							Combinator::Options sub = opts;
+							if (!StatementN(do_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
+						}
+						epilogue(cursor, nullptr, &branch.endLine, nullptr);
+
+						return true;
+					};
 					if (!activatedBranch) {
+						if (!branchChunk())
+							return false;
+
 						// Add the chunk of code for later pass.
 						// Mark this branch as alive.
 						branch.isAlive = true;
 						activatedBranch = true;
 						children.push_back(do_);
 					} else {
+						PROC_GUARD(beginIgnoringError(), endIgnoringError());
+
+						branchChunk();
+
 						// Ignore the chunk of code of one of the previous condition was already satisfied.
 						// Mark this branch as dead.
 						branch.isAlive = false;
@@ -35212,7 +35267,7 @@ private:
 				{
 					// `#END IF ...` directive.
 					State q1 = q;
-					if (!LineNumber(q1, opts)) return throwInvalidSyntax(q1.index);
+					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
 						forwardN(1, Token::Types::PREPROCESSOR, "#end")(q1.index) &&
 						forwardN(2, Token::Types::KEYWORD, "if")(q1.index)
@@ -35224,7 +35279,7 @@ private:
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `#END IF`.
 					} else if (!must(Token::Types::PREPROCESSOR, "#endif")(q1)) {
-						return throwInvalidSyntax(q1.index);
+						THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					}
 					q.index = q1.index;
 				}
@@ -35263,7 +35318,7 @@ private:
 
 				if (!must(Token::Types::INTEGER)(q)) return false;
 				if (!must(Token::Types::PREPROCESSOR, "#message")(q)) return false;
-				if (!(id = must(Token::Types::STRING)(q))) return throwStringExpected(q.index);
+				if (!(id = must(Token::Types::STRING)(q))) THROW_PARSER_ERROR(throwStringExpected(q.index));
 				txt = (std::string)id->data();
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!must(Token::Types::END_OF_LINE)(q)) return false;
@@ -35294,7 +35349,7 @@ private:
 
 				if (!must(Token::Types::INTEGER)(q)) return false;
 				if (!must(Token::Types::PREPROCESSOR, "#warn")(q)) return false;
-				if (!(id = must(Token::Types::STRING)(q))) return throwStringExpected(q.index);
+				if (!(id = must(Token::Types::STRING)(q))) THROW_PARSER_ERROR(throwStringExpected(q.index));
 				txt = (std::string)id->data();
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!must(Token::Types::END_OF_LINE)(q)) return false;
@@ -35323,7 +35378,7 @@ private:
 
 				if (!must(Token::Types::INTEGER)(q)) return false;
 				if (!must(Token::Types::PREPROCESSOR, "#error")(q)) return false;
-				if (!(id = must(Token::Types::STRING)(q))) return throwStringExpected(q.index);
+				if (!(id = must(Token::Types::STRING)(q))) THROW_PARSER_ERROR(throwStringExpected(q.index));
 				txt = (std::string)id->data();
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!must(Token::Types::END_OF_LINE)(q)) return false;
@@ -35403,7 +35458,7 @@ private:
 				if (!must(Token::Types::IDENTIFIER, "nothing")(q)) return false;
 				if (forward(Token::Types::KEYWORD, "with")(q.index)) return false;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"donothing", "_",
@@ -35434,10 +35489,10 @@ private:
 				if (!must(Token::Types::KEYWORD, "do")(q)) return false;
 				if (!must(Token::Types::IDENTIFIER, "nothing")(q)) return false;
 				if (!must(Token::Types::KEYWORD, "with")(q)) return false;
-				if (!(id = must(Token::Types::IDENTIFIER)(q))) return throwInvalidSyntax(q.index);
+				if (!(id = must(Token::Types::IDENTIFIER)(q))) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				name = (std::string)id->data();
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"donothingwith", "_",
@@ -35479,29 +35534,29 @@ private:
 						validate<Word>(tk, val, onError);
 						entry = BuiltinTable::Entry::define(val);
 						++n;
-					})) return throwInvalidSyntax(q.index);
+					})) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					CHECK_UNEXPECTED(q);
 				} else {
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				const Node::MacroIdentifierAliasTable::Entry* idAlias = macroIdentifierAliases.find(name); // FEAT: MACRO.
 				if (idAlias) {
 					const std::string idName = idAlias->name;
 					const IdentifierTable::Entry* idEntry = identifiers.find(idName);
 					if (!idEntry)
-						return throwIdHasNotBeenDeclared(r, idName);
+						THROW_PARSER_ERROR(throwIdHasNotBeenDeclared(r, idName));
 					if (idEntry->type != IdentifierTable::Entry::Types::CONST)
 						return false;
 
 					id->data(idName);
 				} else {
-					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()); }
+					if (idHasBeenDefined(name)) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()));
 				}
 
-				if (n != 1) return throwInvalidSyntax(r);
+				if (n != 1) THROW_PARSER_ERROR(throwInvalidSyntax(r));
 				builtins.add(name, entry, options.caseInsensitive);
 
 				Node::Ptr node = createNode(
@@ -35540,11 +35595,11 @@ private:
 				if (let) any()(q);
 				if ((id = must(Token::Types::OPERATOR)(q))) {
 					name = (std::string)id->data();
-					if (!Text::startsWith(name, "stack", true)) return throwInvalidSyntax(q.index);
+					if (!Text::startsWith(name, "stack", true)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					const std::string idxTxt = name.substr(5 /* after "stack" */);
 					int idx = -1;
-					if (!Text::fromString(idxTxt, idx)) return throwInvalidSyntax(q.index);
-					if (idx < 0 || idx >= COMPILER_STACK_ARGUMENT_MAX_COUNT) return throwInvalidSyntax(q.index);
+					if (!Text::fromString(idxTxt, idx)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+					if (idx < 0 || idx >= COMPILER_STACK_ARGUMENT_MAX_COUNT) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else if ((id = must(Token::Types::IDENTIFIER)(q))) {
 					name = (std::string)id->data();
 				} else {
@@ -35552,14 +35607,14 @@ private:
 				}
 				const int r = q.index;
 				if (must(Token::Types::OPERATOR, "=")(q)) {
-					if (!New(q, children) && !Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) return throwInvalidSyntax(q.index);
-					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) return throwInvalidSyntax(q.index);
+					if (!New(q, children) && !Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (let) { /* Do nothing. */ }
 					else { return false; } // Just skip this parser.
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				const Node::MacroIdentifierAliasTable::Entry* idAlias = macroIdentifierAliases.find(name); // FEAT: MACRO.
 				const Node::MacroStackReferenceTable::Entry* stackNRef = macroStackReferences.find(name); // FEAT: MACRO.
@@ -35567,19 +35622,19 @@ private:
 					const std::string idName = idAlias->name;
 					const IdentifierTable::Entry* idEntry = identifiers.find(idName);
 					if (!idEntry)
-						return throwIdHasNotBeenDeclared(r, idName);
+						THROW_PARSER_ERROR(throwIdHasNotBeenDeclared(r, idName));
 					if (idEntry->type != IdentifierTable::Entry::Types::LET)
-						return throwInvalidSyntax(r);
+						THROW_PARSER_ERROR(throwInvalidSyntax(r));
 
 					id->data(idName);
 				} else if(stackNRef) {
-					if (let) { return throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()); }
+					if (let) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()));
 					id
 						->type(Token::Types::OPERATOR)
 						->text(stackNRef->alias->text())
 						->parse(false);
 				} else {
-					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()); }
+					if (idHasBeenDefined(name)) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()));
 				}
 
 				Node::Ptr node = createNode(
@@ -35622,27 +35677,27 @@ private:
 				else name = (std::string)id->data();
 				const int r = q.index;
 				if (must(Token::Types::OPERATOR, "=")(q)) {
-					if (!New(q, children) && !Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) return throwInvalidSyntax(q.index);
-					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) return throwInvalidSyntax(q.index);
+					if (!New(q, children) && !Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
-					if (local) return throwInvalidSyntax(q.index);
+					if (local) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					else return false; // Just skip this parser.
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				const Node::MacroIdentifierAliasTable::Entry* idAlias = macroIdentifierAliases.find(name); // FEAT: MACRO.
 				if (idAlias) {
 					const std::string idName = idAlias->name;
 					const IdentifierTable::Entry* idEntry = identifiers.find(idName);
 					if (!idEntry)
-						return throwIdHasNotBeenDeclared(r, idName);
+						THROW_PARSER_ERROR(throwIdHasNotBeenDeclared(r, idName));
 					if (idEntry->type != IdentifierTable::Entry::Types::LOCAL)
 						return false;
 
 					id->data(idName);
 				} else {
-					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()); }
+					if (idHasBeenDefined(name)) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()));
 				}
 
 				Node::Ptr node = createNode(
@@ -35680,25 +35735,25 @@ private:
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "dim")(q)) return false;
-				if (!(id = must(Token::Types::SYMBOL)(q))) return throwInvalidSyntax(q.index);
+				if (!(id = must(Token::Types::SYMBOL)(q))) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				else name = (std::string)id->data();
 				if (name == "trigger") return false;
 				const int r = q.index;
-				if (!must(Token::Types::OPERATOR, "[")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, "[")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (!Numbers(q, children, [&] (const Token::Ptr &tk) -> void {
 					int val = 0;
 					validate<Word>(tk, val, onError);
 					max(tk, val, options.indexBase, onError);
 					dimensions.bounds.push_back(val);
-				})) return throwInvalidSyntax(q.index);
+				})) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				CHECK_UNEXPECTED(q);
-				if (!must(Token::Types::OPERATOR, "]")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, "]")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()); }
+				if (idHasBeenDefined(name)) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()));
 
-				if (dimensions.bounds.size() > DIMENSION_MAX_COUNT) return throwTooManyDimensions(r);
+				if (dimensions.bounds.size() > DIMENSION_MAX_COUNT) THROW_PARSER_ERROR(throwTooManyDimensions(r));
 
 				Node::Ptr node = createNode(
 					"dim", "_",
@@ -35739,24 +35794,24 @@ private:
 				if (!must(Token::Types::OPERATOR, "[")(q)) return false;
 				Arguments(q, children);
 				CHECK_UNEXPECTED(q);
-				if (!must(Token::Types::OPERATOR, "]")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, "]")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (must(Token::Types::OPERATOR, "=")(q)) {
-					if (!New(q, children) && !Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) return throwInvalidSyntax(q.index);
-					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) return throwInvalidSyntax(q.index);
+					if (!New(q, children) && !Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				const Node::MacroIdentifierAliasTable::Entry* idAlias = macroIdentifierAliases.find(name); // FEAT: MACRO.
 				if (idAlias) {
 					const std::string idName = idAlias->name;
 					const IdentifierTable::Entry* idEntry = identifiers.find(idName);
 					if (!idEntry)
-						return throwIdHasNotBeenDeclared(r, idName);
+						THROW_PARSER_ERROR(throwIdHasNotBeenDeclared(r, idName));
 					if (idEntry->type != IdentifierTable::Entry::Types::DIM)
-						return throwInvalidSyntax(r);
+						THROW_PARSER_ERROR(throwInvalidSyntax(r));
 
 					id->data(idName);
 				}
@@ -35787,9 +35842,9 @@ private:
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "if")(q)) return false;
-				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (forward(Token::Types::KEYWORD, "goto")(q.index)) tkgoto = next(q);
-				else if (!forward(Token::Types::KEYWORD, "then")(q.index)) return throwInvalidSyntax(q.index);
+				else if (!forward(Token::Types::KEYWORD, "then")(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				{
 					if (
 						!tkgoto && (
@@ -35843,14 +35898,14 @@ private:
 							end(q1);
 							q.index = q1.index;
 						} else if (!Statement(then, sub)) { // Statement.
-							return throwInvalidSyntax(q.index);
+							THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						}
 					}
 					children.push_back(then);
 					q.index = cursor;
 				}
 				if (forward(Token::Types::KEYWORD, "else")(q.index)) {
-					if (forwardN(2, Token::Types::END_OF_LINE)(q.index)) return throwInvalidSyntax(q.index);
+					if (forwardN(2, Token::Types::END_OF_LINE)(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 					Node::Ptr else_(new NodeElse());
 					else_->concat(next(q)); // `ELSE`.
@@ -35858,7 +35913,7 @@ private:
 					{
 						Combinator::Options sub = opts;
 						sub.mustHaveLineNumber = false;
-						if (!Statement(else_, sub)) return throwInvalidSyntax(q.index);
+						if (!Statement(else_, sub)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					}
 					children.push_back(else_);
 					q.index = cursor;
@@ -35867,12 +35922,12 @@ private:
 					forwardN(1, Token::Types::KEYWORD, "end")(q.index) &&
 					forwardN(2, Token::Types::KEYWORD, "if")(q.index)
 				) { // Paired `END IF` is identical with `ENDIF`.
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else if (forward(Token::Types::KEYWORD, "endif")(q.index)) {
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"if", "_",
@@ -35901,16 +35956,16 @@ private:
 				Node::Array children;
 				const int index = q.index;
 
-				if (tooManyNestedStructures()) return throwTooManyNestedStructures(index);
+				if (tooManyNestedStructures()) THROW_PARSER_ERROR(throwTooManyNestedStructures(index));
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "if")(q)) return false;
-				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
-				if (!forward(Token::Types::KEYWORD, "then")(q.index)) return throwInvalidSyntax(q.index);
+				if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+				if (!forward(Token::Types::KEYWORD, "then")(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				{
 					const Token::Ptr thenTk = next(q);
 					ignore(Token::Types::COMMENT)(q);
-					if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index); // Is not a multi-line `IF`.
+					if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index)); // Is not a multi-line `IF`.
 
 					Node::Ptr then(new NodeThen());
 					then->concat(thenTk); // `THEN`.
@@ -35921,7 +35976,7 @@ private:
 							break;
 
 						Combinator::Options sub = opts;
-						if (!StatementN(then, sub)) return throwIncompleteStructure(index);
+						if (!StatementN(then, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
 					}
 					children.push_back(then);
 					q.index = cursor;
@@ -35943,7 +35998,7 @@ private:
 						State q1 = begin();
 						q1.index = q.index;
 
-						if (!LineNumber(q1, opts)) return throwInvalidSyntax(q.index);
+						if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						elseif->concat(q1.tokens);
 						if (pairedElseIf) {
 							Token::Ptr node(new Token());
@@ -35955,9 +36010,9 @@ private:
 						} else {
 							elseif->concat(next(q1)); // `ELSEIF`.
 						}
-						if (forward(Token::Types::END_OF_LINE)(q1.index)) return throwInvalidSyntax(q1.index);
+						if (forward(Token::Types::END_OF_LINE)(q1.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 
-						if (!Expression(q1, children)) return throwInvalidSyntax(q.index);
+						if (!Expression(q1, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 						q.index = q1.index;
 					}
@@ -35965,7 +36020,7 @@ private:
 					if (forward(Token::Types::KEYWORD, "then")(q.index)) {
 						next(q);
 						ignore(Token::Types::COMMENT)(q);
-						if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+						if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					}
 
 					cursor = q.index;
@@ -35975,7 +36030,7 @@ private:
 							break;
 
 						Combinator::Options sub = opts;
-						if (!StatementN(elseif, sub)) return throwIncompleteStructure(index);
+						if (!StatementN(elseif, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
 					}
 					children.push_back(elseif);
 					q.index = cursor;
@@ -35987,11 +36042,11 @@ private:
 						State q1 = begin();
 						q1.index = q.index;
 
-						if (!LineNumber(q1, opts)) return throwInvalidSyntax(q.index);
+						if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						else_->concat(q1.tokens);
 						else_->concat(next(q1)); // `ELSE`.
 						ignore(Token::Types::COMMENT)(q1);
-						if (!ignore(Token::Types::END_OF_LINE)(q1)) return throwInvalidSyntax(q1.index);
+						if (!ignore(Token::Types::END_OF_LINE)(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 
 						q.index = q1.index;
 					}
@@ -36003,14 +36058,14 @@ private:
 							break;
 
 						Combinator::Options sub = opts;
-						if (!StatementN(else_, sub)) return throwIncompleteStructure(index);
+						if (!StatementN(else_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
 					}
 					children.push_back(else_);
 					q.index = cursor;
 				}
 				{
 					State q1 = q;
-					if (!LineNumber(q1, opts)) return throwInvalidSyntax(q1.index);
+					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
 						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
 						forwardN(2, Token::Types::KEYWORD, "if")(q1.index)
@@ -36022,12 +36077,12 @@ private:
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END IF`.
 					} else if (!must(Token::Types::KEYWORD, "endif")(q1)) {
-						return throwInvalidSyntax(q1.index);
+						THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					}
 					q.index = q1.index;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"if", "_",
@@ -36057,23 +36112,23 @@ private:
 				std::string name;
 				const int index = q.index;
 
-				if (tooManyNestedStructures()) return throwTooManyNestedStructures(index);
+				if (tooManyNestedStructures()) THROW_PARSER_ERROR(throwTooManyNestedStructures(index));
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "select")(q)) return false;
-				if (!must(Token::Types::KEYWORD, "case")(q)) return throwInvalidSyntax(q.index);
-				if (!(id = must(Token::Types::SYMBOL)(q))) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::KEYWORD, "case")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+				if (!(id = must(Token::Types::SYMBOL)(q))) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				else name = (std::string)id->data();
-				if (idHasBeenDefinedAsMacro(name)) return throwInvalidSyntax(q.index); // Is a macro.
+				if (idHasBeenDefinedAsMacro(name)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index)); // Is a macro.
 				{
 					ignore(Token::Types::COMMENT)(q);
-					if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+					if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				for (EVER) {
 					if (forwardN(2, Token::Types::COMMENT)(q.index)) {
-						if (!ignore(Token::Types::INTEGER)(q)) return throwInvalidSyntax(q.index);
-						if (!ignore(Token::Types::COMMENT)(q)) return throwInvalidSyntax(q.index);
-						if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+						if (!ignore(Token::Types::INTEGER)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+						if (!ignore(Token::Types::COMMENT)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+						if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 						continue;
 					}
@@ -36087,10 +36142,10 @@ private:
 						State q1 = begin();
 						q1.index = q.index;
 
-						if (!LineNumber(q1, opts)) return throwInvalidSyntax(q.index);
-						if (!must(Token::Types::KEYWORD, "case")(q1)) return throwInvalidSyntax(q1.index);
+						if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+						if (!must(Token::Types::KEYWORD, "case")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 						case_->concat(q1.tokens); // `CASE`.
-						if (forward(Token::Types::END_OF_LINE)(q1.index)) return throwInvalidSyntax(q1.index);
+						if (forward(Token::Types::END_OF_LINE)(q1.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 
 						State q2 = begin();
 						q2.index = q1.index;
@@ -36259,11 +36314,11 @@ private:
 							break;
 						}
 
-						return throwInvalidSyntax(q.index);
+						THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					} while (false);
 
 					ignore(Token::Types::COMMENT)(q);
-					if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+					if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 					cursor = q.index;
 					for (EVER) {
@@ -36272,7 +36327,7 @@ private:
 							break;
 
 						Combinator::Options sub = opts;
-						if (!StatementN(case_, sub)) return throwIncompleteStructure(index);
+						if (!StatementN(case_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
 					}
 					children.push_back(case_);
 					q.index = cursor;
@@ -36284,11 +36339,11 @@ private:
 						State q1 = begin();
 						q1.index = q.index;
 
-						if (!LineNumber(q1, opts)) return throwInvalidSyntax(q.index);
+						if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						else_->concat(q1.tokens);
 						else_->concat(next(q1)); // `ELSE`.
 						ignore(Token::Types::COMMENT)(q1);
-						if (!ignore(Token::Types::END_OF_LINE)(q1)) return throwInvalidSyntax(q1.index);
+						if (!ignore(Token::Types::END_OF_LINE)(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 
 						q.index = q1.index;
 					}
@@ -36300,14 +36355,14 @@ private:
 							break;
 
 						Combinator::Options sub = opts;
-						if (!StatementN(else_, sub)) return throwIncompleteStructure(index);
+						if (!StatementN(else_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
 					}
 					children.push_back(else_);
 					q.index = cursor;
 				}
 				{
 					State q1 = q;
-					if (!LineNumber(q1, opts)) return throwInvalidSyntax(q1.index);
+					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
 						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
 						forwardN(2, Token::Types::KEYWORD, "select")(q1.index)
@@ -36319,12 +36374,12 @@ private:
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END SELECT`.
 					} else if (!must(Token::Types::KEYWORD, "endselect")(q1)) {
-						return throwInvalidSyntax(q1.index);
+						THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					}
 					q.index = q1.index;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"select", "_",
@@ -36372,7 +36427,7 @@ private:
 					if (must(Token::Types::KEYWORD, "gosub")(q)) { /* Do nothing. */ }
 					else if (must(Token::Types::KEYWORD, "goto")(q)) { /* Do nothing. */ }
 					else if (must(Token::Types::KEYWORD, "start")(q)) { /* Do nothing. */ }
-					else { return throwInvalidSyntax(q.index); }
+					else { THROW_PARSER_ERROR(throwInvalidSyntax(q.index)); }
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
 							Arguments(q, children);
@@ -36392,7 +36447,7 @@ private:
 					if (must(Token::Types::KEYWORD, "gosub")(q)) { /* Do nothing. */ }
 					else if (must(Token::Types::KEYWORD, "goto")(q)) { /* Do nothing. */ }
 					else if (must(Token::Types::KEYWORD, "start")(q)) { /* Do nothing. */ }
-					else { return throwInvalidSyntax(q.index); }
+					else { THROW_PARSER_ERROR(throwInvalidSyntax(q.index)); }
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
 							Arguments(q, children);
@@ -36415,7 +36470,7 @@ private:
 						q1.index = q.index;
 						Node::Array children_;
 
-						if (!Evaluation(q1, children_)) return throwInvalidSyntax(q.index);
+						if (!Evaluation(q1, children_)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 						Node::Ptr exp(new NodeExpression());
 						exp->concat(q1.tokens);
@@ -36437,7 +36492,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"on", "_",
@@ -36493,10 +36548,10 @@ private:
 				} else if (forward(Token::Types::KEYWORD, "menu")(q.index)) {
 					return false; // Menu's callback is handled by `MenuM`.
 				} else {
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"off", "_",
@@ -36526,16 +36581,16 @@ private:
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "for")(q)) return false;
-				if (!(id = must(Token::Types::IDENTIFIER)(q))) return throwInvalidSyntax(q.index);
+				if (!(id = must(Token::Types::IDENTIFIER)(q))) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				else name = (std::string)id->data();
-				if (idHasBeenDefinedAsMacro(name)) return throwInvalidSyntax(q.index); // Is a macro.
-				if (!must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
-				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
-				if (!must(Token::Types::KEYWORD, "to")(q)) return throwInvalidSyntax(q.index);
-				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				if (idHasBeenDefinedAsMacro(name)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index)); // Is a macro.
+				if (!must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+				if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+				if (!must(Token::Types::KEYWORD, "to")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+				if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (forward(Token::Types::KEYWORD, "step")(q.index)) {
 					any()(q);
-					if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+					if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				if (forward(Token::Types::COMMENT)(q.index) || forward(Token::Types::END_OF_LINE)(q.index)) return false;
 				{
@@ -36551,23 +36606,23 @@ private:
 
 						Combinator::Options sub = opts;
 						sub.mustHaveLineNumber = false;
-						if (!Statement(do_, sub)) return throwIncompleteStructure(index);
+						if (!Statement(do_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
 					}
 					children.push_back(do_);
 					q.index = cursor;
 				}
 				{
 					State q1 = q;
-					if (!must(Token::Types::KEYWORD, "next")(q1)) return throwInvalidSyntax(q1.index);
+					if (!must(Token::Types::KEYWORD, "next")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (forward(Token::Types::IDENTIFIER)(q1.index)) {
 						Token::Ptr id_ = maybe(Token::Types::IDENTIFIER)(q1);
 						const std::string name_ = (std::string)id_->data();
-						if (name_ != name) return throwInvalidSyntax(q1.index);
+						if (name_ != name) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					}
 					q.index = q1.index;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"for", id->data(),
@@ -36605,24 +36660,24 @@ private:
 				std::string name;
 				const int index = q.index;
 
-				if (tooManyNestedStructures()) return throwTooManyNestedStructures(index);
+				if (tooManyNestedStructures()) THROW_PARSER_ERROR(throwTooManyNestedStructures(index));
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "for")(q)) return false;
-				if (!(id = must(Token::Types::IDENTIFIER)(q))) return throwInvalidSyntax(q.index);
+				if (!(id = must(Token::Types::IDENTIFIER)(q))) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				else name = (std::string)id->data();
-				if (idHasBeenDefinedAsMacro(name)) return throwInvalidSyntax(q.index); // Is a macro.
-				if (!must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
-				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
-				if (!must(Token::Types::KEYWORD, "to")(q)) return throwInvalidSyntax(q.index);
-				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				if (idHasBeenDefinedAsMacro(name)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index)); // Is a macro.
+				if (!must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+				if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+				if (!must(Token::Types::KEYWORD, "to")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+				if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (forward(Token::Types::KEYWORD, "step")(q.index)) {
 					any()(q);
-					if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+					if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				{
 					ignore(Token::Types::COMMENT)(q);
-					if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+					if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 					Node::Ptr do_(new NodeDo());
 					cursor = q.index;
@@ -36632,24 +36687,24 @@ private:
 							break;
 
 						Combinator::Options sub = opts;
-						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
+						if (!StatementN(do_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
 					}
 					children.push_back(do_);
 					q.index = cursor;
 				}
 				{
 					State q1 = q;
-					if (!LineNumber(q1, opts)) return throwInvalidSyntax(q1.index);
-					if (!must(Token::Types::KEYWORD, "next")(q1)) return throwInvalidSyntax(q1.index);
+					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+					if (!must(Token::Types::KEYWORD, "next")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (forward(Token::Types::IDENTIFIER)(q1.index)) {
 						Token::Ptr id_ = maybe(Token::Types::IDENTIFIER)(q1);
 						const std::string name_ = (std::string)id_->data();
-						if (name_ != name) return throwInvalidSyntax(q1.index);
+						if (name_ != name) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					}
 					q.index = q1.index;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"for", id->data(),
@@ -36690,9 +36745,9 @@ private:
 					name = (std::string)id->data();
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (!isLoopStructure("for")) return throwLoopExpected(q.index);
+				if (!isLoopStructure("for")) THROW_PARSER_ERROR(throwLoopExpected(q.index));
 
 				Node::Ptr node = createNode(
 					"next", "_",
@@ -36723,7 +36778,7 @@ private:
 				{
 					VAR_GUARD(evalOpts.canTruncate, true);
 
-					if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+					if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				if (forward(Token::Types::COMMENT)(q.index) || forward(Token::Types::END_OF_LINE)(q.index)) return false;
 				{
@@ -36745,7 +36800,7 @@ private:
 
 						Combinator::Options sub = opts;
 						sub.mustHaveLineNumber = false;
-						if (!Statement(do_, sub)) return throwIncompleteStructure(index);
+						if (!Statement(do_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
 					}
 					children.push_back(do_);
 					q.index = cursor;
@@ -36768,7 +36823,7 @@ private:
 					q.index = q1.index;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"while", "_",
@@ -36797,14 +36852,14 @@ private:
 				Node::Array children;
 				const int index = q.index;
 
-				if (tooManyNestedStructures()) return throwTooManyNestedStructures(index);
+				if (tooManyNestedStructures()) THROW_PARSER_ERROR(throwTooManyNestedStructures(index));
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "while")(q)) return false;
-				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				{
 					ignore(Token::Types::COMMENT)(q);
-					if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+					if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 					Node::Ptr do_(new NodeDo());
 					cursor = q.index;
@@ -36814,14 +36869,14 @@ private:
 							break;
 
 						Combinator::Options sub = opts;
-						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
+						if (!StatementN(do_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
 					}
 					children.push_back(do_);
 					q.index = cursor;
 				}
 				{
 					State q1 = q;
-					if (!LineNumber(q1, opts)) return throwInvalidSyntax(q1.index);
+					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
 						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
 						forwardN(2, Token::Types::KEYWORD, "while")(q1.index)
@@ -36833,12 +36888,12 @@ private:
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END WHILE`.
 					} else if (!must(Token::Types::KEYWORD, "wend")(q1)) {
-						return throwInvalidSyntax(q1.index);
+						THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					}
 					q.index = q1.index;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"while", "_",
@@ -36880,7 +36935,7 @@ private:
 
 						Combinator::Options sub = opts;
 						sub.mustHaveLineNumber = false;
-						if (!Statement(do_, sub)) return throwIncompleteStructure(index);
+						if (!Statement(do_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
 					}
 					children.push_back(do_);
 					q.index = cursor;
@@ -36890,9 +36945,9 @@ private:
 					if (!must(Token::Types::KEYWORD, "until")(q1)) return false;
 					q.index = q1.index;
 				}
-				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"repeat", "_",
@@ -36921,13 +36976,13 @@ private:
 				Node::Array children;
 				const int index = q.index;
 
-				if (tooManyNestedStructures()) return throwTooManyNestedStructures(index);
+				if (tooManyNestedStructures()) THROW_PARSER_ERROR(throwTooManyNestedStructures(index));
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "repeat")(q)) return false;
 				{
 					ignore(Token::Types::COMMENT)(q);
-					if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+					if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 					Node::Ptr do_(new NodeDo());
 					cursor = q.index;
@@ -36937,20 +36992,20 @@ private:
 							break;
 
 						Combinator::Options sub = opts;
-						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
+						if (!StatementN(do_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
 					}
 					children.push_back(do_);
 					q.index = cursor;
 				}
 				{
 					State q1 = q;
-					if (!LineNumber(q1, opts)) return throwInvalidSyntax(q1.index);
-					if (!must(Token::Types::KEYWORD, "until")(q1)) return throwInvalidSyntax(q1.index);
+					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+					if (!must(Token::Types::KEYWORD, "until")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					q.index = q1.index;
 				}
-				if (!Expression(q, children)) return throwInvalidSyntax(q.index);
+				if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"repeat", "_",
@@ -36978,9 +37033,9 @@ private:
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "exit")(q)) return false;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (!isLoopStructure(ANYTHING)) return throwLoopExpected(q.index);
+				if (!isLoopStructure(ANYTHING)) THROW_PARSER_ERROR(throwLoopExpected(q.index));
 
 				Node::Ptr node = createNode(
 					"exit", "_",
@@ -37045,7 +37100,7 @@ private:
 				Arguments(q, children);
 				CHECK_UNEXPECTED(q);
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"goto", "_",
@@ -37075,7 +37130,7 @@ private:
 				Arguments(q, children);
 				CHECK_UNEXPECTED(q);
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"gosub", "_",
@@ -37102,7 +37157,7 @@ private:
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "return")(q)) return false;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"return", "_",
@@ -37163,16 +37218,16 @@ private:
 							times = val;
 						}
 						++n;
-					})) return throwInvalidSyntax(q.index);
+					})) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					CHECK_UNEXPECTED(q);
-					if (n != 2) return throwInvalidSyntax(q.index);
+					if (n != 2) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					const int headSize = Asm::INSTRUCTIONS[(Byte)Asm::Types::JUMP_FAR].totalSize();
 					if (headSize + times * dataSize > options.bankSize) {
 						// DOC: ROM SCHEMA.
 						// The data size of this data statement overflows, throw an error.
 						// This statement doesn't care about other ones, the check is just
 						// an insurance to prevent the `times` parameter is too big.
-						return throwDataSectionOverflow(q.index);
+						THROW_PARSER_ERROR(throwDataSectionOverflow(q.index));
 					}
 					for (int i = 0; i < times; ++i)
 						data_.values.push_back(Node::Context::Data::Value(page, lnno, value, y));
@@ -37196,7 +37251,7 @@ private:
 							break;
 						}
 						data_.values.push_back(Node::Context::Data::Value(page, lnno, val, y));
-					})) return throwInvalidSyntax(q.index);
+					})) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					CHECK_UNEXPECTED(q);
 				}
 				if (!structures.empty()) {
@@ -37204,7 +37259,7 @@ private:
 					throwDataInsideStructureAlwaysTakesEffectOnceAndOnlyOnce(q.index, struct_);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"data", "_",
@@ -37248,7 +37303,7 @@ private:
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"read", "_",
@@ -37286,7 +37341,7 @@ private:
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"restore", "_",
@@ -37328,7 +37383,7 @@ private:
 					throwFillerInsideStructureAlwaysTakesEffectOnceAndOnlyOnce(q.index, struct_);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"filler", "_",
@@ -37356,7 +37411,7 @@ private:
 				Node::Array children;
 				const int index = q.index;
 
-				if (tooManyNestedStructures()) return throwTooManyNestedStructures(index);
+				if (tooManyNestedStructures()) THROW_PARSER_ERROR(throwTooManyNestedStructures(index));
 
 				if (!LineNumber(q, opts)) return false;
 				if (
@@ -37373,7 +37428,7 @@ private:
 					return false;
 				}
 				ignore(Token::Types::COMMENT)(q);
-				if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+				if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				{
 					Node::Ptr do_(new NodeDo());
 					cursor = q.index;
@@ -37383,14 +37438,14 @@ private:
 							break;
 
 						Combinator::Options sub = opts;
-						if (!StatementN(do_, sub)) return throwIncompleteStructure(index);
+						if (!StatementN(do_, sub)) THROW_PARSER_ERROR(throwIncompleteStructure(index));
 					}
 					children.push_back(do_);
 					q.index = cursor;
 				}
 				{
 					State q1 = q;
-					if (!LineNumber(q1, opts)) return throwInvalidSyntax(q1.index);
+					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
 						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
 						forwardN(2, Token::Types::KEYWORD, "do")(q1.index)
@@ -37402,12 +37457,12 @@ private:
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END DO`.
 					} else if (!must(Token::Types::KEYWORD, "enddo")(q1)) {
-						return throwInvalidSyntax(q1.index);
+						THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					}
 					q.index = q1.index;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"begindo", "_",
@@ -37435,7 +37490,7 @@ private:
 				Node::Array children;
 				const int index = q.index;
 
-				if (tooManyNestedStructures()) return throwTooManyNestedStructures(index);
+				if (tooManyNestedStructures()) THROW_PARSER_ERROR(throwTooManyNestedStructures(index));
 
 				if (!LineNumber(q, opts)) return false;
 				if (
@@ -37452,7 +37507,7 @@ private:
 					return false;
 				}
 				ignore(Token::Types::COMMENT)(q);
-				if (!ignore(Token::Types::END_OF_LINE)(q)) return throwInvalidSyntax(q.index);
+				if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				Node::MacroFunctionTable tbl;
 				{
 					PROC_GUARD(beginDef(index), endDef(q.index));
@@ -37473,7 +37528,7 @@ private:
 							if (index != q.index)
 								throwInvalidSyntax(q.index);
 
-							return throwIncompleteStructure(index);
+							THROW_PARSER_ERROR(throwIncompleteStructure(index));
 						}
 					}
 					children.push_back(do_);
@@ -37483,7 +37538,7 @@ private:
 				}
 				{
 					State q1 = q;
-					if (!LineNumber(q1, opts)) return throwInvalidSyntax(q1.index);
+					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
 						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
 						forwardN(2, Token::Types::KEYWORD, "def")(q1.index)
@@ -37495,12 +37550,12 @@ private:
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END DEF`.
 					} else if (!must(Token::Types::KEYWORD, "enddef")(q1)) {
-						return throwInvalidSyntax(q1.index);
+						THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					}
 					q.index = q1.index;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"begindef", "_",
@@ -37535,19 +37590,19 @@ private:
 				if (!must(Token::Types::KEYWORD, "def")(q)) return false;
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 				else name = (std::string)id->data();
-				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
+				if (idHasBeenDefined(name)) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()));
 				if (must(Token::Types::OPERATOR, "=")(q)) {
 					r = q.index;
 					if (!Parameters(q, children, false)) return false;
 					CHECK_UNEXPECTED(q);
 				} else {
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (children.size() < 1) return throwTooFewArguments(r);
-				else if (children.size() > 1) return throwTooManyArguments(r);
+				if (children.size() < 1) THROW_PARSER_ERROR(throwTooFewArguments(r));
+				else if (children.size() > 1) THROW_PARSER_ERROR(throwTooManyArguments(r));
 
 				if (!children.front()->onlyToken())
 					return false;
@@ -37597,23 +37652,23 @@ private:
 				{
 					if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 					else name = (std::string)id->data();
-					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
+					if (idHasBeenDefined(name)) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()));
 					if (!must(Token::Types::OPERATOR, "(")(q)) return false;
 					Parameters(q, children, false);
 					CHECK_UNEXPECTED(q);
 					if (!must(Token::Types::OPERATOR, ")")(q)) return false;
 					if (must(Token::Types::OPERATOR, "=")(q)) {
-						if (!New(q, children) && !Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) return throwInvalidSyntax(q.index);
-						if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) return throwInvalidSyntax(q.index);
+						if (!New(q, children) && !Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+						if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					} else {
-						return throwInvalidSyntax(q.index);
+						THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					}
 				}
 				endIdx = q.index;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (children.size() < 2) return throwInvalidSyntax(q.index);
+				if (children.size() < 2) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"def fn(...)=...", "_",
@@ -37693,7 +37748,7 @@ private:
 				if (!must(Token::Types::KEYWORD, "def")(q)) return false;
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 				else name = (std::string)id->data();
-				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
+				if (idHasBeenDefined(name)) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()));
 				if (must(Token::Types::OPERATOR, "=")(q)) {
 					if (forward(Token::Types::IDENTIFIER, "nothing")(q.index)) {
 						ignore(Token::Types::IDENTIFIER)(q);
@@ -37739,16 +37794,16 @@ private:
 					}
 					CHECK_UNEXPECTED(q);
 				} else {
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				const int r = q.index;
 				if (!forward(Token::Types::COMMENT)(q.index) && !forward(Token::Types::END_OF_LINE)(q.index))
 					return false;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (children.size() < 1) return throwTooFewArguments(r);
-				else if (children.size() > 1) return throwTooManyArguments(r);
+				if (children.size() < 1) THROW_PARSER_ERROR(throwTooFewArguments(r));
+				else if (children.size() > 1) THROW_PARSER_ERROR(throwTooManyArguments(r));
 
 				if (!children.front()->onlyToken())
 					return false;
@@ -37771,8 +37826,8 @@ private:
 				Token::Ptr valTk = node->onlyTokenInOnlyChild();
 				const std::string &valTxt = valTk->text();
 				int val = -1;
-				if (!Text::fromString(valTxt, val)) return throwInvalidSyntax(r);
-				if (val < std::numeric_limits<Int16>::min() || val > std::numeric_limits<UInt16>::max()) return throwInvalidSyntax(r);
+				if (!Text::fromString(valTxt, val)) THROW_PARSER_ERROR(throwInvalidSyntax(r));
+				if (val < std::numeric_limits<Int16>::min() || val > std::numeric_limits<UInt16>::max()) THROW_PARSER_ERROR(throwInvalidSyntax(r));
 				macroConstants.add(name, Node::MacroConstantTable::Entry(valTk, val)); // Add to the macro constant table.
 				const Variant data = val;
 				const Macro macro(name, Macro::Types::CONSTANT, data, headOfCurrentScope());
@@ -37795,19 +37850,19 @@ private:
 				if (!must(Token::Types::KEYWORD, "def")(q)) return false;
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 				else name = (std::string)id->data();
-				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
+				if (idHasBeenDefined(name)) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()));
 				if (must(Token::Types::OPERATOR, "=")(q)) {
 					r = q.index;
 					if (!Parameters(q, children, false)) return false;
 					CHECK_UNEXPECTED(q);
 				} else {
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (children.size() < 1) return throwTooFewArguments(r);
-				else if (children.size() > 1) return throwTooManyArguments(r);
+				if (children.size() < 1) THROW_PARSER_ERROR(throwTooFewArguments(r));
+				else if (children.size() > 1) THROW_PARSER_ERROR(throwTooManyArguments(r));
 
 				if (!children.front()->onlyToken())
 					return false;
@@ -37815,7 +37870,7 @@ private:
 				const std::string idName = children.front()->onlyToken()->text();
 				const IdentifierTable::Entry* idEntry = identifiers.find(idName);
 				if (!idEntry) {
-					if (!Text::startsWith(idName, "stack", true)) return throwIdHasNotBeenDeclared(r, idName); // Is not a stack reference.
+					if (!Text::startsWith(idName, "stack", true)) THROW_PARSER_ERROR(throwIdHasNotBeenDeclared(r, idName)); // Is not a stack reference.
 
 					return false;
 				}
@@ -37856,19 +37911,19 @@ private:
 				if (!must(Token::Types::KEYWORD, "def")(q)) return false;
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 				else name = (std::string)id->data();
-				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
+				if (idHasBeenDefined(name)) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()));
 				if (must(Token::Types::OPERATOR, "=")(q)) {
 					if (!References(q, children)) return false;
 					CHECK_UNEXPECTED(q);
 				} else {
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				const int r = q.index;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (children.size() < 1) return throwTooFewArguments(r);
-				else if (children.size() > 1) return throwTooManyArguments(r);
+				if (children.size() < 1) THROW_PARSER_ERROR(throwTooFewArguments(r));
+				else if (children.size() > 1) THROW_PARSER_ERROR(throwTooManyArguments(r));
 
 				if (!children.front()->onlyToken())
 					return false;
@@ -37890,11 +37945,11 @@ private:
 
 				Token::Ptr ref = node->onlyTokenInOnlyChild();
 				const std::string &refTo = ref->text();
-				if (!Text::startsWith(refTo, "stack", true)) return throwInvalidSyntax(r);
+				if (!Text::startsWith(refTo, "stack", true)) THROW_PARSER_ERROR(throwInvalidSyntax(r));
 				const std::string idxTxt = refTo.substr(5 /* after "stack" */);
 				int idx = -1;
-				if (!Text::fromString(idxTxt, idx)) return throwInvalidSyntax(r);
-				if (idx < 0 || idx >= COMPILER_STACK_ARGUMENT_MAX_COUNT) return throwInvalidSyntax(r);
+				if (!Text::fromString(idxTxt, idx)) THROW_PARSER_ERROR(throwInvalidSyntax(r));
+				if (idx < 0 || idx >= COMPILER_STACK_ARGUMENT_MAX_COUNT) THROW_PARSER_ERROR(throwInvalidSyntax(r));
 				macroStackReferences.add(name, Node::MacroStackReferenceTable::Entry(ref, idx)); // Add to the macro stack reference table.
 				const Variant data = refTo;
 				const Macro macro(name, Macro::Types::STACK_REFERENCE, data, headOfCurrentScope());
@@ -37915,19 +37970,19 @@ private:
 				if (!must(Token::Types::KEYWORD, "def")(q)) return false;
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 				else name = (std::string)id->data();
-				if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
+				if (idHasBeenDefined(name)) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()));
 				if (must(Token::Types::OPERATOR, "=")(q)) {
 					r = q.index;
 					if (!Arguments(q, children)) return false;
 					CHECK_UNEXPECTED(q);
 				} else {
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (children.size() < 1) return throwTooFewArguments(r);
-				else if (children.size() > 1) return throwTooManyArguments(r);
+				if (children.size() < 1) THROW_PARSER_ERROR(throwTooFewArguments(r));
+				else if (children.size() > 1) THROW_PARSER_ERROR(throwTooManyArguments(r));
 
 				Token::Ptr tk = children.front()->onlyToken();
 				if (!tk)
@@ -37975,22 +38030,22 @@ private:
 				{
 					if (!(id = must(Token::Types::IDENTIFIER)(q))) return false;
 					else name = (std::string)id->data();
-					if (idHasBeenDefined(name)) { return throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()); }
+					if (idHasBeenDefined(name)) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(q.index, id->caseSensitiveText()));
 					if (must(Token::Types::OPERATOR, "(")(q)) return false;
 					Parameters(q, children, false);
 					CHECK_UNEXPECTED(q);
 					if (must(Token::Types::OPERATOR, "=")(q)) {
-						if (!New(q, children) && !Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) return throwInvalidSyntax(q.index);
-						if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) return throwInvalidSyntax(q.index);
+						if (!New(q, children) && !Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+						if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					} else {
-						return throwInvalidSyntax(q.index);
+						THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					}
 				}
 				endIdx = q.index;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (children.size() < 2) return throwInvalidSyntax(q.index);
+				if (children.size() < 2) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"def fn(...)=...", "_", // Reuse the `DEF FN` workflow for macro expression.
@@ -38089,10 +38144,10 @@ private:
 					else name = (std::string)id->data();
 					if (name == "palette" || name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile" || name == "music" || name == "sfx") {
 						any()(q);
-						if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						Arguments(q, children);
 						CHECK_UNEXPECTED(q);
-						if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					}
 					{
 						const int n = (int)children.size();
@@ -38106,7 +38161,7 @@ private:
 					return false;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"bankof", "_",
@@ -38156,10 +38211,10 @@ private:
 					else name = (std::string)id->data();
 					if (name == "palette" || name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile" || name == "music" || name == "sfx") {
 						any()(q);
-						if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						Arguments(q, children);
 						CHECK_UNEXPECTED(q);
-						if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					}
 					{
 						const int n = (int)children.size();
@@ -38173,7 +38228,7 @@ private:
 					return false;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"addressof", "_",
@@ -38216,7 +38271,7 @@ private:
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"peek", "_",
@@ -38260,7 +38315,7 @@ private:
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"poke", "_",
@@ -38289,11 +38344,11 @@ private:
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "reserve")(q)) return false;
 				if (!forward(Token::Types::COMMENT)(q.index) && !forward(Token::Types::END_OF_LINE)(q.index)) {
-					if (!Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) return throwInvalidSyntax(q.index);
-					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) return throwInvalidSyntax(q.index);
+					if (!Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"reserve", "_",
@@ -38321,11 +38376,11 @@ private:
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "push")(q)) return false;
 				if (!forward(Token::Types::COMMENT)(q.index) && !forward(Token::Types::END_OF_LINE)(q.index)) {
-					if (!Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) return throwInvalidSyntax(q.index);
-					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) return throwInvalidSyntax(q.index);
+					if (!Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"push", "_",
@@ -38353,11 +38408,11 @@ private:
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "pop")(q)) return false;
 				if (!forward(Token::Types::COMMENT)(q.index) && !forward(Token::Types::END_OF_LINE)(q.index)) {
-					if (!Expression(q, children)) return throwInvalidSyntax(q.index);
-					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) return throwInvalidSyntax(q.index);
+					if (!Expression(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"pop", "_",
@@ -38396,13 +38451,13 @@ private:
 				}
 				const int r = q.index;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (children.size() < 2) return throwTooFewArguments(r);
-				else if (children.size() > 4) return throwTooManyArguments(r);
+				if (children.size() < 2) THROW_PARSER_ERROR(throwTooFewArguments(r));
+				else if (children.size() > 4) THROW_PARSER_ERROR(throwTooManyArguments(r));
 				if (children.size() == 2) { /* Do nothing. */ }
 				else if (children.size() == 4) { /* Do nothing. */ }
-				else return throwArgumentCountDoesNotMatch(r);
+				else THROW_PARSER_ERROR(throwArgumentCountDoesNotMatch(r));
 
 				Node::Ptr node = createNode(
 					"pack", "_",
@@ -38443,13 +38498,13 @@ private:
 				}
 				const int r = q.index;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (children.size() < 3) return throwTooFewArguments(r);
-				else if (children.size() > 5) return throwTooManyArguments(r);
+				if (children.size() < 3) THROW_PARSER_ERROR(throwTooFewArguments(r));
+				else if (children.size() > 5) THROW_PARSER_ERROR(throwTooManyArguments(r));
 				if (children.size() == 3) { /* Do nothing. */ }
 				else if (children.size() == 5) { /* Do nothing. */ }
-				else return throwArgumentCountDoesNotMatch(r);
+				else THROW_PARSER_ERROR(throwArgumentCountDoesNotMatch(r));
 
 				Node::Ptr node = createNode(
 					"unpack", "_",
@@ -38488,10 +38543,10 @@ private:
 				}
 				const int r = q.index;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (children.size() < 2) return throwTooFewArguments(r);
-				else if (children.size() > 2) return throwTooManyArguments(r);
+				if (children.size() < 2) THROW_PARSER_ERROR(throwTooFewArguments(r));
+				else if (children.size() > 2) THROW_PARSER_ERROR(throwTooManyArguments(r));
 
 				Node::Ptr node = createNode(
 					"swap", "_",
@@ -38530,10 +38585,10 @@ private:
 				}
 				const int r = q.index;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (children.size() < 1) return throwTooFewArguments(r);
-				else if (children.size() > 1) return throwTooManyArguments(r);
+				if (children.size() < 1) THROW_PARSER_ERROR(throwTooFewArguments(r));
+				else if (children.size() > 1) THROW_PARSER_ERROR(throwTooManyArguments(r));
 
 				Node::Ptr node = createNode(
 					"inc", "_",
@@ -38572,10 +38627,10 @@ private:
 				}
 				const int r = q.index;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (children.size() < 1) return throwTooFewArguments(r);
-				else if (children.size() > 1) return throwTooManyArguments(r);
+				if (children.size() < 1) THROW_PARSER_ERROR(throwTooFewArguments(r));
+				else if (children.size() > 1) THROW_PARSER_ERROR(throwTooManyArguments(r));
 
 				Node::Ptr node = createNode(
 					"dec", "_",
@@ -38613,7 +38668,7 @@ private:
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"rgb", "_",
@@ -38651,7 +38706,7 @@ private:
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"hsv", "_",
@@ -38697,21 +38752,21 @@ private:
 					q.tokens.push_back(node);
 				}
 				if (forward(Token::Types::OPERATOR, "=")(q.index)) {
-					if (!must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					if (must(Token::Types::KEYWORD, "with")(q)) {
 						if (forward(Token::Types::KEYWORD, "tile")(q.index)) {
 							any()(q);
 						} else if (forward(Token::Types::KEYWORD, "map")(q.index)) {
 							any()(q);
 						} else {
-							return throwInvalidSyntax(q.index);
+							THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						}
 					}
 					if (forward(Token::Types::KEYWORD, "read")(q.index)) {
 						any()(q);
 					} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 						any()(q);
-						if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+						if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					} else {
 						if (must(Token::Types::OPERATOR, "(")(q)) {
 							if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -38726,7 +38781,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"memcpy", "_",
@@ -38765,7 +38820,7 @@ private:
 				else onoroff = (std::string)on->data();
 				if (!(onoroff == "on" || onoroff == "off")) return false;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node(new NodeAutoToggle());
 				if (!node) return false;
@@ -38799,7 +38854,7 @@ private:
 				else onoroff = (std::string)on->data();
 				if (!(onoroff == "on" || onoroff == "off")) return false;
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node(new NodeToggle());
 				if (!node) return false;
@@ -38819,10 +38874,10 @@ private:
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "image")(q)) return false;
-				if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				Arguments(q, children);
 				CHECK_UNEXPECTED(q);
-				if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				{
 					const int n = (int)children.size();
 					Token::Ptr node(new Token());
@@ -38831,21 +38886,21 @@ private:
 						->data(n);
 					q.tokens.push_back(node);
 				}
-				if (!must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (must(Token::Types::KEYWORD, "with")(q)) {
 					if (forward(Token::Types::KEYWORD, "tile")(q.index)) {
 						any()(q);
 					} else if (forward(Token::Types::KEYWORD, "map")(q.index)) {
 						any()(q);
 					} else {
-						return throwInvalidSyntax(q.index);
+						THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					}
 				}
 				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
 					any()(q);
 				} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 					any()(q);
-					if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+					if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -38859,7 +38914,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"image", "_",
@@ -38890,16 +38945,16 @@ private:
 				if (!(id = must(Token::Types::SYMBOL)(q))) return false;
 				else name = (std::string)id->data();
 				if (name == "tile") {
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (!must(Token::Types::KEYWORD, "tile")(q)) return false;
 					if (forward(Token::Types::KEYWORD, "len")(q.index)) {
 						any()(q);
 					}
-					if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
-					if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				{
 					const int n = (int)children.size();
@@ -38909,12 +38964,12 @@ private:
 						->data(n);
 					q.tokens.push_back(node);
 				}
-				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
 					any()(q);
 				} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 					any()(q);
-					if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+					if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -38928,7 +38983,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"tile", id->data(),
@@ -38974,10 +39029,10 @@ private:
 					if (forward(Token::Types::KEYWORD, "width")(q.index) || forward(Token::Types::KEYWORD, "height")(q.index)) {
 						any()(q);
 					}
-					if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
-					if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				{
 					const int n = (int)children.size();
@@ -38987,12 +39042,12 @@ private:
 						->data(n);
 					q.tokens.push_back(node);
 				}
-				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
 					any()(q);
 				} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 					any()(q);
-					if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+					if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39006,7 +39061,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"map", id->data(),
@@ -39052,10 +39107,10 @@ private:
 					if (forward(Token::Types::KEYWORD, "width")(q.index) || forward(Token::Types::KEYWORD, "height")(q.index)) {
 						any()(q);
 					}
-					if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
-					if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				{
 					const int n = (int)children.size();
@@ -39065,12 +39120,12 @@ private:
 						->data(n);
 					q.tokens.push_back(node);
 				}
-				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
 					any()(q);
 				} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 					any()(q);
-					if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+					if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39084,7 +39139,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"window", id->data(),
@@ -39130,10 +39185,10 @@ private:
 					if (forward(Token::Types::KEYWORD, "property")(q.index)) {
 						any()(q);
 					}
-					if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
-					if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				{
 					const int n = (int)children.size();
@@ -39143,12 +39198,12 @@ private:
 						->data(n);
 					q.tokens.push_back(node);
 				}
-				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
 					any()(q);
 				} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 					any()(q);
-					if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+					if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39162,7 +39217,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"sprite", id->data(),
@@ -39210,10 +39265,10 @@ private:
 					} else if (forward(Token::Types::KEYWORD, "width")(q.index) || forward(Token::Types::KEYWORD, "height")(q.index)) {
 						any()(q);
 					}
-					if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
-					if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				{
 					const int n = (int)children.size();
@@ -39223,12 +39278,12 @@ private:
 						->data(n);
 					q.tokens.push_back(node);
 				}
-				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
 					any()(q);
 				} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 					any()(q);
-					if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+					if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39242,7 +39297,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"scene", id->data(),
@@ -39293,10 +39348,10 @@ private:
 						any()(q);
 					}
 					if (name == "def") {
-						if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						Arguments(q, children);
 						CHECK_UNEXPECTED(q);
-						if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					} else if (name == "del") {
 						if (must(Token::Types::OPERATOR, "(")(q)) {
 							if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39405,10 +39460,10 @@ private:
 							CHECK_UNEXPECTED(q);
 						}
 					} else {
-						if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						Arguments(q, children);
 						CHECK_UNEXPECTED(q);
-						if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					}
 				}
 				{
@@ -39438,20 +39493,20 @@ private:
 					// Do nothing.
 				} else if (name == "on") {
 					if (must(Token::Types::OPERATOR, "hits")(q)) { /* Do nothing. */ }
-					else { return throwInvalidSyntax(q.index); }
+					else { THROW_PARSER_ERROR(throwInvalidSyntax(q.index)); }
 					if (must(Token::Types::KEYWORD, "start")(q)) { /* Do nothing. */ }
-					else { return throwInvalidSyntax(q.index); }
+					else { THROW_PARSER_ERROR(throwInvalidSyntax(q.index)); }
 				} else if (name == "off") {
 					if (must(Token::Types::OPERATOR, "hits")(q)) { /* Do nothing. */ }
-					else { return throwInvalidSyntax(q.index); }
+					else { THROW_PARSER_ERROR(throwInvalidSyntax(q.index)); }
 				} else {
-					if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+					if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
 					any()(q);
 				} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 					any()(q);
-					if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+					if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39473,7 +39528,7 @@ private:
 						any()(q);
 					} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 						any()(q);
-						if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+						if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					} else {
 						if (must(Token::Types::OPERATOR, "(")(q)) {
 							if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39488,7 +39543,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"actor", id->data(),
@@ -39515,19 +39570,19 @@ private:
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "emote")(q)) return false;
-				if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
 				}
-				if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (forward(Token::Types::KEYWORD, "with")(q.index)) {
 					any()(q);
-					if (!must(Token::Types::KEYWORD, "actor")(q)) return throwInvalidSyntax(q.index);
-					if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::KEYWORD, "actor")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+					if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
-					if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				{
 					const int n = (int)children.size();
@@ -39537,12 +39592,12 @@ private:
 						->data(n);
 					q.tokens.push_back(node);
 				}
-				if (!must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
 					any()(q);
 				} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 					any()(q);
-					if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+					if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39556,7 +39611,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"emote", "_",
@@ -39608,10 +39663,10 @@ private:
 					}
 				}
 				if (name == "def") {
-					if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
-					if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else if (name == "start") {
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39624,10 +39679,10 @@ private:
 						CHECK_UNEXPECTED(q);
 					}
 				} else {
-					if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
-					if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				{
 					const int n = (int)children.size();
@@ -39639,18 +39694,18 @@ private:
 				}
 				if (name == "start") {
 					if (must(Token::Types::KEYWORD, "with")(q)) {
-						if (!must(Token::Types::KEYWORD, "actor")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::KEYWORD, "actor")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					} else if (must(Token::Types::KEYWORD, "on")(q)) {
-						if (!must(Token::Types::KEYWORD, "actor")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::KEYWORD, "actor")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					}
 				} else {
-					if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+					if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				if (forward(Token::Types::KEYWORD, "read")(q.index)) {
 					any()(q);
 				} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 					any()(q);
-					if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+					if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39672,7 +39727,7 @@ private:
 						any()(q);
 					} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 						any()(q);
-						if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+						if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					} else {
 						if (must(Token::Types::OPERATOR, "(")(q)) {
 							if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39687,7 +39742,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"projectile", id->data(),
@@ -39719,24 +39774,24 @@ private:
 				if (!(id = must(Token::Types::SYMBOL)(q))) return false;
 				else name = (std::string)id->data();
 				if (name == "trigger") {
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (!must(Token::Types::KEYWORD, "trigger")(q)) return false;
 					if (name == "dim") {
-						if (!must(Token::Types::OPERATOR, "[")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, "[")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						if (!Numbers(q, children, [&] (const Token::Ptr &tk) -> void {
 							int val = 0;
 							validate<Word>(tk, val, onError);
 							max(tk, val, options.indexBase, onError);
 							dimensions.bounds.push_back(val);
-						})) return throwInvalidSyntax(q.index);
+						})) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						CHECK_UNEXPECTED(q);
-						if (!must(Token::Types::OPERATOR, "]")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, "]")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					} else if (name == "def") {
-						if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						Arguments(q, children);
 						CHECK_UNEXPECTED(q);
-						if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					} else if (name == "on") {
 						if (must(Token::Types::OPERATOR, "(")(q)) {
 							if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39760,7 +39815,7 @@ private:
 							CHECK_UNEXPECTED(q);
 						}
 					} else {
-						return throwInvalidSyntax(q.index);
+						THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					}
 				}
 				{
@@ -39775,12 +39830,12 @@ private:
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
 					if (must(Token::Types::KEYWORD, "start")(q)) { /* Do nothing. */ }
-					else { return throwInvalidSyntax(q.index); }
+					else { THROW_PARSER_ERROR(throwInvalidSyntax(q.index)); }
 				} else if (name == "off") {
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
 				} else {
-					if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+					if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				if (name == "dim") {
 					// Do nothing.
@@ -39788,7 +39843,7 @@ private:
 					any()(q);
 				} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 					any()(q);
-					if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+					if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39810,7 +39865,7 @@ private:
 						any()(q);
 					} else if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 						any()(q);
-						if (!DataSequence(q, children)) return throwInvalidSyntax(q.index);
+						if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					} else {
 						if (must(Token::Types::OPERATOR, "(")(q)) {
 							if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39825,9 +39880,9 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (dimensions.bounds.size() > 1) return throwTooManyDimensions(q.index);
+				if (dimensions.bounds.size() > 1) THROW_PARSER_ERROR(throwTooManyDimensions(q.index));
 
 				Node::Ptr node = createNode(
 					"trigger", id->data(),
@@ -39858,11 +39913,11 @@ private:
 				if (!(id = must(Token::Types::SYMBOL)(q))) return false;
 				else name = (std::string)id->data();
 				if (name == "widget") {
-					return throwInvalidSyntax(q.index);
+					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (!must(Token::Types::KEYWORD, "widget")(q)) return false;
-					if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
-					if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+					if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				{
 					const int n = (int)children.size();
@@ -39872,7 +39927,7 @@ private:
 						->data(n);
 					q.tokens.push_back(node);
 				}
-				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				{
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39886,7 +39941,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"widget", id->data(),
@@ -39929,10 +39984,10 @@ private:
 					}
 				} else {
 					if (!must(Token::Types::KEYWORD, "label")(q)) return false;
-					if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
-					if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				{
 					const int n = (int)children.size();
@@ -39942,7 +39997,7 @@ private:
 						->data(n);
 					q.tokens.push_back(node);
 				}
-				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				{
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -39956,7 +40011,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"label", id->data(),
@@ -40000,10 +40055,10 @@ private:
 					}
 				} else {
 					if (!must(Token::Types::KEYWORD, "progressbar")(q)) return false;
-					if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
-					if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				{
 					const int n = (int)children.size();
@@ -40013,7 +40068,7 @@ private:
 						->data(n);
 					q.tokens.push_back(node);
 				}
-				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				{
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -40027,7 +40082,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"progressbar", id->data(),
@@ -40071,10 +40126,10 @@ private:
 				} else {
 					if (!must(Token::Types::KEYWORD, "menu")(q)) return false;
 					if (name == "def") {
-						if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						Arguments(q, children);
 						CHECK_UNEXPECTED(q);
-						if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+						if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					} else if (name == "on") {
 						if (must(Token::Types::OPERATOR, "(")(q)) {
 							if (!must(Token::Types::OPERATOR, ")")(q)) return false;
@@ -40088,7 +40143,7 @@ private:
 							// Do nothing.
 						}
 					} else {
-						return throwInvalidSyntax(q.index);
+						THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					}
 				}
 				{
@@ -40103,11 +40158,11 @@ private:
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
 					if (must(Token::Types::KEYWORD, "start")(q)) { /* Do nothing. */ }
-					else { return throwInvalidSyntax(q.index); }
+					else { THROW_PARSER_ERROR(throwInvalidSyntax(q.index)); }
 				} else if (name == "off") {
 					// Do nothing.
 				}
-				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				{
 					if (must(Token::Types::OPERATOR, "(")(q)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -40121,7 +40176,7 @@ private:
 					}
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"menu", id->data(),
@@ -40153,10 +40208,10 @@ private:
 				else name = (std::string)id->data();
 				if (name != "load") return false;
 				if (!must(Token::Types::KEYWORD, "dialog")(q)) return false;
-				if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				Arguments(q, children);
 				CHECK_UNEXPECTED(q);
-				if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				{
 					const int n = (int)children.size();
 					Token::Ptr node(new Token());
@@ -40165,7 +40220,7 @@ private:
 						->data(n);
 					q.tokens.push_back(node);
 				}
-				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) return throwInvalidSyntax(q.index);
+				if (expectAssign(name) && !must(Token::Types::OPERATOR, "=")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (must(Token::Types::OPERATOR, "(")(q)) {
 					if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
 						Arguments(q, children);
@@ -40177,7 +40232,7 @@ private:
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"dialog", id->data(),
@@ -40204,10 +40259,10 @@ private:
 
 				if (!LineNumber(q, opts)) return false;
 				if (!must(Token::Types::KEYWORD, "scroll")(q)) return false;
-				if (!must(Token::Types::OPERATOR, "(")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				Arguments(q, children);
 				CHECK_UNEXPECTED(q);
-				if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				{
 					const int n = (int)children.size();
 					Token::Ptr node(new Token());
@@ -40216,17 +40271,17 @@ private:
 						->data(n);
 					q.tokens.push_back(node);
 				}
-				if (!must(Token::Types::KEYWORD, "with")(q)) return throwInvalidSyntax(q.index);
+				if (!must(Token::Types::KEYWORD, "with")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				if (must(Token::Types::OPERATOR, "(")(q)) {
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
-					if (!must(Token::Types::OPERATOR, ")")(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::OPERATOR, ")")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					Arguments(q, children);
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"scroll", "_",
@@ -40271,7 +40326,7 @@ private:
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					name, "_",
@@ -40311,7 +40366,7 @@ private:
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"stream", "_",
@@ -40344,10 +40399,10 @@ private:
 					name = (std::string)id->data();
 				} else {
 					name = "call";
-					if (!must(Token::Types::INTEGER)(q)) return throwInvalidSyntax(q.index);
-					if (!forward(Token::Types::OPERATOR, ",")(q.index)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::INTEGER)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+					if (!forward(Token::Types::OPERATOR, ",")(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 					else next(q);
-					if (!must(Token::Types::INTEGER)(q)) return throwInvalidSyntax(q.index);
+					if (!must(Token::Types::INTEGER)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				if (must(Token::Types::OPERATOR, "(")(q)) {
 					if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
@@ -40360,7 +40415,7 @@ private:
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				const NativeFunctionTable::Entry* entry = nativeFunctions.find(name);
 				const std::string type = entry ? entry->type : "generic";
@@ -40405,7 +40460,7 @@ private:
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					name, id->data(),
@@ -40445,7 +40500,7 @@ private:
 					CHECK_UNEXPECTED(q);
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
-				if (!EndOfLine(q)) return throwInvalidSyntax(q.index);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
 					"raise", "_",
@@ -40586,6 +40641,8 @@ private:
 		};
 
 		#undef CHECK_UNEXPECTED
+
+		#undef THROW_PARSER_ERROR
 
 		/**< Parse. */
 
