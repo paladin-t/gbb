@@ -7165,7 +7165,11 @@ public:
 			tk = firstNonNumericTokenInThisOrChildren();
 		const std::string msg = y + " expected \"{0}\"";
 		const Error err(msg, false);
-		onError(err, err.format({ tk->caseSensitiveText() }), tk->begin());
+		std::string txt = tk->caseSensitiveText();
+		if      (txt == "\r") txt = "\\r";
+		else if (txt == "\n") txt = "\\n";
+		else if (txt == "\f") txt = "\\f";
+		onError(err, err.format({ txt }), tk->begin());
 	}
 	void throwUnexpectedOperator(Error::Handler onError, Token::Ptr tk = nullptr) const {
 		if (tk == nullptr)
@@ -8978,21 +8982,32 @@ public:
 						txt.erase(txt.begin());
 					if (Text::endsWith(txt, "\"", false))
 						txt.pop_back();
+					txt = Text::replace(txt, "\\r", "\r");
+					txt = Text::replace(txt, "\\n", "\n");
+					txt = Text::replace(txt, "\\f", "\f");
 					Token::Ptr tk(new Token());
 					tk
 						->type(Token::Types::STRING)
 						->text(txt)
-						->parse(false);
-					const std::string id = (std::string)simpleTk->data();
-					if (id.length() == 1) {
+						->parse(false)
+						->begin(simpleTk->begin())
+						->end(simpleTk->end());
+					if (txt.length() == 1) {
 						union {
 							UInt8 byte;
 							std::string::value_type char_;
 						} u;
-						u.char_ = id.front();
+						u.char_ = txt.front();
 						ret = u.byte;
-					} else if (id.length() > 1) {
-						const std::wstring wstr = Unicode::toWide(id);
+					} else if (txt.length() == 2 && txt[0] == GLYPH_ESCAPE_PERCENT && txt[1] == GLYPH_ESCAPE_PERCENT) {
+						union {
+							UInt8 byte;
+							std::string::value_type char_;
+						} u;
+						u.char_ = GLYPH_ESCAPE_PERCENT;
+						ret = u.byte;
+					} else if (txt.length() > 1) {
+						const std::wstring wstr = Unicode::toWide(txt);
 						const wchar_t* wptr = wstr.c_str();
 						if (*wptr == GLYPH_ESCAPE_SPECIAL) {
 							switch (*++wptr) {
@@ -33123,20 +33138,33 @@ private:
 						if (!maybe(Token::Types::NUMBER)(q1)) break;
 					}
 				} else if (must(Token::Types::KEYWORD, "asc")(q1)) {
-					auto toNum = [] (const std::string &txt) -> Token::Ptr {
-						if (txt.length() != 1) return nullptr;
+					auto toNum = [] (Token::Ptr id) -> Token::Ptr {
+						std::string txt = (std::string)id->data();
+						txt = Text::replace(txt, "\\r", "\r");
+						txt = Text::replace(txt, "\\n", "\n");
+						txt = Text::replace(txt, "\\f", "\f");
 						union {
 							UInt8 byte;
 							std::string::value_type char_;
 						} u;
-						u.char_ = txt.front();
+						if (txt.length() == 2 && txt[0] == GLYPH_ESCAPE_PERCENT && txt[1] == GLYPH_ESCAPE_PERCENT) {
+							u.char_ = GLYPH_ESCAPE_PERCENT;
+						} else if (txt.length() == 2 && txt[0] == GLYPH_ESCAPE_SPECIAL && txt[1] == GLYPH_ESCAPE_BACKSLASH) {
+							u.char_ = GLYPH_ESCAPE_BACKSLASH;
+						} else if (txt.length() == 1) {
+							u.char_ = txt.front();
+						} else {
+							return nullptr;
+						}
 						const int val = u.byte;
 
 						Token::Ptr tk(new Token());
 						tk
 							->type(Token::Types::INTEGER)
 							->data(val)
-							->text(Text::toString(val));
+							->text(Text::toString(val))
+							->begin(id->begin())
+							->end(id->end());
 
 						return tk;
 					};
@@ -33145,19 +33173,15 @@ private:
 					if (must(Token::Types::OPERATOR, "(")(q1)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q1.index)) {
 							Token::Ptr id = nullptr;
-							std::string txt;
 							if (!(id = must(Token::Types::STRING)(q1))) return false;
-							txt = (std::string)id->data();
-							tk = toNum(txt);
+							tk = toNum(id);
 							if (!tk) return false;
 						}
 						if (!must(Token::Types::OPERATOR, ")")(q1)) return false;
 					} else {
 						Token::Ptr id = nullptr;
-						std::string txt;
 						if (!(id = must(Token::Types::STRING)(q1))) return false;
-						txt = (std::string)id->data();
-						tk = toNum(txt);
+						tk = toNum(id);
 						if (!tk) return false;
 					}
 					q1.tokens.clear();
