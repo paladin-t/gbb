@@ -505,6 +505,7 @@ private:
 		int magnification = -1;
 		std::string namableText;
 
+		bool focused = false;
 		bool inputFieldFocused = false;
 		bool showGrids = true;
 		bool gridsVisible = false;
@@ -513,6 +514,7 @@ private:
 			magnification = -1;
 			namableText.clear();
 
+			focused = false;
 			inputFieldFocused = false;
 			showGrids = true;
 			gridsVisible = false;
@@ -673,6 +675,9 @@ public:
 	}
 
 	virtual void copy(void) override {
+		if (_tools.focused)
+			return;
+
 		Copy();
 	}
 	virtual void cut(void) override {
@@ -681,6 +686,9 @@ public:
 
 			return;
 		}
+
+		if (_tools.focused)
+			return;
 
 		Cut();
 
@@ -698,6 +706,9 @@ public:
 		if (ReadOnly)
 			return;
 
+		if (_tools.focused)
+			return;
+
 		Paste();
 
 		SetChangesCleared();
@@ -706,6 +717,9 @@ public:
 	}
 	virtual void del(bool) override {
 		if (ReadOnly)
+			return;
+
+		if (_tools.focused)
 			return;
 
 		Delete();
@@ -857,6 +871,9 @@ public:
 
 			return Variant(true);
 		case SELECT_ALL:
+			if (_tools.focused)
+				return Variant(false);
+
 			SelectAll();
 
 			return Variant(true);
@@ -1700,6 +1717,8 @@ public:
 				}
 			}
 			ImGui::PopID();
+
+			_tools.focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows); // Ignore shortcuts when the window is not focused.
 		}
 		ImGui::EndChild();
 		ImGui::PopStyleVar();
