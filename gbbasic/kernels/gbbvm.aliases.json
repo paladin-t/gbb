@@ -84,6 +84,55 @@
     "offset": 8
   },
 
+  "gui_widget_handler_bank": {
+    "ref": "gui_extra_uint8",
+    "offset": 0
+  },
+  "gui_widget_handler_address": {
+    "ref": "gui_extra_uint16",
+    "offset": 0
+  },
+  "gui_label_touch_states": {
+    "ref": "gui_extra_uint8",
+    "offset": 0
+  },
+  "gui_label_start_position": {
+    "ref": "gui_extra_uint16",
+    "offset": 0
+  },
+  "gui_label_x_offset": {
+    "ref": "gui_options",
+    "offset": 0
+  },
+  "gui_progressbar_blit_palettes": {
+    "ref": "gui_options",
+    "offset": 0
+  },
+  "gui_menu_item_count": {
+    "ref": "gui_interval",
+    "offset": 0
+  },
+  "gui_menu_item_cursor": {
+    "ref": "gui_ticks",
+    "offset": 0
+  },
+  "gui_menu_line_height": {
+    "ref": "gui_options",
+    "offset": 0
+  },
+  "gui_menu_pointer_cursor": {
+    "ref": "gui_button_previous",
+    "offset": 0
+  },
+  "gui_menu_handler_bank": {
+    "ref": "gui_extra_uint8",
+    "offset": 0
+  },
+  "gui_menu_handler_address": {
+    "ref": "gui_extra_uint16",
+    "offset": 0
+  },
+
   "PEEK_BANKED": {
     "ref": "peek_banked",
     "offset": 0
@@ -98,6 +147,14 @@
   },
   "WAIT_UNTIL_CONFIRM": {
     "ref": "wait_until_confirm",
+    "offset": 0
+  },
+  "RUMBLE": {
+    "ref": "rumble",
+    "offset": 0
+  },
+  "SEND_SGB_PACKET": {
+    "ref": "send_sgb_packet",
     "offset": 0
   },
   "SET_SGB_BORDER": {
