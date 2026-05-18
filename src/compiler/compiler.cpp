@@ -36645,6 +36645,8 @@ private:
 						identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::FOR, id->begin()));
 						identifiers.use(name);
 					}
+				} else {
+					identifiers.use(name);
 				}
 
 				return true;
@@ -36726,6 +36728,8 @@ private:
 						identifiers.add(name, IdentifierTable::Entry(IdentifierTable::Entry::Types::FOR, id->begin()));
 						identifiers.use(name);
 					}
+				} else {
+					identifiers.use(name);
 				}
 
 				return true;
