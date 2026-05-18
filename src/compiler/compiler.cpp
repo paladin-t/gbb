@@ -33104,7 +33104,18 @@ private:
 				State q1 = begin();
 				q1.index = q.index;
 
-				if (!maybe(Token::Types::NUMBER)(q1)) break;
+				Token::Ptr id = nullptr;
+				if (id = must(Token::Types::IDENTIFIER)(q1)) {
+					const std::string name = (std::string)id->data();
+					const Node::MacroConstantTable::Entry* constant = macroConstants.find(name); // FEAT: MACRO.
+					if (constant) {
+						const Token::Ptr &tk = constant->constant;
+						q1.tokens.clear();
+						q1.tokens.push_back(tk);
+					}
+				} else if (!maybe(Token::Types::NUMBER)(q1)) {
+					break;
+				}
 
 				if (!q1.tokens.empty()) {
 					const Token::Ptr tk = q1.tokens.front();
