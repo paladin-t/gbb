@@ -33115,12 +33115,11 @@ private:
 				q1.index = q.index;
 
 				Token::Ptr id = nullptr;
-				if (id = must(Token::Types::IDENTIFIER)(q1)) {
+				if (id = ignore(Token::Types::IDENTIFIER)(q1)) {
 					const std::string name = (std::string)id->data();
 					const Node::MacroConstantTable::Entry* constant = macroConstants.find(name); // FEAT: MACRO.
 					if (constant) {
 						const Token::Ptr &tk = constant->constant;
-						q1.tokens.clear();
 						q1.tokens.push_back(tk);
 					}
 				} else if (!maybe(Token::Types::NUMBER)(q1)) {
@@ -33180,7 +33179,7 @@ private:
 					} else {
 						if (!maybe(Token::Types::NUMBER)(q1)) break;
 					}
-				} else if (must(Token::Types::KEYWORD, "asc")(q1)) {
+				} else if (ignore(Token::Types::KEYWORD, "asc")(q1)) {
 					auto toNum = [] (Token::Ptr id) -> Token::Ptr {
 						std::string txt = (std::string)id->data();
 						txt = Text::replace(txt, "\\r", "\r");
@@ -33213,21 +33212,20 @@ private:
 					};
 
 					Token::Ptr tk = nullptr;
-					if (must(Token::Types::OPERATOR, "(")(q1)) {
+					if (ignore(Token::Types::OPERATOR, "(")(q1)) {
 						if (!forward(Token::Types::OPERATOR, ")")(q1.index)) {
 							Token::Ptr id = nullptr;
-							if (!(id = must(Token::Types::STRING)(q1))) return false;
+							if (!(id = ignore(Token::Types::STRING)(q1))) return false;
 							tk = toNum(id);
 							if (!tk) return false;
 						}
-						if (!must(Token::Types::OPERATOR, ")")(q1)) return false;
+						if (!ignore(Token::Types::OPERATOR, ")")(q1)) return false;
 					} else {
 						Token::Ptr id = nullptr;
-						if (!(id = must(Token::Types::STRING)(q1))) return false;
+						if (!(id = ignore(Token::Types::STRING)(q1))) return false;
 						tk = toNum(id);
 						if (!tk) return false;
 					}
-					q1.tokens.clear();
 					q1.tokens.push_back(tk);
 				} else {
 					break;
