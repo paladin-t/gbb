@@ -658,6 +658,13 @@ namespace GBBASIC {
 #	define GUI_WIDGET_TYPE_MENU                                     3
 #endif /* GUI_WIDGET_TYPES */
 
+#ifndef GUI_WAIT_FLAGS
+#	define GUI_WAIT_FLAGS
+#	define GUI_WAIT_FOR_NONE                                        0xff
+#	define GUI_WAIT_FOR_NEXT_PAGE                                   0xfe
+#	define GUI_WAIT_FOR_USER_INPUT                                  0xfd
+#endif /* GUI_WAIT_FLAGS */
+
 #ifndef GUI_CONVENTIONS
 #	define GUI_CONVENTIONS
 #	define GUI_BLIT_INTERVAL                                        10
@@ -31176,6 +31183,9 @@ public:
 			ADD_BUILTIN("PROJECTILE_NONE_FLAG",                      BuiltinTable::Entry(PROJECTILE_FLAG_NONE)                        );
 			ADD_BUILTIN("PROJECTILE_ANIMATION_NO_LOOP_FLAG",         BuiltinTable::Entry(PROJECTILE_FLAG_ANIMATION_NO_LOOP)           );
 			ADD_BUILTIN("PROJECTILE_STRONG_FLAG",                    BuiltinTable::Entry(PROJECTILE_FLAG_STRONG)                      );
+
+			// GUI.
+			ADD_BUILTIN("GUI_WAIT_FOR_NONE",                         BuiltinTable::Entry(GUI_WAIT_FOR_NONE)                           ); // For GUI widgets...
 
 			// Effects.
 			ADD_BUILTIN("PULSE_EFFECT",                              BuiltinTable::Entry(EFFECTS_PULSE)                               ); // For graphics effects...

@@ -81,7 +81,8 @@ INLINE void gui_label_terminate(SCRIPT_CTX * THIS, BOOLEAN new_line, UINT8 size)
 
     THIS->PC = (const UINT8 *)gui_text_ptr;
     gui_text_ptr = NULL;
-    gui_ticks = gui_interval;
+    if (gui_ticks != GUI_WAIT_FOR_NONE)
+        gui_ticks = gui_interval;
 }
 
 void vm_label(SCRIPT_CTX * THIS, BOOLEAN new_line, UINT8 nargs, UINT8 font_bank, UINT8 * font_ptr) OLDCALL BANKED {
@@ -94,8 +95,8 @@ void vm_label(SCRIPT_CTX * THIS, BOOLEAN new_line, UINT8 nargs, UINT8 font_bank,
         gui_text_ptr = (const glyph_t *)(THIS->PC + MUL2(nargs));
 
     // Wait for input to turn to next page.
-    if (gui_ticks == GUI_WAIT_FOR_NEXT_PAGE) {
-        if (gui_label_btn_down()) {
+    if (gui_ticks == GUI_WAIT_FOR_USER_INPUT) {
+        if (gui_label_btn_down()) { // User turned the page.
             // Next page.
             gui_cursor_x = GUI_MARGIN_X(gui_margin) + GUI_LABEL_X_OFFSET;
             gui_cursor_y = GUI_MARGIN_Y(gui_margin);
@@ -115,9 +116,16 @@ _loop:
         get_chunk((UINT8 *)&opt, font_bank, font_ptr, sizeof(glyph_option_t)); // Option.
         const UINT8 size = get_uint8(font_bank, font_ptr + sizeof(glyph_option_t)); // Safe size.
         if (gui_cursor_y + GUI_MARGIN_Y(gui_margin) + size > MUL8(gui_height)) { // Page is full.
-            gui_ticks = GUI_WAIT_FOR_NEXT_PAGE; // Wait for input.
+            if (gui_ticks == GUI_WAIT_FOR_NONE) {
+                // Next page.
+                gui_cursor_x = GUI_MARGIN_X(gui_margin) + GUI_LABEL_X_OFFSET;
+                gui_cursor_y = GUI_MARGIN_Y(gui_margin);
+                gui_clear(gui_base_tile, (UINT16)gui_width * (UINT16)gui_height);
+            } else {
+                gui_ticks = GUI_WAIT_FOR_USER_INPUT; // Wait for input.
 
-            goto wait;
+                goto wait;
+            }
         }
 
         glyph_t glyph;
@@ -181,7 +189,7 @@ _loop:
         } else if (GUI_GLYPH_IS_ESCAPE_NEW_PAGE(glyph)) {
             // New page; wait for input, then clear the current page, move the carriage to the beginning of the new page.
             ++gui_text_ptr;
-            gui_ticks = GUI_WAIT_FOR_NEXT_PAGE; // Wait for input.
+            gui_ticks = GUI_WAIT_FOR_USER_INPUT; // Wait for input.
             is_head = TRUE;
 
             goto wait;
@@ -217,7 +225,7 @@ _loop:
             return;
         }
 
-        if (gui_ticks != GUI_WAIT_FOR_NONE)
+        if (gui_ticks != GUI_WAIT_FOR_NONE && gui_ticks != GUI_WAIT_FOR_NEXT_PAGE)
             gui_ticks = 0; // Reset the ticks to wait for timeout.
     }
 
@@ -226,10 +234,12 @@ _loop:
 
     // Update the ticks.
     if (gui_ticks < gui_interval) {
-        if (gui_label_btn_down())
-            gui_ticks = GUI_WAIT_FOR_NONE; // Wait for nothing, until termination of the current sequence.
-        else
+        if (gui_label_btn_down()) { // User fast-forwarded the text.
+            // Until termination of the current sequence.
+            gui_ticks = GUI_WAIT_FOR_NEXT_PAGE; // Wait for nothing except new-page.
+        } else {
             ++gui_ticks;
+        }
     }
 
     // Wait until timeout for next glyph.

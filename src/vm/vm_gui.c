@@ -17,7 +17,8 @@
 
 BANKREF(VM_GUI)
 
-#define GUI_BLIT_INTERVAL   10
+#define GUI_BLIT_INTERVAL       10
+#define GUI_BLIT_MAX_INTERVAL   0x1F
 
 static const UINT8 GUI_BLIT_GLYPH_PICK_MASKS[8] = {
     0b10000000,
@@ -278,7 +279,7 @@ INLINE void gui_def_label(SCRIPT_CTX * THIS) {
     gui_cursor_x             = margin_x;
     gui_cursor_y             = margin_y;
     gui_text_ptr             = NULL;
-    gui_ticks                = gui_interval;
+    gui_ticks                = gui_interval; if (gui_interval > GUI_BLIT_MAX_INTERVAL) gui_interval = 0;
     gui_button_previous      = 0x00;
     gui_label_touch_states   = 0;
     gui_label_start_position = GUI_LABEL_POSITION(x, y);

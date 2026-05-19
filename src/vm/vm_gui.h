@@ -33,6 +33,7 @@ BANKREF_EXTERN(VM_GUI_MENU)
 
 #define GUI_WAIT_FOR_NONE                                     0xFF
 #define GUI_WAIT_FOR_NEXT_PAGE                                0xFE
+#define GUI_WAIT_FOR_USER_INPUT                               0xFD
 
 #define GUI_CATEGORY(Y, L)                                    (((Y) << 4) | ((L) & 0x0F))
 #define GUI_CATEGORY_TYPE(C)                                  ((C) >> 4)
