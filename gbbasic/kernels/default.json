@@ -495,6 +495,10 @@
     {
       "syntax": "HAS_POINTNCLICK",
       "value": "1"
+    },
+    {
+      "syntax": "USE_KEYBOARD_FUNCTIONS",
+      "value": "1"
     }
   ],
   "natives": [
@@ -513,6 +517,14 @@
     {
       "type": "generic",
       "syntax": "wait_until_confirm"
+    },
+    {
+      "type": "generic",
+      "syntax": "wait_for_key_code"
+    },
+    {
+      "type": "generic",
+      "syntax": "wait_for_key_ascii"
     },
     {
       "type": "generic",

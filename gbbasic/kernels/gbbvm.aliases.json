@@ -149,6 +149,14 @@
     "ref": "wait_until_confirm",
     "offset": 0
   },
+  "WAIT_FOR_KEY_CODE": {
+    "ref": "wait_for_key_code",
+    "offset": 0
+  },
+  "WAIT_FOR_KEY_ASCII": {
+    "ref": "wait_for_key_ascii",
+    "offset": 0
+  },
   "RUMBLE": {
     "ref": "rumble",
     "offset": 0

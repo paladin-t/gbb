@@ -86,6 +86,86 @@ BOOLEAN wait_until_confirm(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
     return FALSE;
 }
 
+#if USE_KEYBOARD_FUNCTIONS
+// Waits for keyboard input, returns key code.
+BOOLEAN wait_for_key_code(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)start; (void)stack_frame;
+
+    SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
+
+    if(!(device_type & DEVICE_TYPE_GBB)) { // Ignore key handling if extension features are not supported.
+        *(THIS_->stack_ptr++) = 0;
+
+        return TRUE;
+    }
+
+    const UINT8 code = *(UINT8 *)KEY_CODE_REG; // Get the key code.
+    if (code) { // If a key code is available.
+        const UINT8 mod = *(UINT8 *)KEY_MODIFIER_FLAGS_REG; // Get the key modifiers.
+        *(UINT8 *)KEY_CODE_REG = 0; // Clear the key code, and acknowledge to accept more key codes.
+
+        *(THIS_->stack_ptr++) = ((mod << 8) | code); // Return the result.
+
+        return TRUE;
+    }
+
+    THIS_->waitable = TRUE; // No input, wait.
+
+    return FALSE;
+}
+
+// Waits for keyboard input, returns key ASCII.
+BOOLEAN wait_for_key_ascii(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)start; (void)stack_frame;
+
+    SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
+
+    if(!(device_type & DEVICE_TYPE_GBB)) { // Ignore key handling if extension features are not supported.
+        *(THIS_->stack_ptr++) = 0;
+
+        return TRUE;
+    }
+
+    const UINT8 code = *(UINT8 *)KEY_CODE_REG; // Get the key code.
+    if (code) { // If a key code is available.
+        const UINT8 shift = *(UINT8 *)KEY_MODIFIER_FLAGS_REG & 0x02; // Get whether the Shift key is being pressed.
+        *(UINT8 *)KEY_CODE_REG = 0; // Clear the key code, and acknowledge to accept more key codes.
+
+        UINT8 ascii;
+        if (code >= 4 && code <= 29) {
+            ascii = code - 4;
+            ascii += shift ? 'A' : 'a';
+        } else if (code >= 30 && code <= 39) {
+            const UINT8 NUM[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
+            const UINT8 NUMS[] = { '!', '@', '#', '$', '%', '^', '&', '*', '(', ')' };
+            ascii = code - 30;
+            ascii = shift ? NUMS[ascii] : NUM[ascii];
+        } else if (code >= 40 && code <= 56) {
+            const UINT8 SYM[] = { 13, 27, 8, ' ', ' ', '-', '=', '[', ']', '\\', ' ', ';', '\'', '`', ',', '.', '/' };
+            const UINT8 SYMS[] = { 13, 27, 8, ' ', ' ', '_', '+', '{', '}', '|', ' ', ':', '"', '~', '<', '>', '?' };
+            ascii = code - 40;
+            ascii = shift ? SYMS[ascii] : SYM[ascii];
+        } else if (code >= 79 && code <= 82) {
+            const UINT8 DIR[] = { 0x04, 0x13, 0x18, 0x05 };
+            ascii = code - 79;
+            ascii = DIR[ascii];
+        } else if (code >= 224 && code <= 231) {
+            ascii = code;
+        } else {
+            ascii = 0;
+        }
+
+        *(THIS_->stack_ptr++) = ascii; // Return the result.
+
+        return TRUE;
+    }
+
+    THIS_->waitable = TRUE; // No input, wait.
+
+    return FALSE;
+}
+#endif /* USE_KEYBOARD_FUNCTIONS */
+
 // Rumbles the cartridge.
 BOOLEAN rumble(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
@@ -149,7 +229,7 @@ BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCAL
 #if USE_SGB_MOUSE
 // Gets whether an SGB mouse has been installed.
 BOOLEAN is_sgb_mouse_installed(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
-    (void)THIS;
+    (void)start; (void) stack_frame;
 
     SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
 
