@@ -5112,13 +5112,22 @@ public:
 			target_.page = -1;
 
 		const RomLocation* romLocation = ctx.find(target_);
-		if (romLocation) { // In the same page.
+		if (romLocation) { // Found in the page.
 			*out = romLocation;
 
 			return;
 		}
 
 		if (target_.label.empty()) { // By line number.
+			if (target_.optionalPage) {
+				romLocation = ctx.find(target);
+				if (romLocation) { // In the same page.
+					*out = romLocation;
+
+					return;
+				}
+			}
+
 			THROW_INVALID_PROGRAM_POINT(onError);
 		}
 
