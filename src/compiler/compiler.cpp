@@ -33169,7 +33169,7 @@ private:
 				q1.index = q.index;
 
 				Token::Ptr id = nullptr;
-				if (id = ignore(Token::Types::IDENTIFIER)(q1)) {
+				if ((id = ignore(Token::Types::IDENTIFIER)(q1))) {
 					const std::string name = (std::string)id->data();
 					const Node::MacroConstantTable::Entry* constant = macroConstants.find(name); // FEAT: MACRO.
 					if (constant) {
