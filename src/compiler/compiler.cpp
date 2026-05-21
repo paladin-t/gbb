@@ -10312,6 +10312,10 @@ public:
 		default: {
 				const RomLocation* romLocation = nullptr;
 				findDestination(ctx, _scheduled.target, &romLocation, onError);
+				if (!romLocation)
+					romLocation = ctx.find(_scheduled.target);
+				if (!romLocation)
+					break;
 
 				const int bank = romLocation ? romLocation->bank : 0;
 
@@ -11129,6 +11133,10 @@ public:
 		default: {
 				const RomLocation* romLocation = nullptr;
 				findDestination(ctx, _scheduled.target, &romLocation, onError);
+				if (!romLocation)
+					romLocation = ctx.find(_scheduled.target);
+				if (!romLocation)
+					break;
 
 				const int address = romLocation ? ctx.startAddress + romLocation->address : -1;
 
@@ -14052,6 +14060,8 @@ public:
 		const RomLocation* romLocation = nullptr;
 		findDestination(ctx, _scheduled.target, &romLocation, onError);
 		if (!romLocation)
+			romLocation = ctx.find(_scheduled.target);
+		if (!romLocation)
 			return;
 
 		const int address = ctx.startAddress + romLocation->address;
@@ -14168,6 +14178,8 @@ public:
 
 		const RomLocation* romLocation = nullptr;
 		findDestination(ctx, _scheduled.target, &romLocation, onError);
+		if (!romLocation)
+			romLocation = ctx.find(_scheduled.target);
 		if (!romLocation)
 			return;
 
@@ -14922,6 +14934,8 @@ public:
 
 		const RomLocation* romLocation = nullptr;
 		findDestination(ctx, _scheduled.target, &romLocation, onError);
+		if (!romLocation)
+			romLocation = ctx.find(_scheduled.target);
 		if (!romLocation)
 			return;
 
