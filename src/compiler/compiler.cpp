@@ -301,6 +301,12 @@ namespace GBBASIC {
 #ifndef CLEAR_TEXT_FUNCTION_NAME
 #	define CLEAR_TEXT_FUNCTION_NAME "clear_text" // DOC: ROM SCHEMA.
 #endif /* CLEAR_TEXT_FUNCTION_NAME */
+#ifndef WAIT_FOR_KEY_CODE_FUNCTION_NAME
+#	define WAIT_FOR_KEY_CODE_FUNCTION_NAME "wait_for_key_code" // DOC: ROM SCHEMA.
+#endif /* WAIT_FOR_KEY_CODE_FUNCTION_NAME */
+#ifndef WAIT_FOR_KEY_ASCII_FUNCTION_NAME
+#	define WAIT_FOR_KEY_ASCII_FUNCTION_NAME "wait_for_key_ascii" // DOC: ROM SCHEMA.
+#endif /* WAIT_FOR_KEY_ASCII_FUNCTION_NAME */
 #ifndef RUMBLE_FUNCTION_NAME
 #	define RUMBLE_FUNCTION_NAME "rumble" // DOC: ROM SCHEMA.
 #endif /* RUMBLE_FUNCTION_NAME */
@@ -310,6 +316,9 @@ namespace GBBASIC {
 #ifndef SET_SGB_BORDER_FUNCTION_NAME
 #	define SET_SGB_BORDER_FUNCTION_NAME "set_sgb_border" // DOC: ROM SCHEMA.
 #endif /* SET_SGB_BORDER_FUNCTION_NAME */
+#ifndef IS_SGB_MOUSE_INSTALLED_FUNCTION_NAME
+#	define IS_SGB_MOUSE_INSTALLED_FUNCTION_NAME "is_sgb_mouse_installed" // DOC: ROM SCHEMA.
+#endif /* IS_SGB_MOUSE_INSTALLED_FUNCTION_NAME */
 
 // Compiler convention of palette names.
 #ifndef EDITOR_PALETTE_NAMES
@@ -14367,7 +14376,7 @@ public:
 				return;
 			if (generateString(bytes, context, INSTRUCTIONS, bank, address, true, nullptr, onError))
 				return;
-			if (generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, nullptr, onError))
+			if (generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, false, nullptr, onError))
 				return;
 		};
 
@@ -14389,7 +14398,7 @@ private:
 		Bytes::Ptr &bytes, Context::Stack &context,
 		const Asm::Instructions &INSTRUCTIONS,
 		int bank, int address,
-		bool callerCleansUpArgs,
+		bool callerCleansUpArgs, bool withReturnValue,
 		bool* ret /* nullable */,
 		Error::Handler onError
 	) {
@@ -14403,10 +14412,10 @@ private:
 
 			if (_children.empty()) {
 				// Set the stack footprint guard.
-				VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
+				COUNTER_GUARD(ctx, stk);
 
 				// Emit a `VM_INVOKE_FN` instruction.
-				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); INC_COUNTER(stk, withReturnValue ? 2 : 0);
 				args = fill(args, (Int16)0);
 				args = fill(args, (UInt8)0);
 				args = fill(args, (UInt16)address);
@@ -14416,14 +14425,13 @@ private:
 				CHECK_COUNTER(ctx, onError);
 			} else if (_children.size() <= 255) {
 				// Set the stack footprint guard.
-				VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
 				COUNTER_GUARD(ctx, stk);
 
 				// Emit the evaluations.
 				writeChildren(bytes, context, Range((int)_children.size() - 1, 0), stk, onError);
 
 				// Emit a `VM_INVOKE_FN` instruction.
-				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size());
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]); DEC_COUNTER(stk, 2 * (int)_children.size()); INC_COUNTER(stk, withReturnValue ? 2 : 0);
 				args = fill(args, (Int16)(-(int)_children.size())); // Offset from `ARG0`.
 				args = fill(args, (UInt8)(callerCleansUpArgs ? _children.size() : 0));
 				args = fill(args, (UInt16)address);
@@ -14588,6 +14596,20 @@ private:
 				}
 
 				ok = true;
+			} else if (caseSensitiveFunctionName == WAIT_FOR_KEY_CODE_FUNCTION_NAME) { // `wait_for_key_code`.
+				if (withDeclaring) {
+					generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, true, &ok, onError);
+				} else {
+					// No effect.
+					ok = true;
+				}
+			} else if (caseSensitiveFunctionName == WAIT_FOR_KEY_ASCII_FUNCTION_NAME) { // `wait_for_key_ascii`.
+				if (withDeclaring) {
+					generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, true, &ok, onError);
+				} else {
+					// No effect.
+					ok = true;
+				}
 			} else if (caseSensitiveFunctionName == RUMBLE_FUNCTION_NAME) { // `rumble`.
 				// Using "Rumble" features.
 				if (!ctx.cartridgeHasRumble) { // No rumble.
@@ -14629,12 +14651,19 @@ private:
 				// Using "Super" features.
 				usingSuperFeature(ctx, SEND_SGB_PACKET_FUNCTION_NAME);
 
-				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, &ok, onError);
+				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, false, &ok, onError);
 			} else if (caseSensitiveFunctionName == SET_SGB_BORDER_FUNCTION_NAME) { // `set_sgb_border`.
 				// Using "Super" features.
 				usingSuperFeature(ctx, SET_SGB_BORDER_FUNCTION_NAME);
 
-				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, &ok, onError);
+				generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, false, &ok, onError);
+			} else if (caseSensitiveFunctionName == IS_SGB_MOUSE_INSTALLED_FUNCTION_NAME) { // `is_sgb_mouse_installed`.
+				if (withDeclaring) {
+					generateGeneric(bytes, context, INSTRUCTIONS, bank, address, true, true, &ok, onError);
+				} else {
+					// No effect.
+					ok = true;
+				}
 			} else {
 				spaclialized = false;
 			}
@@ -37622,6 +37651,8 @@ private:
 					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!forward(Token::Types::COMMENT)(q.index) && !forward(Token::Types::END_OF_LINE)(q.index))
+					return false;
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				if (children.size() < 1) THROW_PARSER_ERROR(throwTooFewArguments(r));
@@ -37820,9 +37851,9 @@ private:
 					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				const int r = q.index;
+				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!forward(Token::Types::COMMENT)(q.index) && !forward(Token::Types::END_OF_LINE)(q.index))
 					return false;
-				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				if (children.size() < 1) THROW_PARSER_ERROR(throwTooFewArguments(r));
@@ -37882,6 +37913,8 @@ private:
 					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!forward(Token::Types::COMMENT)(q.index) && !forward(Token::Types::END_OF_LINE)(q.index))
+					return false;
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				if (children.size() < 1) THROW_PARSER_ERROR(throwTooFewArguments(r));
@@ -37943,6 +37976,8 @@ private:
 				}
 				const int r = q.index;
 				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!forward(Token::Types::COMMENT)(q.index) && !forward(Token::Types::END_OF_LINE)(q.index))
+					return false;
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				if (children.size() < 1) THROW_PARSER_ERROR(throwTooFewArguments(r));
@@ -38002,6 +38037,8 @@ private:
 					THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!forward(Token::Types::COMMENT)(q.index) && !forward(Token::Types::END_OF_LINE)(q.index))
+					return false;
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				if (children.size() < 1) THROW_PARSER_ERROR(throwTooFewArguments(r));
@@ -38066,6 +38103,8 @@ private:
 				}
 				endIdx = q.index;
 				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!forward(Token::Types::COMMENT)(q.index) && !forward(Token::Types::END_OF_LINE)(q.index))
+					return false;
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				if (children.size() < 2) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
