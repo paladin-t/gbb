@@ -417,6 +417,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_NoValidProject)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_NoWave)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_NothingAvailable)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_NotReferencedByMapNoIssuesFound)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ObjectList)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Offset)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_OnHits)

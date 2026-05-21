@@ -2840,6 +2840,20 @@ private:
 			const int mw = dx.quot + (dx.rem ? 1 : 0);
 			const int mh = dy.quot + (dy.rem ? 1 : 0);
 
+			// Get reference count by maps.
+			int refsByMap = 0;
+			const int m = _project->mapPageCount();
+			for (int i = 0; i < m; ++i) {
+				const MapAssets::Entry* entry = _project->getMap(i);
+				if (entry->ref != _index)
+					continue;
+				const Map::Ptr &map = entry->data;
+				if (!map)
+					continue;
+
+				++refsByMap;
+			}
+
 			// Slice into tiles.
 			TileRef::Array tileRefs;
 			for (int j = 0; j < mh; j += 2) {
@@ -2867,52 +2881,56 @@ private:
 
 			// Analyze for duplicate.
 			DuplicateTiles duplicateTiles;
-			for (int i = 0; i < (int)tileRefs.size(); ++i) {
-				const TileRef &tileRefL = tileRefs[i];
-				for (int j = i + 1; j < (int)tileRefs.size(); ++j) {
-					const TileRef &tileRefR = tileRefs[j];
-					if (tileRefL.hash != tileRefR.hash)
-						continue;
-					if (tileRefL.slice->compare(tileRefR.slice.get()) != 0)
-						continue;
+			if (refsByMap > 0) {
+				for (int i = 0; i < (int)tileRefs.size(); ++i) {
+					const TileRef &tileRefL = tileRefs[i];
+					for (int j = i + 1; j < (int)tileRefs.size(); ++j) {
+						const TileRef &tileRefR = tileRefs[j];
+						if (tileRefL.hash != tileRefR.hash)
+							continue;
+						if (tileRefL.slice->compare(tileRefR.slice.get()) != 0)
+							continue;
 
-					duplicateTiles[Math::Vec2i(tileRefR.x, tileRefR.y)] = Math::Vec2i(tileRefL.x, tileRefL.y);
+						duplicateTiles[Math::Vec2i(tileRefR.x, tileRefR.y)] = Math::Vec2i(tileRefL.x, tileRefL.y);
+					}
 				}
 			}
 
 			// Analyze for unused.
 			UnusedTiles unusedTiles;
-			for (int j = 0; j < mh; j += 2) {
-				for (int i = 0; i < mw; ++i) {
-					const int x = i;
-					for (int h = 0; h < 2; ++h) { // Prefer 8x16 if possible.
-						const int y = j + h;
-						if (y >= mh)
-							continue;
+			if (refsByMap > 0) {
+				for (int j = 0; j < mh; j += 2) {
+					for (int i = 0; i < mw; ++i) {
+						const int x = i;
+						for (int h = 0; h < 2; ++h) { // Prefer 8x16 if possible.
+							const int y = j + h;
+							if (y >= mh)
+								continue;
 
-						const int cel = x + y * mw;
-						unusedTiles[cel] = Math::Vec2i(x, y);
+							const int cel = x + y * mw;
+							unusedTiles[cel] = Math::Vec2i(x, y);
+						}
 					}
 				}
-			}
 
-			const int n = _project->mapPageCount();
-			for (int i = 0; i < n; ++i) {
-				const MapAssets::Entry* entry = _project->getMap(i);
-				if (entry->ref != _index)
-					continue;
-				const Map::Ptr &map = entry->data;
-				if (!map)
-					continue;
+				const int n = _project->mapPageCount();
+				for (int i = 0; i < n; ++i) {
+					const MapAssets::Entry* entry = _project->getMap(i);
+					if (entry->ref != _index)
+						continue;
+					const Map::Ptr &map = entry->data;
+					if (!map)
+						continue;
 
-				for (int y = 0; y < map->height(); ++y) {
-					for (int x = 0; x < map->width(); ++x) {
-						const int cel = map->get(x, y);
-						UnusedTiles::const_iterator it = unusedTiles.find(cel);
-						if (it == unusedTiles.end())
-							continue;
+					for (int y = 0; y < map->height(); ++y) {
+						for (int x = 0; x < map->width(); ++x) {
+							const int cel = map->get(x, y);
+							UnusedTiles::const_iterator it = unusedTiles.find(cel);
+							if (it == unusedTiles.end())
+								continue;
 
-						unusedTiles.erase(it);
+							unusedTiles.erase(it);
+						}
 					}
 				}
 			}
@@ -2986,12 +3004,21 @@ private:
 			}
 
 			// Prompt no issue found.
-			ws->delay(
-				[ws] (void) -> void {
-					ws->messagePopupBox(ws->theme()->dialogPrompt_NoIssuesFound(), nullptr, nullptr, nullptr);
-				},
-				"ANALYZING TILES"
-			);
+			if (refsByMap > 0) {
+				ws->delay(
+					[ws] (void) -> void {
+						ws->messagePopupBox(ws->theme()->dialogPrompt_NoIssuesFound(), nullptr, nullptr, nullptr);
+					},
+					"ANALYZING TILES"
+				);
+			} else {
+				ws->delay(
+					[ws] (void) -> void {
+						ws->messagePopupBox(ws->theme()->dialogPrompt_NotReferencedByMapNoIssuesFound(), nullptr, nullptr, nullptr);
+					},
+					"ANALYZING TILES"
+				);
+			}
 		};
 
 		// Wait and analyze.

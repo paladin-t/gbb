@@ -14412,6 +14412,7 @@ private:
 
 			if (_children.empty()) {
 				// Set the stack footprint guard.
+				VAR_GUARD(ctx.stackFootprint, withReturnValue ? ctx.stackFootprint : Counter::Ptr(new Counter()));
 				COUNTER_GUARD(ctx, stk);
 
 				// Emit a `VM_INVOKE_FN` instruction.
@@ -14425,6 +14426,7 @@ private:
 				CHECK_COUNTER(ctx, onError);
 			} else if (_children.size() <= 255) {
 				// Set the stack footprint guard.
+				VAR_GUARD(ctx.stackFootprint, withReturnValue ? ctx.stackFootprint : Counter::Ptr(new Counter()));
 				COUNTER_GUARD(ctx, stk);
 
 				// Emit the evaluations.

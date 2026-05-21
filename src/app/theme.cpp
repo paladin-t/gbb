@@ -640,6 +640,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_NoValidProject("No valid project.");
 	dialogPrompt_NoWave("No wave");
 	dialogPrompt_NothingAvailable("Nothing available");
+	dialogPrompt_NotReferencedByMapNoIssuesFound("Not referenced by map.\nNo issues found.");
 	dialogPrompt_ObjectList("Object list");
 	dialogPrompt_Offset("Offset");
 	dialogPrompt_OnHits("On hits");
