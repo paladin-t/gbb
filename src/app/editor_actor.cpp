@@ -2014,7 +2014,7 @@ private:
 		return true;
 	}
 
-	void context(Window*, Renderer*, Workspace* ws, bool seq) {
+	void context(Window* wnd, Renderer* rnd, Workspace* ws, bool seq) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
@@ -2064,6 +2064,21 @@ private:
 				}
 				if (ImGui::MenuItem(ws->theme()->menu_SelectAll())) {
 					post(Editable::SELECT_ALL);
+				}
+				ImGui::Separator();
+				if (Platform::isClipboardImageSupported()) {
+					if (ImGui::MenuItem(ws->theme()->menu_CopyAsImage())) {
+						Math::Recti sel;
+						const int size = _selection.area(sel);
+
+						exportToImageObject(wnd, rnd, ws, size, sel);
+					}
+				}
+				if (ImGui::MenuItem(ws->theme()->menu_SaveAsImageFile(), nullptr, nullptr, !!currentFrame())) {
+					Math::Recti sel;
+					const int size = _selection.area(sel);
+
+					exportToImageFile(wnd, rnd, ws, size, sel);
 				}
 				ImGui::Separator();
 				if (ImGui::MenuItem(ws->theme()->menu_SetAsFigure())) {
@@ -3518,6 +3533,81 @@ private:
 			->exec(object(), Variant((void*)entry()));
 
 		_refresh(cmd);
+	}
+
+	bool exportToImageObject(Window*, Renderer*, Workspace* ws, int size, const Math::Recti &sel) const {
+		if (!currentFrame() || !currentFrame()->pixels)
+			return false;
+
+		Image* ptr = nullptr;
+		currentFrame()->pixels->clone(&ptr);
+		Image::Ptr img(ptr);
+		img->realize();
+		if (size) {
+			Image::Ptr slice(Image::create());
+			slice->fromBlank(sel.width(), sel.height(), 0);
+			img->blit(slice.get(), 0, 0, sel.width(), sel.height(), sel.xMin(), sel.yMin());
+			std::swap(img, slice);
+		}
+
+		Platform::setClipboardImage(img.get());
+
+		ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
+
+		return true;
+	}
+	bool exportToImageFile(Window*, Renderer*, Workspace* ws, int size, const Math::Recti &sel) const {
+		if (!currentFrame() || !currentFrame()->pixels)
+			return false;
+
+		pfd::save_file save(
+			ws->theme()->generic_SaveTo(),
+			entry()->name.empty() ? "gbbasic-actor.png" : Text::sanitizeFilename(entry()->name) + ".png",
+			GBBASIC_IMAGE_FILE_FILTER
+		);
+		std::string path = save.result();
+		Path::uniform(path);
+		if (path.empty())
+			return false;
+		const Text::Array exts = { "png", "jpg", "bmp", "tga" };
+		std::string ext;
+		Path::split(path, nullptr, &ext, nullptr);
+		Text::toLowerCase(ext);
+		if (ext.empty() || std::find(exts.begin(), exts.end(), ext) == exts.end())
+			path += ".png";
+		Path::split(path, nullptr, &ext, nullptr);
+		Text::toLowerCase(ext);
+		const char* y = ext.c_str();
+
+		Image* ptr = nullptr;
+		currentFrame()->pixels->clone(&ptr);
+		Image::Ptr tmp(ptr);
+		tmp->realize();
+		if (size) {
+			Image::Ptr slice(Image::create());
+			slice->fromBlank(sel.width(), sel.height(), 0);
+			tmp->blit(slice.get(), 0, 0, sel.width(), sel.height(), sel.xMin(), sel.yMin());
+			std::swap(tmp, slice);
+		}
+		Bytes::Ptr bytes(Bytes::create());
+		tmp->toBytes(bytes.get(), y);
+
+		File::Ptr file(File::create());
+		if (!file->open(path.c_str(), Stream::WRITE))
+			return false;
+		file->writeBytes(bytes.get());
+		file->close();
+
+#if !defined GBBASIC_OS_HTML
+		FileInfo::Ptr fileInfo = FileInfo::make(path.c_str());
+		std::string path_ = fileInfo->parentPath();
+		path_ = Unicode::toOs(path_);
+		Platform::browse(path_.c_str());
+#endif /* Platform macro. */
+
+		ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
+
+		return true;
 	}
 
 	void refreshAllEntriesSlices(Workspace* ws, bool fast) {

@@ -2608,7 +2608,7 @@ private:
 		return true;
 	}
 
-	void context(Window*, Renderer* rnd, Workspace* ws) {
+	void context(Window* wnd, Renderer* rnd, Workspace* ws) {
 		switch (_tools.layer) {
 		case ASSETS_MAP_GRAPHICS_LAYER: {
 				ImGuiStyle &style = ImGui::GetStyle();
@@ -2641,9 +2641,17 @@ private:
 					if (ImGui::MenuItem(ws->theme()->menu_Delete())) {
 						del(false);
 					}
-					ImGui::Separator();
 					if (ImGui::MenuItem(ws->theme()->menu_SelectAll())) {
 						post(Editable::SELECT_ALL);
+					}
+					ImGui::Separator();
+					if (Platform::isClipboardImageSupported()) {
+						if (ImGui::MenuItem(ws->theme()->menu_CopyAsImage())) {
+							exportToImageObject(wnd, rnd, ws);
+						}
+					}
+					if (ImGui::MenuItem(ws->theme()->menu_SaveAsImageFile(), nullptr, nullptr)) {
+						exportToImageFile(wnd, rnd, ws);
 					}
 
 					ImGui::EndPopup();
@@ -3391,9 +3399,9 @@ private:
 
 					ImGui::SetTooltip(ws->theme()->tooltip_ViaClipboard());
 				}
-				if (ImGui::MenuItem(ws->theme()->menu_ImageFile())) {
-					exportToImageFile(wnd, rnd, ws);
-				}
+			}
+			if (ImGui::MenuItem(ws->theme()->menu_ImageFile())) {
+				exportToImageFile(wnd, rnd, ws);
 			}
 
 			ImGui::EndPopup();

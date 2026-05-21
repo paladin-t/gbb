@@ -353,6 +353,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Compile("Compile");
 	menu_CompileAndRun("Compile & Run");
 	menu_Copy("Copy");
+	menu_CopyAsImage("Copy as Image");
 	menu_CopyJumpCode("Copy Jump Code");
 	menu_Cut("Cut");
 	menu_DataSequence("Data Sequence");
@@ -364,7 +365,6 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Duplicate("Duplicate");
 	menu_EjectSourceCodeVm("Eject Source Code (VM)...");
 	menu_Examples("Examples");
-	menu_ExportSelection("Export Selection");
 	menu_Find("Find");
 	menu_FindInProject("Find in Project...");
 	menu_Font("Font");
@@ -423,6 +423,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Restart("Restart");
 	menu_Run("Run");
 	menu_Save("Save");
+	menu_SaveAsImageFile("Save as Image File...");
 	menu_Scene("Scene");
 	menu_Screenshot("Screenshot");
 	menu_SelectAll("Select All");

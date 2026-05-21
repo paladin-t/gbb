@@ -1532,7 +1532,7 @@ private:
 		return true;
 	}
 
-	void context(Window*, Renderer*, Workspace* ws) {
+	void context(Window* wnd, Renderer* rnd, Workspace* ws) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
@@ -1566,46 +1566,13 @@ private:
 				post(Editable::SELECT_ALL);
 			}
 			ImGui::Separator();
-			if (ImGui::MenuItem(ws->theme()->menu_ExportSelection(), nullptr, nullptr, !!size)) {
-				do {
-					pfd::save_file save(
-						ws->theme()->generic_SaveTo(),
-						entry()->name.empty() ? "gbbasic-tiles.png" : Text::sanitizeFilename(entry()->name) + ".png",
-						GBBASIC_IMAGE_FILE_FILTER
-					);
-					std::string path = save.result();
-					Path::uniform(path);
-					if (path.empty())
-						break;
-					const Text::Array exts = { "png", "jpg", "bmp", "tga" };
-					std::string ext;
-					Path::split(path, nullptr, &ext, nullptr);
-					Text::toLowerCase(ext);
-					if (ext.empty() || std::find(exts.begin(), exts.end(), ext) == exts.end())
-						path += ".png";
-					Path::split(path, nullptr, &ext, nullptr);
-					Text::toLowerCase(ext);
-					const char* y = ext.c_str();
-
-					Bytes::Ptr bytes(Bytes::create());
-					if (!entry()->serializeImage(bytes.get(), y, &sel))
-						break;
-
-					File::Ptr file(File::create());
-					if (!file->open(path.c_str(), Stream::WRITE))
-						break;
-					file->writeBytes(bytes.get());
-					file->close();
-
-#if !defined GBBASIC_OS_HTML
-					FileInfo::Ptr fileInfo = FileInfo::make(path.c_str());
-					std::string path_ = fileInfo->parentPath();
-					path_ = Unicode::toOs(path_);
-					Platform::browse(path_.c_str());
-#endif /* Platform macro. */
-
-					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
-				} while (false);
+			if (Platform::isClipboardImageSupported()) {
+				if (ImGui::MenuItem(ws->theme()->menu_CopyAsImage())) {
+					exportToImageObject(wnd, rnd, ws, size, sel);
+				}
+			}
+			if (ImGui::MenuItem(ws->theme()->menu_SaveAsImageFile(), nullptr, nullptr)) {
+				exportToImageFile(wnd, rnd, ws, size, sel);
 			}
 
 			ImGui::EndPopup();
@@ -2209,15 +2176,7 @@ private:
 			}
 			if (Platform::isClipboardImageSupported()) {
 				if (ImGui::MenuItem(ws->theme()->menu_Image())) {
-					do {
-						Image::Ptr img(Image::create());
-						if (!entry()->serializeImage(img.get(), nullptr))
-							break;
-
-						Platform::setClipboardImage(img.get());
-
-						ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
-					} while (false);
+					exportToImageObject(wnd, rnd, ws, 0, Math::Recti());
 				}
 				if (ImGui::IsItemHovered()) {
 					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -2226,45 +2185,7 @@ private:
 				}
 			}
 			if (ImGui::MenuItem(ws->theme()->menu_ImageFile())) {
-				do {
-					pfd::save_file save(
-						ws->theme()->generic_SaveTo(),
-						entry()->name.empty() ? "gbbasic-tiles.png" : Text::sanitizeFilename(entry()->name) + ".png",
-						GBBASIC_IMAGE_FILE_FILTER
-					);
-					std::string path = save.result();
-					Path::uniform(path);
-					if (path.empty())
-						break;
-					const Text::Array exts = { "png", "jpg", "bmp", "tga" };
-					std::string ext;
-					Path::split(path, nullptr, &ext, nullptr);
-					Text::toLowerCase(ext);
-					if (ext.empty() || std::find(exts.begin(), exts.end(), ext) == exts.end())
-						path += ".png";
-					Path::split(path, nullptr, &ext, nullptr);
-					Text::toLowerCase(ext);
-					const char* y = ext.c_str();
-
-					Bytes::Ptr bytes(Bytes::create());
-					if (!entry()->serializeImage(bytes.get(), y, nullptr))
-						break;
-
-					File::Ptr file(File::create());
-					if (!file->open(path.c_str(), Stream::WRITE))
-						break;
-					file->writeBytes(bytes.get());
-					file->close();
-
-#if !defined GBBASIC_OS_HTML
-					FileInfo::Ptr fileInfo = FileInfo::make(path.c_str());
-					std::string path_ = fileInfo->parentPath();
-					path_ = Unicode::toOs(path_);
-					Platform::browse(path_.c_str());
-#endif /* Platform macro. */
-
-					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
-				} while (false);
+				exportToImageFile(wnd, rnd, ws, 0, Math::Recti());
 			}
 
 			ImGui::EndPopup();
@@ -2805,6 +2726,59 @@ private:
 				_binding.skipFrame = true;
 			}
 		}
+
+		return true;
+	}
+
+	bool exportToImageObject(Window*, Renderer*, Workspace* ws, int size, const Math::Recti &sel) const {
+		Image::Ptr img(Image::create());
+		if (!entry()->serializeImage(img.get(), size ? &sel : nullptr))
+			return false;
+
+		Platform::setClipboardImage(img.get());
+
+		ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
+
+		return true;
+	}
+	bool exportToImageFile(Window*, Renderer*, Workspace* ws, int size, const Math::Recti &sel) const {
+		pfd::save_file save(
+			ws->theme()->generic_SaveTo(),
+			entry()->name.empty() ? "gbbasic-tiles.png" : Text::sanitizeFilename(entry()->name) + ".png",
+			GBBASIC_IMAGE_FILE_FILTER
+		);
+		std::string path = save.result();
+		Path::uniform(path);
+		if (path.empty())
+			return false;
+		const Text::Array exts = { "png", "jpg", "bmp", "tga" };
+		std::string ext;
+		Path::split(path, nullptr, &ext, nullptr);
+		Text::toLowerCase(ext);
+		if (ext.empty() || std::find(exts.begin(), exts.end(), ext) == exts.end())
+			path += ".png";
+		Path::split(path, nullptr, &ext, nullptr);
+		Text::toLowerCase(ext);
+		const char* y = ext.c_str();
+
+		Bytes::Ptr bytes(Bytes::create());
+		if (!entry()->serializeImage(bytes.get(), y, size ? &sel : nullptr))
+			return false;
+
+		File::Ptr file(File::create());
+		if (!file->open(path.c_str(), Stream::WRITE))
+			return false;
+		file->writeBytes(bytes.get());
+		file->close();
+
+#if !defined GBBASIC_OS_HTML
+		FileInfo::Ptr fileInfo = FileInfo::make(path.c_str());
+		std::string path_ = fileInfo->parentPath();
+		path_ = Unicode::toOs(path_);
+		Platform::browse(path_.c_str());
+#endif /* Platform macro. */
+
+		ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 
 		return true;
 	}
