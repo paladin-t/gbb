@@ -56,7 +56,7 @@ BOOLEAN wait_for(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANK
     return ((--*((SCRIPT_CTX *)THIS)->stack_ptr) != 0) ? ((SCRIPT_CTX *)THIS)->waitable = TRUE, (BOOLEAN)FALSE : (BOOLEAN)TRUE;
 }
 
-// Waits until the A button has been pressed or anywhere of the screen has been tapped.
+// Waits until the A or Start button has been pressed or anywhere of the screen has been tapped.
 BOOLEAN wait_until_confirm(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)stack_frame;
 
@@ -87,7 +87,7 @@ BOOLEAN wait_until_confirm(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
 }
 
 #if USE_KEYBOARD_FUNCTIONS
-// Waits for keyboard input, returns key code.
+// Waits for keyboard input, returns the key code.
 BOOLEAN wait_for_key_code(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)start; (void)stack_frame;
 
@@ -114,7 +114,7 @@ BOOLEAN wait_for_key_code(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLD
     return FALSE;
 }
 
-// Waits for keyboard input, returns key ASCII.
+// Waits for keyboard input, returns the key ASCII or control code.
 BOOLEAN wait_for_key_ascii(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)start; (void)stack_frame;
 
@@ -190,7 +190,7 @@ BOOLEAN rumble(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED
     return TRUE;
 }
 
-// Sends a packet of bytes to SGB devices.
+// Sends a packet of bytes to SGB device.
 BOOLEAN send_sgb_packet(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start;
 
@@ -203,7 +203,7 @@ BOOLEAN send_sgb_packet(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCA
     return TRUE;
 }
 
-// Sets border frame for SGB devices.
+// Sets border frame for SGB device.
 BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start;
 
