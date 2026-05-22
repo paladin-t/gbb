@@ -291,6 +291,23 @@ private:
 		Colour color[4];
 	};
 
+	struct DataArea {
+		UInt16 address = 0;
+		std::string tips;
+
+		DataArea() {
+		}
+
+		const std::string &refresh(const std::string &fmt, UInt16 addr) {
+			if (address != addr) {
+				address = addr;
+				tips = Text::format(fmt, { Text::toHex(address, 4, '0', true) });
+			}
+
+			return tips;
+		}
+	};
+
 private:
 	bool _opened = false;
 	struct {
@@ -313,6 +330,9 @@ private:
 	ObjBuffer::Array _objs;
 	Palette::Collection _palettes;
 	CgbPalette::Collection _cgbPalettes;
+	DataArea _tileDataArea;
+	DataArea _bgDataArea;
+	DataArea _winDataArea;
 
 	struct {
 		int tile = -1;
@@ -1000,6 +1020,11 @@ private:
 			regMax.x - regMin.x - borderSize * 2,
 			regMax.y - regMin.y - borderSize * 2
 		);
+
+		ImGui::AlignTextToFramePadding();
+		ImGui::Dummy(ImVec2(1, 0));
+		ImGui::SameLine();
+		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger());
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
 		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_Tiles().c_str(), regSize.x, flags))
@@ -1806,6 +1831,18 @@ private:
 		bool winOn = device->getWindowDisplay();
 		bool objOn = device->getObjDisplay();
 
+		const Device::TileSourceTypes tileSrc = device->getTileSourceType();
+		const UInt16 tileBase = tileSrc == Device::TileSourceTypes::FROM_8800_TO_97FF ? 0x8800 : 0x8000;
+		const std::string &tileTxt = _tileDataArea.refresh(theme->windowEmulator_VramDebugger_StatusReadonly_TileArea(), tileBase);
+
+		const Device::MapSourceTypes mapSrc = device->getMapSourceType(Device::LayerTypes::BG);
+		const UInt16 mapBase = mapSrc == Device::MapSourceTypes::FROM_9800_TO_9BFF ? 0x9800 : 0x9c00;
+		const std::string &mapTxt = _bgDataArea.refresh(theme->windowEmulator_VramDebugger_StatusReadonly_BgArea(), mapBase);
+
+		const Device::MapSourceTypes winSrc = device->getMapSourceType(Device::LayerTypes::WINDOW);
+		const UInt16 winBase = winSrc == Device::MapSourceTypes::FROM_9800_TO_9BFF ? 0x9800 : 0x9c00;
+		const std::string &winTxt = _winDataArea.refresh(theme->windowEmulator_VramDebugger_StatusReadonly_WinArea(), winBase);
+
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		const float borderSize = style.ChildBorderSize;
@@ -1830,6 +1867,21 @@ private:
 		if (ImGui::Checkbox(theme->windowEmulator_VramDebugger_StatusReadonly_ObjOn(), &objOn)) {
 			// Do nothing.
 		}
+
+		ImGui::Dummy(ImVec2(1, 0));
+		ImGui::SameLine();
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted(tileTxt);
+
+		ImGui::Dummy(ImVec2(1, 0));
+		ImGui::SameLine();
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted(mapTxt);
+
+		ImGui::Dummy(ImVec2(1, 0));
+		ImGui::SameLine();
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted(winTxt);
 	}
 };
 

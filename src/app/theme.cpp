@@ -911,6 +911,7 @@ bool Theme::open(class Renderer* rnd) {
 
 	windowCode_SearchFor("Search for");
 
+	windowEmulator_VramDebugger("VRAM Debugger");
 	windowEmulator_VramDebugger_BgWinMap("BG/WIN map");
 	windowEmulator_VramDebugger_Layer("Layer");
 	windowEmulator_VramDebugger_Oam("OAM");
@@ -919,6 +920,9 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_VramDebugger_StatusReadonly_BgOn("BG on");
 	windowEmulator_VramDebugger_StatusReadonly_ObjOn("OBJ on");
 	windowEmulator_VramDebugger_StatusReadonly_WinOn("WIN on");
+	windowEmulator_VramDebugger_StatusReadonly_TileArea("Tile area: 0x{0}");
+	windowEmulator_VramDebugger_StatusReadonly_BgArea("  BG area: 0x{0}");
+	windowEmulator_VramDebugger_StatusReadonly_WinArea(" WIN area: 0x{0}");
 	windowEmulator_VramDebugger_Tiles("Tiles");
 
 	windowTiles_Analize("Analyze");

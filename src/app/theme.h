@@ -675,6 +675,7 @@ public:
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowCode_SearchFor)
 
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_BgWinMap)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_Layer)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_Oam)
@@ -683,6 +684,9 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_StatusReadonly_BgOn)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_StatusReadonly_ObjOn)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_StatusReadonly_WinOn)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_StatusReadonly_TileArea)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_StatusReadonly_BgArea)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_StatusReadonly_WinArea)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_Tiles)
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowTiles_Analize)
