@@ -14953,6 +14953,68 @@ public:
 	using Node::dump;
 };
 
+class NodeBeginAsm : public Node {
+private:
+	IToken::Array _asmTokens;
+
+public:
+	NodeBeginAsm() {
+	}
+	virtual ~NodeBeginAsm() override {
+	}
+
+	NODE_TYPE(Types::BEGIN_ASM)
+
+	virtual void options(const IDictionary::Ptr &options) override {
+		const Token::Array tokens = *(const Token::Array*)(void*)options->get("asm");
+
+		_asmTokens = IToken::Array(tokens.begin(), tokens.end());
+	}
+
+	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		const Generator_Void_Bool generator = [&] (bool overflow) -> void {
+			// Prepare.
+			Context &ctx = context.top();
+			State &state = top();
+
+			const Asm::Instructions &INSTRUCTIONS = *ctx.instructions;
+
+			// Determine the location in the ROM.
+			state.inRom.bank = ctx.bank;
+			state.inRom.address = ctx.addressCursor;
+			state.inRom.size = 0;
+
+			// Consume the tokens.
+			if (ctx.expect.lnno) {
+				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				})) { THROW_INVALID_SYNTAX(onError); }
+			}
+
+			// Check the children.
+			if (!_children.empty()) {
+				THROW_INVALID_SYNTAX(onError);
+			}
+
+			// TODO: inline asm.
+			(void)overflow;
+			(void)INSTRUCTIONS;
+		};
+
+		write(bytes, context, generator, false, onError);
+	}
+
+	virtual Abstract abstract(void) const override {
+		return abstract("BEGIN ASM");
+	}
+	using Node::abstract;
+
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "BEGIN ASM");
+	}
+	using Node::dump;
+};
+
 /* ===========================================================================} */
 
 /*
@@ -31121,7 +31183,11 @@ public:
 			ADD_STATEMENT("return",            node<NodeReturn>(),                         Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("end",               node<NodeEnd>(),                            Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("call",              node<NodeCall>(),                           Token::Types::KEYWORD,        false);
+
+			// Inline assembly.
 			ADD_STATEMENT("asm",               node<NodeAsm>(),                            Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("beginasm",          node<NodeBeginAsm>(),                       Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("endasm",            NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 
 			// Thread.
 			ADD_STATEMENT("start",             node<NodeStart>(),                          Token::Types::KEYWORD,        false);
@@ -32845,6 +32911,22 @@ private:
 				macroStrings.pop();
 			};
 		};
+		auto beginAsm = [&] (int idx) -> auto {
+			return [&, idx] (void) -> void {
+				if (idx >= 0 && idx < (int)tokens.size()) {
+					const Token::Ptr &tk = tokens[idx];
+					(void)tk;
+				}
+			};
+		};
+		auto endAsm = [&] (int idx) -> auto {
+			return [&, idx] (void) -> void {
+				if (idx >= 0 && idx < (int)tokens.size()) {
+					const Token::Ptr &tk = tokens[idx];
+					(void)tk;
+				}
+			};
+		};
 		auto headOfCurrentScope = [&] (void) -> TextLocation {
 			if (scopeHeads.empty())
 				return TextLocation::INVALID();
@@ -32861,7 +32943,7 @@ private:
 				structures.pop_back();
 			};
 		};
-		auto isLoopStructure = [&] (const std::string &keyword) -> bool {
+		auto hasLoopStructure = [&] (const std::string &keyword) -> bool {
 			for (Text::Array::reverse_iterator it = structures.rbegin(); it != structures.rend(); ++it) {
 				if (keyword == ANYTHING) {
 					if (*it == "for" || *it == "while" || *it == "repeat")
@@ -32870,6 +32952,14 @@ private:
 					if (*it == keyword)
 						return true;
 				}
+			}
+
+			return false;
+		};
+		auto hasAsmStructure = [&] (void) -> bool {
+			for (Text::Array::reverse_iterator it = structures.rbegin(); it != structures.rend(); ++it) {
+				if (*it == "begin asm")
+					return true;
 			}
 
 			return false;
@@ -33046,6 +33136,9 @@ private:
 		auto throwTooManyArguments = [&] (int index) -> bool {
 			return throwError("Too many arguments", index, false);
 		};
+		auto throwTooManyAsmLevels = [&] (int index) -> bool {
+			return throwError("Too many ASM levels", index, false);
+		};
 		auto throwTooManyDimensions = [&] (int index) -> bool {
 			return throwError("Too many dimensions", index, false);
 		};
@@ -33152,6 +33245,10 @@ private:
 		const Lexical::List BEGINDEF_STOPS = {
 			Lexical(Token::Types::KEYWORD,          "enddef"),
 				Lexical(Token::Types::KEYWORD,      "end", Token::Types::KEYWORD, "def")
+		};
+		const Lexical::List BEGINASM_STOPS = {
+			Lexical(Token::Types::KEYWORD,          "endasm"),
+				Lexical(Token::Types::KEYWORD,      "end", Token::Types::KEYWORD, "asm")
 		};
 
 		// Sub combinators.
@@ -37077,7 +37174,7 @@ private:
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (!isLoopStructure("for")) THROW_PARSER_ERROR(throwLoopExpected(q.index));
+				if (!hasLoopStructure("for")) THROW_PARSER_ERROR(throwLoopExpected(q.index));
 
 				Node::Ptr node = createNode(
 					"next", "_",
@@ -37365,7 +37462,7 @@ private:
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (!isLoopStructure(ANYTHING)) THROW_PARSER_ERROR(throwLoopExpected(q.index));
+				if (!hasLoopStructure(ANYTHING)) THROW_PARSER_ERROR(throwLoopExpected(q.index));
 
 				Node::Ptr node = createNode(
 					"exit", "_",
@@ -40779,7 +40876,48 @@ private:
 				return true;
 			}
 		);
-		const Combinator CallAsm( // Call an assembly function.
+		const Combinator Call( // Call an API.
+			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				State q = begin();
+				Node::Array children;
+				Token::Ptr id = nullptr;
+				std::string name;
+
+				if (!LineNumber(q, opts)) return false;
+				if (!(id = must(Token::Types::SYMBOL)(q))) return false;
+				else name = (std::string)id->data();
+				if (must(Token::Types::OPERATOR, "(")(q)) {
+					if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
+						Arguments(q, children);
+						CHECK_UNEXPECTED(q);
+					}
+					if (!must(Token::Types::OPERATOR, ")")(q)) return false;
+				} else {
+					Arguments(q, children);
+					CHECK_UNEXPECTED(q);
+				}
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+
+				Node::Ptr node = createNode(
+					name, id->data(),
+					{
+						{ "allow_call", true }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				node->add(children);
+
+				return true;
+			}
+		);
+		const Combinator CallAsm( // Call an assembly entry.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				State q = begin();
 				Node::Array children;
@@ -40821,33 +40959,81 @@ private:
 				return true;
 			}
 		);
-		const Combinator Call( // Call an API.
+		const Combinator BeginAsm( // Call a chunk of inline assembly entry.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				if (hasAsmStructure()) THROW_PARSER_ERROR(throwTooManyAsmLevels(cursor));
+
+				PROC_GUARD(beginStructure("begin asm"), endStructure());
+
 				State q = begin();
 				Node::Array children;
-				Token::Ptr id = nullptr;
-				std::string name;
+				const int index = q.index;
+
+				if (tooManyNestedStructures()) THROW_PARSER_ERROR(throwTooManyNestedStructures(index));
 
 				if (!LineNumber(q, opts)) return false;
-				if (!(id = must(Token::Types::SYMBOL)(q))) return false;
-				else name = (std::string)id->data();
-				if (must(Token::Types::OPERATOR, "(")(q)) {
-					if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
-						Arguments(q, children);
-						CHECK_UNEXPECTED(q);
+				if (
+					forwardN(1, Token::Types::KEYWORD, "begin")(q.index) &&
+					forwardN(2, Token::Types::KEYWORD, "asm")(q.index)
+				) { // Paired `BEGIN ASM` is identical with `BEGINASM`.
+					Token::Ptr node(new Token());
+					node
+						->type(Token::Types::KEYWORD)
+						->data("beginasm");
+					q.tokens.push_back(node);
+					next(q); next(q); // `BEGIN ASM`.
+				} else if (!must(Token::Types::KEYWORD, "beginasm")(q)) {
+					return false;
+				}
+				ignore(Token::Types::COMMENT)(q);
+				if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+				Token::Array asmTokens;
+				{
+					PROC_GUARD(beginAsm(index), endAsm(q.index));
+
+					State q1 = begin();
+					q1.index = q.index;
+
+					for (EVER) {
+						const bool stp = stop(BEGINASM_STOPS, q1.index, 2);
+						if (stp)
+							break;
+
+						any()(q1);
 					}
-					if (!must(Token::Types::OPERATOR, ")")(q)) return false;
-				} else {
-					Arguments(q, children);
-					CHECK_UNEXPECTED(q);
+
+					q1.success = true;
+					end(q1);
+					q.index = q1.index;
+
+					std::swap(asmTokens, q1.tokens);
+				}
+				{
+					State q1 = q;
+					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+					if (
+						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						forwardN(2, Token::Types::KEYWORD, "asm")(q1.index)
+					) { // Paired `END ASM` is identical with `ENDASM`.
+						Token::Ptr node(new Token());
+						node
+							->type(Token::Types::KEYWORD)
+							->data("endasm");
+						q1.tokens.push_back(node);
+						next(q1); next(q1); // `END ASM`.
+					} else if (!must(Token::Types::KEYWORD, "endasm")(q1)) {
+						THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+					}
+					q.index = q1.index;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
-					name, id->data(),
+					"beginasm", "_",
 					{
-						{ "allow_call", true }
+						{ "allow_call", false },
+						{ "asm", (void*)&asmTokens }
 					}
 				);
 				if (!node) return false;
@@ -41003,7 +41189,8 @@ private:
 
 			/**< Invoking. */
 
-			CallNative, CallAsm, Call,
+			CallNative, Call,
+			CallAsm, BeginAsm,
 
 			/**< Error handling. */
 

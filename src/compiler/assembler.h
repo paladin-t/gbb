@@ -10,7 +10,7 @@
 #define __ASSEMBLER_H__
 
 #include "../gbbasic.h"
-#include "../utils/object.h"
+#include "compiler.h"
 
 /*
 ** {===========================================================================
@@ -25,6 +25,8 @@ public:
 
 public:
 	GBBASIC_CLASS_TYPE('A', 'S', 'M', 'B')
+
+	virtual bool assemble(Bytes::Ptr &bytes, const IToken::Array &tokens) = 0;
 
 	static Assembler* create(void);
 	static void destroy(Assembler* ptr);

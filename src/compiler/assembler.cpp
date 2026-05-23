@@ -32,6 +32,15 @@ public:
 
 		return false;
 	}
+
+	virtual bool assemble(Bytes::Ptr &bytes, const IToken::Array &tokens) override {
+		(void)bytes;
+		(void)tokens;
+
+		// TODO: inline asm.
+
+		return false;
+	}
 };
 
 Assembler* Assembler::create(void) {
