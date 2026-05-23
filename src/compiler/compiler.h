@@ -579,6 +579,7 @@ public:
 		RETURN,
 		END,
 		CALL,
+		ASM,
 		START,
 		JOIN,
 		KILL,

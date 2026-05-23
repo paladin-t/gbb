@@ -90,7 +90,7 @@ HOME const SCRIPT_CMD script_cmds[] = {
 
     // Functions.
     { vm_invoke_fn,             BANK(VM_MAIN),              6 }, // 0x2A.
-    { vm_asm,                   BANK(VM_MAIN),              0 }, // 0x2B.
+    { vm_asm,                   BANK(VM_MAIN),              5 }, // 0x2B.
     { vm_locate,                BANK(VM_MAIN),              4 }, // 0x2C.
     { vm_print,                 BANK(VM_MAIN),              2 }, // 0x2D.
     { vm_srand,                 BANK(VM_MAIN),              2 }, // 0x2E.

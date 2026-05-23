@@ -645,36 +645,27 @@ void vm_invoke_fn(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * fn, UINT8 nparams, INT1
 }
 
 // Invokes the inlined native code by `THIS->PC`.
-void vm_asm(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS) OLDCALL NONBANKED NAKED {
-    (void)dummy0; (void)dummy1; (void)THIS;
+void vm_asm(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS, UINT8 bank, UINT8 * fn, UINT16 size) OLDCALL NONBANKED NAKED {
+    (void)dummy0; (void)dummy1; (void)bank; (void)fn;
+
+    THIS->PC += size;
 
 #if defined __SDCC && defined NINTENDO
 __asm
-        ldhl sp, #6
-        ld a, (hl+)
-        ld h, (hl)
-        ld l, a                     ; HL = THIS.
+        ldhl sp, #8
+        ld a, (hl)                  ; A = bank.
 
-        push hl
+        ldhl sp, #9
+        ld e, (hl)
+        inc hl
+        ld d, (hl)                  ; DE = fn.
 
-        inc hl
-        inc hl
-        ld a, (hl-)                 ; A = THIS->bank.
         ldh (__current_bank), a
-        ld (_rROMB0), a             ; Switch bank with script.
-        ld a, (hl-)
-        ld l, (hl)
-        ld h, a                     ; HL = THIS->PC.
+        ld (_rROMB0), a             ; Switch bank.
+        ld h, d
+        ld l, e                     ; HL = fn.
+        rst 0x20                    ; Call HL.
 
-        rst 0x20                    ; Call HL, new PC returned on stack.
-
-        pop de                      ; DE = the new PC.
-
-        pop hl                      ; HL = THIS.
-
-        ld (hl), e
-        inc hl
-        ld (hl), d                  ; Save new PC to THIS->PC.
         ret
 __endasm;
 #else /* __SDCC && NINTENDO */

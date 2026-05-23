@@ -704,6 +704,7 @@
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='release|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='debug|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
+    <ClCompile Include="src\compiler\assembler.cpp" />
     <ClCompile Include="src\compiler\codepoint.cpp">
       <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='release|Win32'">4819;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">4819;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -1062,6 +1063,7 @@
     <ClInclude Include="src\app\widgets.h" />
     <ClInclude Include="src\app\win\resource.h" />
     <ClInclude Include="src\app\workspace.h" />
+    <ClInclude Include="src\compiler\assembler.h" />
     <ClInclude Include="src\compiler\codepoint.h" />
     <ClInclude Include="src\compiler\compiler.h" />
     <ClInclude Include="src\compiler\evaluator.h" />

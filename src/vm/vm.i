@@ -323,8 +323,8 @@ OP_VM_INVOKE_FN                 = 0x2A
 .endm
 
 OP_VM_ASM                       = 0x2B
-.macro VM_ASM
-        .db OP_VM_ASM
+.macro VM_ASM BANK, ADDR, N
+        .db OP_VM_ASM, #>N, #<N, #>ADDR, #<ADDR, #<BANK
 .endm
 
 OP_VM_LOCATE                    = 0x2C

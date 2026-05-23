@@ -6,6 +6,7 @@
 ** For the latest info, see https://paladin-t.github.io/kits/gbb/
 */
 
+#include "assembler.h"
 #include "codepoint.h"
 #include "compiler.h"
 #include "evaluator.h"
@@ -2163,7 +2164,7 @@ const Asm::Instructions Asm::INSTRUCTIONS = array(
 
 	// Functions.
 	Asm(Asm::Types::INVOKE_FN,             6),
-	Asm(Asm::Types::ASM,                   0),
+	Asm(Asm::Types::ASM,                   5),
 	Asm(Asm::Types::LOCATE,                4),
 	Asm(Asm::Types::PRINT,                 2),
 	Asm(Asm::Types::SRAND,                 2),
@@ -14703,6 +14704,255 @@ private:
 	}
 };
 
+class NodeAsm : public Node {
+private:
+	enum class OperationTypes {
+		NONE,
+		DATA,
+		NAMED
+	};
+
+private:
+	Scheduled _scheduled;
+	OperationTypes _type = OperationTypes::NONE;
+
+public:
+	NodeAsm() {
+	}
+	virtual ~NodeAsm() override {
+	}
+
+	NODE_TYPE(Types::ASM)
+
+	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		const Generator_Void_Bool generator = [&] (bool overflow) -> void {
+			// Prepare.
+			Context &ctx = context.top();
+			State &state = top();
+
+			const Asm::Instructions &INSTRUCTIONS = *ctx.instructions;
+
+			// Determine the location in the ROM.
+			state.inRom.bank = ctx.bank;
+			state.inRom.address = ctx.addressCursor;
+			state.inRom.size = 0;
+
+			// Reset the states.
+			_scheduled = Scheduled();
+			_type = OperationTypes::NONE;
+
+			// Consume the tokens.
+			std::string name;
+			if (ctx.expect.lnno) {
+				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				})) { THROW_INVALID_SYNTAX(onError); }
+			}
+			if (!consume(Token::Types::KEYWORD, "asm")) { THROW_INVALID_SYNTAX(onError); }
+			if (consume(Token::Types::KEYWORD, "data")) _type = OperationTypes::DATA;
+			else if ((_children.size() == 1) && isString(context, 0, &name, nullptr)) _type = OperationTypes::NAMED;
+			if (consume(Token::Types::OPERATOR, "(")) {
+				if (!consume(Token::Types::OPERATOR, ")")) { THROW_INVALID_SYNTAX(onError); }
+			}
+
+			// Check the children.
+			switch (_type) {
+			case OperationTypes::NONE:
+				if ((int)_children.size() <= 1) {
+					THROW_TOO_FEW_ARGUMENTS(onError);
+				} else if (_children.size() == 2) {
+					// Do nothing.
+				} else {
+					THROW_TOO_MANY_ARGUMENTS(onError);
+				}
+
+				break;
+			case OperationTypes::DATA:
+				if (_children.empty()) {
+					THROW_TOO_FEW_ARGUMENTS(onError);
+				}
+
+				break;
+			case OperationTypes::NAMED:
+				if (_children.empty()) {
+					THROW_TOO_FEW_ARGUMENTS(onError);
+				} else if (_children.size() == 1) {
+					// Do nothing.
+				} else {
+					THROW_TOO_MANY_ARGUMENTS(onError);
+				}
+
+				break;
+			default:
+				GBBASIC_ASSERT(false && "Impossible.");
+
+				break;
+			}
+
+			// Make an assembly call.
+			switch (_type) {
+			case OperationTypes::NONE: {
+					// Parse the arguments.
+					Token::Ptr tk0 = nullptr;
+					int val0 = 0;
+					if (!isUInt8(context, 0, val0, &tk0)) { THROW_TYPE_EXPECTED(onError, "Byte constant", tk0); }
+					Token::Ptr tk1 = nullptr;
+					int val1 = 0;
+					if (!isUInt16(context, 1, val1, &tk1)) { THROW_TYPE_EXPECTED(onError, "Integer constant", tk1); }
+
+					// Emit a `VM_ASM` instruction to set the data.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
+					args = fill(args, (UInt16)0);
+					args = fill(args, (UInt16)val1);
+					args = fill(args, (UInt8)val0);
+				}
+
+				break;
+			case OperationTypes::DATA: {
+					// Parse the arguments.
+					const Token::Array seq = flatOnlyTokens(Range(0, (int)_children.size() - 1));
+					const int n = (int)Token::sizeOfIntegers(seq);
+					const int bank = state.inRom.bank;
+					const int address = state.inRom.address + ctx.startAddress + sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+
+					// Emit a `VM_ASM` instruction to set the data.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
+					args = fill(args, (UInt16)n);
+					args = fill(args, (UInt16)address);
+					args = fill(args, (UInt8)bank);
+
+					// Emit the data.
+					for (const Token::Ptr &tk : seq)
+						writeInteger(bytes, context, tk);
+				}
+
+				break;
+			case OperationTypes::NAMED: {
+					// Prepare.
+					int page = -1;
+					Destination dest(0);
+					const Token::Array tks = flatNumericOrLabeledDestinationTokens(context, page, &dest, 0, false);
+					if (tks.empty()) { THROW_INVALID_DESTINATION(onError); }
+
+					if (!dest.isRight())
+						break;
+
+					int bank = -1;
+					int address = -1;
+					bool found = false;
+
+					// Search for builtin name.
+					const std::string name = dest.right().get();
+					if (!ctx.symbols) { THROW_INVALID_ASSET_POINT(onError); }
+					const RomLocation* romLocation = ctx.symbols->find(name);
+					if (romLocation) { // By builtin name.
+						bank = romLocation->bank;
+						address = romLocation->address;
+						found = true;
+					}
+
+					// Search for identifier.
+					if (!found) {
+						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+						const RamLocation* ramLocation = ctx.findPageAndGlobal(name);
+						const Context::Array::Dimensions* dimensions = ctx.array->find(name);
+						if (scriptMemoryRamLocation && ramLocation) {
+							if (dimensions) { // By array name.
+								bank = scriptMemoryRamLocation->bank;
+								address =
+									scriptMemoryRamLocation->address /* start address */ +
+									ramLocation->address /* address in RAM as `int16_t*` */ *
+									WORD_SIZE /* 2 bytes per word */;
+							} else { // By variable name.
+								bank = scriptMemoryRamLocation->bank;
+								address =
+									scriptMemoryRamLocation->address /* start address */ +
+									ramLocation->address /* address in RAM as `int16_t*` */ *
+									WORD_SIZE /* 2 bytes per word */;
+							}
+							found = true;
+						}
+					}
+
+					// Search for labeled destination.
+					SourceLocation target;
+					if (!found) {
+						if (dest.isLeft())
+							target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
+						else
+							target = SourceLocation(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+						const RomLocation* romLocation = ctx.find(target);
+						if (romLocation) {
+							bank = romLocation ? romLocation->bank : 0;
+							address = romLocation ? ctx.startAddress + romLocation->address : -1;
+							found = true;
+						}
+					}
+
+					// Emit a `VM_ASM` instruction to set the data.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
+					if (found) {
+						args = fill(args, (UInt16)0);
+						args = fill(args, (UInt16)address);
+						args = fill(args, (UInt8)bank);
+					} else {
+						_scheduled = Scheduled(target, bytes->pointer(), args, overflow);
+					}
+				}
+
+				break;
+			default:
+				GBBASIC_ASSERT(false && "Impossible.");
+
+				break;
+			}
+		};
+
+		write(bytes, context, generator, false, onError);
+	}
+	virtual void post(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		Context &ctx = context.top();
+
+		if (!_scheduled.pending())
+			return;
+
+		switch (_type) {
+		case OperationTypes::NAMED: {
+				const RomLocation* romLocation = nullptr;
+				findDestination(ctx, _scheduled.target, &romLocation, onError);
+				if (!romLocation)
+					romLocation = ctx.find(_scheduled.target);
+				if (!romLocation)
+					break;
+
+				const int bank = romLocation ? romLocation->bank : 0;
+				const int address = romLocation ? ctx.startAddress + romLocation->address : -1;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (UInt16)0);
+				args = fill(args, (UInt16)address);
+				args = fill(args, (UInt8)bank);
+			}
+
+			break;
+		default:
+			GBBASIC_ASSERT(false && "Impossible.");
+
+			break;
+		}
+	}
+
+	virtual Abstract abstract(void) const override {
+		return abstract("ASM");
+	}
+	using Node::abstract;
+
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "ASM");
+	}
+	using Node::dump;
+};
+
 /* ===========================================================================} */
 
 /*
@@ -18999,7 +19249,7 @@ public:
 						);
 					} else if (data) {
 						if (argn >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-						Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
+						const Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
 						constexpr const int M = 16;
 						const int n = (int)Token::sizeOfIntegers(seq);
 						if (n < M || n % M != 0) { THROW_ARGUMENT_COUNT_DOES_NOT_MATCH(onError); }
@@ -19655,7 +19905,7 @@ public:
 					writeRoutine(bytes, context, Asm::Types::FILL_TILE, ASSET_SOURCE_READ, GRAPHICS_LAYER_MAP, 2, nullptr, nullptr, onError);
 				} else if (data) {
 					if (2 >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-					Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
+					const Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
 					constexpr const int M = 16;
 					const int n = (int)Token::sizeOfIntegers(seq);
 					if (n < M || n % M != 0) { THROW_ARGUMENT_COUNT_DOES_NOT_MATCH(onError); }
@@ -19959,7 +20209,7 @@ public:
 					writeRoutine(bytes, context, Asm::Types::FILL_TILE, ASSET_SOURCE_READ, GRAPHICS_LAYER_MAP, 2, nullptr, nullptr, onError);
 				} else if (data) {
 					if (2 >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-					Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
+					const Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
 					constexpr const int M = 16;
 					const int n = (int)Token::sizeOfIntegers(seq);
 					if (n < M || n % M != 0) { THROW_ARGUMENT_COUNT_DOES_NOT_MATCH(onError); }
@@ -20131,7 +20381,7 @@ public:
 					if (data) {
 						argi = [&] (Counter &) -> void {
 							if (argn >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-							Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
+							const Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
 							for (const Token::Ptr &tk : seq)
 								writeInteger(bytes, context, tk);
 						};
@@ -20498,7 +20748,7 @@ public:
 					writeRoutine(bytes, context, Asm::Types::FILL_TILE, ASSET_SOURCE_READ, GRAPHICS_LAYER_WINDOW, 2, nullptr, nullptr, onError);
 				} else if (data) {
 					if (2 >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-					Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
+					const Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
 					constexpr const int M = 16;
 					const int n = (int)Token::sizeOfIntegers(seq);
 					if (n < M || n % M != 0) { THROW_ARGUMENT_COUNT_DOES_NOT_MATCH(onError); }
@@ -20670,7 +20920,7 @@ public:
 					if (data) {
 						argi = [&] (Counter &) -> void {
 							if (argn >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-							Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
+							const Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
 							for (const Token::Ptr &tk : seq)
 								writeInteger(bytes, context, tk);
 						};
@@ -21023,7 +21273,7 @@ public:
 					writeRoutine(bytes, context, Asm::Types::FILL_TILE, ASSET_SOURCE_READ, GRAPHICS_LAYER_SPRITE, 2, nullptr, nullptr, onError);
 				} else if (data) {
 					if (2 >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-					Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
+					const Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
 					constexpr const int M = 16;
 					const int n = (int)Token::sizeOfIntegers(seq);
 					if (n < M || n % M != 0) { THROW_ARGUMENT_COUNT_DOES_NOT_MATCH(onError); }
@@ -23595,7 +23845,7 @@ public:
 					if (data) {
 						argi = [&] (Counter &) -> void {
 							if (argn >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-							Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
+							const Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
 							for (const Token::Ptr &tk : seq)
 								writeInteger(bytes, context, tk);
 						};
@@ -24346,7 +24596,7 @@ public:
 					writeRoutine(bytes, context, Asm::Types::FILL_TILE, ASSET_SOURCE_READ, GRAPHICS_LAYER_SPRITE, 2, nullptr, nullptr, onError);
 				} else if (data) {
 					if (2 >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-					Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
+					const Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
 					constexpr const int M = 16;
 					const int n = (int)Token::sizeOfIntegers(seq);
 					if (n < M || n % M != 0) { THROW_ARGUMENT_COUNT_DOES_NOT_MATCH(onError); }
@@ -24462,7 +24712,7 @@ public:
 					if (data) {
 						argi = [&] (Counter &) -> void {
 							if (argn >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-							Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
+							const Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
 							for (const Token::Ptr &tk : seq)
 								writeInteger(bytes, context, tk);
 						};
@@ -24571,7 +24821,7 @@ public:
 					);
 				} else if (data) {
 					if (2 >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-					Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
+					const Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
 					Token::Ptr tk = nullptr;
 					int val = 0;
 					int m = -1;
@@ -25735,7 +25985,7 @@ public:
 				writeRoutine(bytes, context, Asm::Types::EMOTE, ASSET_SOURCE_READ, -1, argf, nullptr, onError);
 			} else if (data) {
 				if (argn >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-				Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
+				const Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
 				constexpr const int N = 64;
 				const int n = (int)Token::sizeOfIntegers(seq);
 				if (n == N || n == N / 2) { /* Do nothing. */ }
@@ -26026,7 +26276,7 @@ public:
 					writeRoutine(bytes, context, Asm::Types::FILL_TILE, ASSET_SOURCE_READ, GRAPHICS_LAYER_SPRITE, 2, nullptr, nullptr, onError);
 				} else if (data) {
 					if (2 >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-					Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
+					const Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
 					constexpr const int M = 16;
 					const int n = (int)Token::sizeOfIntegers(seq);
 					if (n < M || n % M != 0) { THROW_ARGUMENT_COUNT_DOES_NOT_MATCH(onError); }
@@ -26136,7 +26386,7 @@ public:
 						);
 					} else if (data) {
 						if (2 >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-						Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
+						const Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
 						Token::Ptr tk = nullptr;
 						int val = 0;
 						int m = -1;
@@ -26260,7 +26510,7 @@ public:
 					if (data) {
 						argi = [&] (Counter &) -> void {
 							if (argn >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-							Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
+							const Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
 							for (const Token::Ptr &tk : seq)
 								writeInteger(bytes, context, tk);
 						};
@@ -26342,7 +26592,7 @@ public:
 					);
 				} else if (data) {
 					if (2 >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-					Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
+					const Token::Array seq = flatOnlyTokens(Range(2, (int)_children.size() - 1));
 					Token::Ptr tk = nullptr;
 					int val = 0;
 					int m = -1;
@@ -27129,7 +27379,7 @@ public:
 					if (data) {
 						argi = [&] (Counter &) -> void {
 							if (argn >= (int)_children.size() - 1) { THROW_TOO_FEW_ARGUMENTS(onError); }
-							Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
+							const Token::Array seq = flatOnlyTokens(Range(argn, (int)_children.size() - 1));
 							const int n = (int)Token::sizeOfIntegers(seq);
 							if (n < 4) { THROW_TOO_FEW_ARGUMENTS(onError); }
 							else if (n > 4) { THROW_TOO_MANY_ARGUMENTS(onError); }
@@ -30871,6 +31121,7 @@ public:
 			ADD_STATEMENT("return",            node<NodeReturn>(),                         Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("end",               node<NodeEnd>(),                            Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("call",              node<NodeCall>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("asm",               node<NodeAsm>(),                            Token::Types::KEYWORD,        false);
 
 			// Thread.
 			ADD_STATEMENT("start",             node<NodeStart>(),                          Token::Types::KEYWORD,        false);
@@ -40528,6 +40779,48 @@ private:
 				return true;
 			}
 		);
+		const Combinator CallAsm( // Call an assembly function.
+			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				State q = begin();
+				Node::Array children;
+
+				if (!LineNumber(q, opts)) return false;
+				if (!must(Token::Types::KEYWORD, "asm")(q)) return false;
+				if (forward(Token::Types::KEYWORD, "data")(q.index)) {
+					any()(q);
+					if (!DataSequence(q, children)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+				}
+				if (must(Token::Types::OPERATOR, "(")(q)) {
+					if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
+						Arguments(q, children);
+						CHECK_UNEXPECTED(q);
+					}
+					if (!must(Token::Types::OPERATOR, ")")(q)) return false;
+				} else {
+					Arguments(q, children);
+					CHECK_UNEXPECTED(q);
+				}
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+
+				Node::Ptr node = createNode(
+					"asm", "_",
+					{
+						{ "allow_call", false }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				node->add(children);
+
+				return true;
+			}
+		);
 		const Combinator Call( // Call an API.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				State q = begin();
@@ -40710,7 +41003,7 @@ private:
 
 			/**< Invoking. */
 
-			CallNative, Call,
+			CallNative, CallAsm, Call,
 
 			/**< Error handling. */
 

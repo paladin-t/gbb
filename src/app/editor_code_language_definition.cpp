@@ -273,6 +273,7 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 		"return",
 		"end",
 		"call",
+		"asm",
 
 		// Scope and macros.
 		"begin",
