@@ -3608,6 +3608,13 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_ARGUMENT_COUNT_DOES_NOT_MATCH */
+#ifndef THROW_ASM_ERROR
+#	define THROW_ASM_ERROR(ON_ERROR, TK) \
+		do { \
+			throwAsmError((ON_ERROR), (TK)); \
+			return; \
+		} while (false)
+#endif /* THROW_ASM_ERROR */
 #ifndef THROW_ASSET_IS_DEFINED_AS_AN_ACTOR_BUT_USED_AS_A_PROJECTILE
 #	define THROW_ASSET_IS_DEFINED_AS_AN_ACTOR_BUT_USED_AS_A_PROJECTILE(ON_ERROR) \
 		do { \
@@ -6969,6 +6976,12 @@ public:
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
 		const Error err("Argument count does not match", false);
+		onError(err, err.format(), tk->begin());
+	}
+	void throwAsmError(Error::Handler onError, Token::Ptr tk = nullptr) const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("ASM error", false);
 		onError(err, err.format(), tk->begin());
 	}
 	void throwAssetIsDefinedAsAnActorButUsedAsAProjectile(Error::Handler onError, Token::Ptr tk = nullptr) const {
@@ -14972,7 +14985,7 @@ public:
 	}
 
 	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
-		const Generator_Void_Bool generator = [&] (bool overflow) -> void {
+		const Generator_Void_Void generator = [&] (void) -> void {
 			// Prepare.
 			Context &ctx = context.top();
 			State &state = top();
@@ -14985,20 +14998,46 @@ public:
 			state.inRom.size = 0;
 
 			// Consume the tokens.
+			Token::Ptr tkbegin = nullptr;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
 					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
 				})) { THROW_INVALID_SYNTAX(onError); }
 			}
+			if (!(tkbegin = consume(Token::Types::KEYWORD, "beginasm"))) { THROW_INVALID_SYNTAX(onError); }
 
 			// Check the children.
 			if (!_children.empty()) {
 				THROW_INVALID_SYNTAX(onError);
 			}
 
-			// TODO: inline asm.
-			(void)overflow;
-			(void)INSTRUCTIONS;
+			// Assemble the instructions.
+			Assembler::Ptr assembler(Assembler::create());
+			Bytes::Ptr bytes_(Bytes::create());
+			const bool ok = assembler->assemble(
+				bytes_,
+				_asmTokens,
+				[&] (const std::string &msg, const IToken::Ptr &tk) -> void {
+					const Error err(msg, false);
+					onError(err, err.format(), tk->begin());
+				}
+			);
+			if (!ok) { THROW_ASM_ERROR(onError, tkbegin); }
+			if (bytes_->empty())
+				return; // Ignore blank assembly.
+
+			const int n = (int)bytes_->count();
+			const int bank = state.inRom.bank;
+			const int address = state.inRom.address + ctx.startAddress + sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+
+			// Emit a `VM_ASM` instruction to set the data.
+			Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
+			args = fill(args, (UInt16)n);
+			args = fill(args, (UInt16)address);
+			args = fill(args, (UInt8)bank);
+
+			// Emit the data.
+			emit(bytes, context, bytes_->pointer(), (size_t)n);
 		};
 
 		write(bytes, context, generator, false, onError);
@@ -35690,15 +35729,18 @@ private:
 				{
 					// `#END IF ...` directive.
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::PREPROCESSOR, "#end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::PREPROCESSOR, "#end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "if")(q1.index)
 					) { // Paired `#END IF` is identical with `#ENDIF`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::PREPROCESSOR)
-							->data("#endif");
+							->data("#endif")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `#END IF`.
 					} else if (!must(Token::Types::PREPROCESSOR, "#endif")(q1)) {
@@ -36405,9 +36447,10 @@ private:
 					q.index = cursor;
 				}
 				for (EVER) {
+					Token::Ptr tkhead = nullptr;
 					bool pairedElseIf = false;
 					if (
-						forwardN(2, Token::Types::KEYWORD, "else")(q.index) &&
+						(tkhead = forwardN(2, Token::Types::KEYWORD, "else")(q.index)) &&
 						forwardN(3, Token::Types::KEYWORD, "if")(q.index)
 					) { // Paired `ELSE IF` is identical with `ELSEIF`.
 						pairedElseIf = true;
@@ -36427,7 +36470,9 @@ private:
 							Token::Ptr node(new Token());
 							node
 								->type(Token::Types::KEYWORD)
-								->data("elseif");
+								->data("elseif")
+								->begin(tkhead->begin())
+								->end(tkhead->end());
 							next(q1); next(q1);
 							elseif->concat(node); // `ELSE IF`.
 						} else {
@@ -36488,15 +36533,18 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "if")(q1.index)
 					) { // Paired `END IF` is identical with `ENDIF`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("endif");
+							->data("endif")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END IF`.
 					} else if (!must(Token::Types::KEYWORD, "endif")(q1)) {
@@ -36785,15 +36833,18 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "select")(q1.index)
 					) { // Paired `END SELECT` is identical with `ENDSELECT`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("endselect");
+							->data("endselect")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END SELECT`.
 					} else if (!must(Token::Types::KEYWORD, "endselect")(q1)) {
@@ -37234,14 +37285,17 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "while")(q1.index)
 					) { // Paired `END WHILE` is identical with `WEND`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("wend");
+							->data("wend")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END WHILE`.
 					} else if (!must(Token::Types::KEYWORD, "wend")(q1)) {
@@ -37303,15 +37357,18 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "while")(q1.index)
 					) { // Paired `END WHILE` is identical with `WEND`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("wend");
+							->data("wend")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END WHILE`.
 					} else if (!must(Token::Types::KEYWORD, "wend")(q1)) {
@@ -37835,6 +37892,7 @@ private:
 				PROC_GUARD(beginStructure("begin do"), endStructure());
 
 				State q = begin();
+				Token::Ptr tkhead = nullptr;
 				Node::Array children;
 				const int index = q.index;
 
@@ -37842,13 +37900,15 @@ private:
 
 				if (!LineNumber(q, opts)) return false;
 				if (
-					forwardN(1, Token::Types::KEYWORD, "begin")(q.index) &&
+					(tkhead = forwardN(1, Token::Types::KEYWORD, "begin")(q.index)) &&
 					forwardN(2, Token::Types::KEYWORD, "do")(q.index)
 				) { // Paired `BEGIN DO` is identical with `BEGINDO`.
 					Token::Ptr node(new Token());
 					node
 						->type(Token::Types::KEYWORD)
-						->data("begindo");
+						->data("begindo")
+						->begin(tkhead->begin())
+						->end(tkhead->end());
 					q.tokens.push_back(node);
 					next(q); next(q); // `BEGIN DO`.
 				} else if (!must(Token::Types::KEYWORD, "begindo")(q)) {
@@ -37872,15 +37932,18 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "do")(q1.index)
 					) { // Paired `END DO` is identical with `ENDDO`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("enddo");
+							->data("enddo")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END DO`.
 					} else if (!must(Token::Types::KEYWORD, "enddo")(q1)) {
@@ -37914,6 +37977,7 @@ private:
 				PROC_GUARD(beginStructure("begin def"), endStructure());
 
 				State q = begin();
+				Token::Ptr tkhead = nullptr;
 				Node::Array children;
 				const int index = q.index;
 
@@ -37921,13 +37985,15 @@ private:
 
 				if (!LineNumber(q, opts)) return false;
 				if (
-					forwardN(1, Token::Types::KEYWORD, "begin")(q.index) &&
+					(tkhead = forwardN(1, Token::Types::KEYWORD, "begin")(q.index)) &&
 					forwardN(2, Token::Types::KEYWORD, "def")(q.index)
 				) { // Paired `BEGIN DEF` is identical with `BEGINDEF`.
 					Token::Ptr node(new Token());
 					node
 						->type(Token::Types::KEYWORD)
-						->data("begindef");
+						->data("begindef")
+						->begin(tkhead->begin())
+						->end(tkhead->end());
 					q.tokens.push_back(node);
 					next(q); next(q); // `BEGIN DEF`.
 				} else if (!must(Token::Types::KEYWORD, "begindef")(q)) {
@@ -37965,15 +38031,18 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "def")(q1.index)
 					) { // Paired `END DEF` is identical with `ENDDEF`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("enddef");
+							->data("enddef")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END DEF`.
 					} else if (!must(Token::Types::KEYWORD, "enddef")(q1)) {
@@ -40966,6 +41035,7 @@ private:
 				PROC_GUARD(beginStructure("begin asm"), endStructure());
 
 				State q = begin();
+				Token::Ptr tkhead = nullptr;
 				Node::Array children;
 				const int index = q.index;
 
@@ -40973,13 +41043,15 @@ private:
 
 				if (!LineNumber(q, opts)) return false;
 				if (
-					forwardN(1, Token::Types::KEYWORD, "begin")(q.index) &&
+					(tkhead = forwardN(1, Token::Types::KEYWORD, "begin")(q.index)) &&
 					forwardN(2, Token::Types::KEYWORD, "asm")(q.index)
 				) { // Paired `BEGIN ASM` is identical with `BEGINASM`.
 					Token::Ptr node(new Token());
 					node
 						->type(Token::Types::KEYWORD)
-						->data("beginasm");
+						->data("beginasm")
+						->begin(tkhead->begin())
+						->end(tkhead->end());
 					q.tokens.push_back(node);
 					next(q); next(q); // `BEGIN ASM`.
 				} else if (!must(Token::Types::KEYWORD, "beginasm")(q)) {
@@ -41010,15 +41082,18 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "asm")(q1.index)
 					) { // Paired `END ASM` is identical with `ENDASM`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("endasm");
+							->data("endasm")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END ASM`.
 					} else if (!must(Token::Types::KEYWORD, "endasm")(q1)) {

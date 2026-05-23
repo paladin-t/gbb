@@ -33,13 +33,17 @@ public:
 		return false;
 	}
 
-	virtual bool assemble(Bytes::Ptr &bytes, const IToken::Array &tokens) override {
-		(void)bytes;
+	virtual bool assemble(Bytes::Ptr &bytes, const IToken::Array &tokens, ErrorHandler onError) override {
 		(void)tokens;
+		(void)onError;
+
+		// Prepare.
+		bytes->clear();
 
 		// TODO: inline asm.
 
-		return false;
+		// Finish.
+		return true;
 	}
 };
 

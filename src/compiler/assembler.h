@@ -23,10 +23,12 @@ class Assembler : public virtual Object {
 public:
 	typedef std::shared_ptr<Assembler> Ptr;
 
+	typedef std::function<void(const std::string &, const IToken::Ptr &)> ErrorHandler;
+
 public:
 	GBBASIC_CLASS_TYPE('A', 'S', 'M', 'B')
 
-	virtual bool assemble(Bytes::Ptr &bytes, const IToken::Array &tokens) = 0;
+	virtual bool assemble(Bytes::Ptr &bytes, const IToken::Array &tokens, ErrorHandler onError) = 0;
 
 	static Assembler* create(void);
 	static void destroy(Assembler* ptr);
