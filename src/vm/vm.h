@@ -222,6 +222,7 @@ void vm_wait_n(SCRIPT_CTX * THIS, INT16 idx) OLDCALL BANKED;
 void vm_lock(SCRIPT_CTX * THIS) OLDCALL BANKED;
 void vm_unlock(SCRIPT_CTX * THIS) OLDCALL BANKED;
 void vm_invoke_fn(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * fn, UINT8 nparams, INT16 idx) OLDCALL BANKED;
+void vm_asm(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS) OLDCALL NONBANKED NAKED;
 void vm_locate(SCRIPT_CTX * THIS, INT16 idxA, INT16 idxB) OLDCALL BANKED;
 void vm_print(SCRIPT_CTX * THIS, BOOLEAN new_line, UINT8 nargs) OLDCALL BANKED;
 void vm_srand(SCRIPT_CTX * THIS, INT16 idx) OLDCALL BANKED;

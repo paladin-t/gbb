@@ -135,8 +135,7 @@ void vm_next_bank(SCRIPT_CTX * THIS) OLDCALL BANKED {
 // Compares variable with a set of values, if it equals to one of them then jump
 // to the specified label.
 void vm_switch(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS, INT16 idx, UINT8 size, UINT8 n, BOOLEAN call) OLDCALL NONBANKED {
-    (void)dummy0;
-    (void)dummy1;
+    (void)dummy0; (void)dummy1;
 
     INT16 value;
     INT16 * table;
@@ -321,8 +320,7 @@ STATIC INT16 sign_of(INT16 val) {
 // we access the VM bytecode. The dummy parameters are needed to make NONBANKED
 // function to be compatible with banked call.
 void vm_rpn(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS) OLDCALL NONBANKED {
-    (void)dummy0;
-    (void)dummy1;
+    (void)dummy0; (void)dummy1;
 
     INT16 * A, * B, * ARGS;
     INT16 idx;
@@ -644,6 +642,44 @@ void vm_invoke_fn(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * fn, UINT8 nparams, INT1
 
     // Call the handler again, wait if the condition is not met.
     THIS->PC -= INSTRUCTION_SIZE + sizeof(bank) + sizeof(fn) + sizeof(nparams) + sizeof(idx);
+}
+
+// Invokes the inlined native code by `THIS->PC`.
+void vm_asm(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS) OLDCALL NONBANKED NAKED {
+    (void)dummy0; (void)dummy1; (void)THIS;
+
+#if defined __SDCC && defined NINTENDO
+__asm
+        ldhl sp, #6
+        ld a, (hl+)
+        ld h, (hl)
+        ld l, a                     ; HL = THIS.
+
+        push hl
+
+        inc hl
+        inc hl
+        ld a, (hl-)                 ; A = THIS->bank.
+        ldh (__current_bank), a
+        ld (_rROMB0), a             ; Switch bank with script.
+        ld a, (hl-)
+        ld l, (hl)
+        ld h, a                     ; HL = THIS->PC.
+
+        rst 0x20                    ; Call HL, new PC returned on stack.
+
+        pop de                      ; DE = the new PC.
+
+        pop hl                      ; HL = THIS.
+
+        ld (hl), e
+        inc hl
+        ld (hl), d                  ; Save new PC to THIS->PC.
+        ret
+__endasm;
+#else /* __SDCC && NINTENDO */
+#   error "Not implemented."
+#endif /* __SDCC && NINTENDO */
 }
 
 // Sets the cursor to the specific location.

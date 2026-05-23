@@ -1833,6 +1833,7 @@ struct Asm {
 
 		// Functions.
 		INVOKE_FN,
+		ASM,
 		LOCATE,
 		PRINT,
 		SRAND,
@@ -2162,6 +2163,7 @@ const Asm::Instructions Asm::INSTRUCTIONS = array(
 
 	// Functions.
 	Asm(Asm::Types::INVOKE_FN,             6),
+	Asm(Asm::Types::ASM,                   0),
 	Asm(Asm::Types::LOCATE,                4),
 	Asm(Asm::Types::PRINT,                 2),
 	Asm(Asm::Types::SRAND,                 2),
