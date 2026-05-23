@@ -259,6 +259,7 @@ list(
 )
 list(
   APPEND GBBASIC_SRC_COMPILER
+  "../src/compiler/assembler.cpp"
   "../src/compiler/codepoint.cpp"
   "../src/compiler/compiler.cpp"
   "../src/compiler/evaluator.cpp"

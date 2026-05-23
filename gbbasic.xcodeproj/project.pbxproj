@@ -44,6 +44,7 @@
 		038E776E2582133D00A94374 /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = 038E775B2582133B00A94374 /* crc32.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		038E77702582133D00A94374 /* gzclose.c in Sources */ = {isa = PBXBuildFile; fileRef = 038E775D2582133C00A94374 /* gzclose.c */; };
 		03FEADAF25C94ED3006A5EF0 /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 03FEADAE25C94ED3006A5EF0 /* imgui_tables.cpp */; };
+		689D9AE02FC1CC8400982109 /* assembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689D9ADF2FC1CC8400982109 /* assembler.cpp */; };
 		689DD3FA2E2F37C5001D2B86 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD3F72E2F37C5001D2B86 /* main.cpp */; };
 		689DD4282E2F3A36001D2B86 /* stb_vorbis.c in Sources */ = {isa = PBXBuildFile; fileRef = 689DD4142E2F3A34001D2B86 /* stb_vorbis.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		689DD4322E2F3AB6001D2B86 /* promise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD4312E2F3AB6001D2B86 /* promise.cpp */; };
@@ -307,6 +308,8 @@
 		688D8A2B2E33339700B7C5DA /* Info-Emu.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "Info-Emu.plist"; path = "src/app/mac/Info-Emu.plist"; sourceTree = "<group>"; };
 		688D8A2D2E3333A900B7C5DA /* Info-Steam.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "Info-Steam.plist"; path = "src/app/mac/Info-Steam.plist"; sourceTree = "<group>"; };
 		68913EE52F542A5800B15C51 /* editor_map.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = editor_map.inl; path = src/app/editor_map.inl; sourceTree = "<group>"; };
+		689D9ADE2FC1CC8400982109 /* assembler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = assembler.h; path = src/compiler/assembler.h; sourceTree = "<group>"; };
+		689D9ADF2FC1CC8400982109 /* assembler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = assembler.cpp; path = src/compiler/assembler.cpp; sourceTree = "<group>"; };
 		689DD3F72E2F37C5001D2B86 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = src/main.cpp; sourceTree = "<group>"; };
 		689DD3F82E2F37C5001D2B86 /* gbbasic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gbbasic.h; path = src/gbbasic.h; sourceTree = "<group>"; };
 		689DD4132E2F3A34001D2B86 /* stb_tilemap_editor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stb_tilemap_editor.h; path = lib/stb/stb_tilemap_editor.h; sourceTree = "<group>"; };
@@ -751,6 +754,8 @@
 		038E727A2581E2BB00A94374 /* compiler */ = {
 			isa = PBXGroup;
 			children = (
+				689D9ADF2FC1CC8400982109 /* assembler.cpp */,
+				689D9ADE2FC1CC8400982109 /* assembler.h */,
 				689DD56C2E2F3EED001D2B86 /* codepoint.cpp */,
 				689DD56A2E2F3EED001D2B86 /* codepoint.h */,
 				689DD56B2E2F3EED001D2B86 /* compiler.cpp */,
@@ -1708,6 +1713,7 @@
 				689DD52C2E2F3DE9001D2B86 /* text.cpp in Sources */,
 				689DD5702E2F3EED001D2B86 /* kernel.cpp in Sources */,
 				689DD52E2E2F3DE9001D2B86 /* actor.cpp in Sources */,
+				689D9AE02FC1CC8400982109 /* assembler.cpp in Sources */,
 				689DD5272E2F3DE8001D2B86 /* dispatchable.cpp in Sources */,
 				038E77692582133D00A94374 /* inffast.c in Sources */,
 				689DD5392E2F3DE9001D2B86 /* localization.cpp in Sources */,

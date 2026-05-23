@@ -548,6 +548,9 @@
     <ClCompile Include="src\compiler\evaluator.cpp">
       <Filter>compiler</Filter>
     </ClCompile>
+    <ClCompile Include="src\compiler\assembler.cpp">
+      <Filter>compiler</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="utils">
@@ -1604,6 +1607,9 @@
       <Filter>app</Filter>
     </ClInclude>
     <ClInclude Include="src\compiler\evaluator.h">
+      <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="src\compiler\assembler.h">
       <Filter>compiler</Filter>
     </ClInclude>
   </ItemGroup>

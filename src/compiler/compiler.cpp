@@ -6,6 +6,7 @@
 ** For the latest info, see https://paladin-t.github.io/kits/gbb/
 */
 
+#include "assembler.h"
 #include "codepoint.h"
 #include "compiler.h"
 #include "evaluator.h"
