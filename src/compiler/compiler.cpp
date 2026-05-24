@@ -4707,6 +4707,7 @@ public:
 		const FunctionTable* functions = nullptr;                 // Stores the generic function information for `NodeRoutine` and `NodeFunction`.
 		const OperatorTable* operators = nullptr;                 // Stores the regular and function-like math operators.
 		MacroFunctionTable::Stack* macroFunctions = nullptr;      // FEAT: MACRO. Stores the user defined macro functions.
+		Assembler::Ptr assembler = nullptr;                       // Stores the assembler.
 
 		BorderFrameResources* borderFrameResources = nullptr;     // Stores the border resources.
 		SuperPaletteResources* superPaletteResources = nullptr;   // Stores the "Super" palettes.
@@ -15014,7 +15015,6 @@ public:
 			// Assemble the instructions.
 			const int bank = state.inRom.bank;
 			const int address = state.inRom.address + ctx.startAddress + sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
-
 			Assembler::Options options(
 				bank, address,
 				[&] (const std::string &msg, const IToken::Ptr &tk) -> void {
@@ -15023,7 +15023,9 @@ public:
 				}
 			);
 			Bytes::Ptr bytes_(Bytes::create());
-			const bool ok = Assembler::assemble(bytes_, _asmTokens, options);
+			if (!ctx.assembler)
+				ctx.assembler = Assembler::Ptr(Assembler::create());
+			const bool ok = ctx.assembler->assemble(bytes_, _asmTokens, options);
 			if (!ok) { THROW_ASM_ERROR(onError, tkbegin); }
 			if (bytes_->empty())
 				return; // Ignore blank assembly.
@@ -42014,6 +42016,8 @@ private:
 		// Finish.
 		*allocations = context.top().allocations();
 		*featureUsages = context.top().featureUsages();
+
+		context.top().assembler = nullptr;
 
 		return bytes;
 	}

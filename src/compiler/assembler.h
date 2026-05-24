@@ -19,8 +19,10 @@
 
 namespace GBBASIC {
 
-class Assembler {
+class Assembler : public virtual Object {
 public:
+	typedef std::shared_ptr<Assembler> Ptr;
+
 	typedef std::function<void(const std::string &, const IToken::Ptr &)> ErrorHandler;
 
 	struct Options {
@@ -33,9 +35,12 @@ public:
 	};
 
 public:
-	Assembler() = delete;
+	GBBASIC_CLASS_TYPE('A', 'S', 'M', 'B')
 
-	static bool assemble(Bytes::Ptr &bytes, const IToken::Array &tokens, const Options &options);
+	virtual bool assemble(Bytes::Ptr &bytes, const IToken::Array &tokens, const Options &options) = 0;
+
+	static Assembler* create(void);
+	static void destroy(Assembler* ptr);
 };
 
 }
