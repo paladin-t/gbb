@@ -19,19 +19,23 @@
 
 namespace GBBASIC {
 
-class Assembler : public virtual Object {
+class Assembler {
 public:
-	typedef std::shared_ptr<Assembler> Ptr;
-
 	typedef std::function<void(const std::string &, const IToken::Ptr &)> ErrorHandler;
 
+	struct Options {
+		int bank = 0;
+		int address = 0;
+		ErrorHandler onError = nullptr;
+
+		Options();
+		Options(int b, int addr, ErrorHandler onerr);
+	};
+
 public:
-	GBBASIC_CLASS_TYPE('A', 'S', 'M', 'B')
+	Assembler() = delete;
 
-	virtual bool assemble(Bytes::Ptr &bytes, const IToken::Array &tokens, ErrorHandler onError) = 0;
-
-	static Assembler* create(void);
-	static void destroy(Assembler* ptr);
+	static bool assemble(Bytes::Ptr &bytes, const IToken::Array &tokens, const Options &options);
 };
 
 }

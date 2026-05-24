@@ -15012,25 +15012,24 @@ public:
 			}
 
 			// Assemble the instructions.
-			Assembler::Ptr assembler(Assembler::create());
-			Bytes::Ptr bytes_(Bytes::create());
-			const bool ok = assembler->assemble(
-				bytes_,
-				_asmTokens,
+			const int bank = state.inRom.bank;
+			const int address = state.inRom.address + ctx.startAddress + sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+
+			Assembler::Options options(
+				bank, address,
 				[&] (const std::string &msg, const IToken::Ptr &tk) -> void {
 					const Error err(msg, false);
 					onError(err, err.format(), tk->begin());
 				}
 			);
+			Bytes::Ptr bytes_(Bytes::create());
+			const bool ok = Assembler::assemble(bytes_, _asmTokens, options);
 			if (!ok) { THROW_ASM_ERROR(onError, tkbegin); }
 			if (bytes_->empty())
 				return; // Ignore blank assembly.
 
-			const int n = (int)bytes_->count();
-			const int bank = state.inRom.bank;
-			const int address = state.inRom.address + ctx.startAddress + sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
-
 			// Emit a `VM_ASM` instruction to set the data.
+			const int n = (int)bytes_->count();
 			Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
 			args = fill(args, (UInt16)n);
 			args = fill(args, (UInt16)address);
