@@ -149,6 +149,8 @@ class AssemblerImpl : public Assembler {
 private:
 	typedef std::map<std::string, int> Dictionary;
 
+	typedef std::set<std::string> Set;
+
 	struct OprandPattern {
 		typedef std::vector<OprandPattern> Array;
 
@@ -166,6 +168,7 @@ private:
 	Dictionary _cbOpcodeDictionary;
 	OprandPattern::Array _oprandPatterns;
 	Text::Dictionary _mnemonicAliases;
+	Set _registers;
 
 public:
 	AssemblerImpl() {
@@ -215,6 +218,12 @@ public:
 			{ "ld (hld),a", "ld (hl-),a" },
 			{ "ldd (hl),a", "ld (hl-),a" },
 			{ "ldhl sp,e8", "ld hl,sp+e8" }
+		};
+
+		_registers = {
+			"af", "bc", "de", "hl", "sp",
+			"a", "b", "c", "d", "e", "h", "l",
+			"z", "nz", "nc"
 		};
 	}
 	virtual ~AssemblerImpl() override {
@@ -315,6 +324,36 @@ private:
 		int cursor = 0;
 
 		// Error handlers.
+		auto throwIdHasNotBeenDeclared = [&] (int idx, const std::string &id) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = Text::format("ID \"{0}\" has not been decleared", { id });
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwIdHasNotBeenDeclaredDidYouMean = [&] (int idx, const std::string &id, const std::string &fuzzy) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = Text::format("ID \"{0}\" has not been decleared, did you mean \"{1}\"", { id, fuzzy });
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwInvalidFormat = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = "Invalid format";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
 		auto throwInvalidOpcode = [&] (int idx = -1) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
@@ -374,6 +413,7 @@ private:
 
 		// Parse the tokens.
 		std::string mnemonic;
+		std::string opcode;
 		Oprands oprands;
 		std::string oprandType;
 
@@ -384,25 +424,46 @@ private:
 		if (tkop->is(IToken::Types::COMMENT)) return true; // Ignore this line with comment.
 
 		if (!tkop->is(IToken::Types::IDENTIFIER)) return throwInvalidOpcode(cursor); // Expect opcode.
-		mnemonic = (std::string)tkop->data();
+		opcode =(std::string)tkop->data();
+		mnemonic = opcode;
 		mnemonic += " ";
 		++cursor;
+		Text::toLowerCase(opcode);
 
 		for (; cursor < lnEnd; ++cursor) {
 			if (cursor == lnEnd - 1) continue; // Ignore the line end.
 
 			const IToken::Ptr &tk = tokens[cursor];
 			if (tk->is(IToken::Types::IDENTIFIER)) {
-				// TODO: Resolve BASIC symbols.
-				// options.resolveIdentifier;
+				const std::string data = (std::string)tk->data();
+				if (_registers.find(data) == _registers.end()) {
+					// Resolve BASIC symbols.
+					RamLocation loc;
+					std::string id;
+					std::string fuzzyName;
+					if (!options.resolveIdentifier(tk, loc, id, fuzzyName)) {
+						if (!fuzzyName.empty())
+							return throwIdHasNotBeenDeclaredDidYouMean(cursor, id, fuzzyName);
 
-				mnemonic += (std::string)tk->data();
+						return throwIdHasNotBeenDeclared(cursor, id);
+					}
+
+					const int oprand = loc.address;
+					oprands.push_back(oprand);
+					mnemonic += "*";
+				} else {
+					mnemonic += data;
+				}
 			} else if (tk->is(IToken::Types::OPERATOR)) {
 				mnemonic += (std::string)tk->data();
 			} else if (tk->is(IToken::Types::NUMBER)) {
 				const int oprand = (int)(Int)tk->data();
-				oprands.push_back(oprand);
-				mnemonic += "*";
+				if (opcode == "bit" || opcode == "res" || opcode == "set") {
+					mnemonic += Text::toString(oprand);
+				} else {
+					oprands.push_back(oprand);
+					mnemonic += "*";
+				}
 			} else if (tk->is(IToken::Types::COMMENT)) {
 				// Do nothing.
 			} else {
@@ -492,7 +553,7 @@ private:
 			return true;
 		}
 
-		return false;
+		return throwInvalidFormat(cursor);
 	}
 };
 

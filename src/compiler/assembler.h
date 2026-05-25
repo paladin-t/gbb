@@ -23,7 +23,7 @@ class Assembler : public virtual Object {
 public:
 	typedef std::shared_ptr<Assembler> Ptr;
 
-	typedef std::function<bool(const IToken::Ptr &, RamLocation &)> IdentifierResolver;
+	typedef std::function<bool(const IToken::Ptr &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
 
 	typedef std::function<void(const std::string &, const IToken::Ptr &)> ErrorHandler;
 
