@@ -33,7 +33,7 @@ namespace GBBASIC {
 //  ALU instructions (`add`, `adc`, `sub`, `sbc`, `and`, `xor`, `or`, and `cp`) can be written with the left-hand side `a` omitted.
 //  Thus for example `add a, b` has the alternative mnemonic `add b`, and `cp a, 0xf` has the alternative mnemonic `cp 0xf`.
 
-static constexpr const char* const ASSEMBLER_OPCODE_MNEMONIC[256] = {
+static constexpr const char* const ASSEMBLER_OPCODE_MNEMONICS[256] = {
 	/*       x0            x1           x2            x3           x4             x5           x6            x7           x8             x9           xA            xB         xC            xD          xE            xF      */
 	/* 0x */ "nop",        "ld bc,n16", "ld (bc),a",  "inc bc",    "inc b",       "dec b",     "ld b,n8",    "rlca",      "ld (a16),sp", "add hl,bc", "ld a,(bc)",  "dec bc",  "inc c",      "dec c",    "ld c,n8",    "rrca",
 	/* 1x */ "stop",       "ld de,n16", "ld (de),a",  "inc de",    "inc d",       "dec d",     "ld d,n8",    "rla",       "jr e8",       "add hl,de", "ld a,(de)",  "dec de",  "inc e",      "dec e",    "ld e,n8",    "rra",
@@ -52,7 +52,7 @@ static constexpr const char* const ASSEMBLER_OPCODE_MNEMONIC[256] = {
 	/* Ex */ "ldh (a8),a", "pop hl",    "ld (c),a",   nullptr,     nullptr,       "push hl",   "and a,n8",   "rst 20H",   "add sp,e8",   "jp hl",     "ld (a16),a", nullptr,   nullptr,      nullptr,    "xor a,n8",   "rst 28H",
 	/* Fx */ "ldh a,(a8)", "pop af",    "ld a,(c)",   "di",        nullptr,       "push af",   "or a,n8",    "rst 30H",   "ld hl,spr8",  "ld sp,hl",  "ld a,(a16)", "ei",      nullptr,      nullptr,    "cp a,n8",    "rst 38H"
 };
-static constexpr const char* const ASSEMBLER_CB_OPCODE_MNEMONIC[256] = {
+static constexpr const char* const ASSEMBLER_CB_OPCODE_MNEMONICS[256] = {
 	/*       x0         x1         x2         x3         x4         x5         x6            x7         x8         x9         xA         xB         xC         xD         xE            xF      */
 	/* 0x */ "rlc b",   "rlc c",   "rlc d",   "rlc e",   "rlc h",   "rlc l",   "rlc (hl)",   "rlc a",   "rrc b",   "rrc c",   "rrc d",   "rrc e",   "rrc h",   "rrc l",   "rrc (hl)",   "rrc a",
 	/* 1x */ "rl b",    "rl c",    "rl d",    "rl e",    "rl h",    "rl l",    "rl (hl)",    "rl a",    "rr b",    "rr c",    "rr d",    "rr e",    "rr h",    "rr l",    "rr (hl)",    "rr a",
@@ -72,7 +72,7 @@ static constexpr const char* const ASSEMBLER_CB_OPCODE_MNEMONIC[256] = {
 	/* Fx */ "set 6,b", "set 6,c", "set 6,d", "set 6,e", "set 6,h", "set 6,l", "set 6,(hl)", "set 6,a", "set 7,b", "set 7,c", "set 7,d", "set 7,e", "set 7,h", "set 7,l", "set 7,(hl)", "set 7,a"
 };
 
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_N8[] = {
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_N8[] = {
 	"ld b,n8",    "ld c,n8",
 	"ld d,n8",    "ld e,n8",
 	"ld h,n8",    "ld l,n8",
@@ -82,24 +82,24 @@ static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_N8[] = {
 	"and a,n8",   "xor a,n8",
 	"or a,n8",    "cp a,n8"
 };
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_N16[] = {
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_N16[] = {
 	"ld bc,n16",
 	"ld de,n16",
 	"ld hl,n16",
 	"ld sp,n16"
 };
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_A8[] = {
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A8[] = {
 	"ldh (a8),a",
 	"ldh a,(a8)"
 };
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_A16[] = {
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A16[] = {
 	"ld (a16),sp",
 	"jp nz,a16",   "jp a16",      "call nz,a16", "jp z,a16",   "call z,a16", "call a16",
 	"jp nc,a16",   "call nc,a16", "jp c,a16",    "call c,a16",
 	"ld (a16),a",
 	"ld a,(a16)"
 };
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_E8[] = {
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_E8[] = {
 	"jr e8",
 	"jr nz,e8",   "jr z,e8",
 	"jr nc,e8",   "jr c,e8",
@@ -170,39 +170,39 @@ private:
 
 public:
 	AssemblerImpl() {
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONIC); ++i) {
-			const char* op = ASSEMBLER_OPCODE_MNEMONIC[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONICS); ++i) {
+			const char* op = ASSEMBLER_OPCODE_MNEMONICS[i];
 			if (!op)
 				continue;
 
 			_opcodeDictionary.insert(std::make_pair(op, i));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_CB_OPCODE_MNEMONIC); ++i) {
-			const char* op = ASSEMBLER_CB_OPCODE_MNEMONIC[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_CB_OPCODE_MNEMONICS); ++i) {
+			const char* op = ASSEMBLER_CB_OPCODE_MNEMONICS[i];
 			if (!op)
 				continue;
 
 			_cbOpcodeDictionary.insert(std::make_pair(op, i));
 		}
 
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_N8); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_N8[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_N8); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_N8[i];
 			_oprandPatterns.push_back(OprandPattern(pattern, "n8"));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_N16); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_N16[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_N16); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_N16[i];
 			_oprandPatterns.push_back(OprandPattern(pattern, "n16"));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_A8); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_A8[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_A8); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_A8[i];
 			_oprandPatterns.push_back(OprandPattern(pattern, "a8"));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_A16); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_A16[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_A16); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_A16[i];
 			_oprandPatterns.push_back(OprandPattern(pattern, "a16"));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_E8); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_E8[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_E8); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_E8[i];
 			_oprandPatterns.push_back(OprandPattern(pattern, "e8"));
 		}
 
@@ -669,7 +669,7 @@ private:
 		if (opit != _opcodeDictionary.end()) {
 			// Emit the opcode.
 			const int op = opit->second;
-			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONIC) && "Invalid opcode.");
+			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONICS) && "Invalid opcode.");
 			emitUInt8(bytes, ctx, (UInt8)op);
 
 			// Specialized for `stop`.
@@ -729,7 +729,7 @@ private:
 			emitUInt8(bytes, ctx, (UInt8)ASSEMBLER_OPCODE_CB); // Prefix.
 
 			const int op = cbopit->second;
-			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONIC) && "Invalid opcode.");
+			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONICS) && "Invalid opcode.");
 			emitUInt8(bytes, ctx, (UInt8)op);
 
 			return true;
