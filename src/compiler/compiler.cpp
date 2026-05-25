@@ -15020,9 +15020,30 @@ public:
 				[&] (const IToken::Ptr &tk, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool {
 					const std::string id = (std::string)tk->data();
 					std::string fuzzyName;
+					bool found = false;
+					int address = 0;
+
+					const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
 					const RamLocation* ramLocation = ctx.findPageAndGlobal(id, fuzzyName);
-					if (ramLocation) {
+					const Context::Array::Dimensions* dimensions = ctx.array->find(id);
+					if (scriptMemoryRamLocation && ramLocation) {
+						if (dimensions) { // By array name.
+							address =
+								scriptMemoryRamLocation->address /* start address */ +
+								ramLocation->address /* address in RAM as `int16_t*` */ *
+								WORD_SIZE /* 2 bytes per word */;
+						} else { // By variable name.
+							address =
+								scriptMemoryRamLocation->address /* start address */ +
+								ramLocation->address /* address in RAM as `int16_t*` */ *
+								WORD_SIZE /* 2 bytes per word */;
+						}
+						found = true;
+					}
+
+					if (found) {
 						loc = *ramLocation;
+						loc.address = address;
 
 						return true;
 					} else {
