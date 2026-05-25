@@ -130,9 +130,9 @@ static constexpr const UInt8 ASSEMBLER_OPCODE_SIZE[256] = {
 	/* Fx */ 2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 1, 2, 1
 };
 
-static constexpr const UInt8 ASSEMBLER_OPCODE_NOP = 0x00;
+static constexpr const UInt8 ASSEMBLER_OPCODE_NOP  = 0x00;
 static constexpr const UInt8 ASSEMBLER_OPCODE_STOP = 0x10;
-static constexpr const UInt8 ASSEMBLER_OPCODE_CB = 0xcb;
+static constexpr const UInt8 ASSEMBLER_OPCODE_CB   = 0xcb;
 
 }
 
@@ -324,6 +324,26 @@ private:
 		int cursor = 0;
 
 		// Error handlers.
+		auto throwByteExpected = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = "Byte expected";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwCommaExpected = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = "Comma expected";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
 		auto throwIdHasNotBeenDeclared = [&] (int idx, const std::string &id) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
@@ -369,6 +389,26 @@ private:
 				idx = cursor;
 			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
 			const std::string msg = "Too many oprands";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwUnexpectedComma = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = "Unexpected comma";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwWordExpected = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = "Word expected";
 			if (options.onError)
 				options.onError(msg, tk);
 
@@ -431,13 +471,50 @@ private:
 		Text::toLowerCase(opcode);
 
 		for (; cursor < lnEnd; ++cursor) {
+			// Prepare.
 			if (cursor == lnEnd - 1) continue; // Ignore the line end.
 
+			// Parse data.
 			const IToken::Ptr &tk = tokens[cursor];
+			if (opcode == "db") {
+				if (!tk->is(IToken::Types::NUMBER)) return throwByteExpected(cursor);
+				const int oprand = (int)(Int)tk->data();
+				oprands.push_back(oprand);
+				const std::string data = "0x" + Text::toHex(oprand, 2, '0', true);
+				mnemonic += data;
+
+				const IToken::Ptr tk_ = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[++cursor] : nullptr;
+				if (tk_->is(IToken::Types::OPERATOR)) {
+					const std::string data = (std::string)tk_->data();
+					if (data != ",") return throwCommaExpected(cursor);
+					if (cursor == lnEnd - 1) return throwUnexpectedComma(cursor);
+					mnemonic += data;
+				}
+
+				continue;
+			} else if (opcode == "dw") {
+				if (!tk->is(IToken::Types::NUMBER)) return throwByteExpected(cursor);
+				const int oprand = (int)(Int)tk->data();
+				oprands.push_back(oprand);
+				const std::string data = "0x" + Text::toHex(oprand, 4, '0', true);
+				mnemonic += data;
+
+				const IToken::Ptr tk_ = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[++cursor] : nullptr;
+				if (tk_->is(IToken::Types::OPERATOR)) {
+					const std::string data = (std::string)tk_->data();
+					if (data != ",") return throwCommaExpected(cursor);
+					if (cursor == lnEnd - 1) return throwUnexpectedComma(cursor);
+					mnemonic += data;
+				}
+
+				continue;
+			}
+
+			// Parse instructions.
 			if (tk->is(IToken::Types::IDENTIFIER)) {
 				const std::string data = (std::string)tk->data();
 				if (_registers.find(data) == _registers.end()) {
-					// Resolve BASIC symbols.
+					// Resolve BASIC identifiers.
 					RamLocation loc;
 					std::string id;
 					std::string fuzzyName;
@@ -474,9 +551,22 @@ private:
 		Text::toLowerCase(mnemonic);
 		mnemonic = Text::trim(mnemonic);
 
+		// Translate the data it's data declaration.
+		if (opcode == "db") {
+			for (int oprand : oprands)
+				emitUInt8(bytes, ctx, (UInt8)oprand);
+
+			return true;
+		} else if (opcode == "dw") {
+			for (int oprand : oprands)
+				emitUInt16(bytes, ctx, (UInt16)oprand);
+
+			return true;
+		}
+
 		// Translate the oprand.
 		if (!oprands.empty()) {
-			if(oprands.size() > 1) return throwTooManyOprands(cursor);
+			if (oprands.size() > 1) return throwTooManyOprands(cursor);
 
 			for (const OprandPattern &pattern : _oprandPatterns) {
 				if (Text::matchWildcard(pattern.pattern, mnemonic.c_str(), false)) {
@@ -495,18 +585,22 @@ private:
 
 		Dictionary::const_iterator opit = _opcodeDictionary.find(mnemonic);
 		if (opit != _opcodeDictionary.end()) {
+			// Emit the opcode.
 			const int op = opit->second;
 			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONIC) && "Invalid opcode.");
 			emitUInt8(bytes, ctx, (UInt8)op);
 
+			// Specialized for `stop`.
 			if (op == ASSEMBLER_OPCODE_STOP) {
 				emitUInt8(bytes, ctx, (UInt8)ASSEMBLER_OPCODE_NOP);
 
 				return true;
 			}
 
-			// TODO: Resolve jump destination.
+			// Resolve jump destination.
+			// TODO
 
+			// Emit the oprand.
 			const int sz = ASSEMBLER_OPCODE_SIZE[op];
 			const int restSz = sz - 1;
 			if (restSz == 0) {
@@ -522,6 +616,9 @@ private:
 					return false;
 
 				const int oprand = oprands.front();
+				if (oprand < std::numeric_limits<Int8>::min() || oprand > std::numeric_limits<UInt8>::max())
+					return throwByteExpected(cursor);
+
 				emitUInt8(bytes, ctx, (UInt8)oprand);
 
 				return true;
@@ -532,6 +629,9 @@ private:
 					return false;
 
 				const int oprand = oprands.front();
+				if (oprand < std::numeric_limits<Int16>::min() || oprand > std::numeric_limits<UInt16>::max())
+					return throwWordExpected(cursor);
+
 				emitUInt16(bytes, ctx, (UInt16)oprand);
 
 				return true;
