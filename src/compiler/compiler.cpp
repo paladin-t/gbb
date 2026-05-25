@@ -15023,9 +15023,10 @@ public:
 				}
 			);
 			Bytes::Ptr bytes_(Bytes::create());
+			Assembler::Cotnext asmCtx;
 			if (!ctx.assembler)
 				ctx.assembler = Assembler::Ptr(Assembler::create());
-			const bool ok = ctx.assembler->assemble(bytes_, _asmTokens, options);
+			const bool ok = ctx.assembler->assemble(bytes_, asmCtx, _asmTokens, options);
 			if (!ok) { THROW_ASM_ERROR(onError, tkbegin); }
 			if (bytes_->empty())
 				return; // Ignore blank assembly.

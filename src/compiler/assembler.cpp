@@ -7,6 +7,18 @@
 */
 
 #include "assembler.h"
+#include "../utils/text.h"
+
+/*
+** {===========================================================================
+** Macros and constants
+*/
+
+#ifndef ANYTHING
+#	define ANYTHING "?"
+#endif /* ANYTHING */
+
+/* ===========================================================================} */
 
 /*
 ** {===========================================================================
@@ -91,6 +103,7 @@ private:
 private:
 	Dictionary _opcodeDictionary;
 	Dictionary _cbOpcodeDictionary;
+	Text::Dictionary _mnemonicAliases;
 
 public:
 	AssemblerImpl() {
@@ -108,6 +121,17 @@ public:
 
 			_cbOpcodeDictionary.insert(std::make_pair(op, i));
 		}
+		_mnemonicAliases = {
+			{ "ld a,(hli)", "ld a,(hl+)" },
+			{ "ldi a,(hl)", "ld a,(hl+)" },
+			{ "ld (hli),a", "ld (hl+),a" },
+			{ "ldi (hl),a", "ld (hl+),a" },
+			{ "ld a,(hld)", "ld a,(hl-)" },
+			{ "ldd a,(hl)", "ld a,(hl-)" },
+			{ "ld (hld),a", "ld (hl-),a" },
+			{ "ldd (hl),a", "ld (hl-),a" },
+			{ "ldhl sp,e8", "ld hl,sp+e8" }
+		};
 	}
 	virtual ~AssemblerImpl() override {
 	}
@@ -123,19 +147,177 @@ public:
 		return false;
 	}
 
-	virtual bool assemble(Bytes::Ptr &bytes, const IToken::Array &tokens, const Options &options) override {
-		(void)tokens;
-		(void)options;
-
+	virtual bool assemble(Bytes::Ptr &bytes, Cotnext &ctx, const IToken::Array &tokens, const Options &options) override {
 		// Prepare.
+		int cursor = 0;
 		bytes->clear();
 
-		// TODO: inline asm.
+		// Error handlers.
+		auto throwInvalidLineBegin = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = "Invalid line begin";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+
+		// Parser operations.
+		auto must = [&] (IToken::Types y, Variant d = nullptr) -> auto {
+			// Expect a token that matches the specific pattern, move the cursor to the next location if matched,
+			// otherwise return `nullptr`.
+			return [&, y, d] (int &idx) -> IToken::Ptr {
+				if (idx >= (int)tokens.size())
+					return nullptr;
+
+				const IToken::Ptr &tk = tokens[idx];
+				if (tk->isNot(y))
+					return nullptr;
+				if (d == ANYTHING) {
+					++idx;
+
+					return tk;
+				}
+				if (d != nullptr && tk->data() != d)
+					return nullptr;
+
+				++idx;
+
+				return tk;
+			};
+		};
+		auto maybe = [&] (IToken::Types y, Variant d = nullptr) -> auto {
+			// Expect a token that matches the specific pattern, move the cursor to the next location,
+			// otherwise return `nullptr`.
+			return [&, y, d] (int &idx) -> IToken::Ptr {
+				if (idx >= (int)tokens.size())
+					return nullptr;
+
+				const IToken::Ptr &tk = tokens[idx++];
+				if (tk->isNot(y))
+					return nullptr;
+				if (d == ANYTHING)
+					return tk;
+				if (d != nullptr && tk->data() != d)
+					return nullptr;
+
+				return tk;
+			};
+		};
+
+		// Parse the lines.
+		while (cursor < (int)tokens.size()) {
+			// Prepare.
+			int lnBegin = -1;
+			int lnEnd = -1;
+
+			// Parse a line.
+			lnBegin = cursor;
+			if (!must(IToken::Types::INTEGER)(cursor)) return throwInvalidLineBegin(lnBegin);
+			while (cursor < (int)tokens.size()) {
+				if (maybe(IToken::Types::END_OF_LINE)(cursor)) {
+					lnEnd = cursor;
+
+					break;
+				}
+			}
+			if (!assembleLine(bytes, ctx, tokens, lnBegin, lnEnd, options)) return false;
+		}
 
 		// Finish.
 		return true;
 	}
+
+private:
+	bool assembleLine(Bytes::Ptr &bytes, Cotnext &ctx, const IToken::Array &tokens, int lnBegin, int lnEnd, const Options &options) {
+		// Prepare.
+		int cursor = 0;
+
+		// Error handlers.
+		auto throwInvalidOpcode = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = "Invalid opcode";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+
+		// Emitters.
+		auto emit = [] (Bytes::Ptr &bytes, Cotnext &ctx, UInt8 data) -> Byte* {
+			int n = 0;
+			const size_t m = bytes->peek();
+			n += bytes->writeUInt8(data);
+
+			ctx.size += n;
+
+			ctx.addressCursor += n;
+
+			Byte* result = bytes->pointer() + m;
+
+			return result;
+		};
+
+		// Parse the tokens.
+		std::string mnemonic;
+
+		cursor = lnBegin;
+		++cursor; // Ignore the line number.
+
+		const IToken::Ptr &tkop = tokens[cursor];
+		if (!tkop->is(IToken::Types::IDENTIFIER)) return throwInvalidOpcode(cursor);
+		mnemonic = (std::string)tkop->data();
+		mnemonic += " ";
+		++cursor;
+
+		for (; cursor < lnEnd; ++cursor) {
+			if (cursor == lnEnd - 1) continue; // Ignore the line end.
+
+			const IToken::Ptr &tk = tokens[cursor];
+			if (tk->is(IToken::Types::IDENTIFIER)) {
+				mnemonic += (std::string)tk->data();
+			} else if (tk->is(IToken::Types::OPERATOR)) {
+				mnemonic += (std::string)tk->data();
+			}
+			// TODO
+		}
+
+		Text::toLowerCase(mnemonic);
+		mnemonic = Text::trim(mnemonic);
+
+		// Translate the mnemonic.
+		Text::Dictionary::const_iterator ait = _mnemonicAliases.find(mnemonic);
+		if (ait != _mnemonicAliases.end())
+			mnemonic = ait->second;
+
+		Dictionary::const_iterator opit = _opcodeDictionary.find(mnemonic);
+		if (opit != _opcodeDictionary.end()) {
+			const int op = opit->second;
+			emit(bytes, ctx, (UInt8)op);
+			// TODO
+
+			return true;
+		}
+
+		Dictionary::const_iterator cbopit = _cbOpcodeDictionary.find(mnemonic);
+		if (cbopit != _cbOpcodeDictionary.end()) {
+			const int op = cbopit->second;
+			emit(bytes, ctx, (UInt8)op);
+			// TODO
+
+			return true;
+		}
+
+		return false;
+	}
 };
+
+Assembler::Cotnext::Cotnext() {
+}
 
 Assembler::Options::Options() {
 }

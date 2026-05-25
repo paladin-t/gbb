@@ -25,6 +25,13 @@ public:
 
 	typedef std::function<void(const std::string &, const IToken::Ptr &)> ErrorHandler;
 
+	struct Cotnext {
+		int size = 0;
+		int addressCursor = 0;
+
+		Cotnext();
+	};
+
 	struct Options {
 		int bank = 0;
 		int address = 0;
@@ -37,7 +44,7 @@ public:
 public:
 	GBBASIC_CLASS_TYPE('A', 'S', 'M', 'B')
 
-	virtual bool assemble(Bytes::Ptr &bytes, const IToken::Array &tokens, const Options &options) = 0;
+	virtual bool assemble(Bytes::Ptr &bytes, Cotnext &ctx, const IToken::Array &tokens, const Options &options) = 0;
 
 	static Assembler* create(void);
 	static void destroy(Assembler* ptr);
