@@ -25,15 +25,13 @@ namespace GBBASIC {
 //   a16: 16 bit address.
 //   e8 : 8 bit signed data, which are added to program counter.
 //
-//   ld a,(c) has alternative mnemonic ld a,($FF00+c).
-//   ld c,(a) has alternative mnemonic ld ($FF00+c),a.
-//   ldh a,(a8) has alternative mnemonic ld a,($FF00+a8).
-//   ldh (a8),a has alternative mnemonic ld ($FF00+a8),a.
-//   ld a,(hl+) has alternative mnemonic ld a,(hli) or ldi a,(hl).
-//   ld (hl+),a has alternative mnemonic ld (hli),a or ldi (hl),a.
-//   ld a,(hl-) has alternative mnemonic ld a,(hld) or ldd a,(hl).
-//   ld (hl-),a has alternative mnemonic ld (hld),a or ldd (hl),a.
-//   ld hl,sp+e8 has alternative mnemonic ldhl sp,e8.
+//  `ld a, (hl+)` has the alternative mnemonics `ld a, (hli)` and `ldi a, (hl)`.
+//  `ld (hl+), a` has the alternative mnemonics `ld (hli), a` and `ldi (hl), a`.
+//  `ld a, (hl-)` has the alternative mnemonics `ld a, (hld)` and `ldd a, (hl)`.
+//  `ld (hl-), a` has the alternative mnemonics `ld (hld), a` and `ldd (hl), a`.
+//  `ld hl, sp+e8` has the alternative mnemonics `ldhl sp, e8`.
+//  ALU instructions (`Add`, `adc`, `sub`, `sbc`, `and`, `xor`, `or`, and `cp`) can be written with the left-hand side `a` omitted.
+//  Thus for example `add a, b` has the alternative mnemonic `add b`, and `cp a, 0xf` has the alternative mnemonic `cp 0xf`.
 
 static constexpr const char* const ASSEMBLER_OPCODE_MNEMONIC[256] = {
 	/*       x0            x1           x2            x3           x4             x5           x6            x7           x8             x9           xA            xB         xC            xD          xE            xF      */
@@ -219,6 +217,8 @@ public:
 			{ "ldd (hl),a", "ld (hl-),a" },
 			{ "ldhl sp,e8", "ld hl,sp+e8" }
 		};
+		//  ALU instructions (`Add`, `adc`, `sub`, `sbc`, `and`, `xor`, `or`, and `cp`) can be written with the left-hand side `a` omitted.
+		//  Thus for example `add a, b` has the alternative mnemonic `add b`, and `cp a, 0xf` has the alternative mnemonic `cp 0xf`.
 
 		_registers = {
 			"af", "bc", "de", "hl", "sp",
@@ -477,11 +477,19 @@ private:
 			// Parse data.
 			const IToken::Ptr &tk = tokens[cursor];
 			if (opcode == "db") {
-				if (!tk->is(IToken::Types::NUMBER)) return throwByteExpected(cursor);
-				const int oprand = (int)(Int)tk->data();
-				oprands.push_back(oprand);
-				const std::string data = "0x" + Text::toHex(oprand, 2, '0', true);
-				mnemonic += data;
+				if (tk->is(IToken::Types::STRING)) {
+					const std::string data = (std::string)tk->data();
+					for (std::string::value_type oprand : data)
+						oprands.push_back(oprand);
+					mnemonic += data;
+				} else if (tk->is(IToken::Types::NUMBER)) {
+					const int oprand = (int)(Int)tk->data();
+					oprands.push_back(oprand);
+					const std::string data = "0x" + Text::toHex(oprand, 2, '0', true);
+					mnemonic += data;
+				} else {
+					return throwByteExpected(cursor);
+				}
 
 				const IToken::Ptr tk_ = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[++cursor] : nullptr;
 				if (tk_->is(IToken::Types::OPERATOR)) {
@@ -493,11 +501,14 @@ private:
 
 				continue;
 			} else if (opcode == "dw") {
-				if (!tk->is(IToken::Types::NUMBER)) return throwByteExpected(cursor);
-				const int oprand = (int)(Int)tk->data();
-				oprands.push_back(oprand);
-				const std::string data = "0x" + Text::toHex(oprand, 4, '0', true);
-				mnemonic += data;
+				if (tk->is(IToken::Types::NUMBER)) {
+					const int oprand = (int)(Int)tk->data();
+					oprands.push_back(oprand);
+					const std::string data = "0x" + Text::toHex(oprand, 4, '0', true);
+					mnemonic += data;
+				} else {
+					return throwByteExpected(cursor);
+				}
 
 				const IToken::Ptr tk_ = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[++cursor] : nullptr;
 				if (tk_->is(IToken::Types::OPERATOR)) {
