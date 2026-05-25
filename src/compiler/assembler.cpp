@@ -12,17 +12,6 @@
 
 /*
 ** {===========================================================================
-** Macros and constants
-*/
-
-#ifndef ANYTHING
-#	define ANYTHING "?"
-#endif /* ANYTHING */
-
-/* ===========================================================================} */
-
-/*
-** {===========================================================================
 ** Utilities
 */
 
@@ -242,7 +231,7 @@ public:
 		return false;
 	}
 
-	virtual bool assemble(Bytes::Ptr &bytes, Cotnext &ctx, const IToken::Array &tokens, const Options &options) override {
+	virtual bool assemble(Bytes::Ptr &bytes, Cotnext &ctx, const IToken::Array &tokens, const Options &options) const override {
 		// Prepare.
 		int cursor = 0;
 		bytes->clear();
@@ -270,11 +259,6 @@ public:
 				const IToken::Ptr &tk = tokens[idx];
 				if (tk->isNot(y))
 					return nullptr;
-				if (d == ANYTHING) {
-					++idx;
-
-					return tk;
-				}
 				if (d != nullptr && tk->data() != d)
 					return nullptr;
 
@@ -293,8 +277,6 @@ public:
 				const IToken::Ptr &tk = tokens[idx++];
 				if (tk->isNot(y))
 					return nullptr;
-				if (d == ANYTHING)
-					return tk;
 				if (d != nullptr && tk->data() != d)
 					return nullptr;
 
@@ -326,7 +308,7 @@ public:
 	}
 
 private:
-	bool assembleLine(Bytes::Ptr &bytes, Cotnext &ctx, const IToken::Array &tokens, int lnBegin, int lnEnd, const Options &options) {
+	bool assembleLine(Bytes::Ptr &bytes, Cotnext &ctx, const IToken::Array &tokens, int lnBegin, int lnEnd, const Options &options) const {
 		// Prepare.
 		typedef std::vector<int> Oprands;
 
@@ -400,7 +382,8 @@ private:
 
 		const IToken::Ptr &tkop = tokens[cursor];
 		if (tkop->is(IToken::Types::COMMENT)) return true; // Ignore this line with comment.
-		if (!tkop->is(IToken::Types::IDENTIFIER)) return throwInvalidOpcode(cursor);
+
+		if (!tkop->is(IToken::Types::IDENTIFIER)) return throwInvalidOpcode(cursor); // Expect opcode.
 		mnemonic = (std::string)tkop->data();
 		mnemonic += " ";
 		++cursor;
@@ -411,6 +394,7 @@ private:
 			const IToken::Ptr &tk = tokens[cursor];
 			if (tk->is(IToken::Types::IDENTIFIER)) {
 				// TODO: Resolve BASIC symbols.
+				// options.resolveIdentifier;
 
 				mnemonic += (std::string)tk->data();
 			} else if (tk->is(IToken::Types::OPERATOR)) {
@@ -419,6 +403,10 @@ private:
 				const int oprand = (int)(Int)tk->data();
 				oprands.push_back(oprand);
 				mnemonic += "*";
+			} else if (tk->is(IToken::Types::COMMENT)) {
+				// Do nothing.
+			} else {
+				// Do nothing.
 			}
 		}
 
@@ -514,9 +502,9 @@ Assembler::Cotnext::Cotnext() {
 Assembler::Options::Options() {
 }
 
-Assembler::Options::Options(int b, int addr, ErrorHandler onerr) :
-	bank(b),
-	address(addr),
+Assembler::Options::Options(int b, int addr, IdentifierResolver resolveid, ErrorHandler onerr) :
+	bank(b), address(addr),
+	resolveIdentifier(resolveid),
 	onError(onerr)
 {
 }

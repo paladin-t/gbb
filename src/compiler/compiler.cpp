@@ -15017,6 +15017,11 @@ public:
 			const int address = state.inRom.address + ctx.startAddress + sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
 			Assembler::Options options(
 				bank, address,
+				[&] (const IToken::Ptr &tk, RamLocation &loc) -> bool {
+					// TODO
+
+					return false;
+				},
 				[&] (const std::string &msg, const IToken::Ptr &tk) -> void {
 					const Error err(msg, false);
 					onError(err, err.format(), tk->begin());
