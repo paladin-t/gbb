@@ -3608,6 +3608,13 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_ARGUMENT_COUNT_DOES_NOT_MATCH */
+#ifndef THROW_ASM_ERROR
+#	define THROW_ASM_ERROR(ON_ERROR, TK) \
+		do { \
+			throwAsmError((ON_ERROR), (TK)); \
+			return; \
+		} while (false)
+#endif /* THROW_ASM_ERROR */
 #ifndef THROW_ASSET_IS_DEFINED_AS_AN_ACTOR_BUT_USED_AS_A_PROJECTILE
 #	define THROW_ASSET_IS_DEFINED_AS_AN_ACTOR_BUT_USED_AS_A_PROJECTILE(ON_ERROR) \
 		do { \
@@ -4700,6 +4707,7 @@ public:
 		const FunctionTable* functions = nullptr;                 // Stores the generic function information for `NodeRoutine` and `NodeFunction`.
 		const OperatorTable* operators = nullptr;                 // Stores the regular and function-like math operators.
 		MacroFunctionTable::Stack* macroFunctions = nullptr;      // FEAT: MACRO. Stores the user defined macro functions.
+		Assembler::Ptr assembler = nullptr;                       // Stores the assembler.
 
 		BorderFrameResources* borderFrameResources = nullptr;     // Stores the border resources.
 		SuperPaletteResources* superPaletteResources = nullptr;   // Stores the "Super" palettes.
@@ -6969,6 +6977,12 @@ public:
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
 		const Error err("Argument count does not match", false);
+		onError(err, err.format(), tk->begin());
+	}
+	void throwAsmError(Error::Handler onError, Token::Ptr tk = nullptr) const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("ASM error", false);
 		onError(err, err.format(), tk->begin());
 	}
 	void throwAssetIsDefinedAsAnActorButUsedAsAProjectile(Error::Handler onError, Token::Ptr tk = nullptr) const {
@@ -14949,6 +14963,131 @@ public:
 
 	virtual std::string dump(int depth) const override {
 		return dump(depth, "ASM");
+	}
+	using Node::dump;
+};
+
+class NodeBeginAsm : public Node {
+private:
+	IToken::Array _asmTokens;
+
+public:
+	NodeBeginAsm() {
+	}
+	virtual ~NodeBeginAsm() override {
+	}
+
+	NODE_TYPE(Types::BEGIN_ASM)
+
+	virtual void options(const IDictionary::Ptr &options) override {
+		const Token::Array tokens = *(const Token::Array*)(void*)options->get("asm");
+
+		_asmTokens = IToken::Array(tokens.begin(), tokens.end());
+	}
+
+	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		const Generator_Void_Void generator = [&] (void) -> void {
+			// Prepare.
+			Context &ctx = context.top();
+			State &state = top();
+
+			const Asm::Instructions &INSTRUCTIONS = *ctx.instructions;
+
+			// Determine the location in the ROM.
+			state.inRom.bank = ctx.bank;
+			state.inRom.address = ctx.addressCursor;
+			state.inRom.size = 0;
+
+			// Consume the tokens.
+			Token::Ptr tkbegin = nullptr;
+			if (ctx.expect.lnno) {
+				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				})) { THROW_INVALID_SYNTAX(onError); }
+			}
+			if (!(tkbegin = consume(Token::Types::KEYWORD, "beginasm"))) { THROW_INVALID_SYNTAX(onError); }
+
+			// Check the children.
+			if (!_children.empty()) {
+				THROW_INVALID_SYNTAX(onError);
+			}
+
+			// Assemble the instructions.
+			const int bank = state.inRom.bank;
+			const int address = state.inRom.address + ctx.startAddress + sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+			Assembler::Options options(
+				bank, address,
+				[&] (const IToken::Ptr &tk, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool {
+					const std::string id = (std::string)tk->data();
+					std::string fuzzyName;
+					bool found = false;
+					int address = 0;
+
+					const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+					const RamLocation* ramLocation = ctx.findPageAndGlobal(id, fuzzyName);
+					const Context::Array::Dimensions* dimensions = ctx.array->find(id);
+					if (scriptMemoryRamLocation && ramLocation) {
+						if (dimensions) { // By array name.
+							address =
+								scriptMemoryRamLocation->address /* start address */ +
+								ramLocation->address /* address in RAM as `int16_t*` */ *
+								WORD_SIZE /* 2 bytes per word */;
+						} else { // By variable name.
+							address =
+								scriptMemoryRamLocation->address /* start address */ +
+								ramLocation->address /* address in RAM as `int16_t*` */ *
+								WORD_SIZE /* 2 bytes per word */;
+						}
+						found = true;
+					}
+
+					if (found) {
+						loc = *ramLocation;
+						loc.address = address;
+
+						return true;
+					} else {
+						id_ = id;
+						fuzzyName_ = fuzzyName;
+
+						return false;
+					}
+				},
+				[&] (const std::string &msg, const IToken::Ptr &tk) -> void {
+					const Error err(msg, false);
+					onError(err, err.format(), tk->begin());
+				}
+			);
+			Bytes::Ptr bytes_(Bytes::create());
+			Assembler::Cotnext asmCtx;
+			if (!ctx.assembler)
+				ctx.assembler = Assembler::Ptr(Assembler::create());
+			const bool ok = ctx.assembler->assemble(bytes_, asmCtx, _asmTokens, options);
+			if (!ok) { THROW_ASM_ERROR(onError, tkbegin); }
+			if (bytes_->empty())
+				return; // Ignore blank assembly.
+
+			// Emit a `VM_ASM` instruction to set the data.
+			const int n = (int)bytes_->count();
+			Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
+			args = fill(args, (UInt16)n);
+			args = fill(args, (UInt16)address);
+			args = fill(args, (UInt8)bank);
+
+			// Emit the data.
+			emit(bytes, context, bytes_->pointer(), (size_t)n);
+		};
+
+		write(bytes, context, generator, false, onError);
+	}
+
+	virtual Abstract abstract(void) const override {
+		return abstract("BEGIN ASM");
+	}
+	using Node::abstract;
+
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "BEGIN ASM");
 	}
 	using Node::dump;
 };
@@ -31121,7 +31260,11 @@ public:
 			ADD_STATEMENT("return",            node<NodeReturn>(),                         Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("end",               node<NodeEnd>(),                            Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("call",              node<NodeCall>(),                           Token::Types::KEYWORD,        false);
+
+			// Inline assembly.
 			ADD_STATEMENT("asm",               node<NodeAsm>(),                            Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("beginasm",          node<NodeBeginAsm>(),                       Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("endasm",            NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 
 			// Thread.
 			ADD_STATEMENT("start",             node<NodeStart>(),                          Token::Types::KEYWORD,        false);
@@ -32845,6 +32988,22 @@ private:
 				macroStrings.pop();
 			};
 		};
+		auto beginAsm = [&] (int idx) -> auto {
+			return [&, idx] (void) -> void {
+				if (idx >= 0 && idx < (int)tokens.size()) {
+					const Token::Ptr &tk = tokens[idx];
+					(void)tk;
+				}
+			};
+		};
+		auto endAsm = [&] (int idx) -> auto {
+			return [&, idx] (void) -> void {
+				if (idx >= 0 && idx < (int)tokens.size()) {
+					const Token::Ptr &tk = tokens[idx];
+					(void)tk;
+				}
+			};
+		};
 		auto headOfCurrentScope = [&] (void) -> TextLocation {
 			if (scopeHeads.empty())
 				return TextLocation::INVALID();
@@ -32861,7 +33020,7 @@ private:
 				structures.pop_back();
 			};
 		};
-		auto isLoopStructure = [&] (const std::string &keyword) -> bool {
+		auto hasLoopStructure = [&] (const std::string &keyword) -> bool {
 			for (Text::Array::reverse_iterator it = structures.rbegin(); it != structures.rend(); ++it) {
 				if (keyword == ANYTHING) {
 					if (*it == "for" || *it == "while" || *it == "repeat")
@@ -32870,6 +33029,14 @@ private:
 					if (*it == keyword)
 						return true;
 				}
+			}
+
+			return false;
+		};
+		auto hasAsmStructure = [&] (void) -> bool {
+			for (Text::Array::reverse_iterator it = structures.rbegin(); it != structures.rend(); ++it) {
+				if (*it == "begin asm")
+					return true;
 			}
 
 			return false;
@@ -33046,6 +33213,9 @@ private:
 		auto throwTooManyArguments = [&] (int index) -> bool {
 			return throwError("Too many arguments", index, false);
 		};
+		auto throwTooManyAsmLevels = [&] (int index) -> bool {
+			return throwError("Too many ASM levels", index, false);
+		};
 		auto throwTooManyDimensions = [&] (int index) -> bool {
 			return throwError("Too many dimensions", index, false);
 		};
@@ -33152,6 +33322,10 @@ private:
 		const Lexical::List BEGINDEF_STOPS = {
 			Lexical(Token::Types::KEYWORD,          "enddef"),
 				Lexical(Token::Types::KEYWORD,      "end", Token::Types::KEYWORD, "def")
+		};
+		const Lexical::List BEGINASM_STOPS = {
+			Lexical(Token::Types::KEYWORD,          "endasm"),
+				Lexical(Token::Types::KEYWORD,      "end", Token::Types::KEYWORD, "asm")
 		};
 
 		// Sub combinators.
@@ -35593,15 +35767,18 @@ private:
 				{
 					// `#END IF ...` directive.
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::PREPROCESSOR, "#end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::PREPROCESSOR, "#end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "if")(q1.index)
 					) { // Paired `#END IF` is identical with `#ENDIF`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::PREPROCESSOR)
-							->data("#endif");
+							->data("#endif")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `#END IF`.
 					} else if (!must(Token::Types::PREPROCESSOR, "#endif")(q1)) {
@@ -36308,9 +36485,10 @@ private:
 					q.index = cursor;
 				}
 				for (EVER) {
+					Token::Ptr tkhead = nullptr;
 					bool pairedElseIf = false;
 					if (
-						forwardN(2, Token::Types::KEYWORD, "else")(q.index) &&
+						(tkhead = forwardN(2, Token::Types::KEYWORD, "else")(q.index)) &&
 						forwardN(3, Token::Types::KEYWORD, "if")(q.index)
 					) { // Paired `ELSE IF` is identical with `ELSEIF`.
 						pairedElseIf = true;
@@ -36330,7 +36508,9 @@ private:
 							Token::Ptr node(new Token());
 							node
 								->type(Token::Types::KEYWORD)
-								->data("elseif");
+								->data("elseif")
+								->begin(tkhead->begin())
+								->end(tkhead->end());
 							next(q1); next(q1);
 							elseif->concat(node); // `ELSE IF`.
 						} else {
@@ -36391,15 +36571,18 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "if")(q1.index)
 					) { // Paired `END IF` is identical with `ENDIF`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("endif");
+							->data("endif")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END IF`.
 					} else if (!must(Token::Types::KEYWORD, "endif")(q1)) {
@@ -36688,15 +36871,18 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "select")(q1.index)
 					) { // Paired `END SELECT` is identical with `ENDSELECT`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("endselect");
+							->data("endselect")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END SELECT`.
 					} else if (!must(Token::Types::KEYWORD, "endselect")(q1)) {
@@ -37077,7 +37263,7 @@ private:
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (!isLoopStructure("for")) THROW_PARSER_ERROR(throwLoopExpected(q.index));
+				if (!hasLoopStructure("for")) THROW_PARSER_ERROR(throwLoopExpected(q.index));
 
 				Node::Ptr node = createNode(
 					"next", "_",
@@ -37137,14 +37323,17 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "while")(q1.index)
 					) { // Paired `END WHILE` is identical with `WEND`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("wend");
+							->data("wend")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END WHILE`.
 					} else if (!must(Token::Types::KEYWORD, "wend")(q1)) {
@@ -37206,15 +37395,18 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "while")(q1.index)
 					) { // Paired `END WHILE` is identical with `WEND`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("wend");
+							->data("wend")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END WHILE`.
 					} else if (!must(Token::Types::KEYWORD, "wend")(q1)) {
@@ -37365,7 +37557,7 @@ private:
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
-				if (!isLoopStructure(ANYTHING)) THROW_PARSER_ERROR(throwLoopExpected(q.index));
+				if (!hasLoopStructure(ANYTHING)) THROW_PARSER_ERROR(throwLoopExpected(q.index));
 
 				Node::Ptr node = createNode(
 					"exit", "_",
@@ -37738,6 +37930,7 @@ private:
 				PROC_GUARD(beginStructure("begin do"), endStructure());
 
 				State q = begin();
+				Token::Ptr tkhead = nullptr;
 				Node::Array children;
 				const int index = q.index;
 
@@ -37745,13 +37938,15 @@ private:
 
 				if (!LineNumber(q, opts)) return false;
 				if (
-					forwardN(1, Token::Types::KEYWORD, "begin")(q.index) &&
+					(tkhead = forwardN(1, Token::Types::KEYWORD, "begin")(q.index)) &&
 					forwardN(2, Token::Types::KEYWORD, "do")(q.index)
 				) { // Paired `BEGIN DO` is identical with `BEGINDO`.
 					Token::Ptr node(new Token());
 					node
 						->type(Token::Types::KEYWORD)
-						->data("begindo");
+						->data("begindo")
+						->begin(tkhead->begin())
+						->end(tkhead->end());
 					q.tokens.push_back(node);
 					next(q); next(q); // `BEGIN DO`.
 				} else if (!must(Token::Types::KEYWORD, "begindo")(q)) {
@@ -37775,15 +37970,18 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "do")(q1.index)
 					) { // Paired `END DO` is identical with `ENDDO`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("enddo");
+							->data("enddo")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END DO`.
 					} else if (!must(Token::Types::KEYWORD, "enddo")(q1)) {
@@ -37817,6 +38015,7 @@ private:
 				PROC_GUARD(beginStructure("begin def"), endStructure());
 
 				State q = begin();
+				Token::Ptr tkhead = nullptr;
 				Node::Array children;
 				const int index = q.index;
 
@@ -37824,13 +38023,15 @@ private:
 
 				if (!LineNumber(q, opts)) return false;
 				if (
-					forwardN(1, Token::Types::KEYWORD, "begin")(q.index) &&
+					(tkhead = forwardN(1, Token::Types::KEYWORD, "begin")(q.index)) &&
 					forwardN(2, Token::Types::KEYWORD, "def")(q.index)
 				) { // Paired `BEGIN DEF` is identical with `BEGINDEF`.
 					Token::Ptr node(new Token());
 					node
 						->type(Token::Types::KEYWORD)
-						->data("begindef");
+						->data("begindef")
+						->begin(tkhead->begin())
+						->end(tkhead->end());
 					q.tokens.push_back(node);
 					next(q); next(q); // `BEGIN DEF`.
 				} else if (!must(Token::Types::KEYWORD, "begindef")(q)) {
@@ -37868,15 +38069,18 @@ private:
 				}
 				{
 					State q1 = q;
+					Token::Ptr tkhead = nullptr;
 					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 					if (
-						forwardN(1, Token::Types::KEYWORD, "end")(q1.index) &&
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
 						forwardN(2, Token::Types::KEYWORD, "def")(q1.index)
 					) { // Paired `END DEF` is identical with `ENDDEF`.
 						Token::Ptr node(new Token());
 						node
 							->type(Token::Types::KEYWORD)
-							->data("enddef");
+							->data("enddef")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
 						q1.tokens.push_back(node);
 						next(q1); next(q1); // `END DEF`.
 					} else if (!must(Token::Types::KEYWORD, "enddef")(q1)) {
@@ -40779,7 +40983,48 @@ private:
 				return true;
 			}
 		);
-		const Combinator CallAsm( // Call an assembly function.
+		const Combinator Call( // Call an API.
+			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				State q = begin();
+				Node::Array children;
+				Token::Ptr id = nullptr;
+				std::string name;
+
+				if (!LineNumber(q, opts)) return false;
+				if (!(id = must(Token::Types::SYMBOL)(q))) return false;
+				else name = (std::string)id->data();
+				if (must(Token::Types::OPERATOR, "(")(q)) {
+					if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
+						Arguments(q, children);
+						CHECK_UNEXPECTED(q);
+					}
+					if (!must(Token::Types::OPERATOR, ")")(q)) return false;
+				} else {
+					Arguments(q, children);
+					CHECK_UNEXPECTED(q);
+				}
+				maybe(Token::Types::OPERATOR, ";")(q);
+				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+
+				Node::Ptr node = createNode(
+					name, id->data(),
+					{
+						{ "allow_call", true }
+					}
+				);
+				if (!node) return false;
+				node->concat(q.tokens);
+				p->add(node);
+
+				q.success = true;
+				end(q);
+
+				node->add(children);
+
+				return true;
+			}
+		);
+		const Combinator CallAsm( // Call an assembly entry.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
 				State q = begin();
 				Node::Array children;
@@ -40821,33 +41066,87 @@ private:
 				return true;
 			}
 		);
-		const Combinator Call( // Call an API.
+		const Combinator BeginAsm( // Call a chunk of inline assembly entry.
 			[&] (Node::Ptr &p, const Combinator::Options &opts) -> bool {
+				if (hasAsmStructure()) THROW_PARSER_ERROR(throwTooManyAsmLevels(cursor));
+
+				PROC_GUARD(beginStructure("begin asm"), endStructure());
+
 				State q = begin();
+				Token::Ptr tkhead = nullptr;
 				Node::Array children;
-				Token::Ptr id = nullptr;
-				std::string name;
+				const int index = q.index;
+
+				if (tooManyNestedStructures()) THROW_PARSER_ERROR(throwTooManyNestedStructures(index));
 
 				if (!LineNumber(q, opts)) return false;
-				if (!(id = must(Token::Types::SYMBOL)(q))) return false;
-				else name = (std::string)id->data();
-				if (must(Token::Types::OPERATOR, "(")(q)) {
-					if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
-						Arguments(q, children);
-						CHECK_UNEXPECTED(q);
+				if (
+					(tkhead = forwardN(1, Token::Types::KEYWORD, "begin")(q.index)) &&
+					forwardN(2, Token::Types::KEYWORD, "asm")(q.index)
+				) { // Paired `BEGIN ASM` is identical with `BEGINASM`.
+					Token::Ptr node(new Token());
+					node
+						->type(Token::Types::KEYWORD)
+						->data("beginasm")
+						->begin(tkhead->begin())
+						->end(tkhead->end());
+					q.tokens.push_back(node);
+					next(q); next(q); // `BEGIN ASM`.
+				} else if (!must(Token::Types::KEYWORD, "beginasm")(q)) {
+					return false;
+				}
+				ignore(Token::Types::COMMENT)(q);
+				if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+				Token::Array asmTokens;
+				{
+					PROC_GUARD(beginAsm(index), endAsm(q.index));
+
+					State q1 = begin();
+					q1.index = q.index;
+
+					for (EVER) {
+						const bool stp = stop(BEGINASM_STOPS, q1.index, 2);
+						if (stp)
+							break;
+
+						any()(q1);
 					}
-					if (!must(Token::Types::OPERATOR, ")")(q)) return false;
-				} else {
-					Arguments(q, children);
-					CHECK_UNEXPECTED(q);
+
+					q1.success = true;
+					end(q1);
+					q.index = q1.index;
+
+					std::swap(asmTokens, q1.tokens);
+				}
+				{
+					State q1 = q;
+					Token::Ptr tkhead = nullptr;
+					if (!LineNumber(q1, opts)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+					if (
+						(tkhead = forwardN(1, Token::Types::KEYWORD, "end")(q1.index)) &&
+						forwardN(2, Token::Types::KEYWORD, "asm")(q1.index)
+					) { // Paired `END ASM` is identical with `ENDASM`.
+						Token::Ptr node(new Token());
+						node
+							->type(Token::Types::KEYWORD)
+							->data("endasm")
+							->begin(tkhead->begin())
+							->end(tkhead->end());
+						q1.tokens.push_back(node);
+						next(q1); next(q1); // `END ASM`.
+					} else if (!must(Token::Types::KEYWORD, "endasm")(q1)) {
+						THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+					}
+					q.index = q1.index;
 				}
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
 				Node::Ptr node = createNode(
-					name, id->data(),
+					"beginasm", "_",
 					{
-						{ "allow_call", true }
+						{ "allow_call", false },
+						{ "asm", (void*)&asmTokens }
 					}
 				);
 				if (!node) return false;
@@ -41003,7 +41302,8 @@ private:
 
 			/**< Invoking. */
 
-			CallNative, CallAsm, Call,
+			CallNative, Call,
+			CallAsm, BeginAsm,
 
 			/**< Error handling. */
 
@@ -41753,6 +42053,8 @@ private:
 		// Finish.
 		*allocations = context.top().allocations();
 		*featureUsages = context.top().featureUsages();
+
+		context.top().assembler = nullptr;
 
 		return bytes;
 	}

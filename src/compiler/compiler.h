@@ -580,6 +580,7 @@ public:
 		END,
 		CALL,
 		ASM,
+		BEGIN_ASM,
 		START,
 		JOIN,
 		KILL,

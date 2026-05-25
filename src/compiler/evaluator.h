@@ -151,6 +151,8 @@ public:
 	};
 
 public:
+	Evaluator() = delete;
+
 	/**
 	 * @brief Converts infix notation to RPN.
 	 *

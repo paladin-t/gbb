@@ -645,10 +645,10 @@ void vm_invoke_fn(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * fn, UINT8 nparams, INT1
 }
 
 // Invokes the inlined native code by `THIS->PC`.
-void vm_asm(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS, UINT8 bank, UINT8 * fn, UINT16 size) OLDCALL NONBANKED NAKED {
+void vm_asm(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS, UINT8 bank, UINT8 * fn, UINT16 step) OLDCALL NONBANKED NAKED {
     (void)dummy0; (void)dummy1; (void)bank; (void)fn;
 
-    THIS->PC += size;
+    THIS->PC += step;
 
 #if defined __SDCC && defined NINTENDO
 __asm

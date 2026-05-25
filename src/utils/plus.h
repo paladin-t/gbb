@@ -11,11 +11,11 @@
 
 #include "../gbbasic.h"
 #include <array>
-#include <functional>
-#include <memory>
 #if GBBASIC_MULTITHREAD_ENABLED
 #	include <atomic>
 #endif /* GBBASIC_MULTITHREAD_ENABLED */
+#include <functional>
+#include <memory>
 #include <mutex>
 
 /*
