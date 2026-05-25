@@ -15017,7 +15017,7 @@ public:
 			const int address = state.inRom.address + ctx.startAddress + sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
 			Assembler::Options options(
 				bank, address,
-				[&] (const IToken::Ptr &tk, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool {
+				/* Resolve BASIC identifier */ [&] (const IToken::Ptr &tk, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool {
 					const std::string id = (std::string)tk->data();
 					std::string fuzzyName;
 					bool found = false;

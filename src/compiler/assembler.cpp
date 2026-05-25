@@ -25,17 +25,15 @@ namespace GBBASIC {
 //   a16: 16 bit address.
 //   e8 : 8 bit signed data, which are added to program counter.
 //
-//   ld a,(c) has alternative mnemonic ld a,($FF00+c).
-//   ld c,(a) has alternative mnemonic ld ($FF00+c),a.
-//   ldh a,(a8) has alternative mnemonic ld a,($FF00+a8).
-//   ldh (a8),a has alternative mnemonic ld ($FF00+a8),a.
-//   ld a,(hl+) has alternative mnemonic ld a,(hli) or ldi a,(hl).
-//   ld (hl+),a has alternative mnemonic ld (hli),a or ldi (hl),a.
-//   ld a,(hl-) has alternative mnemonic ld a,(hld) or ldd a,(hl).
-//   ld (hl-),a has alternative mnemonic ld (hld),a or ldd (hl),a.
-//   ld hl,sp+e8 has alternative mnemonic ldhl sp,e8.
+//  `ld a, (hl+)` has the alternative mnemonics `ld a, (hli)` and `ldi a, (hl)`.
+//  `ld (hl+), a` has the alternative mnemonics `ld (hli), a` and `ldi (hl), a`.
+//  `ld a, (hl-)` has the alternative mnemonics `ld a, (hld)` and `ldd a, (hl)`.
+//  `ld (hl-), a` has the alternative mnemonics `ld (hld), a` and `ldd (hl), a`.
+//  `ld hl, sp+e8` has the alternative mnemonics `ldhl sp, e8`.
+//  ALU instructions (`add`, `adc`, `sub`, `sbc`, `and`, `xor`, `or`, and `cp`) can be written with the left-hand side `a` omitted.
+//  Thus for example `add a, b` has the alternative mnemonic `add b`, and `cp a, 0xf` has the alternative mnemonic `cp 0xf`.
 
-static constexpr const char* const ASSEMBLER_OPCODE_MNEMONIC[256] = {
+static constexpr const char* const ASSEMBLER_OPCODE_MNEMONICS[256] = {
 	/*       x0            x1           x2            x3           x4             x5           x6            x7           x8             x9           xA            xB         xC            xD          xE            xF      */
 	/* 0x */ "nop",        "ld bc,n16", "ld (bc),a",  "inc bc",    "inc b",       "dec b",     "ld b,n8",    "rlca",      "ld (a16),sp", "add hl,bc", "ld a,(bc)",  "dec bc",  "inc c",      "dec c",    "ld c,n8",    "rrca",
 	/* 1x */ "stop",       "ld de,n16", "ld (de),a",  "inc de",    "inc d",       "dec d",     "ld d,n8",    "rla",       "jr e8",       "add hl,de", "ld a,(de)",  "dec de",  "inc e",      "dec e",    "ld e,n8",    "rra",
@@ -54,7 +52,7 @@ static constexpr const char* const ASSEMBLER_OPCODE_MNEMONIC[256] = {
 	/* Ex */ "ldh (a8),a", "pop hl",    "ld (c),a",   nullptr,     nullptr,       "push hl",   "and a,n8",   "rst 20H",   "add sp,e8",   "jp hl",     "ld (a16),a", nullptr,   nullptr,      nullptr,    "xor a,n8",   "rst 28H",
 	/* Fx */ "ldh a,(a8)", "pop af",    "ld a,(c)",   "di",        nullptr,       "push af",   "or a,n8",    "rst 30H",   "ld hl,spr8",  "ld sp,hl",  "ld a,(a16)", "ei",      nullptr,      nullptr,    "cp a,n8",    "rst 38H"
 };
-static constexpr const char* const ASSEMBLER_CB_OPCODE_MNEMONIC[256] = {
+static constexpr const char* const ASSEMBLER_CB_OPCODE_MNEMONICS[256] = {
 	/*       x0         x1         x2         x3         x4         x5         x6            x7         x8         x9         xA         xB         xC         xD         xE            xF      */
 	/* 0x */ "rlc b",   "rlc c",   "rlc d",   "rlc e",   "rlc h",   "rlc l",   "rlc (hl)",   "rlc a",   "rrc b",   "rrc c",   "rrc d",   "rrc e",   "rrc h",   "rrc l",   "rrc (hl)",   "rrc a",
 	/* 1x */ "rl b",    "rl c",    "rl d",    "rl e",    "rl h",    "rl l",    "rl (hl)",    "rl a",    "rr b",    "rr c",    "rr d",    "rr e",    "rr h",    "rr l",    "rr (hl)",    "rr a",
@@ -74,7 +72,7 @@ static constexpr const char* const ASSEMBLER_CB_OPCODE_MNEMONIC[256] = {
 	/* Fx */ "set 6,b", "set 6,c", "set 6,d", "set 6,e", "set 6,h", "set 6,l", "set 6,(hl)", "set 6,a", "set 7,b", "set 7,c", "set 7,d", "set 7,e", "set 7,h", "set 7,l", "set 7,(hl)", "set 7,a"
 };
 
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_N8[] = {
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_N8[] = {
 	"ld b,n8",    "ld c,n8",
 	"ld d,n8",    "ld e,n8",
 	"ld h,n8",    "ld l,n8",
@@ -84,24 +82,24 @@ static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_N8[] = {
 	"and a,n8",   "xor a,n8",
 	"or a,n8",    "cp a,n8"
 };
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_N16[] = {
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_N16[] = {
 	"ld bc,n16",
 	"ld de,n16",
 	"ld hl,n16",
 	"ld sp,n16"
 };
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_A8[] = {
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A8[] = {
 	"ldh (a8),a",
 	"ldh a,(a8)"
 };
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_A16[] = {
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A16[] = {
 	"ld (a16),sp",
 	"jp nz,a16",   "jp a16",      "call nz,a16", "jp z,a16",   "call z,a16", "call a16",
 	"jp nc,a16",   "call nc,a16", "jp c,a16",    "call c,a16",
 	"ld (a16),a",
 	"ld a,(a16)"
 };
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_E8[] = {
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_E8[] = {
 	"jr e8",
 	"jr nz,e8",   "jr z,e8",
 	"jr nc,e8",   "jr c,e8",
@@ -130,9 +128,9 @@ static constexpr const UInt8 ASSEMBLER_OPCODE_SIZE[256] = {
 	/* Fx */ 2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 1, 2, 1
 };
 
-static constexpr const UInt8 ASSEMBLER_OPCODE_NOP = 0x00;
+static constexpr const UInt8 ASSEMBLER_OPCODE_NOP  = 0x00;
 static constexpr const UInt8 ASSEMBLER_OPCODE_STOP = 0x10;
-static constexpr const UInt8 ASSEMBLER_OPCODE_CB = 0xcb;
+static constexpr const UInt8 ASSEMBLER_OPCODE_CB   = 0xcb;
 
 }
 
@@ -172,52 +170,125 @@ private:
 
 public:
 	AssemblerImpl() {
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONIC); ++i) {
-			const char* op = ASSEMBLER_OPCODE_MNEMONIC[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONICS); ++i) {
+			const char* op = ASSEMBLER_OPCODE_MNEMONICS[i];
 			if (!op)
 				continue;
 
 			_opcodeDictionary.insert(std::make_pair(op, i));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_CB_OPCODE_MNEMONIC); ++i) {
-			const char* op = ASSEMBLER_CB_OPCODE_MNEMONIC[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_CB_OPCODE_MNEMONICS); ++i) {
+			const char* op = ASSEMBLER_CB_OPCODE_MNEMONICS[i];
 			if (!op)
 				continue;
 
 			_cbOpcodeDictionary.insert(std::make_pair(op, i));
 		}
 
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_N8); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_N8[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_N8); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_N8[i];
 			_oprandPatterns.push_back(OprandPattern(pattern, "n8"));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_N16); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_N16[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_N16); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_N16[i];
 			_oprandPatterns.push_back(OprandPattern(pattern, "n16"));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_A8); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_A8[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_A8); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_A8[i];
 			_oprandPatterns.push_back(OprandPattern(pattern, "a8"));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_A16); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_A16[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_A16); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_A16[i];
 			_oprandPatterns.push_back(OprandPattern(pattern, "a16"));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_E8); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_E8[i];
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_E8); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_E8[i];
 			_oprandPatterns.push_back(OprandPattern(pattern, "e8"));
 		}
 
 		_mnemonicAliases = {
-			{ "ld a,(hli)", "ld a,(hl+)" },
-			{ "ldi a,(hl)", "ld a,(hl+)" },
-			{ "ld (hli),a", "ld (hl+),a" },
-			{ "ldi (hl),a", "ld (hl+),a" },
-			{ "ld a,(hld)", "ld a,(hl-)" },
-			{ "ldd a,(hl)", "ld a,(hl-)" },
-			{ "ld (hld),a", "ld (hl-),a" },
-			{ "ldd (hl),a", "ld (hl-),a" },
-			{ "ldhl sp,e8", "ld hl,sp+e8" }
+			{ "ld a,(hli)", "ld a,(hl+)"  },
+			{ "ldi a,(hl)", "ld a,(hl+)"  },
+			{ "ld (hli),a", "ld (hl+),a"  },
+			{ "ldi (hl),a", "ld (hl+),a"  },
+			{ "ld a,(hld)", "ld a,(hl-)"  },
+			{ "ldd a,(hl)", "ld a,(hl-)"  },
+			{ "ld (hld),a", "ld (hl-),a"  },
+			{ "ldd (hl),a", "ld (hl-),a"  },
+			{ "ldhl sp,e8", "ld hl,sp+e8" },
+
+			{ "add b",      "add a,b"     },
+			{ "add c",      "add a,c"     },
+			{ "add d",      "add a,d"     },
+			{ "add e",      "add a,e"     },
+			{ "add h",      "add a,h"     },
+			{ "add l",      "add a,l"     },
+			{ "add (hl)",   "add a,(hl)"  },
+			{ "add a",      "add a,a"     },
+			{ "add n8",     "add a,n8"    },
+			{ "adc b",      "adc a,b"     },
+			{ "adc c",      "adc a,c"     },
+			{ "adc d",      "adc a,d"     },
+			{ "adc e",      "adc a,e"     },
+			{ "adc h",      "adc a,h"     },
+			{ "adc l",      "adc a,l"     },
+			{ "adc (hl)",   "adc a,(hl)"  },
+			{ "adc a",      "adc a,a"     },
+			{ "adc n8",     "adc a,n8"    },
+			{ "sub b",      "sub a,b"     },
+			{ "sub c",      "sub a,c"     },
+			{ "sub d",      "sub a,d"     },
+			{ "sub e",      "sub a,e"     },
+			{ "sub h",      "sub a,h"     },
+			{ "sub l",      "sub a,l"     },
+			{ "sub (hl)",   "sub a,(hl)"  },
+			{ "sub a",      "sub a,a"     },
+			{ "sub n8",     "sub a,n8"    },
+			{ "sbc b",      "sbc a,b"     },
+			{ "sbc c",      "sbc a,c"     },
+			{ "sbc d",      "sbc a,d"     },
+			{ "sbc e",      "sbc a,e"     },
+			{ "sbc h",      "sbc a,h"     },
+			{ "sbc l",      "sbc a,l"     },
+			{ "sbc (hl)",   "sbc a,(hl)"  },
+			{ "sbc a",      "sbc a,a"     },
+			{ "sbc n8",     "sbc a,n8"    },
+			{ "and b",      "and a,b"     },
+			{ "and c",      "and a,c"     },
+			{ "and d",      "and a,d"     },
+			{ "and e",      "and a,e"     },
+			{ "and h",      "and a,h"     },
+			{ "and l",      "and a,l"     },
+			{ "and (hl)",   "and a,(hl)"  },
+			{ "and a",      "and a,a"     },
+			{ "and n8",     "and a,n8"    },
+			{ "xor b",      "xor a,b"     },
+			{ "xor c",      "xor a,c"     },
+			{ "xor d",      "xor a,d"     },
+			{ "xor e",      "xor a,e"     },
+			{ "xor h",      "xor a,h"     },
+			{ "xor l",      "xor a,l"     },
+			{ "xor (hl)",   "xor a,(hl)"  },
+			{ "xor a",      "xor a,a"     },
+			{ "xor n8",     "xor a,n8"    },
+			{ "or b",       "or a,b"      },
+			{ "or c",       "or a,c"      },
+			{ "or d",       "or a,d"      },
+			{ "or e",       "or a,e"      },
+			{ "or h",       "or a,h"      },
+			{ "or l",       "or a,l"      },
+			{ "or (hl)",    "or a,(hl)"   },
+			{ "or a",       "or a,a"      },
+			{ "or n8",      "or a,n8"     },
+			{ "cp b",       "cp a,b"      },
+			{ "cp c",       "cp a,c"      },
+			{ "cp d",       "cp a,d"      },
+			{ "cp e",       "cp a,e"      },
+			{ "cp h",       "cp a,h"      },
+			{ "cp l",       "cp a,l"      },
+			{ "cp (hl)",    "cp a,(hl)"   },
+			{ "cp a",       "cp a,a"      },
+			{ "cp n8",      "cp a,n8"     }
 		};
 
 		_registers = {
@@ -324,6 +395,26 @@ private:
 		int cursor = 0;
 
 		// Error handlers.
+		auto throwByteExpected = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = "Byte expected";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwCommaExpected = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = "Comma expected";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
 		auto throwIdHasNotBeenDeclared = [&] (int idx, const std::string &id) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
@@ -369,6 +460,26 @@ private:
 				idx = cursor;
 			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
 			const std::string msg = "Too many oprands";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwUnexpectedComma = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = "Unexpected comma";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwWordExpected = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = "Word expected";
 			if (options.onError)
 				options.onError(msg, tk);
 
@@ -431,13 +542,61 @@ private:
 		Text::toLowerCase(opcode);
 
 		for (; cursor < lnEnd; ++cursor) {
+			// Prepare.
 			if (cursor == lnEnd - 1) continue; // Ignore the line end.
 
+			// Parse data.
 			const IToken::Ptr &tk = tokens[cursor];
+			if (opcode == "db") {
+				if (tk->is(IToken::Types::STRING)) {
+					const std::string data = (std::string)tk->data();
+					for (std::string::value_type oprand : data)
+						oprands.push_back(oprand);
+					mnemonic += data;
+				} else if (tk->is(IToken::Types::NUMBER)) {
+					const int oprand = (int)(Int)tk->data();
+					oprands.push_back(oprand);
+					const std::string data = "0x" + Text::toHex(oprand, 2, '0', true);
+					mnemonic += data;
+				} else {
+					return throwByteExpected(cursor);
+				}
+
+				const IToken::Ptr tk_ = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[++cursor] : nullptr;
+				if (tk_->is(IToken::Types::OPERATOR)) {
+					const std::string data = (std::string)tk_->data();
+					if (data != ",") return throwCommaExpected(cursor);
+					if (cursor == lnEnd - 1) return throwUnexpectedComma(cursor);
+					mnemonic += data;
+				}
+
+				continue;
+			} else if (opcode == "dw") {
+				if (tk->is(IToken::Types::NUMBER)) {
+					const int oprand = (int)(Int)tk->data();
+					oprands.push_back(oprand);
+					const std::string data = "0x" + Text::toHex(oprand, 4, '0', true);
+					mnemonic += data;
+				} else {
+					return throwByteExpected(cursor);
+				}
+
+				const IToken::Ptr tk_ = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[++cursor] : nullptr;
+				if (tk_->is(IToken::Types::OPERATOR)) {
+					const std::string data = (std::string)tk_->data();
+					if (data != ",") return throwCommaExpected(cursor);
+					if (cursor == lnEnd - 1) return throwUnexpectedComma(cursor);
+					mnemonic += data;
+				}
+
+				continue;
+			}
+
+			// Parse instructions.
 			if (tk->is(IToken::Types::IDENTIFIER)) {
 				const std::string data = (std::string)tk->data();
 				if (_registers.find(data) == _registers.end()) {
-					// Resolve BASIC symbols.
+					// Resolve BASIC identifiers.
 					RamLocation loc;
 					std::string id;
 					std::string fuzzyName;
@@ -474,9 +633,22 @@ private:
 		Text::toLowerCase(mnemonic);
 		mnemonic = Text::trim(mnemonic);
 
+		// Translate the data it's data declaration.
+		if (opcode == "db") {
+			for (int oprand : oprands)
+				emitUInt8(bytes, ctx, (UInt8)oprand);
+
+			return true;
+		} else if (opcode == "dw") {
+			for (int oprand : oprands)
+				emitUInt16(bytes, ctx, (UInt16)oprand);
+
+			return true;
+		}
+
 		// Translate the oprand.
 		if (!oprands.empty()) {
-			if(oprands.size() > 1) return throwTooManyOprands(cursor);
+			if (oprands.size() > 1) return throwTooManyOprands(cursor);
 
 			for (const OprandPattern &pattern : _oprandPatterns) {
 				if (Text::matchWildcard(pattern.pattern, mnemonic.c_str(), false)) {
@@ -495,18 +667,22 @@ private:
 
 		Dictionary::const_iterator opit = _opcodeDictionary.find(mnemonic);
 		if (opit != _opcodeDictionary.end()) {
+			// Emit the opcode.
 			const int op = opit->second;
-			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONIC) && "Invalid opcode.");
+			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONICS) && "Invalid opcode.");
 			emitUInt8(bytes, ctx, (UInt8)op);
 
+			// Specialized for `stop`.
 			if (op == ASSEMBLER_OPCODE_STOP) {
 				emitUInt8(bytes, ctx, (UInt8)ASSEMBLER_OPCODE_NOP);
 
 				return true;
 			}
 
-			// TODO: Resolve jump destination.
+			// Resolve jump destination.
+			// TODO
 
+			// Emit the oprand.
 			const int sz = ASSEMBLER_OPCODE_SIZE[op];
 			const int restSz = sz - 1;
 			if (restSz == 0) {
@@ -522,6 +698,9 @@ private:
 					return false;
 
 				const int oprand = oprands.front();
+				if (oprand < std::numeric_limits<Int8>::min() || oprand > std::numeric_limits<UInt8>::max())
+					return throwByteExpected(cursor);
+
 				emitUInt8(bytes, ctx, (UInt8)oprand);
 
 				return true;
@@ -532,6 +711,9 @@ private:
 					return false;
 
 				const int oprand = oprands.front();
+				if (oprand < std::numeric_limits<Int16>::min() || oprand > std::numeric_limits<UInt16>::max())
+					return throwWordExpected(cursor);
+
 				emitUInt16(bytes, ctx, (UInt16)oprand);
 
 				return true;
@@ -547,7 +729,7 @@ private:
 			emitUInt8(bytes, ctx, (UInt8)ASSEMBLER_OPCODE_CB); // Prefix.
 
 			const int op = cbopit->second;
-			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONIC) && "Invalid opcode.");
+			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONICS) && "Invalid opcode.");
 			emitUInt8(bytes, ctx, (UInt8)op);
 
 			return true;
