@@ -7,6 +7,7 @@
 */
 
 #include "assembler.h"
+#include "../utils/platform.h"
 #include "../utils/text.h"
 
 /*
@@ -64,7 +65,6 @@ static constexpr const char* const ASSEMBLER_OPCODE_MNEMONIC[256] = {
 	/* Ex */ "ldh (a8),a", "pop hl",    "ld (c),a",   nullptr,     nullptr,       "push hl",   "and a,n8",   "rst 20H",   "add sp,e8",   "jp hl",     "ld (a16),a", nullptr,   nullptr,      nullptr,    "xor a,n8",   "rst 28H",
 	/* Fx */ "ldh a,(a8)", "pop af",    "ld a,(c)",   "di",        nullptr,       "push af",   "or a,n8",    "rst 30H",   "ld hl,spr8",  "ld sp,hl",  "ld a,(a16)", "ei",      nullptr,      nullptr,    "cp a,n8",    "rst 38H"
 };
-
 static constexpr const char* const ASSEMBLER_CB_OPCODE_MNEMONIC[256] = {
 	/*       x0         x1         x2         x3         x4         x5         x6            x7         x8         x9         xA         xB         xC         xD         xE            xF      */
 	/* 0x */ "rlc b",   "rlc c",   "rlc d",   "rlc e",   "rlc h",   "rlc l",   "rlc (hl)",   "rlc a",   "rrc b",   "rrc c",   "rrc d",   "rrc e",   "rrc h",   "rrc l",   "rrc (hl)",   "rrc a",
@@ -85,6 +85,66 @@ static constexpr const char* const ASSEMBLER_CB_OPCODE_MNEMONIC[256] = {
 	/* Fx */ "set 6,b", "set 6,c", "set 6,d", "set 6,e", "set 6,h", "set 6,l", "set 6,(hl)", "set 6,a", "set 7,b", "set 7,c", "set 7,d", "set 7,e", "set 7,h", "set 7,l", "set 7,(hl)", "set 7,a"
 };
 
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_N8[] = {
+	"ld b,n8",    "ld c,n8",
+	"ld d,n8",    "ld e,n8",
+	"ld h,n8",    "ld l,n8",
+	"ld (hl),n8", "ld a,n8",
+	"add a,n8",   "adc a,n8",
+	"sub a,n8",   "sbc a,n8",
+	"and a,n8",   "xor a,n8",
+	"or a,n8",    "cp a,n8"
+};
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_N16[] = {
+	"ld bc,n16",
+	"ld de,n16",
+	"ld hl,n16",
+	"ld sp,n16"
+};
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_A8[] = {
+	"ldh (a8),a",
+	"ldh a,(a8)"
+};
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_A16[] = {
+	"ld (a16),sp",
+	"jp nz,a16",   "jp a16",      "call nz,a16", "jp z,a16",   "call z,a16", "call a16",
+	"jp nc,a16",   "call nc,a16", "jp c,a16",    "call c,a16",
+	"ld (a16),a",
+	"ld a,(a16)"
+};
+static constexpr const char* const ASSEMBLER_OPRAND_PATTERN_FOR_E8[] = {
+	"jr e8",
+	"jr nz,e8",   "jr z,e8",
+	"jr nc,e8",   "jr c,e8",
+	"add sp,e8",
+
+	"ldhl sp,e8", "ld hl,sp+e8"
+};
+
+static constexpr const UInt8 ASSEMBLER_OPCODE_SIZE[256] = {
+	/*       x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF */
+	/* 0x */ 1, 3, 1, 1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 2, 1,
+	/* 1x */ 1, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+	/* 2x */ 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+	/* 3x */ 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+	/* 4x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* 5x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* 6x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* 7x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* 8x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* 9x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* Ax */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* Bx */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* Cx */ 1, 1, 3, 3, 3, 1, 2, 1, 1, 1, 3, 2, 3, 3, 2, 1,
+	/* Dx */ 1, 1, 3, 1, 3, 1, 2, 1, 1, 1, 3, 1, 3, 1, 2, 1,
+	/* Ex */ 2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 1, 2, 1,
+	/* Fx */ 2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 1, 2, 1
+};
+
+static constexpr const UInt8 ASSEMBLER_OPCODE_NOP = 0x00;
+static constexpr const UInt8 ASSEMBLER_OPCODE_STOP = 0x10;
+static constexpr const UInt8 ASSEMBLER_OPCODE_CB = 0xcb;
+
 }
 
 /* ===========================================================================} */
@@ -100,9 +160,22 @@ class AssemblerImpl : public Assembler {
 private:
 	typedef std::map<std::string, int> Dictionary;
 
+	struct OprandPattern {
+		typedef std::vector<OprandPattern> Array;
+
+		std::string pattern;
+		std::string type;
+
+		OprandPattern() {
+		}
+		OprandPattern(const std::string &p, const std::string &y) : pattern(p), type(y) {
+		}
+	};
+
 private:
 	Dictionary _opcodeDictionary;
 	Dictionary _cbOpcodeDictionary;
+	OprandPattern::Array _oprandPatterns;
 	Text::Dictionary _mnemonicAliases;
 
 public:
@@ -121,6 +194,28 @@ public:
 
 			_cbOpcodeDictionary.insert(std::make_pair(op, i));
 		}
+
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_N8); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_N8[i];
+			_oprandPatterns.push_back(OprandPattern(pattern, "n8"));
+		}
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_N16); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_N16[i];
+			_oprandPatterns.push_back(OprandPattern(pattern, "n16"));
+		}
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_A8); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_A8[i];
+			_oprandPatterns.push_back(OprandPattern(pattern, "a8"));
+		}
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_A16); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_A16[i];
+			_oprandPatterns.push_back(OprandPattern(pattern, "a16"));
+		}
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERN_FOR_E8); ++i) {
+			const char* pattern = ASSEMBLER_OPRAND_PATTERN_FOR_E8[i];
+			_oprandPatterns.push_back(OprandPattern(pattern, "e8"));
+		}
+
 		_mnemonicAliases = {
 			{ "ld a,(hli)", "ld a,(hl+)" },
 			{ "ldi a,(hl)", "ld a,(hl+)" },
@@ -233,6 +328,8 @@ public:
 private:
 	bool assembleLine(Bytes::Ptr &bytes, Cotnext &ctx, const IToken::Array &tokens, int lnBegin, int lnEnd, const Options &options) {
 		// Prepare.
+		typedef std::vector<int> Oprands;
+
 		int cursor = 0;
 
 		// Error handlers.
@@ -246,9 +343,19 @@ private:
 
 			return false;
 		};
+		auto throwTooManyOprands = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = "Too many oprands";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
 
 		// Emitters.
-		auto emit = [] (Bytes::Ptr &bytes, Cotnext &ctx, UInt8 data) -> Byte* {
+		auto emitUInt8 = [] (Bytes::Ptr &bytes, Cotnext &ctx, UInt8 data) -> Byte* {
 			int n = 0;
 			const size_t m = bytes->peek();
 			n += bytes->writeUInt8(data);
@@ -261,14 +368,38 @@ private:
 
 			return result;
 		};
+		auto emitUInt16 = [] (Bytes::Ptr &bytes, Cotnext &ctx, UInt16 data) -> Byte* {
+			int n = 0;
+			const size_t m = bytes->peek();
+			union {
+				UInt16 data;
+				UInt8 bytes[2];
+			} u;
+			u.data = data;
+			if (!Platform::isLittleEndian())
+				std::swap(u.bytes[0], u.bytes[1]);
+			n += bytes->writeUInt8(u.bytes[0]);
+			n += bytes->writeUInt8(u.bytes[1]);
+
+			ctx.size += n;
+
+			ctx.addressCursor += n;
+
+			Byte* result = bytes->pointer() + m;
+
+			return result;
+		};
 
 		// Parse the tokens.
 		std::string mnemonic;
+		Oprands oprands;
+		std::string oprandType;
 
 		cursor = lnBegin;
 		++cursor; // Ignore the line number.
 
 		const IToken::Ptr &tkop = tokens[cursor];
+		if (tkop->is(IToken::Types::COMMENT)) return true; // Ignore this line with comment.
 		if (!tkop->is(IToken::Types::IDENTIFIER)) return throwInvalidOpcode(cursor);
 		mnemonic = (std::string)tkop->data();
 		mnemonic += " ";
@@ -279,15 +410,34 @@ private:
 
 			const IToken::Ptr &tk = tokens[cursor];
 			if (tk->is(IToken::Types::IDENTIFIER)) {
+				// TODO: Resolve BASIC symbols.
+
 				mnemonic += (std::string)tk->data();
 			} else if (tk->is(IToken::Types::OPERATOR)) {
 				mnemonic += (std::string)tk->data();
+			} else if (tk->is(IToken::Types::NUMBER)) {
+				const int oprand = (int)(Int)tk->data();
+				oprands.push_back(oprand);
+				mnemonic += "*";
 			}
-			// TODO
 		}
 
 		Text::toLowerCase(mnemonic);
 		mnemonic = Text::trim(mnemonic);
+
+		// Translate the oprand.
+		if (!oprands.empty()) {
+			if(oprands.size() > 1) return throwTooManyOprands(cursor);
+
+			for (const OprandPattern &pattern : _oprandPatterns) {
+				if (Text::matchWildcard(pattern.pattern, mnemonic.c_str(), false)) {
+					mnemonic = pattern.pattern;
+					oprandType = pattern.type;
+
+					break;
+				}
+			}
+		}
 
 		// Translate the mnemonic.
 		Text::Dictionary::const_iterator ait = _mnemonicAliases.find(mnemonic);
@@ -297,17 +447,59 @@ private:
 		Dictionary::const_iterator opit = _opcodeDictionary.find(mnemonic);
 		if (opit != _opcodeDictionary.end()) {
 			const int op = opit->second;
-			emit(bytes, ctx, (UInt8)op);
-			// TODO
+			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONIC) && "Invalid opcode.");
+			emitUInt8(bytes, ctx, (UInt8)op);
 
-			return true;
+			if (op == ASSEMBLER_OPCODE_STOP) {
+				emitUInt8(bytes, ctx, (UInt8)ASSEMBLER_OPCODE_NOP);
+
+				return true;
+			}
+
+			// TODO: Resolve jump destination.
+
+			const int sz = ASSEMBLER_OPCODE_SIZE[op];
+			const int restSz = sz - 1;
+			if (restSz == 0) {
+				GBBASIC_ASSERT(oprandType.empty() && "Invalid opcode.");
+
+				return true;
+			}
+
+			if (restSz == 1) {
+				GBBASIC_ASSERT((oprandType == "n8" || oprandType == "a8" || oprandType == "e8") && !oprands.empty() && "Invalid oprand.");
+
+				if (oprands.empty())
+					return false;
+
+				const int oprand = oprands.front();
+				emitUInt8(bytes, ctx, (UInt8)oprand);
+
+				return true;
+			} else if (restSz == 2) {
+				GBBASIC_ASSERT((oprandType == "n16" || oprandType == "a16") && !oprands.empty() && "Invalid oprand.");
+
+				if (oprands.empty())
+					return false;
+
+				const int oprand = oprands.front();
+				emitUInt16(bytes, ctx, (UInt16)oprand);
+
+				return true;
+			}
+
+			GBBASIC_ASSERT(false && "Invalid opcode.");
+
+			return false;
 		}
 
 		Dictionary::const_iterator cbopit = _cbOpcodeDictionary.find(mnemonic);
 		if (cbopit != _cbOpcodeDictionary.end()) {
+			emitUInt8(bytes, ctx, (UInt8)ASSEMBLER_OPCODE_CB); // Prefix.
+
 			const int op = cbopit->second;
-			emit(bytes, ctx, (UInt8)op);
-			// TODO
+			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONIC) && "Invalid opcode.");
+			emitUInt8(bytes, ctx, (UInt8)op);
 
 			return true;
 		}
