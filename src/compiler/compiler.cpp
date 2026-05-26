@@ -36107,6 +36107,7 @@ private:
 				if (!must(Token::Types::KEYWORD, "with")(q)) return false;
 				if (!(id = must(Token::Types::IDENTIFIER)(q))) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				name = (std::string)id->data();
+				const int r = q.index;
 				maybe(Token::Types::OPERATOR, ";")(q);
 				if (!EndOfLine(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 
@@ -36125,7 +36126,7 @@ private:
 
 				node->add(children);
 
-				identifiers.use(name);
+				if (!identifiers.use(name)) THROW_PARSER_ERROR(throwIdHasNotBeenDeclared(r, name));
 
 				return true;
 			}

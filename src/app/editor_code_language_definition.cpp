@@ -491,7 +491,7 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 	// Assembly keywords.
 	constexpr const char* const ASM_KEYWORDS[] = {
 		// Load/transfer.
-		"ld", "ldh", "ldi", "ldd", "ldio",
+		"ld", "ldh", "ldi", "ldd",
 
 		// Arithmetic.
 		"add", "adc", "sub", "sbc",
@@ -533,8 +533,8 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 	// Assembly registers.
 	constexpr const char* const ASM_REGISTERS[] = {
 		"a", "b", "c", "d", "e", "h", "l",
-		"hl", "bc", "de", "sp", "af",
-		"nz", "z", "nc", "c"
+		"af", "bc", "de", "hl", "sp",
+		"z", "nz", /* "c" */ "nc"
 	};
 	for (const char* const k : ASM_REGISTERS) {
 		ImGui::CodeEditor::Identifier id;
