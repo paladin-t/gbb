@@ -50,7 +50,7 @@ static constexpr const char* const ASSEMBLER_OPCODE_MNEMONICS[256] = {
 	/* Cx */ "ret nz",     "pop bc",    "jp nz,a16",  "jp a16",    "call nz,a16", "push bc",   "add a,n8",   "rst 00H",   "ret z",       "ret",       "jp z,a16",   nullptr,   "call z,a16", "call a16", "adc a,n8",   "rst 08H",
 	/* Dx */ "ret nc",     "pop de",    "jp nc,a16",  nullptr,     "call nc,a16", "push de",   "sub a,n8",   "rst 10H",   "ret c",       "reti",      "jp c,a16",   nullptr,   "call c,a16", nullptr,    "sbc a,n8",   "rst 18H",
 	/* Ex */ "ldh (a8),a", "pop hl",    "ld (c),a",   nullptr,     nullptr,       "push hl",   "and a,n8",   "rst 20H",   "add sp,e8",   "jp hl",     "ld (a16),a", nullptr,   nullptr,      nullptr,    "xor a,n8",   "rst 28H",
-	/* Fx */ "ldh a,(a8)", "pop af",    "ld a,(c)",   "di",        nullptr,       "push af",   "or a,n8",    "rst 30H",   "ld hl,spr8",  "ld sp,hl",  "ld a,(a16)", "ei",      nullptr,      nullptr,    "cp a,n8",    "rst 38H"
+	/* Fx */ "ldh a,(a8)", "pop af",    "ld a,(c)",   "di",        nullptr,       "push af",   "or a,n8",    "rst 30H",   "ld hl,sp+e8", "ld sp,hl",  "ld a,(a16)", "ei",      nullptr,      nullptr,    "cp a,n8",    "rst 38H"
 };
 static constexpr const char* const ASSEMBLER_CB_OPCODE_MNEMONICS[256] = {
 	/*       x0         x1         x2         x3         x4         x5         x6            x7         x8         x9         xA         xB         xC         xD         xE            xF      */
@@ -298,9 +298,9 @@ public:
 		};
 
 		_registers = {
-			"af", "bc", "de", "hl", "sp",
 			"a", "b", "c", "d", "e", "h", "l",
-			"z", "nz", "nc"
+			"af", "bc", "de", "hl", "sp",
+			"z", "nz", /* "c" */ "nc"
 		};
 	}
 	virtual ~AssemblerImpl() override {
