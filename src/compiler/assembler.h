@@ -30,6 +30,7 @@ public:
 	struct Cotnext {
 		int size = 0;
 		int addressCursor = 0;
+		bool hasRet = false;
 
 		Cotnext();
 	};
@@ -47,7 +48,8 @@ public:
 public:
 	GBBASIC_CLASS_TYPE('A', 'S', 'M', 'B')
 
-	virtual bool assemble(Bytes::Ptr &bytes, Cotnext &ctx, const IToken::Array &tokens, const Options &options) const = 0;
+	virtual bool assemble(Bytes::Ptr &bytes, Cotnext &context, const IToken::Array &tokens, const Options &options) const = 0;
+	virtual void post(Bytes::Ptr &bytes, Cotnext &context, const Options &options) const = 0;
 
 	static Assembler* create(void);
 	static void destroy(Assembler* ptr);

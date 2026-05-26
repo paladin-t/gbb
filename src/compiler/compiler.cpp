@@ -3615,6 +3615,13 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_ASM_ERROR */
+#ifndef THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK
+		// As warning.
+#	define THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK(ON_ERROR) \
+		do { \
+			throwAsmNoRetInstructionFoundInAsmBlock(ON_ERROR); \
+		} while (false)
+#endif /* THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK */
 #ifndef THROW_ASSET_IS_DEFINED_AS_AN_ACTOR_BUT_USED_AS_A_PROJECTILE
 #	define THROW_ASSET_IS_DEFINED_AS_AN_ACTOR_BUT_USED_AS_A_PROJECTILE(ON_ERROR) \
 		do { \
@@ -6983,6 +6990,12 @@ public:
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
 		const Error err("ASM error", false);
+		onError(err, err.format(), tk->begin());
+	}
+	void throwAsmNoRetInstructionFoundInAsmBlock(Error::Handler onError, Token::Ptr tk = nullptr) const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("No RET instruction found in ASM block", true); // Warning.
 		onError(err, err.format(), tk->begin());
 	}
 	void throwAssetIsDefinedAsAnActorButUsedAsAProjectile(Error::Handler onError, Token::Ptr tk = nullptr) const {
@@ -15066,6 +15079,9 @@ public:
 			if (!ok) { THROW_ASM_ERROR(onError, tkbegin); }
 			if (bytes_->empty())
 				return; // Ignore blank assembly.
+			if (!asmCtx.hasRet) {
+				THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK(onError);
+			}
 
 			// Emit a `VM_ASM` instruction to set the data.
 			const int n = (int)bytes_->count();
@@ -15079,6 +15095,20 @@ public:
 		};
 
 		write(bytes, context, generator, false, onError);
+	}
+	virtual void post(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		Context &ctx = context.top();
+
+		if (!ctx.assembler) {
+			GBBASIC_ASSERT(false && "Impossible.");
+
+			return;
+		}
+
+		(void)bytes;
+		(void)onError;
+
+		// TODO
 	}
 
 	virtual Abstract abstract(void) const override {
