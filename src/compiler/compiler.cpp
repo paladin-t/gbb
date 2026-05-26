@@ -1581,6 +1581,70 @@ void PreprocessorBranch::clear(void) {
 	conditionLine = -1;
 }
 
+AsmBlock::AsmBlock() {
+}
+
+AsmBlock::AsmBlock(int pg, int begin, int end) :
+	page(pg), beginLine(begin), endLine(end)
+{
+}
+
+bool AsmBlock::operator == (const AsmBlock &other) const {
+	return compare(other) == 0;
+}
+
+bool AsmBlock::operator != (const AsmBlock &other) const {
+	return compare(other) != 0;
+}
+
+bool AsmBlock::operator < (const AsmBlock &other) const {
+	return compare(other) <  0;
+}
+
+bool AsmBlock::operator <= (const AsmBlock &other) const {
+	return compare(other) <= 0;
+}
+
+bool AsmBlock::operator > (const AsmBlock &other) const {
+	return compare(other) >  0;
+}
+
+bool AsmBlock::operator >= (const AsmBlock &other) const {
+	return compare(other) >= 0;
+}
+
+int AsmBlock::compare(const AsmBlock &other) const {
+	if (page < other.page)
+		return -1;
+	else if (page > other.page)
+		return 1;
+
+	if (beginLine < other.beginLine)
+		return -1;
+	else if (beginLine > other.beginLine)
+		return 1;
+
+	if (endLine < other.endLine)
+		return -1;
+	else if (endLine > other.endLine)
+		return 1;
+
+	return 0;
+}
+
+bool AsmBlock::valid(void) const {
+	if (page == -1 || beginLine == -1 || endLine == -1)
+		return false;
+
+	return true;
+}
+
+void AsmBlock::clear(void) {
+	page = -1;
+	beginLine = -1;
+	endLine = -1;
+}
+
 FeatureUsages::FeatureUsages() {
 }
 
@@ -14991,6 +15055,25 @@ public:
 	}
 
 	NODE_TYPE(Types::BEGIN_ASM)
+
+	virtual TextLocation::Range location(void) const override {
+		TextLocation::Range result = std::make_pair(TextLocation::INVALID(), TextLocation::INVALID());
+
+		for (const IToken::Ptr &tk : _asmTokens) {
+			const TextLocation &tkBegin = tk->begin();
+			const TextLocation &tkEnd = tk->end();
+			if (result.first.invalid())
+				result.first = tkBegin;
+			else if (tkBegin < result.first)
+				result.first = tkBegin;
+			if (result.second.invalid())
+				result.second = tkEnd;
+			else if (tkEnd > result.second)
+				result.second = tkEnd;
+		}
+
+		return result;
+	}
 
 	virtual void options(const IDictionary::Ptr &options) override {
 		const Token::Array tokens = *(const Token::Array*)(void*)options->get("asm");

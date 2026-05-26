@@ -995,6 +995,7 @@ public:
 	void clearAnalyzedCodeInformation(void);
 	const std::string &getAnalyzedCodeInformation(void);
 	const GBBASIC::PreprocessorBranch::Array* getPreprocessorBranches(int page) const;
+	const GBBASIC::AsmBlock::Array* getAsmBlocks(int page) const;
 	void clearAssetPageNames(void);
 	void clearFontPageNames(void);
 	const Text::Array &getFontPageNames(void);

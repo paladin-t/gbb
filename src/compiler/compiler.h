@@ -337,6 +337,32 @@ struct PreprocessorBranch {
 };
 
 /**
+ * @brief Assembly block range, used for syntax highlighting.
+ */
+struct AsmBlock {
+	typedef std::vector<AsmBlock> Array;
+
+	int page = -1;
+	int beginLine = -1;
+	int endLine = -1;
+
+	AsmBlock();
+	AsmBlock(int pg, int begin, int end);
+
+	bool operator == (const AsmBlock &other) const;
+	bool operator != (const AsmBlock &other) const;
+	bool operator < (const AsmBlock &other) const;
+	bool operator <= (const AsmBlock &other) const;
+	bool operator > (const AsmBlock &other) const;
+	bool operator >= (const AsmBlock &other) const;
+
+	int compare(const AsmBlock &other) const;
+
+	bool valid(void) const;
+	void clear(void);
+};
+
+/**
  * @brief Feature usages.
  */
 struct FeatureUsages {

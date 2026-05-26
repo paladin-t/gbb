@@ -5378,6 +5378,13 @@ const GBBASIC::PreprocessorBranch::Array* Workspace::getPreprocessorBranches(int
 	return staticAnalyzer()->getPreprocessorBranches(page);
 }
 
+const GBBASIC::AsmBlock::Array* Workspace::getAsmBlocks(int page) const {
+	if (!staticAnalyzer())
+		return nullptr;
+
+	return staticAnalyzer()->getAsmBlocks(page);
+}
+
 void Workspace::clearAssetPageNames(void) {
 	assetPageNames().clear();
 }

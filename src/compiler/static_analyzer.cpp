@@ -35,11 +35,14 @@ class StaticAnalyzerImpl : public StaticAnalyzer {
 private:
 	typedef std::vector<PreprocessorBranch::Array> PagedPreprocessorBranches;
 
+	typedef std::vector<AsmBlock::Array> PagedAsmBlocks;
+
 	struct Result {
 		Macro::List macrosDefinitions;
 		Text::Array destinations;
 		RamLocation::Dictionary ramAllocations;
 		PagedPreprocessorBranches pagedPreprocessorBranches;
+		PagedAsmBlocks pagedAsmBlocks;
 		CodePageName::Array codePageNames;
 		std::string errors;
 
@@ -56,6 +59,7 @@ private:
 	Text::Array _destinations;
 	RamLocation::Dictionary _ramAllocations;
 	PagedPreprocessorBranches _pagedPreprocessorBranches;
+	PagedAsmBlocks _pagedAsmBlocks;
 	CodePageName::Array _codePageNames;
 	std::string _errors;
 
@@ -120,6 +124,13 @@ public:
 					diff |= true;
 				}
 
+				if (!::equals(_pagedAsmBlocks, result->pagedAsmBlocks)) {
+					_pagedAsmBlocks.clear();
+					std::swap(_pagedAsmBlocks, result->pagedAsmBlocks);
+					_pagedAsmBlocks.shrink_to_fit();
+					diff |= true;
+				}
+
 				std::swap(_codePageNames, result->codePageNames);
 				_codePageNames.shrink_to_fit();
 
@@ -169,6 +180,13 @@ public:
 		return &_pagedPreprocessorBranches[page];
 	}
 
+	virtual const AsmBlock::Array* getAsmBlocks(int page) const override {
+		if (page < 0 || page >= (int)_pagedAsmBlocks.size())
+			return nullptr;
+
+		return &_pagedAsmBlocks[page];
+	}
+
 	virtual const CodePageName* getCodePageName(int page) const override {
 		if (page < 0 || page >= (int)_codePageNames.size())
 			return nullptr;
@@ -189,6 +207,7 @@ public:
 		_destinations.clear();
 		_ramAllocations.clear();
 		_pagedPreprocessorBranches.clear();
+		_pagedAsmBlocks.clear();
 		_codePageNames.clear();
 		_errors.clear();
 	}
@@ -270,6 +289,8 @@ private:
 		doAnalyzeProgram(result, program);
 
 		doAnalyzePagedPreprocessorBranches(result, program);
+
+		doAnalyzePagedAsmBlocks(result, program);
 
 		doAnalyzeCodePages(result, program);
 
@@ -355,6 +376,41 @@ private:
 								std::make_move_iterator(toAppend.begin()),
 								std::make_move_iterator(toAppend.end())
 							);
+						}
+					}
+				);
+		}
+	}
+	static void doAnalyzePagedAsmBlocks(Result* result, Program &program) {
+		// Prepare.
+		const INode::Ptr &root = program.root; // Get the compiled AST, which could be corrupt.
+		if (!root)
+			return;
+
+		// Select pages.
+		Select pages = Select(root)
+			.children(Where(INode::Types::PAGE));
+
+		if (pages.ok()) {
+			// Parse the asm blocks.
+			result->pagedAsmBlocks.resize(pages.count());
+			pages
+				.foreach(
+					[&] (const Select&, const INode::Ptr &page, int index) -> void {
+						Select asmNodes = Select(page)
+							.children(Where(INode::Types::BEGIN_ASM, false, true));
+						if (!asmNodes.ok())
+							return;
+
+						for (int i = 0; i < asmNodes.count(); ++i) {
+							INode::Ptr asmNode = asmNodes[i];
+							TextLocation::Range loc = asmNode->location();
+							if (loc.first.row < 0 || loc.second.row < 0)
+								continue;
+
+							const AsmBlock block(index, loc.first.row, loc.second.row + 1);
+							AsmBlock::Array &blocks = result->pagedAsmBlocks[index];
+							blocks.push_back(block);
 						}
 					}
 				);
