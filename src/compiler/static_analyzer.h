@@ -73,6 +73,8 @@ public:
 
 	virtual const PreprocessorBranch::Array* getPreprocessorBranches(int page) const = 0;
 
+	virtual const AsmBlock::Array* getAsmBlocks(int page) const = 0;
+
 	virtual const CodePageName* getCodePageName(int page) const = 0;
 
 	virtual const std::string* getErrors(void) const = 0;

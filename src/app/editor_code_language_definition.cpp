@@ -488,6 +488,60 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 		}
 	);
 
+	// Assembly keywords.
+	constexpr const char* const ASM_KEYWORDS[] = {
+		// Load/transfer.
+		"ld", "ldh", "ldi", "ldd", "ldio",
+
+		// Arithmetic.
+		"add", "adc", "sub", "sbc",
+
+		// Logic.
+		"and", "or", "xor", "cp",
+
+		// Increment/decrement.
+		"inc", "dec",
+
+		// Rotate/shift.
+		"rlca", "rrca", "rla", "rra",
+		"rlc", "rrc", "rl", "rr",
+		"sla", "sra", "srl",
+		"swap",
+
+		// Bit operations.
+		"bit", "set", "res",
+
+		// Jump/call.
+		"jp", "jr", "call", "ret", "reti", "rst",
+
+		// Stack.
+		"push", "pop",
+
+		// Control.
+		"nop", "halt", "stop", "di", "ei",
+
+		// Flags.
+		"daa", "cpl", "scf", "ccf",
+
+		// Data.
+		"db", "dw"
+	};
+	for (const char* const k : ASM_KEYWORDS) {
+		langDef.AsmKeys.insert(std::string(k));
+	}
+
+	// Assembly registers.
+	constexpr const char* const ASM_REGISTERS[] = {
+		"a", "b", "c", "d", "e", "h", "l",
+		"hl", "bc", "de", "sp", "af",
+		"nz", "z", "nc", "c"
+	};
+	for (const char* const k : ASM_REGISTERS) {
+		ImGui::CodeEditor::Identifier id;
+		id.Declaration = "Register";
+		langDef.AsmIds.insert(std::make_pair(std::string(k), id));
+	}
+
 	// Other syntax rules.
 	langDef.TokenRegexPatterns.push_back(std::make_pair<std::string, ImGui::CodeEditor::PaletteIndex>(
 		"'.*|rem$|rem[ \t](.*)?",

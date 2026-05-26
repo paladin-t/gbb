@@ -1581,6 +1581,70 @@ void PreprocessorBranch::clear(void) {
 	conditionLine = -1;
 }
 
+AsmBlock::AsmBlock() {
+}
+
+AsmBlock::AsmBlock(int pg, int begin, int end) :
+	page(pg), beginLine(begin), endLine(end)
+{
+}
+
+bool AsmBlock::operator == (const AsmBlock &other) const {
+	return compare(other) == 0;
+}
+
+bool AsmBlock::operator != (const AsmBlock &other) const {
+	return compare(other) != 0;
+}
+
+bool AsmBlock::operator < (const AsmBlock &other) const {
+	return compare(other) <  0;
+}
+
+bool AsmBlock::operator <= (const AsmBlock &other) const {
+	return compare(other) <= 0;
+}
+
+bool AsmBlock::operator > (const AsmBlock &other) const {
+	return compare(other) >  0;
+}
+
+bool AsmBlock::operator >= (const AsmBlock &other) const {
+	return compare(other) >= 0;
+}
+
+int AsmBlock::compare(const AsmBlock &other) const {
+	if (page < other.page)
+		return -1;
+	else if (page > other.page)
+		return 1;
+
+	if (beginLine < other.beginLine)
+		return -1;
+	else if (beginLine > other.beginLine)
+		return 1;
+
+	if (endLine < other.endLine)
+		return -1;
+	else if (endLine > other.endLine)
+		return 1;
+
+	return 0;
+}
+
+bool AsmBlock::valid(void) const {
+	if (page == -1 || beginLine == -1 || endLine == -1)
+		return false;
+
+	return true;
+}
+
+void AsmBlock::clear(void) {
+	page = -1;
+	beginLine = -1;
+	endLine = -1;
+}
+
 FeatureUsages::FeatureUsages() {
 }
 
@@ -3615,6 +3679,13 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_ASM_ERROR */
+#ifndef THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK
+		// As warning.
+#	define THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK(ON_ERROR) \
+		do { \
+			throwAsmNoRetInstructionFoundInAsmBlock(ON_ERROR); \
+		} while (false)
+#endif /* THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK */
 #ifndef THROW_ASSET_IS_DEFINED_AS_AN_ACTOR_BUT_USED_AS_A_PROJECTILE
 #	define THROW_ASSET_IS_DEFINED_AS_AN_ACTOR_BUT_USED_AS_A_PROJECTILE(ON_ERROR) \
 		do { \
@@ -6983,6 +7054,12 @@ public:
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
 		const Error err("ASM error", false);
+		onError(err, err.format(), tk->begin());
+	}
+	void throwAsmNoRetInstructionFoundInAsmBlock(Error::Handler onError, Token::Ptr tk = nullptr) const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("No RET instruction found in ASM block", true); // Warning.
 		onError(err, err.format(), tk->begin());
 	}
 	void throwAssetIsDefinedAsAnActorButUsedAsAProjectile(Error::Handler onError, Token::Ptr tk = nullptr) const {
@@ -14979,6 +15056,25 @@ public:
 
 	NODE_TYPE(Types::BEGIN_ASM)
 
+	virtual TextLocation::Range location(void) const override {
+		TextLocation::Range result = std::make_pair(TextLocation::INVALID(), TextLocation::INVALID());
+
+		for (const IToken::Ptr &tk : _asmTokens) {
+			const TextLocation &tkBegin = tk->begin();
+			const TextLocation &tkEnd = tk->end();
+			if (result.first.invalid())
+				result.first = tkBegin;
+			else if (tkBegin < result.first)
+				result.first = tkBegin;
+			if (result.second.invalid())
+				result.second = tkEnd;
+			else if (tkEnd > result.second)
+				result.second = tkEnd;
+		}
+
+		return result;
+	}
+
 	virtual void options(const IDictionary::Ptr &options) override {
 		const Token::Array tokens = *(const Token::Array*)(void*)options->get("asm");
 
@@ -15066,6 +15162,9 @@ public:
 			if (!ok) { THROW_ASM_ERROR(onError, tkbegin); }
 			if (bytes_->empty())
 				return; // Ignore blank assembly.
+			if (!asmCtx.hasRet) {
+				THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK(onError);
+			}
 
 			// Emit a `VM_ASM` instruction to set the data.
 			const int n = (int)bytes_->count();
@@ -15079,6 +15178,20 @@ public:
 		};
 
 		write(bytes, context, generator, false, onError);
+	}
+	virtual void post(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		Context &ctx = context.top();
+
+		if (!ctx.assembler) {
+			GBBASIC_ASSERT(false && "Impossible.");
+
+			return;
+		}
+
+		(void)bytes;
+		(void)onError;
+
+		// TODO
 	}
 
 	virtual Abstract abstract(void) const override {

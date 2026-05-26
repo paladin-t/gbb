@@ -128,9 +128,15 @@ static constexpr const UInt8 ASSEMBLER_OPCODE_SIZE[256] = {
 	/* Fx */ 2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 1, 2, 1
 };
 
-static constexpr const UInt8 ASSEMBLER_OPCODE_NOP  = 0x00;
-static constexpr const UInt8 ASSEMBLER_OPCODE_STOP = 0x10;
-static constexpr const UInt8 ASSEMBLER_OPCODE_CB   = 0xcb;
+static constexpr const UInt8 ASSEMBLER_OPCODE_NOP   = 0x00;
+static constexpr const UInt8 ASSEMBLER_OPCODE_STOP  = 0x10;
+static constexpr const UInt8 ASSEMBLER_OPCODE_RETNZ = 0xc0;
+static constexpr const UInt8 ASSEMBLER_OPCODE_RETZ  = 0xc8;
+static constexpr const UInt8 ASSEMBLER_OPCODE_RET   = 0xc9;
+static constexpr const UInt8 ASSEMBLER_OPCODE_RETNC = 0xd0;
+static constexpr const UInt8 ASSEMBLER_OPCODE_RETC  = 0xd8;
+static constexpr const UInt8 ASSEMBLER_OPCODE_RETI  = 0xd9;
+static constexpr const UInt8 ASSEMBLER_OPCODE_CB    = 0xcb;
 
 }
 
@@ -311,7 +317,7 @@ public:
 		return false;
 	}
 
-	virtual bool assemble(Bytes::Ptr &bytes, Cotnext &ctx, const IToken::Array &tokens, const Options &options) const override {
+	virtual bool assemble(Bytes::Ptr &bytes, Cotnext &context, const IToken::Array &tokens, const Options &options) const override {
 		// Prepare.
 		int cursor = 0;
 		bytes->clear();
@@ -380,15 +386,22 @@ public:
 					break;
 				}
 			}
-			if (!assembleLine(bytes, ctx, tokens, lnBegin, lnEnd, options)) return false;
+			if (!assembleLine(bytes, context, tokens, lnBegin, lnEnd, options)) return false;
 		}
 
 		// Finish.
 		return true;
 	}
+	virtual void post(Bytes::Ptr &bytes, Cotnext &context, const Options &options) const override {
+		(void)bytes;
+		(void)context;
+		(void)options;
+
+		// TODO
+	}
 
 private:
-	bool assembleLine(Bytes::Ptr &bytes, Cotnext &ctx, const IToken::Array &tokens, int lnBegin, int lnEnd, const Options &options) const {
+	bool assembleLine(Bytes::Ptr &bytes, Cotnext &context, const IToken::Array &tokens, int lnBegin, int lnEnd, const Options &options) const {
 		// Prepare.
 		typedef std::vector<int> Oprands;
 
@@ -636,12 +649,12 @@ private:
 		// Translate the data it's data declaration.
 		if (opcode == "db") {
 			for (int oprand : oprands)
-				emitUInt8(bytes, ctx, (UInt8)oprand);
+				emitUInt8(bytes, context, (UInt8)oprand);
 
 			return true;
 		} else if (opcode == "dw") {
 			for (int oprand : oprands)
-				emitUInt16(bytes, ctx, (UInt16)oprand);
+				emitUInt16(bytes, context, (UInt16)oprand);
 
 			return true;
 		}
@@ -670,13 +683,22 @@ private:
 			// Emit the opcode.
 			const int op = opit->second;
 			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONICS) && "Invalid opcode.");
-			emitUInt8(bytes, ctx, (UInt8)op);
+			emitUInt8(bytes, context, (UInt8)op);
 
 			// Specialized for `stop`.
 			if (op == ASSEMBLER_OPCODE_STOP) {
-				emitUInt8(bytes, ctx, (UInt8)ASSEMBLER_OPCODE_NOP);
+				emitUInt8(bytes, context, (UInt8)ASSEMBLER_OPCODE_NOP);
 
 				return true;
+			}
+
+			// Count `ret *`.
+			if (
+				!context.hasRet && (
+					op == ASSEMBLER_OPCODE_RETNZ || op == ASSEMBLER_OPCODE_RETZ || op == ASSEMBLER_OPCODE_RET ||
+					op == ASSEMBLER_OPCODE_RETNC || op == ASSEMBLER_OPCODE_RETC || op == ASSEMBLER_OPCODE_RETI)
+			) {
+				context.hasRet = true;
 			}
 
 			// Resolve jump destination.
@@ -701,7 +723,7 @@ private:
 				if (oprand < std::numeric_limits<Int8>::min() || oprand > std::numeric_limits<UInt8>::max())
 					return throwByteExpected(cursor);
 
-				emitUInt8(bytes, ctx, (UInt8)oprand);
+				emitUInt8(bytes, context, (UInt8)oprand);
 
 				return true;
 			} else if (restSz == 2) {
@@ -714,7 +736,7 @@ private:
 				if (oprand < std::numeric_limits<Int16>::min() || oprand > std::numeric_limits<UInt16>::max())
 					return throwWordExpected(cursor);
 
-				emitUInt16(bytes, ctx, (UInt16)oprand);
+				emitUInt16(bytes, context, (UInt16)oprand);
 
 				return true;
 			}
@@ -726,11 +748,11 @@ private:
 
 		Dictionary::const_iterator cbopit = _cbOpcodeDictionary.find(mnemonic);
 		if (cbopit != _cbOpcodeDictionary.end()) {
-			emitUInt8(bytes, ctx, (UInt8)ASSEMBLER_OPCODE_CB); // Prefix.
+			emitUInt8(bytes, context, (UInt8)ASSEMBLER_OPCODE_CB); // Prefix.
 
 			const int op = cbopit->second;
 			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONICS) && "Invalid opcode.");
-			emitUInt8(bytes, ctx, (UInt8)op);
+			emitUInt8(bytes, context, (UInt8)op);
 
 			return true;
 		}

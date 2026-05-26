@@ -22,8 +22,8 @@
 ** Utilities
 */
 
-class DeadCodeRange {
-private:
+class CodeRangeBase {
+protected:
 	typedef std::pair<int, int> CodeRange;
 	typedef std::vector<CodeRange> CodeRanges;
 
@@ -31,32 +31,10 @@ private:
 	CodeRanges _mergedRanges;
 
 public:
-	DeadCodeRange() {
-	}
-	explicit DeadCodeRange(const GBBASIC::PreprocessorBranch::Array &branches) {
-		CodeRanges ranges;
-		for (const GBBASIC::PreprocessorBranch &branch : branches) {
-			if (!branch.isAlive && branch.valid()) {
-				const int begin = branch.beginLine;
-				const int end = Math::max(branch.beginLine, branch.endLine - 1);
-				ranges.emplace_back(begin, end);
-			}
-		}
-		if (ranges.empty())
-			return;
-
-		std::sort(ranges.begin(), ranges.end());
-		_mergedRanges.push_back(ranges[0]);
-		for (int i = 1; i < (int)ranges.size(); ++i) {
-			CodeRange &last = _mergedRanges.back();
-			if (ranges[i].first <= last.second + 1)
-				last.second = Math::max(last.second, ranges[i].second);
-			else
-				_mergedRanges.push_back(ranges[i]);
-		}
+	CodeRangeBase() {
 	}
 
-	bool isDeadLine(int ln) const {
+	bool match(int ln) const {
 		CodeRanges::const_iterator it = std::upper_bound(
 			_mergedRanges.begin(), _mergedRanges.end(), ln,
 			[] (int value, const CodeRange &range) {
@@ -73,6 +51,64 @@ public:
 
 	void clear(void) {
 		_mergedRanges.clear();
+	}
+
+protected:
+	void sort(CodeRanges &ranges) {
+		if (ranges.empty())
+			return;
+
+		std::sort(ranges.begin(), ranges.end());
+		_mergedRanges.push_back(ranges[0]);
+		for (int i = 1; i < (int)ranges.size(); ++i) {
+			CodeRange &last = _mergedRanges.back();
+			if (ranges[i].first <= last.second + 1)
+				last.second = Math::max(last.second, ranges[i].second);
+			else
+				_mergedRanges.push_back(ranges[i]);
+		}
+	}
+};
+
+class DeadCodeRange : public CodeRangeBase {
+public:
+	DeadCodeRange() {
+	}
+	explicit DeadCodeRange(const GBBASIC::PreprocessorBranch::Array &branches) {
+		CodeRanges ranges;
+		for (const GBBASIC::PreprocessorBranch &blk : branches) {
+			if (!blk.isAlive && blk.valid()) {
+				const int begin = blk.beginLine;
+				const int end = Math::max(blk.beginLine, blk.endLine - 1);
+				ranges.emplace_back(begin, end);
+			}
+		}
+
+		sort(ranges);
+	}
+
+	bool isDeadLine(int ln) const {
+		return match(ln);
+	}
+};
+
+class AsmCodeRange : public CodeRangeBase {
+public:
+	AsmCodeRange() {
+	}
+	explicit AsmCodeRange(const GBBASIC::AsmBlock::Array &blocks) {
+		CodeRanges ranges;
+		for (const GBBASIC::AsmBlock &blk : blocks) {
+			const int begin = blk.beginLine;
+			const int end = Math::max(blk.beginLine, blk.endLine - 1);
+			ranges.emplace_back(begin, end);
+		}
+
+		sort(ranges);
+	}
+
+	bool isAsmBlock(int ln) const {
+		return match(ln);
 	}
 };
 
@@ -146,6 +182,7 @@ private:
 	} _cache;
 	struct {
 		DeadCodeRange deadCodeRange;
+		AsmCodeRange asmCodeRange;
 		unsigned revision = 0;
 		bool filled = false;
 
@@ -309,6 +346,8 @@ public:
 
 		SetIsDeadLineHandler(std::bind(&EditorCodeImpl::isDeadLine, this, std::placeholders::_1));
 
+		SetIsAsmLineHandler(std::bind(&EditorCodeImpl::isAsmLine, this, std::placeholders::_1));
+
 		SetColorizedHandler(std::bind(&EditorCodeImpl::colorized, this, std::placeholders::_1));
 
 		SetModifiedHandler(std::bind(&EditorCodeImpl::modified, this, wnd, rnd, ws, std::placeholders::_1));
@@ -327,6 +366,8 @@ public:
 		fprintf(stdout, "Code editor closed: #%d.\n", _index);
 
 		SetIsDeadLineHandler(nullptr);
+
+		SetIsAsmLineHandler(nullptr);
 
 		SetColorizedHandler(nullptr);
 
@@ -1548,6 +1589,9 @@ private:
 	bool isDeadLine(int ln) {
 		return _analyzedCodeInformations.deadCodeRange.isDeadLine(ln);
 	}
+	bool isAsmLine(int ln) {
+		return _analyzedCodeInformations.asmCodeRange.isAsmBlock(ln);
+	}
 	void colorized(bool) {
 		_tokens.filled = false;
 	}
@@ -1698,6 +1742,14 @@ private:
 		const GBBASIC::PreprocessorBranch::Array* preprocessorBranches = ws->getPreprocessorBranches(_index);
 		if (preprocessorBranches && !preprocessorBranches->empty()) {
 			_analyzedCodeInformations.deadCodeRange = DeadCodeRange(*preprocessorBranches);
+
+			Colorize();
+		}
+
+		// Initialize with ASM code blocks.
+		const GBBASIC::AsmBlock::Array* asmBlocks = ws->getAsmBlocks(_index);
+		if (asmBlocks && !asmBlocks->empty()) {
+			_analyzedCodeInformations.asmCodeRange = AsmCodeRange(*asmBlocks);
 
 			Colorize();
 		}
