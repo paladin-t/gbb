@@ -4963,7 +4963,6 @@ public:
 
 	virtual TextLocation::Range location(void) const override {
 		TextLocation::Range result = std::make_pair(TextLocation::INVALID(), TextLocation::INVALID());
-
 		for (const Ptr &child : _children) {
 			TextLocation::Range childLoc = child->location();
 			if (result.first.invalid())
@@ -4993,12 +4992,13 @@ public:
 	}
 
 	virtual INode::Array children(void) const override {
-		INode::Array result;
+		const INode::Array result(_children.begin(), _children.end());
 
-		for (const Ptr &child : _children) {
-			Ptr iptr = child;
-			result.push_back(iptr);
-		}
+		return result;
+	}
+
+	virtual IToken::Array tokens(void) const override {
+		const IToken::Array result(_tokens.begin(), _tokens.end());
 
 		return result;
 	}
@@ -15046,7 +15046,27 @@ public:
 
 class NodeBeginAsm : public Node {
 private:
+	struct ScheduledAsmJump {
+		int argsOffset = 0;
+		int baseAddress = 0;
+
+		ScheduledAsmJump() {
+		}
+		ScheduledAsmJump(const Byte* begin, const Byte* end, int addr) :
+			baseAddress(addr)
+		{
+			argsOffset = (int)((intptr_t)end - (intptr_t)begin);
+		}
+
+		Byte* args(const Byte* begin) const {
+			return (Byte*)((intptr_t)begin + argsOffset);
+		}
+	};
+
+private:
+	ScheduledAsmJump _scheduled;
 	IToken::Array _asmTokens;
+	Assembler::Context _asmCtx;
 
 public:
 	NodeBeginAsm() {
@@ -15075,6 +15095,10 @@ public:
 		return result;
 	}
 
+	virtual IToken::Array tokens(void) const override {
+		return _asmTokens;
+	}
+
 	virtual void options(const IDictionary::Ptr &options) override {
 		const Token::Array tokens = *(const Token::Array*)(void*)options->get("asm");
 
@@ -15094,6 +15118,10 @@ public:
 			state.inRom.address = ctx.addressCursor;
 			state.inRom.size = 0;
 
+			// Reset the states.
+			_scheduled = ScheduledAsmJump();
+			_asmCtx = Assembler::Context();
+
 			// Consume the tokens.
 			Token::Ptr tkbegin = nullptr;
 			if (ctx.expect.lnno) {
@@ -15111,7 +15139,7 @@ public:
 			// Assemble the instructions.
 			const int bank = state.inRom.bank;
 			const int address = state.inRom.address + ctx.startAddress + sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
-			Assembler::Options options(
+			const Assembler::AssemblingOptions options(
 				bank, address,
 				/* Resolve BASIC identifier */ [&] (const IToken::Ptr &tk, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool {
 					const std::string id = (std::string)tk->data();
@@ -15155,14 +15183,13 @@ public:
 				}
 			);
 			Bytes::Ptr bytes_(Bytes::create());
-			Assembler::Cotnext asmCtx;
 			if (!ctx.assembler)
 				ctx.assembler = Assembler::Ptr(Assembler::create());
-			const bool ok = ctx.assembler->assemble(bytes_, asmCtx, _asmTokens, options);
+			const bool ok = ctx.assembler->assemble(bytes_, _asmCtx, _asmTokens, options);
 			if (!ok) { THROW_ASM_ERROR(onError, tkbegin); }
 			if (bytes_->empty())
 				return; // Ignore blank assembly.
-			if (!asmCtx.hasRet) {
+			if (!_asmCtx.hasRet) {
 				THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK(onError);
 			}
 
@@ -15172,6 +15199,8 @@ public:
 			args = fill(args, (UInt16)n);
 			args = fill(args, (UInt16)address);
 			args = fill(args, (UInt8)bank);
+
+			_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
 
 			// Emit the data.
 			emit(bytes, context, bytes_->pointer(), (size_t)n);
@@ -15188,10 +15217,17 @@ public:
 			return;
 		}
 
-		(void)bytes;
-		(void)onError;
-
-		// TODO
+		const Assembler::PostingOptions options(
+			ctx.bank, _scheduled.baseAddress,
+			[&] (const Byte* begin) -> Byte* {
+				return _scheduled.args(begin);
+			},
+			[&] (const std::string &msg, const IToken::Ptr &tk) -> void {
+				const Error err(msg, false);
+				onError(err, err.format(), tk->begin());
+			}
+		);
+		ctx.assembler->post(bytes, _asmCtx, _asmTokens, options);
 	}
 
 	virtual Abstract abstract(void) const override {

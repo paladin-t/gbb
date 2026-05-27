@@ -317,7 +317,7 @@ public:
 		return false;
 	}
 
-	virtual bool assemble(Bytes::Ptr &bytes, Cotnext &context, const IToken::Array &tokens, const Options &options) const override {
+	virtual bool assemble(Bytes::Ptr &bytes, Context &context, const IToken::Array &tokens, const AssemblingOptions &options) const override {
 		// Prepare.
 		int cursor = 0;
 		bytes->clear();
@@ -326,7 +326,7 @@ public:
 		auto throwInvalidLineBegin = [&] (int idx = -1) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
-			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Invalid line begin";
 			if (options.onError)
 				options.onError(msg, tk);
@@ -392,16 +392,70 @@ public:
 		// Finish.
 		return true;
 	}
-	virtual void post(Bytes::Ptr &bytes, Cotnext &context, const Options &options) const override {
-		(void)bytes;
-		(void)context;
-		(void)options;
+	virtual bool post(Bytes::Ptr &bytes, Context &context, const IToken::Array &tokens, const PostingOptions &options) const override {
+		// Error handlers.
+		auto throwInvalidProgramPoint = [&] (int idx = -1) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = 0;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
+			const std::string msg = "Invalid program point";
+			if (options.onError)
+				options.onError(msg, tk);
 
-		// TODO
+			return false;
+		};
+
+		// Emitters.
+		auto fillInt8 = [] (Byte* &args, Int8 data) -> Byte* {
+			union {
+				Int8 data;
+				UInt8 bytes[1];
+			} u;
+			u.data = data;
+			*args++ = u.bytes[0];
+
+			return args;
+		};
+		auto fillUInt16 = [] (Byte* &args, UInt16 data) -> Byte* {
+			union {
+				UInt16 data;
+				UInt8 bytes[2];
+			} u;
+			u.data = data;
+			if (!Platform::isLittleEndian())
+				std::swap(u.bytes[0], u.bytes[1]);
+			*args++ = u.bytes[0];
+			*args++ = u.bytes[1];
+
+			return args;
+		};
+
+		// Fill the addresses.
+		for (const Assembler::Context::LabelRef &lblRef : context.labelRefs) {
+			Assembler::Context::LabeledDestination::Dictionary::const_iterator it = context.labels.find(lblRef.label);
+			if (it == context.labels.end()) return throwInvalidProgramPoint(lblRef.tokenIndex);
+
+			const Assembler::Context::LabeledDestination &dest = it->second;
+			const int address = options.baseAddress + dest.address;
+
+			Byte* args = options.resolveArgs(bytes->pointer()) + lblRef.offset;
+			if (lblRef.type == Assembler::Context::LabelRef::Types::ADDRESS) {
+				args = fillUInt16(args, (UInt16)address);
+			} else if (lblRef.type == Assembler::Context::LabelRef::Types::OFFSET) {
+				const int relOffset = address - (options.baseAddress + lblRef.offset + 1);
+				if (relOffset < std::numeric_limits<Int8>::min() || relOffset > std::numeric_limits<Int8>::max())
+					return throwInvalidProgramPoint(lblRef.tokenIndex);
+
+				args = fillInt8(args, (Int8)relOffset);
+			}
+		}
+
+		// Finish.
+		return true;
 	}
 
 private:
-	bool assembleLine(Bytes::Ptr &bytes, Cotnext &context, const IToken::Array &tokens, int lnBegin, int lnEnd, const Options &options) const {
+	bool assembleLine(Bytes::Ptr &bytes, Context &context, const IToken::Array &tokens, int lnBegin, int lnEnd, const AssemblingOptions &options) const {
 		// Prepare.
 		typedef std::vector<int> Oprands;
 
@@ -411,7 +465,7 @@ private:
 		auto throwByteExpected = [&] (int idx = -1) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
-			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Byte expected";
 			if (options.onError)
 				options.onError(msg, tk);
@@ -421,8 +475,18 @@ private:
 		auto throwCommaExpected = [&] (int idx = -1) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
-			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Comma expected";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwDuplicateLabel = [&] (int idx, const std::string &name) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
+			const std::string msg = Text::format("Duplicate label \"{0}\"", { name });
 			if (options.onError)
 				options.onError(msg, tk);
 
@@ -431,7 +495,7 @@ private:
 		auto throwIdHasNotBeenDeclared = [&] (int idx, const std::string &id) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
-			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = Text::format("ID \"{0}\" has not been decleared", { id });
 			if (options.onError)
 				options.onError(msg, tk);
@@ -441,7 +505,7 @@ private:
 		auto throwIdHasNotBeenDeclaredDidYouMean = [&] (int idx, const std::string &id, const std::string &fuzzy) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
-			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = Text::format("ID \"{0}\" has not been decleared, did you mean \"{1}\"", { id, fuzzy });
 			if (options.onError)
 				options.onError(msg, tk);
@@ -451,8 +515,18 @@ private:
 		auto throwInvalidFormat = [&] (int idx = -1) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
-			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Invalid format";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwInvalidLabel = [&] (int idx, const std::string &name) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
+			const std::string msg = Text::format("Invalid label \"{0}\"", { name });
 			if (options.onError)
 				options.onError(msg, tk);
 
@@ -461,7 +535,7 @@ private:
 		auto throwInvalidOpcode = [&] (int idx = -1) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
-			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Invalid opcode";
 			if (options.onError)
 				options.onError(msg, tk);
@@ -471,7 +545,7 @@ private:
 		auto throwTooManyOprands = [&] (int idx = -1) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
-			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Too many oprands";
 			if (options.onError)
 				options.onError(msg, tk);
@@ -481,8 +555,18 @@ private:
 		auto throwUnexpectedComma = [&] (int idx = -1) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
-			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Unexpected comma";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwUnexpectedToken = [&] (int idx, const std::string &id) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
+			const std::string msg = Text::format("Unexpected token \"{0}\"", { id });
 			if (options.onError)
 				options.onError(msg, tk);
 
@@ -491,7 +575,7 @@ private:
 		auto throwWordExpected = [&] (int idx = -1) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
-			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Word expected";
 			if (options.onError)
 				options.onError(msg, tk);
@@ -500,7 +584,7 @@ private:
 		};
 
 		// Emitters.
-		auto emitUInt8 = [] (Bytes::Ptr &bytes, Cotnext &ctx, UInt8 data) -> Byte* {
+		auto emitUInt8 = [] (Bytes::Ptr &bytes, Context &ctx, UInt8 data) -> Byte* {
 			int n = 0;
 			const size_t m = bytes->peek();
 			n += bytes->writeUInt8(data);
@@ -513,7 +597,7 @@ private:
 
 			return result;
 		};
-		auto emitUInt16 = [] (Bytes::Ptr &bytes, Cotnext &ctx, UInt16 data) -> Byte* {
+		auto emitUInt16 = [] (Bytes::Ptr &bytes, Context &ctx, UInt16 data) -> Byte* {
 			int n = 0;
 			const size_t m = bytes->peek();
 			union {
@@ -540,15 +624,35 @@ private:
 		std::string opcode;
 		Oprands oprands;
 		std::string oprandType;
+		std::string labelRefName;
 
 		cursor = lnBegin;
 		++cursor; // Ignore the line number.
 
-		const IToken::Ptr &tkop = tokens[cursor];
-		if (tkop->is(IToken::Types::COMMENT)) return true; // Ignore this line with comment.
+		const IToken::Ptr &tkcar = tokens[cursor];
+		if (tkcar->is(IToken::Types::COMMENT)) return true; // Ignore this line with comment.
 
-		if (!tkop->is(IToken::Types::IDENTIFIER)) return throwInvalidOpcode(cursor); // Expect opcode.
-		opcode =(std::string)tkop->data();
+		if (tkcar->is(IToken::Types::LABEL)) { // Handle declaration of jump label.
+			std::string name = (std::string)tkcar->data();
+			if (name.empty() || name.back() != ':') return throwInvalidLabel(cursor, tkcar->caseSensitiveText());
+			name.pop_back();
+
+			const Context::LabeledDestination dest(context.addressCursor);
+			auto ret = context.labels.insert(std::make_pair(name, dest));
+			if (!ret.second) return throwDuplicateLabel(cursor, tkcar->caseSensitiveText());
+
+			++cursor;
+			for (; cursor < lnEnd; ++cursor) {
+				const IToken::Ptr &tk = tokens[cursor];
+				if (tk->is(IToken::Types::COMMENT)) continue;
+				if (tk->is(IToken::Types::END_OF_LINE)) return true;
+
+				return throwUnexpectedToken(cursor, tk->caseSensitiveText());
+			}
+		}
+
+		if (!tkcar->is(IToken::Types::IDENTIFIER)) return throwInvalidOpcode(cursor); // Expect opcode.
+		opcode = (std::string)tkcar->data();
 		mnemonic = opcode;
 		mnemonic += " ";
 		++cursor;
@@ -558,7 +662,7 @@ private:
 			// Prepare.
 			if (cursor == lnEnd - 1) continue; // Ignore the line end.
 
-			// Parse data.
+			// Handle inline data.
 			const IToken::Ptr &tk = tokens[cursor];
 			if (opcode == "db") {
 				if (tk->is(IToken::Types::STRING)) {
@@ -605,10 +709,19 @@ private:
 				continue;
 			}
 
-			// Parse instructions.
+			// Handle instructions.
 			if (tk->is(IToken::Types::IDENTIFIER)) {
 				const std::string data = (std::string)tk->data();
-				if (_registers.find(data) == _registers.end()) {
+				if (_registers.find(data) != _registers.end()) { // Is a register.
+					mnemonic += data;
+				} else if ( // Is a jump label.
+					opcode == "jp" || opcode == "jr" || opcode == "call" ||
+					context.labels.find(data) != context.labels.end()
+				) {
+					labelRefName = data;
+					oprands.push_back(0); // Placeholder.
+					mnemonic += "*"; // Wildcard.
+				} else { // Is an identifier.
 					// Resolve BASIC identifiers.
 					RamLocation loc;
 					std::string id;
@@ -622,9 +735,7 @@ private:
 
 					const int oprand = loc.address;
 					oprands.push_back(oprand);
-					mnemonic += "*";
-				} else {
-					mnemonic += data;
+					mnemonic += "*"; // Wildcard.
 				}
 			} else if (tk->is(IToken::Types::OPERATOR)) {
 				mnemonic += (std::string)tk->data();
@@ -634,7 +745,7 @@ private:
 					mnemonic += Text::toString(oprand);
 				} else {
 					oprands.push_back(oprand);
-					mnemonic += "*";
+					mnemonic += "*"; // Wildcard.
 				}
 			} else if (tk->is(IToken::Types::COMMENT)) {
 				// Do nothing.
@@ -646,7 +757,7 @@ private:
 		Text::toLowerCase(mnemonic);
 		mnemonic = Text::trim(mnemonic);
 
-		// Translate the data it's data declaration.
+		// Translate the data if it's data declaration.
 		if (opcode == "db") {
 			for (int oprand : oprands)
 				emitUInt8(bytes, context, (UInt8)oprand);
@@ -702,7 +813,15 @@ private:
 			}
 
 			// Resolve jump destination.
-			// TODO
+			if (!labelRefName.empty()) {
+				const Context::LabelRef labelRef(
+					cursor,
+					labelRefName,
+					context.size,
+					(oprandType == "n16" || oprandType == "a16") ? Context::LabelRef::Types::ADDRESS : Context::LabelRef::Types::OFFSET
+				);
+				context.labelRefs.push_back(labelRef);
+			}
 
 			// Emit the oprand.
 			const int sz = ASSEMBLER_OPCODE_SIZE[op];
@@ -761,15 +880,44 @@ private:
 	}
 };
 
-Assembler::Cotnext::Cotnext() {
+Assembler::Context::LabeledDestination::LabeledDestination() {
 }
 
-Assembler::Options::Options() {
+Assembler::Context::LabeledDestination::LabeledDestination(int a) :
+	address(a)
+{
 }
 
-Assembler::Options::Options(int b, int addr, IdentifierResolver resolveid, ErrorHandler onerr) :
+Assembler::Context::LabelRef::LabelRef() {
+}
+
+Assembler::Context::LabelRef::LabelRef(int tkidx, const std::string &lbl, int off, Types y) :
+	tokenIndex(tkidx),
+	label(lbl),
+	offset(off),
+	type(y)
+{
+}
+
+Assembler::Context::Context() {
+}
+
+Assembler::AssemblingOptions::AssemblingOptions() {
+}
+
+Assembler::AssemblingOptions::AssemblingOptions(int b, int addr, IdentifierResolver resolveid, ErrorHandler onerr) :
 	bank(b), address(addr),
 	resolveIdentifier(resolveid),
+	onError(onerr)
+{
+}
+
+Assembler::PostingOptions::PostingOptions() {
+}
+
+Assembler::PostingOptions::PostingOptions(int b, int addr, ArgsResolver resolveargs, ErrorHandler onerr) :
+	bank(b), baseAddress(addr),
+	resolveArgs(resolveargs),
 	onError(onerr)
 {
 }

@@ -705,6 +705,8 @@ public:
 
 	virtual /* LAZY */ Array children(void) const = 0;
 
+	virtual /* LAZY */ IToken::Array tokens(void) const = 0;
+
 	virtual bool get(Variant &ret, const std::string &msg, int argc, const Variant* argv) const = 0;
 	bool get(Variant &ret, const std::string &msg) const {
 		return get(ret, msg, 0, (const Variant*)nullptr);

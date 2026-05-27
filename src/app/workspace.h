@@ -991,7 +991,8 @@ public:
 	void clearAnalyzedCodeInformationInEditors(bool clearRevision);
 	unsigned getLanguageDefinitionRevision(void) const;
 	const GBBASIC::Macro::List* getMacroDefinitions(void) const;
-	const Text::Array* getDestinitions(void) const;
+	const Text::Array* getDestinations(void) const;
+	const Text::Array* getAsmDestinations(void) const;
 	void clearAnalyzedCodeInformation(void);
 	const std::string &getAnalyzedCodeInformation(void);
 	const GBBASIC::PreprocessorBranch::Array* getPreprocessorBranches(int page) const;

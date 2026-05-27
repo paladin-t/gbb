@@ -33,6 +33,7 @@ public:
 	virtual void addSymbol(const char* str) = 0;
 	virtual void addIdentifier(const char* str) = 0;
 	virtual void addPreprocessor(const char* str) = 0;
+	virtual void addAsmSymbol(const char* str) = 0;
 
 	virtual const std::string toString(void) const = 0;
 	virtual void fromString(const char* txt, size_t len = 0) = 0;

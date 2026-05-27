@@ -5315,11 +5315,18 @@ const GBBASIC::Macro::List* Workspace::getMacroDefinitions(void) const {
 	return staticAnalyzer()->getMacroDefinitions();
 }
 
-const Text::Array* Workspace::getDestinitions(void) const {
+const Text::Array* Workspace::getDestinations(void) const {
 	if (!staticAnalyzer())
 		return nullptr;
 
-	return staticAnalyzer()->getDestinitions();
+	return staticAnalyzer()->getDestinations();
+}
+
+const Text::Array* Workspace::getAsmDestinations(void) const {
+	if (!staticAnalyzer())
+		return nullptr;
+
+	return staticAnalyzer()->getAsmDestinations();
 }
 
 void Workspace::clearAnalyzedCodeInformation(void) {

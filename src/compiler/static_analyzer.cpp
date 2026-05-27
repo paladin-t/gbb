@@ -40,6 +40,7 @@ private:
 	struct Result {
 		Macro::List macrosDefinitions;
 		Text::Array destinations;
+		Text::Array asmDestinations;
 		RamLocation::Dictionary ramAllocations;
 		PagedPreprocessorBranches pagedPreprocessorBranches;
 		PagedAsmBlocks pagedAsmBlocks;
@@ -57,6 +58,7 @@ private:
 	unsigned _languageDefinitionRevision = 1;
 	Macro::List _macrosDefinitions;
 	Text::Array _destinations;
+	Text::Array _asmDestinations;
 	RamLocation::Dictionary _ramAllocations;
 	PagedPreprocessorBranches _pagedPreprocessorBranches;
 	PagedAsmBlocks _pagedAsmBlocks;
@@ -115,6 +117,13 @@ public:
 					diff |= true;
 				}
 
+				if (!::equals(_asmDestinations, result->asmDestinations)) {
+					_asmDestinations.clear();
+					std::swap(_asmDestinations, result->asmDestinations);
+					_asmDestinations.shrink_to_fit();
+					diff |= true;
+				}
+
 				std::swap(_ramAllocations, result->ramAllocations);
 
 				if (!::equals(_pagedPreprocessorBranches, result->pagedPreprocessorBranches)) {
@@ -165,8 +174,12 @@ public:
 		return &_macrosDefinitions;
 	}
 
-	virtual const Text::Array* getDestinitions(void) const override {
+	virtual const Text::Array* getDestinations(void) const override {
 		return &_destinations;
+	}
+
+	virtual const Text::Array* getAsmDestinations(void) const override {
+		return &_asmDestinations;
 	}
 
 	virtual const RamLocation::Dictionary* getRamAllocations(void) const override {
@@ -205,6 +218,7 @@ public:
 		_languageDefinitionRevision = 1;
 		_macrosDefinitions.clear();
 		_destinations.clear();
+		_asmDestinations.clear();
 		_ramAllocations.clear();
 		_pagedPreprocessorBranches.clear();
 		_pagedAsmBlocks.clear();
@@ -411,6 +425,17 @@ private:
 							const AsmBlock block(index, loc.first.row, loc.second.row + 1);
 							AsmBlock::Array &blocks = result->pagedAsmBlocks[index];
 							blocks.push_back(block);
+
+							const IToken::Array tokens = asmNode->tokens();
+							for (const IToken::Ptr &tk : tokens) {
+								if (tk->is(IToken::Types::LABEL)) {
+									std::string name = tk->caseSensitiveText();
+									if (name.empty() || name.back() != ':') continue;
+									name.pop_back();
+									Text::toLowerCase(name);
+									result->asmDestinations.push_back(name);
+								}
+							}
 						}
 					}
 				);
