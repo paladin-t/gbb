@@ -651,7 +651,7 @@ private:
 			}
 		}
 
-		if (!tkcar->is(IToken::Types::IDENTIFIER)) return throwInvalidOpcode(cursor); // Expect opcode.
+		if (!tkcar->is(IToken::Types::SYMBOL)) return throwInvalidOpcode(cursor); // Expect opcode.
 		opcode = (std::string)tkcar->data();
 		mnemonic = opcode;
 		mnemonic += " ";
@@ -710,7 +710,7 @@ private:
 			}
 
 			// Handle instructions.
-			if (tk->is(IToken::Types::IDENTIFIER)) {
+			if (tk->is(IToken::Types::SYMBOL)) {
 				const std::string data = (std::string)tk->data();
 				if (_registers.find(data) != _registers.end()) { // Is a register.
 					mnemonic += data;
@@ -815,7 +815,7 @@ private:
 			// Resolve jump destination.
 			if (!labelRefName.empty()) {
 				const Context::LabelRef labelRef(
-					cursor,
+					cursor - 1,
 					labelRefName,
 					context.size,
 					(oprandType == "n16" || oprandType == "a16") ? Context::LabelRef::Types::ADDRESS : Context::LabelRef::Types::OFFSET
