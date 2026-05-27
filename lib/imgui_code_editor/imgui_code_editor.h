@@ -196,6 +196,7 @@ public:
 		Identifiers PreprocIds;
 		Keywords AsmKeys;
 		Identifiers AsmIds;
+		Keywords AsmSymbols;
 		std::string CommentStart, CommentEnd;
 		Char CommentException = '\0';
 		std::string SimpleCommentHead;

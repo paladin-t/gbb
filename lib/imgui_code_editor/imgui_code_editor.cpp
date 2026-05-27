@@ -3500,7 +3500,7 @@ void CodeEditor::ColorizeRange(int aFromLine, int aToLine) {
 	const int endLine = std::max(0, std::min((int)CodeLines.size(), aToLine));
 	for (int i = aFromLine; i < endLine; ++i) {
 		bool preproc = false;
-		bool asmLine = IsAsmLineHandler && IsAsmLineHandler(i);
+		const bool asmLine = IsAsmLineHandler && IsAsmLineHandler(i);
 		Line &line = CodeLines[i];
 		buffer.clear();
 		for (Glyph &g : CodeLines[i].Glyphs) {
@@ -3561,6 +3561,8 @@ void CodeEditor::ColorizeRange(int aFromLine, int aToLine) {
 								color = PaletteIndex::Keyword;
 							else if (LangDef.AsmIds.find(LastSymbol) != LangDef.AsmIds.end())
 								color = PaletteIndex::KnownIdentifier;
+							else if (LangDef.AsmSymbols.find(LastSymbol) != LangDef.AsmSymbols.end())
+								color = PaletteIndex::Symbol;
 						} else if (!preproc) {
 							if (LangDef.Keys.find(LastSymbol) != LangDef.Keys.end())
 								color = PaletteIndex::Keyword;

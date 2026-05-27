@@ -435,6 +435,10 @@ public:
 		id.Declaration = "GB BASIC preprocessor";
 		def.PreprocIds.insert(std::make_pair(std::string(str), id));
 	}
+	virtual void addAsmSymbol(const char* str) override {
+		LanguageDefinition &def = GetLanguageDefinition();
+		def.AsmSymbols.insert(str);
+	}
 
 	virtual const std::string &toString(void) const override {
 		if (_cache.overdue) {
@@ -1773,7 +1777,7 @@ private:
 
 		// Initialize with destinitions.
 		added.clear();
-		const Text::Array* destinitions = ws->getDestinitions();
+		const Text::Array* destinitions = ws->getDestinations();
 		if (destinitions && !destinitions->empty()) {
 			for (const std::string &dest : *destinitions) {
 				if (added.find(dest) != added.end())
@@ -1782,6 +1786,21 @@ private:
 				added.insert(dest);
 
 				addSymbol(dest.c_str());
+			}
+
+			Colorize();
+		}
+
+		Text::Set asmAdded;
+		const Text::Array* asmDestinitions = ws->getAsmDestinations();
+		if (asmDestinitions && !asmDestinitions->empty()) {
+			for (const std::string &dest : *asmDestinitions) {
+				if (asmAdded.find(dest) != asmAdded.end())
+					continue;
+
+				asmAdded.insert(dest);
+
+				addAsmSymbol(dest.c_str());
 			}
 
 			Colorize();

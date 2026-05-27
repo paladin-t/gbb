@@ -4963,7 +4963,6 @@ public:
 
 	virtual TextLocation::Range location(void) const override {
 		TextLocation::Range result = std::make_pair(TextLocation::INVALID(), TextLocation::INVALID());
-
 		for (const Ptr &child : _children) {
 			TextLocation::Range childLoc = child->location();
 			if (result.first.invalid())
@@ -4993,12 +4992,13 @@ public:
 	}
 
 	virtual INode::Array children(void) const override {
-		INode::Array result;
+		const INode::Array result(_children.begin(), _children.end());
 
-		for (const Ptr &child : _children) {
-			Ptr iptr = child;
-			result.push_back(iptr);
-		}
+		return result;
+	}
+
+	virtual IToken::Array tokens(void) const override {
+		const IToken::Array result(_tokens.begin(), _tokens.end());
 
 		return result;
 	}
@@ -15047,6 +15047,7 @@ public:
 class NodeBeginAsm : public Node {
 private:
 	IToken::Array _asmTokens;
+	Assembler::Context _asmCtx;
 
 public:
 	NodeBeginAsm() {
@@ -15073,6 +15074,10 @@ public:
 		}
 
 		return result;
+	}
+
+	virtual IToken::Array tokens(void) const override {
+		return _asmTokens;
 	}
 
 	virtual void options(const IDictionary::Ptr &options) override {
@@ -15155,14 +15160,13 @@ public:
 				}
 			);
 			Bytes::Ptr bytes_(Bytes::create());
-			Assembler::Cotnext asmCtx;
 			if (!ctx.assembler)
 				ctx.assembler = Assembler::Ptr(Assembler::create());
-			const bool ok = ctx.assembler->assemble(bytes_, asmCtx, _asmTokens, options);
+			const bool ok = ctx.assembler->assemble(bytes_, _asmCtx, _asmTokens, options);
 			if (!ok) { THROW_ASM_ERROR(onError, tkbegin); }
 			if (bytes_->empty())
 				return; // Ignore blank assembly.
-			if (!asmCtx.hasRet) {
+			if (!_asmCtx.hasRet) {
 				THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK(onError);
 			}
 

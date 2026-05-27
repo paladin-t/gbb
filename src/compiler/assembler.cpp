@@ -317,7 +317,7 @@ public:
 		return false;
 	}
 
-	virtual bool assemble(Bytes::Ptr &bytes, Cotnext &context, const IToken::Array &tokens, const Options &options) const override {
+	virtual bool assemble(Bytes::Ptr &bytes, Context &context, const IToken::Array &tokens, const Options &options) const override {
 		// Prepare.
 		int cursor = 0;
 		bytes->clear();
@@ -392,7 +392,7 @@ public:
 		// Finish.
 		return true;
 	}
-	virtual void post(Bytes::Ptr &bytes, Cotnext &context, const Options &options) const override {
+	virtual void post(Bytes::Ptr &bytes, Context &context, const Options &options) const override {
 		(void)bytes;
 		(void)context;
 		(void)options;
@@ -401,7 +401,7 @@ public:
 	}
 
 private:
-	bool assembleLine(Bytes::Ptr &bytes, Cotnext &context, const IToken::Array &tokens, int lnBegin, int lnEnd, const Options &options) const {
+	bool assembleLine(Bytes::Ptr &bytes, Context &context, const IToken::Array &tokens, int lnBegin, int lnEnd, const Options &options) const {
 		// Prepare.
 		typedef std::vector<int> Oprands;
 
@@ -423,6 +423,16 @@ private:
 				idx = cursor;
 			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
 			const std::string msg = "Comma expected";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwDuplicateLabel = [&] (int idx, const std::string &name) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = Text::format("Duplicate label \"{0}\"", { name });
 			if (options.onError)
 				options.onError(msg, tk);
 
@@ -458,6 +468,16 @@ private:
 
 			return false;
 		};
+		auto throwInvalidLabel = [&] (int idx, const std::string &name) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = Text::format("Invalid label \"{0}\"", { name });
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
 		auto throwInvalidOpcode = [&] (int idx = -1) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
@@ -488,6 +508,16 @@ private:
 
 			return false;
 		};
+		auto throwUnexpectedToken = [&] (int idx, const std::string &id) -> bool {
+			if (idx < 0 || idx >= (int)tokens.size())
+				idx = cursor;
+			const IToken::Ptr tk = (cursor >= 0 && cursor < (int)tokens.size()) ? tokens[cursor] : nullptr;
+			const std::string msg = Text::format("Unexpected token \"{0}\"", { id });
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
 		auto throwWordExpected = [&] (int idx = -1) -> bool {
 			if (idx < 0 || idx >= (int)tokens.size())
 				idx = cursor;
@@ -500,7 +530,7 @@ private:
 		};
 
 		// Emitters.
-		auto emitUInt8 = [] (Bytes::Ptr &bytes, Cotnext &ctx, UInt8 data) -> Byte* {
+		auto emitUInt8 = [] (Bytes::Ptr &bytes, Context &ctx, UInt8 data) -> Byte* {
 			int n = 0;
 			const size_t m = bytes->peek();
 			n += bytes->writeUInt8(data);
@@ -513,7 +543,7 @@ private:
 
 			return result;
 		};
-		auto emitUInt16 = [] (Bytes::Ptr &bytes, Cotnext &ctx, UInt16 data) -> Byte* {
+		auto emitUInt16 = [] (Bytes::Ptr &bytes, Context &ctx, UInt16 data) -> Byte* {
 			int n = 0;
 			const size_t m = bytes->peek();
 			union {
@@ -544,11 +574,30 @@ private:
 		cursor = lnBegin;
 		++cursor; // Ignore the line number.
 
-		const IToken::Ptr &tkop = tokens[cursor];
-		if (tkop->is(IToken::Types::COMMENT)) return true; // Ignore this line with comment.
+		const IToken::Ptr &tkcar = tokens[cursor];
+		if (tkcar->is(IToken::Types::COMMENT)) return true; // Ignore this line with comment.
 
-		if (!tkop->is(IToken::Types::IDENTIFIER)) return throwInvalidOpcode(cursor); // Expect opcode.
-		opcode =(std::string)tkop->data();
+		if (tkcar->is(IToken::Types::LABEL)) { // Handle labeled destination.
+			std::string name = (std::string)tkcar->data();
+			if (name.empty() || name.back() != ':') return throwInvalidLabel(cursor, tkcar->caseSensitiveText());
+			name.pop_back();
+
+			const Context::LabeledDestination dest(context.addressCursor);
+			auto ret = context.labels.insert(std::make_pair(name, dest));
+			if (!ret.second) return throwDuplicateLabel(cursor, tkcar->caseSensitiveText());
+
+			++cursor;
+			for (; cursor < lnEnd; ++cursor) {
+				const IToken::Ptr &tk = tokens[cursor];
+				if (tk->is(IToken::Types::COMMENT)) continue;
+				if (tk->is(IToken::Types::END_OF_LINE)) return true;
+
+				return throwUnexpectedToken(cursor, tk->caseSensitiveText());
+			}
+		}
+
+		if (!tkcar->is(IToken::Types::IDENTIFIER)) return throwInvalidOpcode(cursor); // Expect opcode.
+		opcode = (std::string)tkcar->data();
 		mnemonic = opcode;
 		mnemonic += " ";
 		++cursor;
@@ -646,7 +695,7 @@ private:
 		Text::toLowerCase(mnemonic);
 		mnemonic = Text::trim(mnemonic);
 
-		// Translate the data it's data declaration.
+		// Translate the data if it's data declaration.
 		if (opcode == "db") {
 			for (int oprand : oprands)
 				emitUInt8(bytes, context, (UInt8)oprand);
@@ -761,7 +810,35 @@ private:
 	}
 };
 
-Assembler::Cotnext::Cotnext() {
+Assembler::Context::LabeledDestination::LabeledDestination() {
+}
+
+Assembler::Context::LabeledDestination::LabeledDestination(int a) {
+	address = a;
+}
+
+Assembler::Context::LabelRef::LabelRef() {
+}
+
+Assembler::Context::LabelRef::LabelRef(Types y, int a) {
+	type = y;
+	switch (type) {
+	case Types::ADDRESS:
+		address = a;
+
+		break;
+	case Types::OFFSET:
+		offset = a;
+
+		break;
+	default:
+		GBBASIC_ASSERT(false && "Impossible.");
+
+		break;
+	}
+}
+
+Assembler::Context::Context() {
 }
 
 Assembler::Options::Options() {

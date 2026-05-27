@@ -67,7 +67,9 @@ public:
 
 	virtual const Macro::List* getMacroDefinitions(void) const = 0;
 
-	virtual const Text::Array* getDestinitions(void) const = 0;
+	virtual const Text::Array* getDestinations(void) const = 0;
+
+	virtual const Text::Array* getAsmDestinations(void) const = 0;
 
 	virtual const RamLocation::Dictionary* getRamAllocations(void) const = 0;
 
