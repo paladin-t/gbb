@@ -386,7 +386,13 @@ public:
 					break;
 				}
 			}
-			if (!assembleLine(bytes, context, tokens, lnBegin, lnEnd, options)) return false;
+
+			bool isRet = false;
+			bool isInst = false;
+			if (!assembleLine(bytes, context, tokens, lnBegin, lnEnd, isRet, isInst, options))
+				return false;
+			if (!context.hasRet && isRet)
+				context.hasRet = true;
 		}
 
 		// Finish.
@@ -455,10 +461,16 @@ public:
 	}
 
 private:
-	bool assembleLine(Bytes::Ptr &bytes, Context &context, const IToken::Array &tokens, int lnBegin, int lnEnd, const AssemblingOptions &options) const {
+	/**
+	 * @param[out] isRet
+	 * @param[out] isInst
+	 */
+	bool assembleLine(Bytes::Ptr &bytes, Context &context, const IToken::Array &tokens, int lnBegin, int lnEnd, bool &isRet, bool &isInst, const AssemblingOptions &options) const {
 		// Prepare.
 		typedef std::vector<int> Oprands;
 
+		isRet = false;
+		isInst = false;
 		int cursor = 0;
 
 		// Error handlers.
@@ -785,6 +797,8 @@ private:
 		}
 
 		// Translate the mnemonic.
+		isInst = true; // Is an instruction.
+
 		Text::Dictionary::const_iterator ait = _mnemonicAliases.find(mnemonic);
 		if (ait != _mnemonicAliases.end())
 			mnemonic = ait->second;
@@ -805,11 +819,10 @@ private:
 
 			// Count `ret *`.
 			if (
-				!context.hasRet && (
-					op == ASSEMBLER_OPCODE_RETNZ || op == ASSEMBLER_OPCODE_RETZ || op == ASSEMBLER_OPCODE_RET ||
-					op == ASSEMBLER_OPCODE_RETNC || op == ASSEMBLER_OPCODE_RETC || op == ASSEMBLER_OPCODE_RETI)
+				op == ASSEMBLER_OPCODE_RETNZ || op == ASSEMBLER_OPCODE_RETZ || op == ASSEMBLER_OPCODE_RET ||
+				op == ASSEMBLER_OPCODE_RETNC || op == ASSEMBLER_OPCODE_RETC || op == ASSEMBLER_OPCODE_RETI
 			) {
-				context.hasRet = true;
+				isRet = true;
 			}
 
 			// Resolve jump destination.
