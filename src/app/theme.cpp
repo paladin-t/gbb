@@ -1311,9 +1311,12 @@ bool Theme::open(class Renderer* rnd) {
 		"Cartridge flag   : {0}\n"
 		"Cartridge ext.   : {1}\n"
 		"   Device flag   : {2}\n"
-		"Cartridge SRAM   : {3}\n"
-		"Cartridge RTC    : {4}\n"
-		"Cartridge rumble : {5}"
+		"Cartridge mapper : {3}\n"
+		"Cartridge SRAM   : {4}\n"
+		"Cartridge RTC    : {5}"
+	);
+	tooltipEmulator_StatusNoteRumble(
+		"Cartridge rumble : {0}"
 	);
 	tooltipEmulator_ToggleOnscreenGamepad("Toggle onscreen gamepad");
 	tooltipEmulator_VramDebugger_Map(

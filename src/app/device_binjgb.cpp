@@ -435,6 +435,46 @@ int DeviceBinjgb::cartridgeSramSize(int* banks) const {
 	}
 }
 
+int DeviceBinjgb::cartridgeMbcType(void) const {
+	return _cartridgeMbcType;
+}
+
+const char* DeviceBinjgb::cartridgeMbcTypeName(void) const {
+	switch (_cartridgeMbcType) {
+	case 0x00: return "ROM";
+	case 0x01: return "MBC1";
+	case 0x02: return "MBC1+RAM";
+	case 0x03: return "MBC1+RAM+BATTERY";
+	case 0x05: return "MBC2";
+	case 0x06: return "MBC2+BATTERY";
+	case 0x08: return "ROM+RAM";
+	case 0x09: return "ROM+RAM+BATTERY";
+	case 0x0b: return "MMM01";
+	case 0x0c: return "MMM01+RAM";
+	case 0x0d: return "MMM01+RAM+BATTERY";
+	case 0x0f: return "MBC3+TIMER+BATTERY";
+	case 0x10: return "MBC3+TIMER+RAM+BATTERY";
+	case 0x11: return "MBC3";
+	case 0x12: return "MBC3+RAM";
+	case 0x13: return "MBC3+RAM+BATTERY";
+	case 0x15: return "MBC4";
+	case 0x16: return "MBC4+RAM";
+	case 0x17: return "MBC4+RAM+BATTERY";
+	case 0x19: return "MBC5";
+	case 0x1a: return "MBC5+RAM";
+	case 0x1b: return "MBC5+RAM+BATTERY";
+	case 0x1c: return "MBC5+RUMBLE";
+	case 0x1d: return "MBC5+RUMBLE+RAM";
+	case 0x1e: return "MBC5+RUMBLE+RAM+BATTERY";
+	case 0xfc: return "POCKET CAMERA";
+	case 0xfd: return "Bandai TAMA5";
+	case 0xfe: return "HuC3";
+	case 0xff: return "HuC1+RAM+BATTERY";
+	default:
+		return "Unknown";
+	}
+}
+
 bool DeviceBinjgb::cartridgeHasRtc(void) const {
 	return
 		_cartridgeMbcType == 0x0f || // MBC3 + TIMER + BATTERY.

@@ -935,6 +935,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_AlternativeSpeed)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_NormalSpeed)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_StatusNote)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_StatusNoteRumble)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_ToggleOnscreenGamepad)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_VramDebugger_Map)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_VramDebugger_Oam)

@@ -212,6 +212,8 @@ public:
 	virtual bool cartridgeHasSgbSupport(void) const = 0;
 	virtual int cartridgeRomSize(int* banks /* nullable */) const = 0;
 	virtual int cartridgeSramSize(int* banks /* nullable */) const = 0;
+	virtual int cartridgeMbcType(void) const = 0;
+	virtual const char* cartridgeMbcTypeName(void) const = 0;
 	virtual bool cartridgeHasRtc(void) const = 0;
 	virtual bool cartridgeHasRumble(void) const = 0;
 

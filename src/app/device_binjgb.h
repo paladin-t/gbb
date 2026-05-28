@@ -80,6 +80,8 @@ public:
 	virtual bool cartridgeHasSgbSupport(void) const override;
 	virtual int cartridgeRomSize(int* banks) const override;
 	virtual int cartridgeSramSize(int* banks) const override;
+	virtual int cartridgeMbcType(void) const override;
+	virtual const char* cartridgeMbcTypeName(void) const override;
 	virtual bool cartridgeHasRtc(void) const override;
 	virtual bool cartridgeHasRumble(void) const override;
 

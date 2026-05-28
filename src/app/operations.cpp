@@ -4667,8 +4667,8 @@ promise::Promise Operations::projectRun(Window* wnd, Renderer* rnd, Workspace* w
 			const Device::DeviceTypes dev = ws->canvasDevice()->deviceType();
 			const Device::DeviceTypes edev = ws->canvasDevice()->enabledDeviceType();
 			const int sram_ = ws->canvasDevice()->cartridgeSramSize(nullptr);
-			const int rtc = ws->canvasDevice()->cartridgeHasRtc();
-			const int rumble = ws->canvasDevice()->cartridgeHasRumble();
+			const bool rtc = ws->canvasDevice()->cartridgeHasRtc();
+			const bool rumble = ws->canvasDevice()->cartridgeHasRumble();
 			const std::string cartFlag = std::string(cgb ? "COLOR" : "GRAY");
 			const std::string sgbFlag = std::string(sgb ? "[SGB]" : "");
 			const std::string devFlag = std::string(
@@ -4680,6 +4680,7 @@ promise::Promise Operations::projectRun(Window* wnd, Renderer* rnd, Workspace* w
 				dev  == Device::DeviceTypes::COLORED_EXTENDED ? "COLOR[EXT]" :
 				                                                "UNKNOWN"
 			);
+			const char* mbcType = ws->canvasDevice()->cartridgeMbcTypeName();
 			ws->canvasCartridgeStatusText(
 				cartFlag + " " +
 				std::string(sram_ ? "SRAM[YES]" : "SRAM[NO]") + " " +
@@ -4688,19 +4689,26 @@ promise::Promise Operations::projectRun(Window* wnd, Renderer* rnd, Workspace* w
 			ws->canvasDeviceStatusText(
 				devFlag
 			);
-			ws->canvasStatusTooltip(
-				Text::format(
-					ws->theme()->tooltipEmulator_StatusNote(),
+			std::string statusTips = Text::format(
+				ws->theme()->tooltipEmulator_StatusNote(),
+				{
+					cartFlag + sgbFlag,
+					std::string(ext ? "YES" : "NO"),
+					devFlag,
+					std::string(mbcType ? mbcType : "Unknown"),
+					std::string(sram_ ? "YES" : "NO"),
+					std::string(rtc ? "YES" : "NO")
+				}
+			);
+			if (rumble) {
+				statusTips += Text::format(
+					ws->theme()->tooltipEmulator_StatusNoteRumble(),
 					{
-						cartFlag + sgbFlag,
-						std::string(ext ? "YES" : "NO"),
-						devFlag,
-						std::string(sram_ ? "YES" : "NO"),
-						std::string(rtc ? "YES" : "NO"),
 						std::string(rumble ? "YES" : "NO")
 					}
-				)
-			);
+				);
+			}
+			ws->canvasStatusTooltip(statusTips);
 
 			ws->initializeVramDebugger(wnd, rnd);
 

@@ -9686,6 +9686,7 @@ public:
 				else if (consume(Token::Types::KEYWORD, "projectile")) { _type = OperationTypes::PROJECTILE; }
 				else if (consume(Token::Types::KEYWORD, "music")) { _type = OperationTypes::MUSIC; }
 				else if (consume(Token::Types::KEYWORD, "sfx")) { _type = OperationTypes::SOUND; }
+				// TODO: ASM.
 				if (!consume(Token::Types::KEYWORD, "bankof")) { THROW_INVALID_SYNTAX(onError); }
 			} else {
 				if (!consume(Token::Types::KEYWORD, "bankof")) { THROW_INVALID_SYNTAX(onError); }
@@ -10196,6 +10197,7 @@ public:
 				}
 
 				break;
+			// TODO: ASM.
 			case OperationTypes::READ: {
 					// Set the stack footprint guard.
 					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
@@ -10408,6 +10410,7 @@ public:
 			}
 
 			break;
+		// TODO: ASM.
 		case OperationTypes::READ:
 			GBBASIC_ASSERT(false && "Impossible.");
 
@@ -10501,6 +10504,7 @@ public:
 				else if (consume(Token::Types::KEYWORD, "projectile")) { _type = OperationTypes::PROJECTILE; }
 				else if (consume(Token::Types::KEYWORD, "music")) { _type = OperationTypes::MUSIC; }
 				else if (consume(Token::Types::KEYWORD, "sfx")) { _type = OperationTypes::SOUND; }
+				// TODO: ASM.
 				if (!consume(Token::Types::KEYWORD, "addressof")) { THROW_INVALID_SYNTAX(onError); }
 			} else {
 				if (!consume(Token::Types::KEYWORD, "addressof")) { THROW_INVALID_SYNTAX(onError); }
@@ -11008,6 +11012,7 @@ public:
 				}
 
 				break;
+			// TODO: ASM.
 			case OperationTypes::READ: {
 					// Set the stack footprint guard.
 					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
@@ -11229,6 +11234,7 @@ public:
 			}
 
 			break;
+		// TODO: ASM.
 		case OperationTypes::READ:
 			GBBASIC_ASSERT(false && "Impossible.");
 
@@ -15130,6 +15136,7 @@ public:
 				})) { THROW_INVALID_SYNTAX(onError); }
 			}
 			if (!(tkbegin = consume(Token::Types::KEYWORD, "beginasm"))) { THROW_INVALID_SYNTAX(onError); }
+			// TODO: With assembly name.
 
 			// Check the children.
 			if (!_children.empty()) {
@@ -41245,6 +41252,7 @@ private:
 				} else if (!must(Token::Types::KEYWORD, "beginasm")(q)) {
 					return false;
 				}
+				// TODO: With assembly name.
 				ignore(Token::Types::COMMENT)(q);
 				if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				Token::Array asmTokens;
