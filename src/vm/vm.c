@@ -644,7 +644,7 @@ void vm_invoke_fn(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * fn, UINT8 nparams, INT1
     THIS->PC -= INSTRUCTION_SIZE + sizeof(bank) + sizeof(fn) + sizeof(nparams) + sizeof(idx);
 }
 
-// Invokes the inlined native code by `THIS->PC`.
+// Invokes the inlined native code at `<bank>:<fn>`, blocks other threads during execution.
 void vm_asm(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS, UINT8 bank, UINT8 * fn, UINT16 step) OLDCALL NONBANKED NAKED {
     (void)dummy0; (void)dummy1; (void)bank; (void)fn;
 
