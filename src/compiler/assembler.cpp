@@ -324,8 +324,9 @@ public:
 
 		// Error handlers.
 		auto throwInvalidLineBegin = [&] (int idx = -1) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Invalid line begin";
 			if (options.onError)
@@ -401,8 +402,7 @@ public:
 	virtual bool post(Bytes::Ptr &bytes, Context &context, const IToken::Array &tokens, const PostingOptions &options) const override {
 		// Error handlers.
 		auto throwInvalidProgramPoint = [&] (int idx = -1) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
-				idx = 0;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Invalid program point";
 			if (options.onError)
@@ -475,8 +475,9 @@ private:
 
 		// Error handlers.
 		auto throwByteExpected = [&] (int idx = -1) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Byte expected";
 			if (options.onError)
@@ -485,8 +486,9 @@ private:
 			return false;
 		};
 		auto throwCommaExpected = [&] (int idx = -1) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Comma expected";
 			if (options.onError)
@@ -495,8 +497,9 @@ private:
 			return false;
 		};
 		auto throwDuplicateLabel = [&] (int idx, const std::string &name) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = Text::format("Duplicate label \"{0}\"", { name });
 			if (options.onError)
@@ -505,8 +508,9 @@ private:
 			return false;
 		};
 		auto throwIdHasNotBeenDeclared = [&] (int idx, const std::string &id) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = Text::format("ID \"{0}\" has not been decleared", { id });
 			if (options.onError)
@@ -515,8 +519,9 @@ private:
 			return false;
 		};
 		auto throwIdHasNotBeenDeclaredDidYouMean = [&] (int idx, const std::string &id, const std::string &fuzzy) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = Text::format("ID \"{0}\" has not been decleared, did you mean \"{1}\"", { id, fuzzy });
 			if (options.onError)
@@ -525,8 +530,9 @@ private:
 			return false;
 		};
 		auto throwInvalidFormat = [&] (int idx = -1) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Invalid format";
 			if (options.onError)
@@ -535,8 +541,9 @@ private:
 			return false;
 		};
 		auto throwInvalidLabel = [&] (int idx, const std::string &name) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = Text::format("Invalid label \"{0}\"", { name });
 			if (options.onError)
@@ -545,8 +552,9 @@ private:
 			return false;
 		};
 		auto throwInvalidOpcode = [&] (int idx = -1) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Invalid opcode";
 			if (options.onError)
@@ -555,8 +563,9 @@ private:
 			return false;
 		};
 		auto throwTooManyOprands = [&] (int idx = -1) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Too many oprands";
 			if (options.onError)
@@ -565,8 +574,9 @@ private:
 			return false;
 		};
 		auto throwUnexpectedComma = [&] (int idx = -1) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Unexpected comma";
 			if (options.onError)
@@ -575,8 +585,9 @@ private:
 			return false;
 		};
 		auto throwUnexpectedToken = [&] (int idx, const std::string &id) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = Text::format("Unexpected token \"{0}\"", { id });
 			if (options.onError)
@@ -585,8 +596,9 @@ private:
 			return false;
 		};
 		auto throwWordExpected = [&] (int idx = -1) -> bool {
-			if (idx < 0 || idx >= (int)tokens.size())
+			if (idx == -1)
 				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Word expected";
 			if (options.onError)
@@ -784,7 +796,7 @@ private:
 
 		// Translate the oprand.
 		if (!oprands.empty()) {
-			if (oprands.size() > 1) return throwTooManyOprands(cursor);
+			if (oprands.size() > 1) return throwTooManyOprands(cursor - 1);
 
 			for (const OprandPattern &pattern : _oprandPatterns) {
 				if (Text::matchWildcard(pattern.pattern, mnemonic.c_str(), false)) {
@@ -853,7 +865,7 @@ private:
 
 				const int oprand = oprands.front();
 				if (oprand < std::numeric_limits<Int8>::min() || oprand > std::numeric_limits<UInt8>::max())
-					return throwByteExpected(cursor);
+					return throwByteExpected(cursor - 1);
 
 				emitUInt8(bytes, context, (UInt8)oprand);
 
@@ -866,7 +878,7 @@ private:
 
 				const int oprand = oprands.front();
 				if (oprand < std::numeric_limits<Int16>::min() || oprand > std::numeric_limits<UInt16>::max())
-					return throwWordExpected(cursor);
+					return throwWordExpected(cursor - 1);
 
 				emitUInt16(bytes, context, (UInt16)oprand);
 
@@ -889,7 +901,7 @@ private:
 			return true;
 		}
 
-		return throwInvalidFormat(cursor);
+		return throwInvalidFormat(cursor - 1);
 	}
 };
 
