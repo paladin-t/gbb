@@ -10210,7 +10210,49 @@ public:
 
 				break;
 			case OperationTypes::ASM: {
-					// TODO: ASM.
+					// Prepare.
+					Token::Ptr nameTk = nullptr;
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, &nameTk)) byName_ = true;
+
+					int bank = -1;
+					bool found = false;
+
+					SourceLocation target;
+					const RomLocation* romLocation = ctx.namedAssemblyBlocks.find(name);
+					if (romLocation) {
+						bank = romLocation->bank;
+						found = true;
+					} else {
+						target = SourceLocation(-1, name); // By name.
+					}
+
+					// Set the stack footprint guard.
+					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
+					COUNTER_GUARD(ctx, stk);
+
+					// Set the expression slot guard.
+					VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
+
+					// Emit the right hand value.
+					writeRightHand(
+						bytes, context, stk,
+						[&, bank] (void) -> void {
+							// Emit a `VM_SET_CONST` instruction to set the data.
+							Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::SET_CONST]);
+							if (found) {
+								args = fill(args, (Int16)bank);
+								args = fill(args, (Int16)ARG0);
+							} else {
+								_scheduled = Scheduled(target, bytes->pointer(), args, overflow);
+							}
+						}, 0, true,
+						onError
+					);
+
+					// Check the stack footprint.
+					CHECK_COUNTER(ctx, onError);
 				}
 
 				break;
@@ -10427,7 +10469,22 @@ public:
 
 			break;
 		case OperationTypes::ASM: {
-				// TODO: ASM.
+				const std::string &name = _scheduled.target.label;
+				std::string fuzzyName;
+				const RomLocation* romLocation = ctx.namedAssemblyBlocks.fuzzy(name, fuzzyName);
+				if (romLocation && name == fuzzyName) {
+					const int bank = romLocation->bank;
+
+					Byte* args = _scheduled.args(bytes->pointer());
+					args = fill(args, (UInt16)bank);
+					args = fill(args, (Int16)ARG0);
+				} else {
+					if (!fuzzyName.empty()) {
+						THROW_ID_HAS_NOT_BEEN_DECLARED_DID_YOU_MEAN(onError, nullptr, fuzzyName);
+					}
+
+					THROW_ID_HAS_NOT_BEEN_DECLARED(onError, nullptr);
+				}
 			}
 
 			break;
@@ -11034,7 +11091,49 @@ public:
 
 				break;
 			case OperationTypes::ASM: {
-					// TODO: ASM.
+					// Prepare.
+					Token::Ptr nameTk = nullptr;
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, &nameTk)) byName_ = true;
+
+					int address = -1;
+					bool found = false;
+
+					SourceLocation target;
+					const RomLocation* romLocation = ctx.namedAssemblyBlocks.find(name);
+					if (romLocation) {
+						address = romLocation->address;
+						found = true;
+					} else {
+						target = SourceLocation(-1, name); // By name.
+					}
+
+					// Set the stack footprint guard.
+					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
+					COUNTER_GUARD(ctx, stk);
+
+					// Set the expression slot guard.
+					VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
+
+					// Emit the right hand value.
+					writeRightHand(
+						bytes, context, stk,
+						[&, address] (void) -> void {
+							// Emit a `VM_SET_CONST` instruction to set the data.
+							Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::SET_CONST]);
+							if (found) {
+								args = fill(args, (Int16)address);
+								args = fill(args, (Int16)ARG0);
+							} else {
+								_scheduled = Scheduled(target, bytes->pointer(), args, overflow);
+							}
+						}, 0, true,
+						onError
+					);
+
+					// Check the stack footprint.
+					CHECK_COUNTER(ctx, onError);
 				}
 
 				break;
@@ -11260,7 +11359,22 @@ public:
 
 			break;
 		case OperationTypes::ASM: {
-				// TODO: ASM.
+				const std::string &name = _scheduled.target.label;
+				std::string fuzzyName;
+				const RomLocation* romLocation = ctx.namedAssemblyBlocks.fuzzy(name, fuzzyName);
+				if (romLocation && name == fuzzyName) {
+					const int address = romLocation->address;
+
+					Byte* args = _scheduled.args(bytes->pointer());
+					args = fill(args, (UInt16)address);
+					args = fill(args, (Int16)ARG0);
+				} else {
+					if (!fuzzyName.empty()) {
+						THROW_ID_HAS_NOT_BEEN_DECLARED_DID_YOU_MEAN(onError, nullptr, fuzzyName);
+					}
+
+					THROW_ID_HAS_NOT_BEEN_DECLARED(onError, nullptr);
+				}
 			}
 
 			break;
@@ -34828,7 +34942,13 @@ private:
 			if (!must(Token::Types::KEYWORD, "get")(q1)) return false;
 			if (!(id = must(Token::Types::SYMBOL)(q1))) return false;
 			else name = (std::string)id->data();
-			if (name == "palette" || name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile" || name == "music" || name == "sfx") {
+			if (
+				name == "palette" ||
+				name == "tile" || name == "map" ||
+				name == "scene" || name == "actor" || name == "projectile" ||
+				name == "music" || name == "sfx" ||
+				name == "asm"
+			) {
 				if (forward(Token::Types::KEYWORD, "bankof")(q1.index)) {
 					any()(q1);
 				}
@@ -34877,7 +34997,13 @@ private:
 			if (!must(Token::Types::KEYWORD, "get")(q1)) return false;
 			if (!(id = must(Token::Types::SYMBOL)(q1))) return false;
 			else name = (std::string)id->data();
-			if (name == "palette" || name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile" || name == "music" || name == "sfx") {
+			if (
+				name == "palette" ||
+				name == "tile" || name == "map" ||
+				name == "scene" || name == "actor" || name == "projectile" ||
+				name == "music" || name == "sfx" ||
+				name == "asm"
+			) {
 				if (forward(Token::Types::KEYWORD, "addressof")(q1.index)) {
 					any()(q1);
 				}
@@ -35459,7 +35585,8 @@ private:
 							!!forwardN(2, Token::Types::KEYWORD, "actor")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "projectile")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "music")(q.index) ||
-							!!forwardN(2, Token::Types::KEYWORD, "sfx")(q.index);
+							!!forwardN(2, Token::Types::KEYWORD, "sfx")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "asm")(q.index);
 						const bool bank = !!forwardN(3, Token::Types::KEYWORD, "bankof")(q.index);
 						const int qi = q.index;
 						if (targets && bank && BankR(q, children, false)) {
@@ -35480,7 +35607,8 @@ private:
 							!!forwardN(2, Token::Types::KEYWORD, "actor")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "projectile")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "music")(q.index) ||
-							!!forwardN(2, Token::Types::KEYWORD, "sfx")(q.index);
+							!!forwardN(2, Token::Types::KEYWORD, "sfx")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "asm")(q.index);
 						const bool addr = !!forwardN(3, Token::Types::KEYWORD, "addressof")(q.index);
 						const int qi = q.index;
 						if (targets && addr && AddressR(q, children, false)) {
@@ -38892,7 +39020,13 @@ private:
 				} else if (name == "get" && forwardN(2, Token::Types::KEYWORD, "bankof")(q.index)) {
 					if (!(id = must(Token::Types::SYMBOL)(q))) return false;
 					else name = (std::string)id->data();
-					if (name == "palette" || name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile" || name == "music" || name == "sfx") {
+					if (
+						name == "palette" ||
+						name == "tile" || name == "map" ||
+						name == "scene" || name == "actor" || name == "projectile" ||
+						name == "music" || name == "sfx" ||
+						name == "asm"
+					) {
 						any()(q);
 						if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						Arguments(q, children);
@@ -38959,7 +39093,13 @@ private:
 				} else if (name == "get" && forwardN(2, Token::Types::KEYWORD, "addressof")(q.index)) {
 					if (!(id = must(Token::Types::SYMBOL)(q))) return false;
 					else name = (std::string)id->data();
-					if (name == "palette" || name == "tile" || name == "map" || name == "scene" || name == "actor" || name == "projectile" || name == "music" || name == "sfx") {
+					if (
+						name == "palette" ||
+						name == "tile" || name == "map" ||
+						name == "scene" || name == "actor" || name == "projectile" ||
+						name == "music" || name == "sfx" ||
+						name == "asm"
+					) {
 						any()(q);
 						if (!must(Token::Types::OPERATOR, "(")(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 						Arguments(q, children);
