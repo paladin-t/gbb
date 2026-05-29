@@ -4788,7 +4788,7 @@ public:
 		const FunctionTable* functions = nullptr;                 // Stores the generic function information for `NodeRoutine` and `NodeFunction`.
 		const OperatorTable* operators = nullptr;                 // Stores the regular and function-like math operators.
 		MacroFunctionTable::Stack* macroFunctions = nullptr;      // FEAT: MACRO. Stores the user defined macro functions.
-		SymbolTable namedAssemblyBlocks;                          // Stores the user defined named assembly blocks.
+		SymbolTable namedAssemblyBlocks;                          // Stores the user defined named assembly blocks. The `RomLocation` values store the final addresses in ROM.
 		Assembler::Ptr assembler = nullptr;                       // Stores the assembler.
 
 		BorderFrameResources* borderFrameResources = nullptr;     // Stores the border resources.
@@ -15081,14 +15081,24 @@ public:
 					int address = -1;
 					bool found = false;
 
-					// Search for builtin name.
-					const std::string name = dest.right().get();
-					if (!ctx.symbols) { THROW_INVALID_ASSET_POINT(onError); }
-					const RomLocation* romLocation = ctx.symbols->find(name);
-					if (romLocation) { // By builtin name.
+					// Search for named assembly block.
+					const RomLocation* romLocation = ctx.namedAssemblyBlocks.find(name);
+					if (romLocation) {
 						bank = romLocation->bank;
 						address = romLocation->address;
 						found = true;
+					}
+
+					// Search for builtin name.
+					if (!found) {
+						const std::string name = dest.right().get();
+						if (!ctx.symbols) { THROW_INVALID_ASSET_POINT(onError); }
+						const RomLocation* romLocation = ctx.symbols->find(name);
+						if (romLocation) { // By builtin name.
+							bank = romLocation->bank;
+							address = romLocation->address;
+							found = true;
+						}
 					}
 
 					// Search for identifier.
@@ -15159,11 +15169,35 @@ public:
 		switch (_type) {
 		case OperationTypes::NAMED: {
 				const RomLocation* romLocation = nullptr;
-				findDestination(ctx, _scheduled.target, &romLocation, onError);
+				std::string fuzzyName;
+				{
+					const std::string &name = _scheduled.target.label;
+					romLocation = ctx.namedAssemblyBlocks.fuzzy(name, fuzzyName);
+					if (romLocation && name == fuzzyName) {
+						const int bank = romLocation ? romLocation->bank : 0;
+						const int address = romLocation ? romLocation->address : -1;
+
+						Byte* args = _scheduled.args(bytes->pointer());
+						args = fill(args, (UInt16)0);
+						args = fill(args, (UInt16)address);
+						args = fill(args, (UInt8)bank);
+
+						break;
+					} else {
+						romLocation = nullptr;
+					}
+				}
+				if (!romLocation)
+					findDestination(ctx, _scheduled.target, &romLocation, onError);
 				if (!romLocation)
 					romLocation = ctx.find(_scheduled.target);
-				if (!romLocation)
-					break;
+				if (!romLocation) {
+					if (!fuzzyName.empty()) {
+						THROW_ID_HAS_NOT_BEEN_DECLARED_DID_YOU_MEAN(onError, nullptr, fuzzyName);
+					}
+
+					THROW_ID_HAS_NOT_BEEN_DECLARED(onError, nullptr);
+				}
 
 				const int bank = romLocation ? romLocation->bank : 0;
 				const int address = romLocation ? ctx.startAddress + romLocation->address : -1;
