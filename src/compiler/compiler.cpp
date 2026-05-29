@@ -1755,6 +1755,16 @@ public:
 
 		return true;
 	}
+	bool add(const std::string &key, const RomLocation &val) {
+		auto ret = _dictionary.insert(std::make_pair(key, val));
+
+		return ret.second;
+	}
+	bool add(const std::string &key, int bank, int address) {
+		const RomLocation romLocation(bank, address);
+
+		return add(key, romLocation);
+	}
 	const RomLocation* find(const std::string &key) const {
 		Dictionary::const_iterator it = _dictionary.find(key);
 		if (it == _dictionary.end())
@@ -4778,6 +4788,7 @@ public:
 		const FunctionTable* functions = nullptr;                 // Stores the generic function information for `NodeRoutine` and `NodeFunction`.
 		const OperatorTable* operators = nullptr;                 // Stores the regular and function-like math operators.
 		MacroFunctionTable::Stack* macroFunctions = nullptr;      // FEAT: MACRO. Stores the user defined macro functions.
+		SymbolTable namedAssemblyBlocks;                          // Stores the user defined named assembly blocks.
 		Assembler::Ptr assembler = nullptr;                       // Stores the assembler.
 
 		BorderFrameResources* borderFrameResources = nullptr;     // Stores the border resources.
@@ -9639,6 +9650,7 @@ private:
 		PROJECTILE,
 		MUSIC,
 		SOUND,
+		ASM,
 		READ
 	};
 
@@ -9686,7 +9698,7 @@ public:
 				else if (consume(Token::Types::KEYWORD, "projectile")) { _type = OperationTypes::PROJECTILE; }
 				else if (consume(Token::Types::KEYWORD, "music")) { _type = OperationTypes::MUSIC; }
 				else if (consume(Token::Types::KEYWORD, "sfx")) { _type = OperationTypes::SOUND; }
-				// TODO: ASM.
+				else if (consume(Token::Types::KEYWORD, "asm")) { _type = OperationTypes::ASM; }
 				if (!consume(Token::Types::KEYWORD, "bankof")) { THROW_INVALID_SYNTAX(onError); }
 			} else {
 				if (!consume(Token::Types::KEYWORD, "bankof")) { THROW_INVALID_SYNTAX(onError); }
@@ -10197,7 +10209,11 @@ public:
 				}
 
 				break;
-			// TODO: ASM.
+			case OperationTypes::ASM: {
+					// TODO: ASM.
+				}
+
+				break;
 			case OperationTypes::READ: {
 					// Set the stack footprint guard.
 					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
@@ -10410,7 +10426,11 @@ public:
 			}
 
 			break;
-		// TODO: ASM.
+		case OperationTypes::ASM: {
+				// TODO: ASM.
+			}
+
+			break;
 		case OperationTypes::READ:
 			GBBASIC_ASSERT(false && "Impossible.");
 
@@ -10457,6 +10477,7 @@ private:
 		PROJECTILE,
 		MUSIC,
 		SOUND,
+		ASM,
 		READ
 	};
 
@@ -10504,7 +10525,7 @@ public:
 				else if (consume(Token::Types::KEYWORD, "projectile")) { _type = OperationTypes::PROJECTILE; }
 				else if (consume(Token::Types::KEYWORD, "music")) { _type = OperationTypes::MUSIC; }
 				else if (consume(Token::Types::KEYWORD, "sfx")) { _type = OperationTypes::SOUND; }
-				// TODO: ASM.
+				else if (consume(Token::Types::KEYWORD, "asm")) { _type = OperationTypes::ASM; }
 				if (!consume(Token::Types::KEYWORD, "addressof")) { THROW_INVALID_SYNTAX(onError); }
 			} else {
 				if (!consume(Token::Types::KEYWORD, "addressof")) { THROW_INVALID_SYNTAX(onError); }
@@ -11012,7 +11033,11 @@ public:
 				}
 
 				break;
-			// TODO: ASM.
+			case OperationTypes::ASM: {
+					// TODO: ASM.
+				}
+
+				break;
 			case OperationTypes::READ: {
 					// Set the stack footprint guard.
 					COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
@@ -11234,7 +11259,11 @@ public:
 			}
 
 			break;
-		// TODO: ASM.
+		case OperationTypes::ASM: {
+				// TODO: ASM.
+			}
+
+			break;
 		case OperationTypes::READ:
 			GBBASIC_ASSERT(false && "Impossible.");
 
@@ -15136,16 +15165,36 @@ public:
 				})) { THROW_INVALID_SYNTAX(onError); }
 			}
 			if (!(tkbegin = consume(Token::Types::KEYWORD, "beginasm"))) { THROW_INVALID_SYNTAX(onError); }
-			// TODO: With assembly name.
 
 			// Check the children.
-			if (!_children.empty()) {
-				THROW_INVALID_SYNTAX(onError);
+			if (_children.size() > 1) {
+				THROW_TOO_MANY_ARGUMENTS(onError);
+			}
+
+			// With assembly name.
+			Token::Ptr nametk = nullptr;
+			std::string name;
+			if (_children.size() == 1) {
+				if (!isString(context, 0, &name, &nametk)) {
+					CHECK_FOR_STRING(onError, nametk);
+				}
+				if (name.empty()) {
+					THROW_INVALID_SYNTAX(onError);
+				}
+			}
+
+			// Add to the table if it's named.
+			const int bank = state.inRom.bank;
+			const int address = state.inRom.address + ctx.startAddress + sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+			if (!name.empty()) {
+				const RomLocation* romLocation = ctx.namedAssemblyBlocks.find(name);
+				if (romLocation) {
+					THROW_ID_HAS_BEEN_ALREADY_DECLARED(onError, nametk);
+				}
+				ctx.namedAssemblyBlocks.add(name, bank, address);
 			}
 
 			// Assemble the instructions.
-			const int bank = state.inRom.bank;
-			const int address = state.inRom.address + ctx.startAddress + sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
 			const Assembler::AssemblingOptions options(
 				bank, address,
 				/* Resolve BASIC identifier */ [&] (const IToken::Ptr &tk, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool {
@@ -41252,7 +41301,18 @@ private:
 				} else if (!must(Token::Types::KEYWORD, "beginasm")(q)) {
 					return false;
 				}
-				// TODO: With assembly name.
+				if (forward(Token::Types::OPERATOR, "(")(q.index) || forward(Token::Types::STRING)(q.index)) { // With assembly name.
+					if (must(Token::Types::OPERATOR, "(")(q)) {
+						if (!forward(Token::Types::OPERATOR, ")")(q.index)) {
+							Arguments(q, children);
+							CHECK_UNEXPECTED(q);
+						}
+						if (!must(Token::Types::OPERATOR, ")")(q)) return false;
+					} else {
+						Arguments(q, children);
+						CHECK_UNEXPECTED(q);
+					}
+				}
 				ignore(Token::Types::COMMENT)(q);
 				if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				Token::Array asmTokens;
