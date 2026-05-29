@@ -14988,6 +14988,7 @@ public:
 					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
 				})) { THROW_INVALID_SYNTAX(onError); }
 			}
+			if (consume(Token::Types::KEYWORD, "call")) { /* Do nothing. */ }
 			if (!consume(Token::Types::KEYWORD, "asm")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::KEYWORD, "data")) _type = OperationTypes::DATA;
 			else if ((_children.size() == 1) && isString(context, 0, &name, nullptr)) _type = OperationTypes::NAMED;
@@ -41410,6 +41411,9 @@ private:
 				Node::Array children;
 
 				if (!LineNumber(q, opts)) return false;
+				if (forward(Token::Types::KEYWORD, "call")(q.index)) {
+					any()(q);
+				}
 				if (!must(Token::Types::KEYWORD, "asm")(q)) return false;
 				if (forward(Token::Types::KEYWORD, "data")(q.index)) {
 					any()(q);
