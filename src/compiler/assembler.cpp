@@ -643,6 +643,17 @@ private:
 			return result;
 		};
 
+		// Parsers.
+		auto isOpcode = [] (const IToken::Ptr &tk) -> bool {
+			if (tk->is(IToken::Types::SYMBOL))
+				return true;
+			const std::string data = (std::string)tk->data();
+			if (tk->is(IToken::Types::OPERATOR) && (data == "and" || data == "or"))
+				return true;
+
+			return false;
+		};
+
 		// Parse the tokens.
 		std::string mnemonic;
 		std::string opcode;
@@ -675,7 +686,9 @@ private:
 			}
 		}
 
-		if (!tkcar->is(IToken::Types::SYMBOL)) return throwInvalidOpcode(cursor); // Expect opcode.
+		if (tkcar->is(IToken::Types::END_OF_LINE)) return true; // Ignore this blank line.
+
+		if (!isOpcode(tkcar)) return throwInvalidOpcode(cursor); // Expect opcode.
 		opcode = (std::string)tkcar->data();
 		mnemonic = opcode;
 		mnemonic += " ";
@@ -734,7 +747,7 @@ private:
 			}
 
 			// Handle instructions.
-			if (tk->is(IToken::Types::SYMBOL)) {
+			if (isOpcode(tk)) {
 				const std::string data = (std::string)tk->data();
 				if (_registers.find(data) != _registers.end()) { // Is a register.
 					mnemonic += data;
