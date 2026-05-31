@@ -343,11 +343,21 @@ struct AsmBlock {
 	typedef std::vector<AsmBlock> Array;
 
 	int page = -1;
+	int row = 0; // Position of `BEGIN ASM`
+	int column = 0;
+	std::string name; // Optional.
 	int beginLine = -1;
 	int endLine = -1;
+	int bank = -1; // Not involved in comparison.
+	int address = -1; // Not involved in comparison.
 
 	AsmBlock();
-	AsmBlock(int pg, int begin, int end);
+	AsmBlock(
+		int pg, int ln, int col, const std::string &name_,
+		int begin, int end,
+		int b,
+		int addr
+	);
 
 	bool operator == (const AsmBlock &other) const;
 	bool operator != (const AsmBlock &other) const;

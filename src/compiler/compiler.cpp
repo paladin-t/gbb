@@ -1584,8 +1584,15 @@ void PreprocessorBranch::clear(void) {
 AsmBlock::AsmBlock() {
 }
 
-AsmBlock::AsmBlock(int pg, int begin, int end) :
-	page(pg), beginLine(begin), endLine(end)
+AsmBlock::AsmBlock(
+	int pg, int ln, int col, const std::string &name_,
+	int begin, int end,
+	int b,
+	int addr
+) :
+	page(pg), row(ln), column(col), name(name_),
+	beginLine(begin), endLine(end),
+	bank(b), address(addr)
 {
 }
 
@@ -1617,6 +1624,21 @@ int AsmBlock::compare(const AsmBlock &other) const {
 	if (page < other.page)
 		return -1;
 	else if (page > other.page)
+		return 1;
+
+	if (row < other.row)
+		return -1;
+	else if (row > other.row)
+		return 1;
+
+	if (column < other.column)
+		return -1;
+	else if (column > other.column)
+		return 1;
+
+	if (name < other.name)
+		return -1;
+	else if (name > other.name)
 		return 1;
 
 	if (beginLine < other.beginLine)
@@ -4790,6 +4812,7 @@ public:
 		MacroFunctionTable::Stack* macroFunctions = nullptr;      // FEAT: MACRO. Stores the user defined macro functions.
 		SymbolTable namedAssemblyBlocks;                          // Stores the user defined named assembly blocks. The `RomLocation` values store the final addresses in ROM.
 		Assembler::Ptr assembler = nullptr;                       // Stores the assembler.
+		Text::Array* assembledInformation = nullptr;              // Stores the assembled information.
 
 		BorderFrameResources* borderFrameResources = nullptr;     // Stores the border resources.
 		SuperPaletteResources* superPaletteResources = nullptr;   // Stores the "Super" palettes.
@@ -7954,6 +7977,20 @@ public:
 		}
 	}
 
+	virtual bool get(Variant &ret, const std::string &msg, int /* argc */, const Variant* /* argv */) const override {
+		ret = nullptr;
+
+		if (msg == "branches") {
+			const PreprocessorBranch::Array* bptr = &_branches;
+
+			ret = (void*)bptr;
+
+			return true;
+		}
+
+		return false;
+	}
+
 	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
 		// Prepare.
 		Context &ctx = context.top();
@@ -7985,20 +8022,6 @@ public:
 
 		// Generate all the children.
 		Node::generate(bytes, context, onError);
-	}
-
-	virtual bool get(Variant &ret, const std::string &msg, int /* argc */, const Variant* /* argv */) const override {
-		ret = nullptr;
-
-		if (msg == "branches") {
-			const PreprocessorBranch::Array* bptr = &_branches;
-
-			ret = (void*)bptr;
-
-			return true;
-		}
-
-		return false;
 	}
 
 	virtual Abstract abstract(void) const override {
@@ -8193,6 +8216,21 @@ public:
 
 	NODE_TYPE(Types::EXPRESSION)
 
+	virtual bool get(Variant &ret, const std::string &msg, int argc, const Variant* argv) const override {
+		ret = nullptr;
+
+		if (msg == "evaluated") {
+			void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
+			IdentifierChecker* idIsVar = arg0 ? (IdentifierChecker*)(arg0) : nullptr;
+			void* arg1 = unpack<void*>(argc, argv, 1, nullptr);
+			IdentifierChecker* idIsMacro = arg1 ? (IdentifierChecker*)(arg1) : nullptr;
+
+			return evaluate(ret, idIsVar ? *idIsVar : nullptr, idIsMacro ? *idIsMacro : nullptr);
+		}
+
+		return false;
+	}
+
 	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
 		// Prepare.
 		Context &ctx = context.top();
@@ -8237,21 +8275,6 @@ public:
 				break;
 			}
 		} while (false);
-	}
-
-	virtual bool get(Variant &ret, const std::string &msg, int argc, const Variant* argv) const override {
-		ret = nullptr;
-
-		if (msg == "evaluated") {
-			void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
-			IdentifierChecker* idIsVar = arg0 ? (IdentifierChecker*)(arg0) : nullptr;
-			void* arg1 = unpack<void*>(argc, argv, 1, nullptr);
-			IdentifierChecker* idIsMacro = arg1 ? (IdentifierChecker*)(arg1) : nullptr;
-
-			return evaluate(ret, idIsVar ? *idIsVar : nullptr, idIsMacro ? *idIsMacro : nullptr);
-		}
-
-		return false;
 	}
 
 	virtual Abstract abstract(void) const override {
@@ -15251,6 +15274,9 @@ private:
 	ScheduledAsmJump _scheduled;
 	IToken::Array _asmTokens;
 	Assembler::Context _asmCtx;
+	std::string _name;
+	TextLocation _inCode;
+	RomLocation _inRom;
 
 public:
 	NodeBeginAsm() {
@@ -15287,6 +15313,38 @@ public:
 		const Token::Array tokens = *(const Token::Array*)(void*)options->get("asm");
 
 		_asmTokens = IToken::Array(tokens.begin(), tokens.end());
+	}
+
+	virtual bool get(Variant &ret, const std::string &msg, int /* argc */, const Variant* /* argv */) const override {
+		ret = nullptr;
+
+		if (msg == "row") {
+			ret = _inCode.row;
+
+			return true;
+		}
+		if (msg == "column") {
+			ret = _inCode.column;
+
+			return true;
+		}
+		if (msg == "name") {
+			ret = _name;
+
+			return true;
+		}
+		if (msg == "bank") {
+			ret = _inRom.bank;
+
+			return true;
+		}
+		if (msg == "address") {
+			ret = _inRom.address;
+
+			return true;
+		}
+
+		return false;
 	}
 
 	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
@@ -15409,6 +15467,32 @@ public:
 
 			// Emit the data.
 			emit(bytes, context, bytes_->pointer(), (size_t)n);
+
+			// Output the assembled information.
+			_name = name;
+			_inCode = tkbegin->begin();
+			_inRom = RomLocation(bank, address, n);
+
+			std::string msg;
+			if (state.inCode.page != -1 || state.inCode.sub != -1) {
+				if (state.inCode.page != -1) {
+					msg += "page ";
+					msg += Text::toPageNumber(state.inCode.page);
+					msg += ", ";
+				}
+				msg += "ln ";
+				msg += Text::toString(state.inCode.sub + 1);
+			}
+			if (!name.empty()) {
+				msg += ", ";
+				msg += "\"" + name + "\"";
+			}
+			msg += ": ";
+			msg += "bank " + Text::toString(bank);
+			msg += ", address 0x" + Text::toHex(address, 4, '0', true);
+
+			if (ctx.assembledInformation)
+				ctx.assembledInformation->push_back(msg);
 		};
 
 		write(bytes, context, generator, false, onError);
@@ -42260,6 +42344,7 @@ public:
 	bool process(
 		const Node::Ptr &ast, AssetsBundle::Ptr assets, Pipeline::Ptr pipeline,
 		RamLocation::Dictionary* allocations,
+		Text::Array* assembledInformation,
 		FeatureUsages* featureUsages,
 		BorderFrameResources &borderFrameResources, SuperPaletteResources &superPaletteResources,
 		int* compiledSize,
@@ -42294,6 +42379,7 @@ public:
 			_macroIdentifierAliases,
 			_macroStackReferences,
 			_macroStrings,
+			assembledInformation,
 			_assets,
 			pipeline,
 			allocations,
@@ -42335,6 +42421,7 @@ private:
 		Node::MacroIdentifierAliasTable::Stack &macroIdentifierAliases,
 		Node::MacroStackReferenceTable::Stack &macroStackReferences,
 		Node::MacroStringTable::Stack &macroStrings,
+		Text::Array* assembledInformation,
 		AssetsBundle::Ptr assets,
 		Pipeline::Ptr pipeline,
 		RamLocation::Dictionary* allocations,
@@ -42376,6 +42463,7 @@ private:
 		(void)                                           macroIdentifierAliases; // FEAT: MACRO.
 		(void)                                           macroStackReferences;   // FEAT: MACRO.
 		(void)                                           macroStrings;           // FEAT: MACRO.
+		context.top().assembledInformation            =  assembledInformation;
 		context.top().borderFrameResources            =  borderFrameResources;
 		context.top().superPaletteResources           =  superPaletteResources;
 		context.top().assets                          =  assets;
@@ -43750,6 +43838,7 @@ bool compile(Program &program, const Options &options) {
 
 		// Compile.
 		RamLocation::Dictionary allocations;
+		Text::Array assembledInformation;
 		FeatureUsages featureUsages;
 		BorderFrameResources borderFrameResources(superFeatures.enabled, superFeatures.border);
 		SuperPaletteResources superPaletteResources(superFeatures.enabled, superFeatures.palettes);
@@ -43758,6 +43847,7 @@ bool compile(Program &program, const Options &options) {
 			!compiler.process(
 				organizer.ast(), program.assets, pipeline,
 				&allocations,
+				&assembledInformation,
 				&featureUsages,
 				borderFrameResources, superPaletteResources,
 				&compiledSize,
@@ -43778,6 +43868,19 @@ bool compile(Program &program, const Options &options) {
 		std::swap(program.compiled.featureUsages, featureUsages);
 		program.compiled.effectiveSize.addCode(codeSize);
 		program.compiled.effectiveSize += pipeline->effectiveSize();
+
+		if (!assembledInformation.empty()) {
+			std::string msg_ = "Succeeded to assemble:\n";
+			for (int i = 0; i < (int)assembledInformation.size(); ++i) {
+				const std::string &msg = assembledInformation[i];
+				msg_ += "  " + msg;
+				if (i != (int)assembledInformation.size() - 1)
+					msg_ += "\n";
+
+				fprintf(stdout, "Assembled %s.\n", msg.c_str());
+			}
+			onPrint(msg_);
+		}
 
 		if (superFeatures.enabled) {
 			if (borderFrameResources.serialized || superPaletteResources.serialized) {

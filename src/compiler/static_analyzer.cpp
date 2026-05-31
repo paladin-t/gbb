@@ -38,10 +38,10 @@ private:
 	typedef std::vector<AsmBlock::Array> PagedAsmBlocks;
 
 	struct Result {
+		RamLocation::Dictionary ramAllocations;
 		Macro::List macrosDefinitions;
 		Text::Array destinations;
 		Text::Array asmDestinations;
-		RamLocation::Dictionary ramAllocations;
 		PagedPreprocessorBranches pagedPreprocessorBranches;
 		PagedAsmBlocks pagedAsmBlocks;
 		CodePageName::Array codePageNames;
@@ -56,13 +56,13 @@ private:
 	int _analyzing = 0;
 
 	unsigned _languageDefinitionRevision = 1;
+	RamLocation::Dictionary _ramAllocations;
 	Macro::List _macrosDefinitions;
 	Text::Array _destinations;
 	Text::Array _asmDestinations;
-	RamLocation::Dictionary _ramAllocations;
+	CodePageName::Array _codePageNames;
 	PagedPreprocessorBranches _pagedPreprocessorBranches;
 	PagedAsmBlocks _pagedAsmBlocks;
-	CodePageName::Array _codePageNames;
 	std::string _errors;
 
 public:
@@ -104,6 +104,9 @@ public:
 				Result* result = (Result*)ptr;
 
 				bool diff = false;
+
+				std::swap(_ramAllocations, result->ramAllocations);
+
 				if (!::equals(_macrosDefinitions, result->macrosDefinitions)) {
 					_macrosDefinitions.clear();
 					std::swap(_macrosDefinitions, result->macrosDefinitions);
@@ -124,7 +127,8 @@ public:
 					diff |= true;
 				}
 
-				std::swap(_ramAllocations, result->ramAllocations);
+				std::swap(_codePageNames, result->codePageNames);
+				_codePageNames.shrink_to_fit();
 
 				if (!::equals(_pagedPreprocessorBranches, result->pagedPreprocessorBranches)) {
 					_pagedPreprocessorBranches.clear();
@@ -139,9 +143,6 @@ public:
 					_pagedAsmBlocks.shrink_to_fit();
 					diff |= true;
 				}
-
-				std::swap(_codePageNames, result->codePageNames);
-				_codePageNames.shrink_to_fit();
 
 				std::swap(_errors, result->errors);
 
@@ -170,6 +171,10 @@ public:
 		return _languageDefinitionRevision;
 	}
 
+	virtual const RamLocation::Dictionary* getRamAllocations(void) const override {
+		return &_ramAllocations;
+	}
+
 	virtual const Macro::List* getMacroDefinitions(void) const override {
 		return &_macrosDefinitions;
 	}
@@ -182,8 +187,11 @@ public:
 		return &_asmDestinations;
 	}
 
-	virtual const RamLocation::Dictionary* getRamAllocations(void) const override {
-		return &_ramAllocations;
+	virtual const CodePageName* getCodePageName(int page) const override {
+		if (page < 0 || page >= (int)_codePageNames.size())
+			return nullptr;
+
+		return &_codePageNames[page];
 	}
 
 	virtual const PreprocessorBranch::Array* getPreprocessorBranches(int page) const override {
@@ -200,13 +208,6 @@ public:
 		return &_pagedAsmBlocks[page];
 	}
 
-	virtual const CodePageName* getCodePageName(int page) const override {
-		if (page < 0 || page >= (int)_codePageNames.size())
-			return nullptr;
-
-		return &_codePageNames[page];
-	}
-
 	virtual const std::string* getErrors(void) const override {
 		if (_errors.empty())
 			return nullptr;
@@ -216,13 +217,13 @@ public:
 
 	virtual void clear(void) override {
 		_languageDefinitionRevision = 1;
+		_ramAllocations.clear();
 		_macrosDefinitions.clear();
 		_destinations.clear();
 		_asmDestinations.clear();
-		_ramAllocations.clear();
+		_codePageNames.clear();
 		_pagedPreprocessorBranches.clear();
 		_pagedAsmBlocks.clear();
-		_codePageNames.clear();
 		_errors.clear();
 	}
 
@@ -296,9 +297,9 @@ private:
 		if (!errors.empty())
 			errors = "Errors:\n" + errors;
 
-		doAnalyzeMacroDefinitions(result, program);
-
 		doAnalyzeRamAllocations(result, program);
+
+		doAnalyzeMacroDefinitions(result, program);
 
 		doAnalyzeProgram(result, program);
 
@@ -316,13 +317,13 @@ private:
 
 		fprintf(stdout, "[ANALYZER INFO] End analyzing.\n");
 	}
-	static void doAnalyzeMacroDefinitions(Result* result, Program &program) {
-		result->macrosDefinitions.clear();
-		std::swap(result->macrosDefinitions, program.compiled.macros);
-	}
 	static void doAnalyzeRamAllocations(Result* result, Program &program) {
 		result->ramAllocations.clear();
 		std::swap(result->ramAllocations, program.compiled.allocations);
+	}
+	static void doAnalyzeMacroDefinitions(Result* result, Program &program) {
+		result->macrosDefinitions.clear();
+		std::swap(result->macrosDefinitions, program.compiled.macros);
 	}
 	static void doAnalyzeProgram(Result* result, Program &program) {
 		// Prepare.
@@ -346,6 +347,33 @@ private:
 							Text::toLowerCase(name);
 							result->destinations.push_back(name);
 						}
+					}
+				);
+		}
+	}
+	static void doAnalyzeCodePages(Result* result, Program &program) {
+		// Prepare.
+		const INode::Ptr &root = program.root; // Get the compiled AST, which could be corrupt.
+		if (!root)
+			return;
+
+		// Select pages.
+		Select pages = Select(root)
+			.children(Where(INode::Types::PAGE));
+
+		if (pages.ok()) {
+			// Parse the code page names.
+			result->codePageNames.resize(pages.count());
+			pages
+				.foreach(
+					[&] (const Select &, const INode::Ptr &page, int index) -> void {
+						Select dest = Select(page)
+							.firstChild(Where(INode::Types::DESTINATION));
+						if (!dest.ok())
+							return;
+
+						const INode::Abstract abs = dest->abstract();
+						result->codePageNames[index] = CodePageName(abs.front());
 					}
 				);
 		}
@@ -422,7 +450,32 @@ private:
 							if (loc.first.row < 0 || loc.second.row < 0)
 								continue;
 
-							const AsmBlock block(index, loc.first.row, loc.second.row + 1);
+							int row = -1;
+							int column = -1;
+							std::string name;
+							int bank = -1;
+							int address = -1;
+							Variant varRow = nullptr;
+							Variant varColumn = nullptr;
+							Variant varName = nullptr;
+							Variant varBank = nullptr;
+							Variant varAddress = nullptr;
+							if (asmNode->get(varRow, "row"))
+								row = (int)(Int)varRow;
+							if (asmNode->get(varColumn, "column"))
+								column = (int)(Int)varColumn;
+							if (asmNode->get(varName, "name"))
+								name = (std::string)varName;
+							if (asmNode->get(varBank, "bank"))
+								bank = (int)(Int)varBank;
+							if (asmNode->get(varAddress, "address"))
+								address = (int)(Int)varAddress;
+
+							const AsmBlock block(
+								index, row, column, name,
+								loc.first.row, loc.second.row + 1,
+								bank, address
+							);
 							AsmBlock::Array &blocks = result->pagedAsmBlocks[index];
 							blocks.push_back(block);
 
@@ -437,33 +490,6 @@ private:
 								}
 							}
 						}
-					}
-				);
-		}
-	}
-	static void doAnalyzeCodePages(Result* result, Program &program) {
-		// Prepare.
-		const INode::Ptr &root = program.root; // Get the compiled AST, which could be corrupt.
-		if (!root)
-			return;
-
-		// Select pages.
-		Select pages = Select(root)
-			.children(Where(INode::Types::PAGE));
-
-		if (pages.ok()) {
-			// Parse the code page names.
-			result->codePageNames.resize(pages.count());
-			pages
-				.foreach(
-					[&] (const Select &, const INode::Ptr &page, int index) -> void {
-						Select dest = Select(page)
-							.firstChild(Where(INode::Types::DESTINATION));
-						if (!dest.ok())
-							return;
-
-						const INode::Abstract abs = dest->abstract();
-						result->codePageNames[index] = CodePageName(abs.front());
 					}
 				);
 		}

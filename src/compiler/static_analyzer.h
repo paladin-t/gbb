@@ -65,19 +65,19 @@ public:
 
 	virtual unsigned getLanguegeDefinitionRevision(void) const = 0;
 
+	virtual const RamLocation::Dictionary* getRamAllocations(void) const = 0;
+
 	virtual const Macro::List* getMacroDefinitions(void) const = 0;
 
-	virtual const Text::Array* getDestinations(void) const = 0;
+	virtual const Text::Array* getDestinations(void) const = 0; // Labeled destination for `GOTO`, `GOSUB`, etc.
 
-	virtual const Text::Array* getAsmDestinations(void) const = 0;
+	virtual const Text::Array* getAsmDestinations(void) const = 0; // Labeled destination in assembly blocks.
 
-	virtual const RamLocation::Dictionary* getRamAllocations(void) const = 0;
+	virtual const CodePageName* getCodePageName(int page) const = 0;
 
 	virtual const PreprocessorBranch::Array* getPreprocessorBranches(int page) const = 0;
 
 	virtual const AsmBlock::Array* getAsmBlocks(int page) const = 0;
-
-	virtual const CodePageName* getCodePageName(int page) const = 0;
 
 	virtual const std::string* getErrors(void) const = 0;
 
