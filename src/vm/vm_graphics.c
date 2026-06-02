@@ -8,7 +8,6 @@
 #include "utils/graphics.h"
 #include "utils/sgb.h"
 #include "utils/text.h"
-#include "utils/utils.h"
 
 #include "vm_device.h"
 #include "vm_graphics.h"

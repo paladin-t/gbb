@@ -6,8 +6,6 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
-#include "../utils/utils.h"
-
 #include "../vm.h"
 #include "../vm_actor.h"
 #include "../vm_scene.h"

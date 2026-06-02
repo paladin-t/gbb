@@ -7,8 +7,6 @@
 
 #include <stdlib.h>
 
-#include "../utils/utils.h"
-
 #include "../vm_input.h"
 #include "../vm_scene.h"
 #include "../vm_trigger.h"

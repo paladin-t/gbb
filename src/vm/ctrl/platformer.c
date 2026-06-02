@@ -8,8 +8,6 @@
 #   error "Not implemented."
 #endif /* __SDCC */
 
-#include "../utils/utils.h"
-
 #include "../vm_input.h"
 #include "../vm_scene.h"
 #include "../vm_trigger.h"

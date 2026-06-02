@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include "utils/utils.h"
+
 #include "vm.h"
 
 BANKREF_EXTERN(VM_SCENE)
@@ -28,6 +30,18 @@ BANKREF_EXTERN(VM_SCENE)
 
 #define SCENE_CAMERA_MAX_X                     (MUL8(scene.width - DEVICE_SCREEN_WIDTH))
 #define SCENE_CAMERA_MAX_Y                     (MUL8(scene.height - DEVICE_SCREEN_HEIGHT))
+
+#define SCENE_LOAD(MAP_BANK, MAP_ADDRESS, ATTR_BANK, ATTR_ADDRESS, X, Y, W, H, SW, BASE_TILE, FUNC) \
+    do { \
+        _submap_tile_offset = (BASE_TILE); \
+        call_v_bbbbpb_oldcall((X), (Y), (W), (H), (MAP_BANK), (MAP_ADDRESS), (SW), (FUNC)); \
+        _submap_tile_offset = 0; \
+        if ((device_type & DEVICE_TYPE_CGB) && (ATTR_BANK)) { \
+            VBK_REG = VBK_ATTRIBUTES; \
+            call_v_bbbbpb_oldcall((X), (Y), (W), (H), (ATTR_BANK), (ATTR_ADDRESS), (SW), (FUNC)); \
+            VBK_REG = VBK_TILES; \
+        } \
+    } while (0)
 
 typedef struct scene_t {
     // Flags.

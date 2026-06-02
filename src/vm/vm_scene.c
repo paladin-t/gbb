@@ -20,18 +20,6 @@
 
 BANKREF(VM_SCENE)
 
-#define SCENE_LOAD(MAP_BANK, MAP_ADDRESS, ATTR_BANK, ATTR_ADDRESS, X, Y, W, H, SW, BASE_TILE, FUNC) \
-    do { \
-        _submap_tile_offset = (BASE_TILE); \
-        call_v_bbbbpb_oldcall((X), (Y), (W), (H), (MAP_BANK), (MAP_ADDRESS), (SW), (FUNC)); \
-        _submap_tile_offset = 0; \
-        if ((device_type & DEVICE_TYPE_CGB) && (ATTR_BANK)) { \
-            VBK_REG = VBK_ATTRIBUTES; \
-            call_v_bbbbpb_oldcall((X), (Y), (W), (H), (ATTR_BANK), (ATTR_ADDRESS), (SW), (FUNC)); \
-            VBK_REG = VBK_TILES; \
-        } \
-    } while (0)
-
 #define SCENE_LAYER_MAP        0x01 // Must have.
 #define SCENE_LAYER_ATTR       0x02
 #define SCENE_LAYER_PROP       0x04
