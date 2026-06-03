@@ -248,6 +248,7 @@ struct RamLocation {
 	typedef std::map<std::string, RamLocation> Dictionary;
 
 	enum class Types {
+		NONE,
 		HEAP
 	};
 

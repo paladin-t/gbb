@@ -7174,7 +7174,12 @@ public:
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
 		const Error err("ID \"{0}\" has not been decleared, did you mean \"{1}\"", false);
-		onError(err, err.format({ tk->caseSensitiveText(), fuzzy }), tk->begin());
+		std::string txt = tk->caseSensitiveText();
+		if (txt.size() >= 2 && txt.front() == '\"' && txt.back() == '\"') {
+			txt.erase(txt.begin());
+			txt.pop_back();
+		}
+		onError(err, err.format({ txt, fuzzy }), tk->begin());
 	}
 	void throwInvalidAssetPoint(Error::Handler onError, Token::Ptr tk = nullptr) const {
 		if (tk == nullptr)
@@ -9663,6 +9668,19 @@ public:
 
 class NodeBankOf : public Node {
 private:
+	struct ScheduledBankOf : public Scheduled {
+		Token::Ptr token = nullptr;
+
+		ScheduledBankOf() : Scheduled() {
+		}
+		ScheduledBankOf(const SourceLocation &t, const Byte* begin, const Byte* end, bool overflow_, const Token::Ptr &tk) :
+			Scheduled(t, begin, end, overflow_),
+			token(tk)
+		{
+		}
+		using Scheduled::Scheduled;
+	};
+
 	enum class OperationTypes {
 		NONE,
 		PALETTE,
@@ -9678,7 +9696,7 @@ private:
 	};
 
 private:
-	Scheduled _scheduled;
+	ScheduledBankOf _scheduled;
 	OperationTypes _type = OperationTypes::NONE;
 
 public:
@@ -9703,7 +9721,7 @@ public:
 			state.inRom.size = 0;
 
 			// Reset the states.
-			_scheduled = Scheduled();
+			_scheduled = ScheduledBankOf();
 			_type = OperationTypes::NONE;
 
 			// Consume the tokens.
@@ -9870,7 +9888,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -9893,7 +9911,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -9925,7 +9943,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -9948,7 +9966,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -9980,7 +9998,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -10003,7 +10021,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -10035,7 +10053,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -10058,7 +10076,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -10090,7 +10108,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -10113,7 +10131,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -10145,7 +10163,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -10168,7 +10186,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -10200,7 +10218,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -10223,7 +10241,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -10268,7 +10286,7 @@ public:
 								args = fill(args, (Int16)bank);
 								args = fill(args, (Int16)ARG0);
 							} else {
-								_scheduled = Scheduled(target, bytes->pointer(), args, overflow);
+								_scheduled = ScheduledBankOf(target, bytes->pointer(), args, overflow, nameTk);
 							}
 						}, 0, true,
 						onError
@@ -10372,7 +10390,7 @@ public:
 								args = fill(args, (Int16)bank);
 								args = fill(args, (Int16)ARG0);
 							} else {
-								_scheduled = Scheduled(target, bytes->pointer(), args, overflow);
+								_scheduled = ScheduledBankOf(target, bytes->pointer(), args, overflow);
 							}
 						}, 0, true,
 						onError
@@ -10503,10 +10521,10 @@ public:
 					args = fill(args, (Int16)ARG0);
 				} else {
 					if (!fuzzyName.empty()) {
-						THROW_ID_HAS_NOT_BEEN_DECLARED_DID_YOU_MEAN(onError, nullptr, fuzzyName);
+						THROW_ID_HAS_NOT_BEEN_DECLARED_DID_YOU_MEAN(onError, _scheduled.token, fuzzyName);
 					}
 
-					THROW_ID_HAS_NOT_BEEN_DECLARED(onError, nullptr);
+					THROW_ID_HAS_NOT_BEEN_DECLARED(onError, _scheduled.token);
 				}
 			}
 
@@ -10547,6 +10565,19 @@ public:
 
 class NodeAddressOf : public Node {
 private:
+	struct ScheduledAddressOf : public Scheduled {
+		Token::Ptr token = nullptr;
+
+		ScheduledAddressOf() : Scheduled() {
+		}
+		ScheduledAddressOf(const SourceLocation &t, const Byte* begin, const Byte* end, bool overflow_, const Token::Ptr &tk) :
+			Scheduled(t, begin, end, overflow_),
+			token(tk)
+		{
+		}
+		using Scheduled::Scheduled;
+	};
+
 	enum class OperationTypes {
 		NONE,
 		PALETTE,
@@ -10562,7 +10593,7 @@ private:
 	};
 
 private:
-	Scheduled _scheduled;
+	ScheduledAddressOf _scheduled;
 	OperationTypes _type = OperationTypes::NONE;
 
 public:
@@ -10587,7 +10618,7 @@ public:
 			state.inRom.size = 0;
 
 			// Reset the states.
-			_scheduled = Scheduled();
+			_scheduled = ScheduledAddressOf();
 			_type = OperationTypes::NONE;
 
 			// Consume the tokens.
@@ -10751,7 +10782,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -10774,7 +10805,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -10806,7 +10837,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -10829,7 +10860,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -10861,7 +10892,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -10884,7 +10915,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -10916,7 +10947,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -10939,7 +10970,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -10971,7 +11002,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -10994,7 +11025,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -11026,7 +11057,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -11049,7 +11080,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -11081,7 +11112,7 @@ public:
 
 							opcodes = [&] (Byte* &args) -> void {
 								const SourceLocation target(pageIndex);
-								_scheduled = Scheduled(target, bytes->pointer(), args, false);
+								_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 								args = fill(args, (Int16)ARG0);
 							};
@@ -11104,7 +11135,7 @@ public:
 
 						opcodes = [&] (Byte* &args) -> void {
 							const SourceLocation target(page, dest.left().get()); // `#pg:n`. By page number and index.
-							_scheduled = Scheduled(target, bytes->pointer(), args, false);
+							_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
 							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
 							args = fill(args, (Int16)ARG0);
 						};
@@ -11149,7 +11180,7 @@ public:
 								args = fill(args, (Int16)address);
 								args = fill(args, (Int16)ARG0);
 							} else {
-								_scheduled = Scheduled(target, bytes->pointer(), args, overflow);
+								_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, overflow, nameTk);
 							}
 						}, 0, true,
 						onError
@@ -11259,7 +11290,7 @@ public:
 								args = fill(args, (Int16)address);
 								args = fill(args, (Int16)ARG0);
 							} else {
-								_scheduled = Scheduled(target, bytes->pointer(), args, overflow);
+								_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, overflow);
 							}
 						}, 0, true,
 						onError
@@ -11393,10 +11424,10 @@ public:
 					args = fill(args, (Int16)ARG0);
 				} else {
 					if (!fuzzyName.empty()) {
-						THROW_ID_HAS_NOT_BEEN_DECLARED_DID_YOU_MEAN(onError, nullptr, fuzzyName);
+						THROW_ID_HAS_NOT_BEEN_DECLARED_DID_YOU_MEAN(onError, _scheduled.token, fuzzyName);
 					}
 
-					THROW_ID_HAS_NOT_BEEN_DECLARED(onError, nullptr);
+					THROW_ID_HAS_NOT_BEEN_DECLARED(onError, _scheduled.token);
 				}
 			}
 
@@ -14969,6 +15000,19 @@ private:
 
 class NodeAsm : public Node {
 private:
+	struct ScheduledAsm : public Scheduled {
+		Token::Ptr token = nullptr;
+
+		ScheduledAsm() : Scheduled() {
+		}
+		ScheduledAsm(const SourceLocation &t, const Byte* begin, const Byte* end, bool overflow_, const Token::Ptr &tk) :
+			Scheduled(t, begin, end, overflow_),
+			token(tk)
+		{
+		}
+		using Scheduled::Scheduled;
+	};
+
 	enum class OperationTypes {
 		NONE,
 		DATA,
@@ -14976,7 +15020,7 @@ private:
 	};
 
 private:
-	Scheduled _scheduled;
+	ScheduledAsm _scheduled;
 	OperationTypes _type = OperationTypes::NONE;
 
 public:
@@ -15001,7 +15045,7 @@ public:
 			state.inRom.size = 0;
 
 			// Reset the states.
-			_scheduled = Scheduled();
+			_scheduled = ScheduledAsm();
 			_type = OperationTypes::NONE;
 
 			// Consume the tokens.
@@ -15170,7 +15214,7 @@ public:
 						args = fill(args, (UInt16)address);
 						args = fill(args, (UInt8)bank);
 					} else {
-						_scheduled = Scheduled(target, bytes->pointer(), args, overflow);
+						_scheduled = ScheduledAsm(target, bytes->pointer(), args, overflow, tks.front());
 					}
 				}
 
@@ -15217,10 +15261,10 @@ public:
 					romLocation = ctx.find(_scheduled.target);
 				if (!romLocation) {
 					if (!fuzzyName.empty()) {
-						THROW_ID_HAS_NOT_BEEN_DECLARED_DID_YOU_MEAN(onError, nullptr, fuzzyName);
+						THROW_ID_HAS_NOT_BEEN_DECLARED_DID_YOU_MEAN(onError, _scheduled.token, fuzzyName);
 					}
 
-					THROW_ID_HAS_NOT_BEEN_DECLARED(onError, nullptr);
+					THROW_ID_HAS_NOT_BEEN_DECLARED(onError, _scheduled.token);
 				}
 
 				const int bank = romLocation ? romLocation->bank : 0;
@@ -15404,41 +15448,77 @@ public:
 			// Assemble the instructions.
 			const Assembler::AssemblingOptions options(
 				bank, address,
-				/* Resolve BASIC identifier */ [&] (const IToken::Ptr &tk, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool {
-					const std::string id = (std::string)tk->data();
-					std::string fuzzyName;
-					bool found = false;
-					int address = 0;
+				/* Resolve BASIC identifier */ [&] (const IToken::Ptr &tk, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool {
+					// Prepare.
+					bank_ = 0;
+					loc = RamLocation();
 
-					const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
-					const RamLocation* ramLocation = ctx.findPageAndGlobal(id, fuzzyName);
-					const Context::Array::Dimensions* dimensions = ctx.array->find(id);
-					if (scriptMemoryRamLocation && ramLocation) {
-						if (dimensions) { // By array name.
-							address =
-								scriptMemoryRamLocation->address /* start address */ +
-								ramLocation->address /* address in RAM as `int16_t*` */ *
-								WORD_SIZE /* 2 bytes per word */;
-						} else { // By variable name.
-							address =
-								scriptMemoryRamLocation->address /* start address */ +
-								ramLocation->address /* address in RAM as `int16_t*` */ *
-								WORD_SIZE /* 2 bytes per word */;
-						}
+					const std::string name = (std::string)tk->data();
+					std::string fuzzyName;
+					int bank = -1;
+					int address = -1;
+					bool found = false;
+
+					// Search for named assembly block.
+					const RomLocation* romLocation = ctx.namedAssemblyBlocks.find(name);
+					if (romLocation) {
+						bank = romLocation->bank;
+						address = romLocation->address;
 						found = true;
+
+						bank_ = bank;
+						loc = RamLocation(RamLocation::Types::NONE, address, romLocation->size, RamLocation::Usages::NONE, TextLocation());
 					}
 
-					if (found) {
-						loc = *ramLocation;
-						loc.address = address;
+					// Search for builtin name.
+					if (!found) {
+						if (ctx.symbols) {
+							const RomLocation* romLocation = ctx.symbols->find(name);
+							if (romLocation) { // By builtin name.
+								bank = romLocation->bank;
+								address = romLocation->address;
+								found = true;
 
-						return true;
-					} else {
-						id_ = id;
+								bank_ = bank;
+								loc = RamLocation(RamLocation::Types::NONE, address, romLocation->size, RamLocation::Usages::NONE, TextLocation());
+							}
+						}
+					}
+
+					// Search for identifier.
+					if (!found) {
+						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+						const RamLocation* ramLocation = ctx.findPageAndGlobal(name, fuzzyName);
+						const Context::Array::Dimensions* dimensions = ctx.array->find(name);
+						if (scriptMemoryRamLocation && ramLocation) {
+							if (dimensions) { // By array name.
+								address =
+									scriptMemoryRamLocation->address /* start address */ +
+									ramLocation->address /* address in RAM as `int16_t*` */ *
+									WORD_SIZE /* 2 bytes per word */;
+							} else { // By variable name.
+								address =
+									scriptMemoryRamLocation->address /* start address */ +
+									ramLocation->address /* address in RAM as `int16_t*` */ *
+									WORD_SIZE /* 2 bytes per word */;
+							}
+							found = true;
+
+							bank_ = 0;
+							loc = *ramLocation;
+							loc.address = address;
+						}
+					}
+
+					// Finish.
+					if (!found) {
+						id_ = name;
 						fuzzyName_ = fuzzyName;
 
 						return false;
 					}
+
+					return true;
 				},
 				[&] (const std::string &msg, const IToken::Ptr &tk) -> void {
 					const Error err(msg, false);

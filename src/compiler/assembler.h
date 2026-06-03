@@ -61,7 +61,7 @@ public:
 	};
 
 	struct AssemblingOptions {
-		typedef std::function<bool(const IToken::Ptr &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
+		typedef std::function<bool(const IToken::Ptr &, int &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
 
 		int bank = 0;
 		int address = 0;

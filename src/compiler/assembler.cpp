@@ -760,10 +760,11 @@ private:
 					mnemonic += "*"; // Wildcard.
 				} else { // Is an identifier.
 					// Resolve BASIC identifiers.
+					int bank = -1;
 					RamLocation loc;
 					std::string id;
 					std::string fuzzyName;
-					if (!options.resolveIdentifier(tk, loc, id, fuzzyName)) {
+					if (!options.resolveIdentifier(tk, bank, loc, id, fuzzyName)) {
 						if (!fuzzyName.empty())
 							return throwIdHasNotBeenDeclaredDidYouMean(cursor, id, fuzzyName);
 
