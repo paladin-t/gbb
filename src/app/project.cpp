@@ -92,6 +92,7 @@ Project::Project(class Window* wnd, Renderer* rnd, class Workspace* ws) {
 	preferencesPreviewAnchorPoint(true);
 	preferencesPreviewPaletteBits(true);
 	preferencesUseByteMatrix(false);
+	preferencesFineZooming(false);
 	preferencesShowGrids(true);
 	preferencesCodePageForBindedRoutine(0);
 	preferencesCodeLineForBindedRoutine(Left<int>(0));
@@ -182,6 +183,7 @@ Project &Project::operator = (const Project &other) {
 	preferencesPreviewAnchorPoint(other.preferencesPreviewAnchorPoint());
 	preferencesPreviewPaletteBits(other.preferencesPreviewPaletteBits());
 	preferencesUseByteMatrix(other.preferencesUseByteMatrix());
+	preferencesFineZooming(other.preferencesFineZooming());
 	preferencesShowGrids(other.preferencesShowGrids());
 	preferencesCodePageForBindedRoutine(other.preferencesCodePageForBindedRoutine());
 	preferencesCodeLineForBindedRoutine(other.preferencesCodeLineForBindedRoutine());
@@ -2625,6 +2627,7 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		preferencesPreviewAnchorPoint(true);
 		preferencesPreviewPaletteBits(true);
 		preferencesUseByteMatrix(false);
+		preferencesFineZooming(false);
 		preferencesShowGrids(true);
 		preferencesCodePageForBindedRoutine(0);
 		preferencesCodeLineForBindedRoutine(Left<int>(0));
@@ -3125,6 +3128,10 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 	if (!Jpath::get(doc, preferencesUseByteMatrix(), "preference", "use_byte_matrix"))
 		preferencesUseByteMatrix(false);
 
+	preferencesFineZooming(false);
+	if (!Jpath::get(doc, preferencesFineZooming(), "preference", "fine_zooming"))
+		preferencesFineZooming(false);
+
 	preferencesShowGrids(true);
 	if (!Jpath::get(doc, preferencesShowGrids(), "preference", "show_grids"))
 		preferencesShowGrids(true);
@@ -3312,6 +3319,8 @@ bool Project::saveInformation(std::string &content) {
 	Jpath::set(doc, doc, preferencesPreviewPaletteBits(), "preference", "preview_palette_bits");
 
 	Jpath::set(doc, doc, preferencesUseByteMatrix(), "preference", "use_byte_matrix");
+
+	Jpath::set(doc, doc, preferencesFineZooming(), "preference", "fine_zooming");
 
 	Jpath::set(doc, doc, preferencesShowGrids(), "preference", "show_grids");
 

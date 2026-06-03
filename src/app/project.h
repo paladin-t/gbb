@@ -125,6 +125,7 @@ public:
 	GBBASIC_PROPERTY             (bool,                          preferencesPreviewAnchorPoint                    ) // Serialized in project. For actor assets.
 	GBBASIC_PROPERTY             (bool,                          preferencesPreviewPaletteBits                    ) // Serialized in project. For map, scene and actor assets.
 	GBBASIC_PROPERTY             (bool,                          preferencesUseByteMatrix                         ) // Serialized in project. For map and scene assets.
+	GBBASIC_PROPERTY             (bool,                          preferencesFineZooming                           ) // Serialized in project. For tiles, map, scene, actor and font assets.
 	GBBASIC_PROPERTY             (bool,                          preferencesShowGrids                             ) // Serialized in project. For tiles, map, scene, actor and font assets.
 	GBBASIC_PROPERTY             (int,                           preferencesCodePageForBindedRoutine              ) // Serialized in project. For scene and actor assets.
 	GBBASIC_PROPERTY_VAL         (CodeLine,                      preferencesCodeLineForBindedRoutine, Left<int>(0)) // Serialized in project. For scene and actor assets.

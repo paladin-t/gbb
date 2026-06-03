@@ -308,6 +308,7 @@ private:
 		bool showGrids = true;
 		bool gridsVisible = false;
 		Math::Vec2i gridUnit = Math::Vec2i(0, 0);
+		bool fineZooming = false;
 		bool transparentBackbroundVisible = true;
 		bool routinesUnfolded = false;
 		int toBindCallback = -1;
@@ -342,6 +343,7 @@ private:
 			showGrids = true;
 			gridsVisible = false;
 			gridUnit = Math::Vec2i(0, 0);
+			fineZooming = false;
 			transparentBackbroundVisible = true;
 			routinesUnfolded = false;
 			toBindCallback = -1;
@@ -567,6 +569,7 @@ public:
 		_tools.magnification = entry()->magnification;
 		_tools.namableText = entry()->name;
 		_tools.showGrids = _project->preferencesShowGrids();
+		_tools.fineZooming = _project->preferencesFineZooming();
 		_tools.gridsVisible = !caps.pressed();
 		_tools.gridUnit = Math::Vec2i(GBBASIC_TILE_SIZE, GBBASIC_TILE_SIZE);
 		_tools.transparentBackbroundVisible = num.pressed();
@@ -1151,6 +1154,9 @@ public:
 		}
 		ImGui::PopID();
 
+		constexpr const int MAGNIFICATIONS[] = {
+			1, 2, 4, 8
+		};
 		ImGuiWindowFlags flags = ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav;
 		if (_tools.scaled) {
 			flags |= ImGuiWindowFlags_AlwaysVerticalScrollbar;
@@ -1170,9 +1176,6 @@ public:
 				Editing::Brush cursor = _cursor;
 				const bool withCursor = _tools.painting != Editing::Tools::HAND;
 
-				constexpr const int MAGNIFICATIONS[] = {
-					1, 2, 4, 8
-				};
 				const int cwidth = currentFrame()->width();
 				const int cheight = currentFrame()->height();
 				if (_tools.magnification == -1) {
@@ -1189,7 +1192,11 @@ public:
 					}
 					_tools.magnification = Math::min(m, n);
 				}
-				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS) - 1);
+				if (_tools.fineZooming) {
+					_tools.magnification = Math::clamp(_tools.magnification, MAGNIFICATIONS[0], MAGNIFICATIONS[GBBASIC_COUNTOF(MAGNIFICATIONS) - 1]);
+				} else {
+					_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS) - 1);
+				}
 
 				const ImVec2 content = ImGui::GetContentRegionAvail();
 				float width_ = (float)cwidth;
@@ -1209,7 +1216,11 @@ public:
 					width_ *= 2;
 					_tools.scaled = true;
 				}
-				width_ *= (float)(MAGNIFICATIONS[_tools.magnification]);
+				if (_tools.fineZooming) {
+					width_ *= (float)_tools.magnification;
+				} else {
+					width_ *= (float)(MAGNIFICATIONS[_tools.magnification]);
+				}
 
 				const active_t &def = _tools.definitionShadow;
 				const Math::Recti boundingBox(def.bounds.left, def.bounds.top, def.bounds.right, def.bounds.bottom);
@@ -1379,8 +1390,22 @@ public:
 			}
 
 			Editing::Tools::separate(rnd, ws, spwidth);
-			if (Editing::Tools::magnifiable(rnd, ws, &_tools.magnification, spwidth, canUseShortcuts()))
-				entry()->magnification = _tools.magnification;
+			if (_tools.fineZooming) {
+				if (
+					Editing::Tools::magnifiable(
+						rnd, ws,
+						&_tools.magnification,
+						MAGNIFICATIONS[0], MAGNIFICATIONS[GBBASIC_COUNTOF(MAGNIFICATIONS) - 1],
+						spwidth, canUseShortcuts(),
+						&inputFieldFocused_
+					)
+				) {
+					entry()->magnification = _tools.magnification;
+				}
+			} else {
+				if (Editing::Tools::magnifiable(rnd, ws, &_tools.magnification, spwidth, canUseShortcuts()))
+					entry()->magnification = _tools.magnification;
+			}
 
 			switch (_tools.painting) {
 			case Editing::Tools::PENCIL: // Fall through.
@@ -2886,6 +2911,13 @@ private:
 
 					_project->hasDirtyEditor(true);
 				}
+			}
+			if (ImGui::MenuItem(ws->theme()->menu_FineZooming(), nullptr, &_tools.fineZooming)) {
+				_tools.magnification = -1;
+
+				_project->preferencesFineZooming(_tools.fineZooming);
+
+				_project->hasDirtyEditor(true);
 			}
 
 			ImGui::EndPopup();

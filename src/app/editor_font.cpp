@@ -509,6 +509,7 @@ private:
 		bool inputFieldFocused = false;
 		bool showGrids = true;
 		bool gridsVisible = false;
+		bool fineZooming = false;
 
 		void clear(void) {
 			magnification = -1;
@@ -518,6 +519,7 @@ private:
 			inputFieldFocused = false;
 			showGrids = true;
 			gridsVisible = false;
+			fineZooming = false;
 		}
 	} _tools;
 
@@ -587,6 +589,7 @@ public:
 		_tools.magnification = entry()->magnification;
 		_tools.namableText = entry()->name;
 		_tools.showGrids = _project->preferencesShowGrids();
+		_tools.fineZooming = _project->preferencesFineZooming();
 		_tools.gridsVisible = !caps.pressed();
 
 		readonly(!entry()->isAsset);
@@ -923,6 +926,9 @@ public:
 			return;
 		}
 
+		constexpr const int MAGNIFICATIONS[] = {
+			1, 2, 4, 8
+		};
 		ImGui::BeginChild("@Pat", ImVec2(splitter.first, height_), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoNav);
 		{
 			VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
@@ -993,9 +999,6 @@ public:
 
 			ImGui::BeginChildFrame(ImGui::GetID("@Prv"), ImVec2(splitter.first, _preview.preferedHeight), ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar);
 			{
-				constexpr const int MAGNIFICATIONS[] = {
-					1, 2, 4, 8
-				};
 				if (_tools.magnification == -1) {
 					const float PADDING = 32.0f;
 					const float s = (splitter.first + PADDING) / _preview.texture->width();
@@ -1010,9 +1013,13 @@ public:
 					}
 					_tools.magnification = Math::min(m, n);
 				}
-				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS) - 1);
+				if (_tools.fineZooming) {
+					_tools.magnification = Math::clamp(_tools.magnification, MAGNIFICATIONS[0], MAGNIFICATIONS[GBBASIC_COUNTOF(MAGNIFICATIONS) - 1]);
+				} else {
+					_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS) - 1);
+				}
 
-				const int scale = MAGNIFICATIONS[_tools.magnification];
+				const int scale = _tools.fineZooming ? _tools.magnification : MAGNIFICATIONS[_tools.magnification];
 				const float widgetWidth = (float)_preview.texture->width() * scale;
 				const float widgetHeight = (float)_preview.texture->height() * scale;
 				const ImVec2 curPos = ImGui::GetCursorScreenPos() - ImVec2(0.5f, 0.5f);
@@ -1023,10 +1030,10 @@ public:
 					ImVec4(1, 1, 1, 1), ImVec4(1, 1, 1, 0.0f)
 				);
 
-				if (_tools.magnification > 0 && (_tools.showGrids && _tools.gridsVisible)) {
+				if (scale > MAGNIFICATIONS[0] && (_tools.showGrids && _tools.gridsVisible)) {
 					ImDrawList* drawList = ImGui::GetWindowDrawList();
 
-					const float alpha = _tools.magnification == 1 ? 0.35f : 0.75f;
+					const float alpha = scale == MAGNIFICATIONS[1] ? 0.35f : 0.75f;
 					drawList->AddRect(
 						curPos,
 						curPos + ImVec2(widgetWidth, widgetHeight),
@@ -1153,7 +1160,17 @@ public:
 			ImGui::PushID("@Mag");
 			{
 				Editing::Tools::separate(rnd, ws, spwidth);
-				Editing::Tools::magnifiable(rnd, ws, &_tools.magnification, spwidth, canUseShortcuts());
+				if (_tools.fineZooming) {
+					Editing::Tools::magnifiable(
+						rnd, ws,
+						&_tools.magnification,
+						MAGNIFICATIONS[0], MAGNIFICATIONS[GBBASIC_COUNTOF(MAGNIFICATIONS) - 1],
+						spwidth, canUseShortcuts(),
+						&inputFieldFocused_
+					);
+				} else {
+					Editing::Tools::magnifiable(rnd, ws, &_tools.magnification, spwidth, canUseShortcuts());
+				}
 			}
 			ImGui::PopID();
 
@@ -2023,6 +2040,13 @@ private:
 						_project->hasDirtyEditor(true);
 					}
 				}
+			}
+			if (ImGui::MenuItem(ws->theme()->menu_FineZooming(), nullptr, &_tools.fineZooming)) {
+				_tools.magnification = -1;
+
+				_project->preferencesFineZooming(_tools.fineZooming);
+
+				_project->hasDirtyEditor(true);
 			}
 
 			ImGui::EndPopup();

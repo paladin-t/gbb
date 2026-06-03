@@ -5741,6 +5741,7 @@ void Workspace::upgrade(
 		prj->preferencesPreviewAnchorPoint(true);
 		prj->preferencesPreviewPaletteBits(true);
 		prj->preferencesUseByteMatrix(false);
+		prj->preferencesFineZooming(false);
 		prj->preferencesShowGrids(true);
 		prj->preferencesCodePageForBindedRoutine(0);
 		prj->preferencesCodeLineForBindedRoutine(Left<int>(0));

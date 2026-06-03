@@ -107,6 +107,26 @@
     "ref": "_HRAM",
     "offset": 0
   },
+  "BGPI_REG": {
+    "ref": "BCPS_REG",
+    "offset": 0
+  },
+  "BGPD_REG": {
+    "ref": "BCPD_REG",
+    "offset": 0
+  },
+  "OBPI_REG": {
+    "ref": "OCPS_REG",
+    "offset": 0
+  },
+  "OBPD_REG": {
+    "ref": "OCPD_REG",
+    "offset": 0
+  },
+  "WBK_REG" : {
+    "ref": "SVBK_REG",
+    "offset": 0
+  },
 
   "SCENE": {
     "ref": "scene",
