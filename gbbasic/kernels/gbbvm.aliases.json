@@ -55,6 +55,59 @@
     "offset": 576
   },
 
+  "VRAM": {
+    "ref": "_VRAM",
+    "offset": 0
+  },
+  "VRAM8000": {
+    "ref": "_VRAM8000",
+    "offset": 0
+  },
+  "VRAM8800": {
+    "ref": "_VRAM8800",
+    "offset": 0
+  },
+  "VRAM9000": {
+    "ref": "_VRAM9000",
+    "offset": 0
+  },
+  "SCRN0": {
+    "ref": "_SCRN0",
+    "offset": 0
+  },
+  "SCRN1": {
+    "ref": "_SCRN1",
+    "offset": 0
+  },
+  "SRAM": {
+    "ref": "_SRAM",
+    "offset": 0
+  },
+  "RAM": {
+    "ref": "_RAM",
+    "offset": 0
+  },
+  "RAMBANK": {
+    "ref": "_RAMBANK",
+    "offset": 0
+  },
+  "OAMRAM": {
+    "ref": "_OAMRAM",
+    "offset": 0
+  },
+  "IO": {
+    "ref": "_IO",
+    "offset": 0
+  },
+  "AUD3WAVERAM": {
+    "ref": "_AUD3WAVERAM",
+    "offset": 0
+  },
+  "HRAM": {
+    "ref": "_HRAM",
+    "offset": 0
+  },
+
   "SCENE": {
     "ref": "scene",
     "offset": 0
