@@ -334,6 +334,7 @@ private:
 		bool scaled = false;
 		int magnification = -1;
 		int weighting = 0;
+		Math::Recti repeat;
 		std::string namableText;
 
 		bool inputFieldFocused = false;
@@ -369,6 +370,7 @@ private:
 			scaled = false;
 			magnification = -1;
 			weighting = 0;
+			repeat = Math::Recti();
 			namableText.clear();
 
 			inputFieldFocused = false;
@@ -2372,10 +2374,8 @@ private:
 			break;
 		}
 
-		if (
-			(!editAsImage && !_tools.post) ||
-			(editAsImage && !_asImage.tools.post)
-		) {
+		const bool flippable = (!editAsImage && !_tools.post) || (editAsImage && !_asImage.tools.post);
+		if (flippable) {
 			Editing::Tools::separate(rnd, ws, spwidth);
 			Editing::Tools::RotationsAndFlippings flipping = Editing::Tools::INVALID;
 			unsigned mask = 0xffffffff;
@@ -2393,6 +2393,29 @@ private:
 			}
 			if (Editing::Tools::flippable(rnd, ws, &flipping, -1.0f, canUseShortcuts(), mask)) {
 				flip(flipping);
+			}
+		}
+
+		if (flippable && editAsImage) {
+			Math::Recti sel;
+			const int size = _selection.area(sel);
+			if (size) {
+				const Math::Recti minRepeat(std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min());
+				const Math::Recti maxRepeat(std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max());
+				Math::Recti repeat;
+				if (
+					Editing::Tools::repeatable(
+						rnd, ws,
+						&_tools.repeat,
+						minRepeat, maxRepeat,
+						spwidth,
+						&inputFieldFocused_,
+						false,
+						ws->theme()->dialogPrompt_Repeat().c_str()
+					)
+				) {
+					// TODO
+				}
 			}
 		}
 

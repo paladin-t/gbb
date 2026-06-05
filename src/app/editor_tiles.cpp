@@ -275,6 +275,7 @@ private:
 		bool scaled = false;
 		int magnification = -1;
 		int weighting = 0;
+		Math::Recti repeat;
 		std::string namableText;
 
 		bool focused = false;
@@ -297,6 +298,7 @@ private:
 			scaled = false;
 			magnification = -1;
 			weighting = 0;
+			repeat = Math::Recti();
 			namableText.clear();
 
 			focused = false;
@@ -1286,6 +1288,28 @@ public:
 				}
 				if (Editing::Tools::flippable(rnd, ws, &flipping, spwidth, canUseShortcuts(), mask)) {
 					flip(flipping);
+				}
+			}
+
+			if (!_tools.post) {
+				Math::Recti sel;
+				const int size = _selection.area(sel);
+				if (size) {
+					const Math::Recti minRepeat(std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min());
+					const Math::Recti maxRepeat(std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max());
+					if (
+						Editing::Tools::repeatable(
+							rnd, ws,
+							&_tools.repeat,
+							minRepeat, maxRepeat,
+							spwidth,
+							&inputFieldFocused_,
+							false,
+							ws->theme()->dialogPrompt_Repeat().c_str()
+						)
+					) {
+						// TODO
+					}
 				}
 			}
 

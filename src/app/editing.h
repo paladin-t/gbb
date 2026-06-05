@@ -858,7 +858,7 @@ bool magnifiable(
 );
 
 /**
- * @param[in, out] newVal
+ * @param[in, out] val
  * @param[in, out] focused
  */
 bool magnifiable(
@@ -889,6 +889,20 @@ bool flippable(
 	float width = -1.0f,
 	bool allowShortcuts = true,
 	unsigned mask = 0xffffffff
+);
+
+/**
+ * @param[out] repeat
+ * @param[in, out] focused
+ */
+bool repeatable(
+	Renderer* rnd, Workspace* ws,
+	Math::Recti* repeat /* nullable */,
+	const Math::Recti &minVal, const Math::Recti &maxVal,
+	float width = -1.0f,
+	bool* focused = nullptr,
+	bool disabled = false,
+	const char* prompt = nullptr
 );
 
 /**
