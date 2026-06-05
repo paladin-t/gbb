@@ -239,6 +239,31 @@ void Delete::destroy(Command* ptr) {
 	delete impl;
 }
 
+Repeat::Repeat() {
+}
+
+Repeat::~Repeat() {
+}
+
+unsigned Repeat::type(void) const {
+	return TYPE();
+}
+
+const char* Repeat::toString(void) const {
+	return "Repeat";
+}
+
+Command* Repeat::create(void) {
+	Repeat* result = new Repeat();
+
+	return result;
+}
+
+void Repeat::destroy(Command* ptr) {
+	Repeat* impl = static_cast<Repeat*>(ptr);
+	delete impl;
+}
+
 SetName::SetName() {
 }
 

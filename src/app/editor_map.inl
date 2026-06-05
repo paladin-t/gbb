@@ -337,7 +337,8 @@ public:
 			->reg<Commands::Map::AsImage::Flip>()
 			->reg<Commands::Map::AsImage::Cut>()
 			->reg<Commands::Map::AsImage::Paste>()
-			->reg<Commands::Map::AsImage::Delete>();
+			->reg<Commands::Map::AsImage::Delete>()
+			->reg<Commands::Map::AsImage::Repeat>();
 
 		binding.fill(
 			std::bind(&EditorMapAsImage::getPixel, this, rnd, std::placeholders::_1, std::placeholders::_2),
@@ -520,8 +521,8 @@ public:
 
 					++k;
 				}
-				dots.shrink_to_fit();
 			}
+			dots.shrink_to_fit();
 
 			return true;
 		};
@@ -732,6 +733,10 @@ public:
 		}
 	}
 
+	void repeat(Renderer* rnd, const Math::Recti &area, const Math::Recti &repeat) {
+		repeatToolUp(rnd, area, repeat);
+	}
+
 private:
 	void createOverlay(Renderer* rnd) {
 		overlay.blank = Image::Ptr(Image::create());
@@ -769,7 +774,8 @@ private:
 			Command::is<Commands::Map::AsImage::Flip>(cmd) ||
 			Command::is<Commands::Map::AsImage::Cut>(cmd) ||
 			Command::is<Commands::Map::AsImage::Paste>(cmd) ||
-			Command::is<Commands::Map::AsImage::Delete>(cmd);
+			Command::is<Commands::Map::AsImage::Delete>(cmd) ||
+			Command::is<Commands::Map::AsImage::Repeat>(cmd);
 
 		if (invalidateTiledData) {
 			shared.invalidateTiled();
@@ -1050,6 +1056,57 @@ private:
 		shared.debounce->modified();
 
 		destroyOverlay();
+	}
+
+	void repeatToolUp(Renderer*, const Math::Recti &area, const Math::Recti &repeat) {
+		if (!binding.getPixel || !binding.setPixel)
+			return;
+
+		const int objW = shared.getObject()->width();
+		const int objH = shared.getObject()->height();
+		const int xMin = area.xMin() + area.width() * repeat.xMin();
+		const int yMin = area.yMin() + area.height() * repeat.yMin();
+		const int xMax = area.xMax() + area.width() * repeat.xMax();
+		const int yMax = area.yMax() + area.height() * repeat.yMax();
+		const Math::Recti area_(Math::max(0, xMin), Math::max(0, yMin), Math::min(objW - 1, xMax), Math::min(objH - 1, yMax));
+		Editing::Dot::Array dots;
+		for (int j = yMin; j <= yMax; ++j) {
+			if (j < 0 || j >= objH)
+				continue;
+
+			const int y = j % area.height();
+			const int py = y + area.yMin();
+			for (int i = xMin; i <= xMax; ++i) {
+				if (i < 0 || i >= objW)
+					continue;
+
+				const int x = i % area.width();
+				const int px = x + area.xMin();
+
+				if (shared.getObject()->paletted()) {
+					int idx = -1;
+					shared.getObject()->get(px, py, idx);
+
+					Editing::Dot dot;
+					dot.indexed = idx;
+					dots.push_back(dot);
+				} else {
+					Colour col;
+					shared.getObject()->get(px, py, col);
+
+					Editing::Dot dot;
+					dot.colored = col;
+					dots.push_back(dot);
+				}
+			}
+		}
+		dots.shrink_to_fit();
+		GBBASIC_ASSERT(area_.width() * area_.height() == (int)dots.size() && "Wrong data.");
+
+		enqueue<Commands::Map::AsImage::Repeat>()
+			->with(binding.getPixel, binding.setPixel)
+			->with(Math::Recti::byXYWH(area_.xMin(), area_.yMin(), area_.width(), area_.height()), dots)
+			->exec(shared.getObject());
 	}
 
 	int getPixels(Renderer*, const Math::Recti* area /* nullable */, Editing::Dots &dots) const {

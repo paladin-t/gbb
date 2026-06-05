@@ -297,6 +297,7 @@ bool Theme::open(class Renderer* rnd) {
 	generic_Dismiss("Dismiss");
 	generic_Empty("Empty");
 	generic_Enabled("Enabled");
+	generic_Fill("Fill");
 	generic_Goto("Goto");
 	generic_Import("Import");
 	generic_Install("Install");
@@ -571,6 +572,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_ExportedCode("Exported code");
 	dialogPrompt_ExportedProject("Exported project");
 	dialogPrompt_FileNameHasNotBeenChanged("File name has not been changed.");
+	dialogPrompt_Filling("Filling...");
 	dialogPrompt_FillLocalPalette("Fill local palette");
 	dialogPrompt_Find("Find ");
 	dialogPrompt_Following("Following");
@@ -667,6 +669,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_RemovedUnreferencedActorRoutineOverriding("Removed unreferenced actor routine overriding");
 	dialogPrompt_RenamedProject("Renamed project");
 	dialogPrompt_Rendering("Rendering...");
+	dialogPrompt_Repeat("Repeat");
 	dialogPrompt_ReplacedKernel("Replaced kernel \"{0}\".");
 	dialogPrompt_ResourceSizeIsNotAMultipleOf8x8("Resource size is not a multiple of 8x8");
 	dialogPrompt_ResourceSizeOutOfBounds("Resource size out of bounds");

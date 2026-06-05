@@ -334,6 +334,7 @@ private:
 		bool scaled = false;
 		int magnification = -1;
 		int weighting = 0;
+		Math::Recti repeat;
 		std::string namableText;
 
 		bool inputFieldFocused = false;
@@ -369,6 +370,7 @@ private:
 			scaled = false;
 			magnification = -1;
 			weighting = 0;
+			repeat = Math::Recti();
 			namableText.clear();
 
 			inputFieldFocused = false;
@@ -2372,10 +2374,8 @@ private:
 			break;
 		}
 
-		if (
-			(!editAsImage && !_tools.post) ||
-			(editAsImage && !_asImage.tools.post)
-		) {
+		const bool flippable = (!editAsImage && !_tools.post) || (editAsImage && !_asImage.tools.post);
+		if (flippable) {
 			Editing::Tools::separate(rnd, ws, spwidth);
 			Editing::Tools::RotationsAndFlippings flipping = Editing::Tools::INVALID;
 			unsigned mask = 0xffffffff;
@@ -2393,6 +2393,43 @@ private:
 			}
 			if (Editing::Tools::flippable(rnd, ws, &flipping, -1.0f, canUseShortcuts(), mask)) {
 				flip(flipping);
+			}
+		}
+
+		if (flippable && editAsImage) {
+			Math::Recti sel;
+			const int size = _selection.area(sel);
+			if (size) {
+				const Math::Recti minRepeat(std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min(), 0, 0);
+				const Math::Recti maxRepeat(0, 0, std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max());
+				Math::Recti repeat;
+				if (
+					Editing::Tools::repeatable(
+						rnd, ws,
+						&_tools.repeat,
+						minRepeat, maxRepeat,
+						spwidth,
+						&inputFieldFocused_,
+						false,
+						ws->theme()->dialogPrompt_Repeat().c_str()
+					)
+				) {
+					ImGui::WaitingPopupBox::TimeoutHandler timeout(
+						[rnd, ws, this, sel] (void) -> void {
+							_asImage.repeat(rnd, sel, _tools.repeat);
+
+							_tools.repeat = Math::Recti();
+
+							ws->popupBox(nullptr);
+						},
+						nullptr
+					);
+					ws->waitingPopupBox(
+						true, ws->theme()->dialogPrompt_Filling(),
+						true, timeout,
+						true
+					);
+				}
 			}
 		}
 
@@ -3975,8 +4012,8 @@ private:
 				dot.indexed = idx;
 				dots.push_back(dot);
 			}
-			dots.shrink_to_fit();
 		}
+		dots.shrink_to_fit();
 
 		const int xOff = -area.width() / 2;
 		const int yOff = -area.height() / 2;
@@ -4017,8 +4054,8 @@ private:
 				dot.indexed = idx;
 				dots.push_back(dot);
 			}
-			dots.shrink_to_fit();
 		}
+		dots.shrink_to_fit();
 
 		const int xOff = -area.width() / 2;
 		const int yOff = -area.height() / 2;
