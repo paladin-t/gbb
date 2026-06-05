@@ -617,6 +617,21 @@ public:
 	static void destroy(Command* ptr);
 };
 
+class Repeat : public Paintable::Paste {
+public:
+	Repeat();
+	virtual ~Repeat() override;
+
+	GBBASIC_CLASS_TYPE('I', 'R', 'P', 'T')
+
+	virtual unsigned type(void) const override;
+
+	virtual const char* toString(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
 }
 
 }

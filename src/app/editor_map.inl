@@ -337,7 +337,8 @@ public:
 			->reg<Commands::Map::AsImage::Flip>()
 			->reg<Commands::Map::AsImage::Cut>()
 			->reg<Commands::Map::AsImage::Paste>()
-			->reg<Commands::Map::AsImage::Delete>();
+			->reg<Commands::Map::AsImage::Delete>()
+			->reg<Commands::Map::AsImage::Repeat>();
 
 		binding.fill(
 			std::bind(&EditorMapAsImage::getPixel, this, rnd, std::placeholders::_1, std::placeholders::_2),
@@ -769,7 +770,8 @@ private:
 			Command::is<Commands::Map::AsImage::Flip>(cmd) ||
 			Command::is<Commands::Map::AsImage::Cut>(cmd) ||
 			Command::is<Commands::Map::AsImage::Paste>(cmd) ||
-			Command::is<Commands::Map::AsImage::Delete>(cmd);
+			Command::is<Commands::Map::AsImage::Delete>(cmd) ||
+			Command::is<Commands::Map::AsImage::Repeat>(cmd);
 
 		if (invalidateTiledData) {
 			shared.invalidateTiled();

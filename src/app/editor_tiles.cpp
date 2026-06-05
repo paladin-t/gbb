@@ -432,6 +432,7 @@ public:
 			->reg<Commands::Tiles::Cut>()
 			->reg<Commands::Tiles::Paste>()
 			->reg<Commands::Tiles::Delete>()
+			->reg<Commands::Tiles::Repeat>()
 			->reg<Commands::Tiles::SetName>()
 			->reg<Commands::Tiles::Resize>()
 			->reg<Commands::Tiles::Pitch>()
