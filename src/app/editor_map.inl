@@ -166,6 +166,7 @@ public:
 		}
 	} ref;
 	struct Tools {
+		Math::Recti repeat;
 		Math::Vec2i gridUnit = Math::Vec2i(0, 0);
 
 		ImVec2 mousePos = ImVec2(-1, -1);
@@ -175,6 +176,7 @@ public:
 		Editing::Tools::PaintableTools postType = Editing::Tools::PENCIL;
 
 		void clear(void) {
+			repeat = Math::Recti();
 			gridUnit = Math::Vec2i(0, 0);
 
 			mousePos = ImVec2(-1, -1);

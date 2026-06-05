@@ -334,7 +334,6 @@ private:
 		bool scaled = false;
 		int magnification = -1;
 		int weighting = 0;
-		Math::Recti repeat;
 		std::string namableText;
 
 		bool inputFieldFocused = false;
@@ -370,7 +369,6 @@ private:
 			scaled = false;
 			magnification = -1;
 			weighting = 0;
-			repeat = Math::Recti();
 			namableText.clear();
 
 			inputFieldFocused = false;
@@ -2398,7 +2396,7 @@ private:
 
 		if (flippable && editAsImage) {
 			Math::Recti sel;
-			const int size = _selection.area(sel);
+			const int size = _asImage.selection.area(sel);
 			if (size) {
 				const Math::Recti minRepeat(std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min(), 0, 0);
 				const Math::Recti maxRepeat(0, 0, std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max());
@@ -2406,7 +2404,7 @@ private:
 				if (
 					Editing::Tools::repeatable(
 						rnd, ws,
-						&_tools.repeat,
+						&_asImage.tools.repeat,
 						minRepeat, maxRepeat,
 						spwidth,
 						&inputFieldFocused_,
@@ -2416,9 +2414,9 @@ private:
 				) {
 					ImGui::WaitingPopupBox::TimeoutHandler timeout(
 						[rnd, ws, this, sel] (void) -> void {
-							_asImage.repeat(rnd, sel, _tools.repeat);
+							_asImage.repeat(rnd, sel, _asImage.tools.repeat);
 
-							_tools.repeat = Math::Recti();
+							_asImage.tools.repeat = Math::Recti();
 
 							ws->popupBox(nullptr);
 						},
