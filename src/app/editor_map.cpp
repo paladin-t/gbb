@@ -2400,8 +2400,8 @@ private:
 			Math::Recti sel;
 			const int size = _selection.area(sel);
 			if (size) {
-				const Math::Recti minRepeat(std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min());
-				const Math::Recti maxRepeat(std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max());
+				const Math::Recti minRepeat(std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min(), 0, 0);
+				const Math::Recti maxRepeat(0, 0, std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max());
 				Math::Recti repeat;
 				if (
 					Editing::Tools::repeatable(
@@ -2414,7 +2414,21 @@ private:
 						ws->theme()->dialogPrompt_Repeat().c_str()
 					)
 				) {
-					// TODO
+					ImGui::WaitingPopupBox::TimeoutHandler timeout(
+						[rnd, ws, this, sel] (void) -> void {
+							_asImage.repeat(rnd, sel, _tools.repeat);
+
+							_tools.repeat = Math::Recti();
+
+							ws->popupBox(nullptr);
+						},
+						nullptr
+					);
+					ws->waitingPopupBox(
+						true, ws->theme()->dialogPrompt_Filling(),
+						true, timeout,
+						true
+					);
 				}
 			}
 		}
@@ -3998,8 +4012,8 @@ private:
 				dot.indexed = idx;
 				dots.push_back(dot);
 			}
-			dots.shrink_to_fit();
 		}
+		dots.shrink_to_fit();
 
 		const int xOff = -area.width() / 2;
 		const int yOff = -area.height() / 2;
@@ -4040,8 +4054,8 @@ private:
 				dot.indexed = idx;
 				dots.push_back(dot);
 			}
-			dots.shrink_to_fit();
 		}
+		dots.shrink_to_fit();
 
 		const int xOff = -area.width() / 2;
 		const int yOff = -area.height() / 2;

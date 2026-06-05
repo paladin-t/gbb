@@ -366,6 +366,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ExportedCode)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_ExportedProject)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_FileNameHasNotBeenChanged)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Filling)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_FillLocalPalette)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Find)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Following)

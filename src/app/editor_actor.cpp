@@ -782,8 +782,8 @@ public:
 
 					++k;
 				}
-				dots.shrink_to_fit();
 			}
+			dots.shrink_to_fit();
 
 			return true;
 		};

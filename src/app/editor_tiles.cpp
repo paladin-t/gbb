@@ -676,8 +676,8 @@ public:
 
 					++k;
 				}
-				dots.shrink_to_fit();
 			}
+			dots.shrink_to_fit();
 
 			return true;
 		};
@@ -1296,8 +1296,8 @@ public:
 				Math::Recti sel;
 				const int size = _selection.area(sel);
 				if (size) {
-					const Math::Recti minRepeat(std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min());
-					const Math::Recti maxRepeat(std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max());
+					const Math::Recti minRepeat(std::numeric_limits<Int8>::min(), std::numeric_limits<Int8>::min(), 0, 0);
+					const Math::Recti maxRepeat(0, 0, std::numeric_limits<Int8>::max(), std::numeric_limits<Int8>::max());
 					if (
 						Editing::Tools::repeatable(
 							rnd, ws,
@@ -1309,7 +1309,21 @@ public:
 							ws->theme()->dialogPrompt_Repeat().c_str()
 						)
 					) {
-						// TODO
+						ImGui::WaitingPopupBox::TimeoutHandler timeout(
+							[rnd, ws, this, sel] (void) -> void {
+								repeatToolUp(rnd, sel, _tools.repeat);
+
+								_tools.repeat = Math::Recti();
+
+								ws->popupBox(nullptr);
+							},
+							nullptr
+						);
+						ws->waitingPopupBox(
+							true, ws->theme()->dialogPrompt_Filling(),
+							true, timeout,
+							true
+						);
 					}
 				}
 			}
@@ -2659,6 +2673,57 @@ private:
 		}
 
 		destroyOverlay();
+	}
+
+	void repeatToolUp(Renderer*, const Math::Recti &area, const Math::Recti &repeat) {
+		if (!_binding.getPixel || !_binding.setPixel)
+			return;
+
+		const int objW = object()->width();
+		const int objH = object()->height();
+		const int xMin = area.xMin() + area.width() * repeat.xMin();
+		const int yMin = area.yMin() + area.height() * repeat.yMin();
+		const int xMax = area.xMax() + area.width() * repeat.xMax();
+		const int yMax = area.yMax() + area.height() * repeat.yMax();
+		const Math::Recti area_(Math::max(0, xMin), Math::max(0, yMin), Math::min(objW - 1, xMax), Math::min(objH - 1, yMax));
+		Editing::Dot::Array dots;
+		for (int j = yMin; j <= yMax; ++j) {
+			if (j < 0 || j >= objH)
+				continue;
+
+			const int y = j % area.height();
+			const int py = y + area.yMin();
+			for (int i = xMin; i <= xMax; ++i) {
+				if (i < 0 || i >= objW)
+					continue;
+
+				const int x = i % area.width();
+				const int px = x + area.xMin();
+
+				if (object()->paletted()) {
+					int idx = -1;
+					object()->get(px, py, idx);
+
+					Editing::Dot dot;
+					dot.indexed = idx;
+					dots.push_back(dot);
+				} else {
+					Colour col;
+					object()->get(px, py, col);
+
+					Editing::Dot dot;
+					dot.colored = col;
+					dots.push_back(dot);
+				}
+			}
+		}
+		dots.shrink_to_fit();
+		GBBASIC_ASSERT(area_.width() * area_.height() == (int)dots.size() && "Wrong data.");
+
+		enqueue<Commands::Tiles::Repeat>()
+			->with(_binding.getPixel, _binding.setPixel)
+			->with(Math::Recti::byXYWH(area_.xMin(), area_.yMin(), area_.width(), area_.height()), dots)
+			->exec(object());
 	}
 
 	TilesAssets::Entry* entry(void) const {

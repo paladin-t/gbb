@@ -1008,8 +1008,8 @@ public:
 
 							++k;
 						}
-						dots.shrink_to_fit();
 					}
+					dots.shrink_to_fit();
 
 					return true;
 				};
@@ -5322,8 +5322,8 @@ private:
 				dot.indexed = idx;
 				dots.push_back(dot);
 			}
-			dots.shrink_to_fit();
 		}
+		dots.shrink_to_fit();
 
 		const int xOff = -area.width() / 2;
 		const int yOff = -area.height() / 2;
@@ -5388,8 +5388,8 @@ private:
 				dot.indexed = idx;
 				dots.push_back(dot);
 			}
-			dots.shrink_to_fit();
 		}
+		dots.shrink_to_fit();
 
 		const int xOff = -area.width() / 2;
 		const int yOff = -area.height() / 2;

@@ -572,6 +572,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_ExportedCode("Exported code");
 	dialogPrompt_ExportedProject("Exported project");
 	dialogPrompt_FileNameHasNotBeenChanged("File name has not been changed.");
+	dialogPrompt_Filling("Filling...");
 	dialogPrompt_FillLocalPalette("Fill local palette");
 	dialogPrompt_Find("Find ");
 	dialogPrompt_Following("Following");

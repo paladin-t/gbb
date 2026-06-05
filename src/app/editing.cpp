@@ -4351,10 +4351,10 @@ bool repeatable(
 	ImGui::TextUnformatted(prompt);
 
 	constexpr const char* const FORMATS[] = {
-		"L: %d",
-		"U: %d",
-		"R: %d",
-		"D: %d"
+		"L: x%d",
+		"U: x%d",
+		"R: x%d",
+		"D: x%d"
 	};
 	if (disabled) {
 		ImGui::BeginDisabled();
