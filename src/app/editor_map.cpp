@@ -2324,7 +2324,7 @@ private:
 			);
 			ImGui::NewLine(1);
 		}
-		if (Editing::Tools::paintable(rnd, ws, &_tools.painting, -1.0f, canUseShortcuts(), false, mask)) {
+		if (Editing::Tools::paintable(rnd, ws, &_tools.painting, -1.0f, canUseShortcuts(), isEditingAsImage(), mask)) {
 			if (_tools.painting == Editing::Tools::STAMP) {
 				_processors[Editing::Tools::STAMP] = Processor{
 					std::bind(&EditorMapImpl::stampToolDown, this, std::placeholders::_1),
