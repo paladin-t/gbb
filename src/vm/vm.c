@@ -646,12 +646,37 @@ void vm_invoke_fn(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * fn, UINT8 nparams, INT1
 
 // Invokes the inlined native code at `<bank>:<fn>`, blocks other threads during execution.
 void vm_asm(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS, UINT8 bank, UINT8 * fn, UINT16 step) OLDCALL NONBANKED NAKED {
-    (void)dummy0; (void)dummy1; (void)bank; (void)fn;
-
-    THIS->PC += step;
+    (void)dummy0; (void)dummy1; (void)THIS; (void)bank; (void)fn; (void)step;
 
 #if defined __SDCC && defined NINTENDO
 __asm
+        ; THIS->PC += step.
+
+        ldhl sp, #6
+        ld a, (hl+)
+        ld h, (hl)
+        ld l, a                     ; HL = THIS.
+
+        ld e, (hl)
+        inc hl
+        ld d, (hl)                  ; DE = THIS->PC.
+
+        push hl
+        ldhl sp, #13
+        ld a, (hl+)
+        ld h, (hl)
+        ld l, a                     ; HL = step.
+        add hl, de
+        ld d, h
+        ld e, l                     ; DE = THIS->PC + step.
+        pop hl                      ; HL = THIS->PC.
+
+        ld (hl), d
+        dec hl
+        ld (hl), e                  ; THIS->PC = DE.
+
+        ; Call the banked function.
+
         ldhl sp, #8
         ld a, (hl)                  ; A = bank.
 
