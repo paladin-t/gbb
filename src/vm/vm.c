@@ -690,7 +690,6 @@ __asm
         ld h, d
         ld l, e                     ; HL = fn.
         rst 0x20                    ; Call HL.
-
         ret
 __endasm;
 #else /* __SDCC && NINTENDO */
@@ -979,7 +978,7 @@ void script_runner_init(void) BANKED {
         TAC_REG = TACF_START | TACF_16KHZ;
         add_VBL(VBL_isr);
         LYC_REG = 0;
-        STAT_REG |= STATF_LYC;
+        STAT_REG = 0;
 #if USE_EFFECTS
         add_LCD(LCD_isr);
 #endif /* USE_EFFECTS */

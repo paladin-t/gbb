@@ -45,7 +45,7 @@ void effects_init(void) BANKED {
     effects_wobble         = 0;
 
     FEATURE_MAP_MOVEMENT_SET;
-    STAT_REG &= ~(STATF_MODE00 | STATF_MODE01);
+    STAT_REG = 0;
 }
 
 void effects_pulse_update(void) BANKED {
@@ -149,19 +149,20 @@ __endasm;
 }
 
 void effects_wobble_sync(void) BANKED {
-    const UINT8 fx = effects_wobble & 0x0F;
-    const UINT8 fy = (effects_wobble >> 4) & 0x0F;
-    const INT16 x  = scene_camera_x - graphics_map_x;
-    const INT16 y  = scene_camera_y - graphics_map_y;
-    const UINT8 s  = effects_wobble_offset[LY_REG & 0x07];
-    if (fx) SCX_REG = x + (s >> fx) - 1;
-    else    SCX_REG = x;
-    if (fy) SCY_REG = y + (s >> fy) - 1;
-    else    SCY_REG = y;
+    const UINT8 step = effects_wobble & 0x0F;
+    const UINT8 fx   = (effects_wobble >> 4) & 0x0F;
+    const INT16 x    = scene_camera_x - graphics_map_x;
+    const UINT8 s    = effects_wobble_offset[LY_REG & 0x07];
+    SCX_REG = x + (s << fx);
+    if (step != 1) {
+        LYC_REG += step;
+        if (LYC_REG >= 144)
+            LYC_REG -= 144;
+    }
 }
 
 void effects_wobble_update(void) BANKED {
-    effects_wobble_offset = &EFFECTS_WOBBLE_OFFSETS[(UINT8)(sys_time >> 2) & 0x07];
+    effects_wobble_offset = &EFFECTS_WOBBLE_OFFSETS[(game_time >> 2) & 0x07];
 }
 
 void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
@@ -195,13 +196,14 @@ void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
                     EFFECTS_PARALLAX_SET(effects_parallax_rows[i], 0, 0, 0);
                 }
             }
-
             if (n && (effects_parallax_rows[0].shift != 0 || effects_parallax_rows[1].shift != 0 || effects_parallax_rows[2].shift != 0)) {
                 effects_wobble        = 0;
-                STAT_REG &= ~(STATF_MODE00 | STATF_MODE01);
+                LYC_REG = 0;
+                STAT_REG |= STATF_LYC;
                 FEATURE_EFFECT_PARALLAX_ENABLE;
             } else {
                 FEATURE_EFFECT_PARALLAX_DISABLE;
+                STAT_REG &= ~(STATF_LYC | STATF_MODE00);
                 memcpy(effects_parallax_rows, parallax_rows_defaults, sizeof(effects_parallax_rows));
             }
         }
@@ -209,20 +211,18 @@ void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
         break;
     case EFFECTS_WOBBLE: {
             const UINT8 val = (UINT8)*(--THIS->stack_ptr);
-
-            if (device_type & DEVICE_TYPE_CGB) {
-                effects_wobble        = (UINT8)val;
-                if (val) {
-                    FEATURE_EFFECT_PARALLAX_DISABLE;
-                    const UINT8 fx    = effects_wobble & 0x0F;
-                    const UINT8 fy    = (effects_wobble >> 4) & 0x0F;
-                    STAT_REG &= ~(STATF_MODE00 | STATF_MODE01);
-                    if (fx) STAT_REG |= STATF_MODE00;
-                    if (fy) STAT_REG |= STATF_MODE01;
-                } else {
-                    STAT_REG &= ~(STATF_MODE00 | STATF_MODE01);
-                    FEATURE_MAP_MOVEMENT_SET;
-                }
+            effects_wobble            = val;
+            if (val) {
+                FEATURE_EFFECT_PARALLAX_DISABLE;
+                LYC_REG = 0;
+                if ((effects_wobble & 0x0F) == 1)
+                    STAT_REG |= STATF_MODE00;
+                else
+                    STAT_REG |= STATF_LYC;
+            } else {
+                LYC_REG = 0;
+                STAT_REG &= ~(STATF_LYC | STATF_MODE00);
+                FEATURE_MAP_MOVEMENT_SET;
             }
         }
 

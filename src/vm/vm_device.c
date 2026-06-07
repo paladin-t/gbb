@@ -204,9 +204,7 @@ void vm_option(SCRIPT_CTX * THIS) OLDCALL BANKED {
     case DEVICE_OPTION_FAST_CPU_ENABLED:
         if (device_type & DEVICE_TYPE_CGB) {
             if (val) cpu_fast(); else cpu_slow();
-            CRITICAL {
-                TMA_REG = val ? 0x80 : 0xC0;
-            }
+            TMA_REG = val ? 0x80 : 0xC0;
             *(THIS->stack_ptr++) = TRUE;
         } else {
             *(THIS->stack_ptr++) = FALSE;
