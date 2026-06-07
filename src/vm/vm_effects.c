@@ -162,7 +162,7 @@ void effects_wobble_sync(void) BANKED {
 }
 
 void effects_wobble_update(void) BANKED {
-    effects_wobble_offset = &EFFECTS_WOBBLE_OFFSETS[(game_time >> 2) & 0x07];
+    effects_wobble_offset = &EFFECTS_WOBBLE_OFFSETS[(UINT8)(sys_time >> 2) & 0x07];
 }
 
 void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
