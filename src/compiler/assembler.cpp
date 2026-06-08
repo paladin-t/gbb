@@ -589,7 +589,10 @@ private:
 				idx = cursor;
 			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
-			const std::string msg = Text::format("Unexpected token \"{0}\"", { id });
+			std::string id_ = id;
+			if (id_ == "\n")
+				id_ = "\\n";
+			const std::string msg = id.empty() ? "Unexpected token" : Text::format("Unexpected token \"{0}\"", { id_ });
 			if (options.onError)
 				options.onError(msg, tk);
 
@@ -695,6 +698,10 @@ private:
 		++cursor;
 		Text::toLowerCase(opcode);
 
+		bool unpackLowByte = false;
+		bool unpackHighByte = false;
+		bool expectOpenBracket = false;
+		bool expectCloseBracket = false;
 		for (; cursor < lnEnd; ++cursor) {
 			// Prepare.
 			if (cursor == lnEnd - 1) continue; // Ignore the line end.
@@ -705,11 +712,11 @@ private:
 				if (tk->is(IToken::Types::STRING)) {
 					const std::string data = (std::string)tk->data();
 					for (std::string::value_type oprand : data)
-						oprands.push_back(oprand);
+						oprands.push_back(oprand); // Number literal.
 					mnemonic += data;
 				} else if (tk->is(IToken::Types::NUMBER)) {
 					const int oprand = (int)(Int)tk->data();
-					oprands.push_back(oprand);
+					oprands.push_back(oprand); // Number literal.
 					const std::string data = "0x" + Text::toHex(oprand, 2, '0', true);
 					mnemonic += data;
 				} else {
@@ -728,7 +735,7 @@ private:
 			} else if (opcode == "dw") {
 				if (tk->is(IToken::Types::NUMBER)) {
 					const int oprand = (int)(Int)tk->data();
-					oprands.push_back(oprand);
+					oprands.push_back(oprand); // Number literal.
 					const std::string data = "0x" + Text::toHex(oprand, 4, '0', true);
 					mnemonic += data;
 				} else {
@@ -744,6 +751,57 @@ private:
 				}
 
 				continue;
+			}
+
+			// Handle unpacking operations.
+			if (tk->is(IToken::Types::IDENTIFIER)) {
+				const std::string data = (std::string)tk->data();
+				if (data == "low") {
+					if (unpackLowByte || unpackHighByte || expectOpenBracket || expectCloseBracket)
+						return throwUnexpectedToken(cursor, tk->caseSensitiveText());
+
+					unpackLowByte = true;
+					expectOpenBracket = true;
+
+					continue;
+				} else if (data == "high") {
+					if (unpackLowByte || unpackHighByte || expectOpenBracket || expectCloseBracket)
+						return throwUnexpectedToken(cursor, tk->caseSensitiveText());
+
+					unpackHighByte = true;
+					expectOpenBracket = true;
+
+					continue;
+				}
+			} else if (tk->is(IToken::Types::OPERATOR)) {
+				const std::string data = (std::string)tk->data();
+				if (data == "<") {
+					if (unpackLowByte || unpackHighByte || expectOpenBracket || expectCloseBracket)
+						return throwUnexpectedToken(cursor, tk->caseSensitiveText());
+
+					unpackLowByte = true;
+
+					continue;
+				} else if (data == ">") {
+					if (unpackLowByte || unpackHighByte || expectOpenBracket || expectCloseBracket)
+						return throwUnexpectedToken(cursor, tk->caseSensitiveText());
+
+					unpackHighByte = true;
+
+					continue;
+				} else if ((unpackLowByte || unpackHighByte) && expectOpenBracket && data == "(") {
+					expectOpenBracket = false;
+					expectCloseBracket = true;
+
+					continue;
+				} else if (expectCloseBracket && data == ")") {
+					expectCloseBracket = false;
+
+					continue;
+				}
+			}
+			if (expectOpenBracket) {
+				return throwUnexpectedToken(cursor, tk->caseSensitiveText());
 			}
 
 			// Handle instructions.
@@ -771,18 +829,26 @@ private:
 						return throwIdHasNotBeenDeclared(cursor, id);
 					}
 
-					const int oprand = loc.address;
-					oprands.push_back(oprand);
+					int oprand = loc.address;
+					if (unpackLowByte)
+						oprand = oprand & 0xff;
+					else if (unpackHighByte)
+						oprand = (oprand >> 8) & 0xff;
+					oprands.push_back(oprand); // Number.
 					mnemonic += "*"; // Wildcard.
 				}
 			} else if (tk->is(IToken::Types::OPERATOR)) {
 				mnemonic += (std::string)tk->data();
 			} else if (tk->is(IToken::Types::NUMBER)) {
-				const int oprand = (int)(Int)tk->data();
+				int oprand = (int)(Int)tk->data();
 				if (opcode == "bit" || opcode == "res" || opcode == "set") {
 					mnemonic += Text::toString(oprand);
 				} else {
-					oprands.push_back(oprand);
+					if (unpackLowByte)
+						oprand = oprand & 0xff;
+					else if (unpackHighByte)
+						oprand = (oprand >> 8) & 0xff;
+					oprands.push_back(oprand); // Number.
 					mnemonic += "*"; // Wildcard.
 				}
 			} else if (tk->is(IToken::Types::COMMENT)) {
@@ -790,6 +856,17 @@ private:
 			} else {
 				// Do nothing.
 			}
+
+			unpackLowByte = false;
+			unpackHighByte = false;
+		}
+		if (expectOpenBracket || expectCloseBracket) {
+			const int idx = Math::clamp(cursor - 1, 0, (int)tokens.size() - 1);
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
+			if (tk)
+				return throwUnexpectedToken(cursor, tk->caseSensitiveText());
+			else
+				return throwUnexpectedToken(cursor, "");
 		}
 
 		Text::toLowerCase(mnemonic);

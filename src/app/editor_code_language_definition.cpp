@@ -524,7 +524,10 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 		"daa", "cpl", "scf", "ccf",
 
 		// Data.
-		"db", "dw"
+		"db", "dw",
+
+		// Unpacking.
+		"low", "high"
 	};
 	for (const char* const k : ASM_KEYWORDS) {
 		langDef.AsmKeys.insert(std::string(k));
