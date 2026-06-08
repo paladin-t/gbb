@@ -14,10 +14,12 @@
 - [Installation](#installation)
   - [Using Prebuilt](#using-prebuilt)
   - [Compiling from Source](#compiling-from-source)
-    - [Windows](#windows)
-    - [Linux](#linux)
-    - [MacOS](#macos)
-    - [Other platforms](#other-platforms)
+    - [The Engine](#the-engine)
+      - [Windows](#windows)
+      - [Linux](#linux)
+      - [MacOS](#macos)
+      - [Other platforms](#other-platforms)
+    - [The Kernel](#the-kernel)
 - [Learning](#learning)
   - [Documentation](#documentation)
 
@@ -127,6 +129,8 @@ GB BASIC is programmable in a brand new BASIC dialect. The integrated assets edi
 
 ## Compiling from Source
 
+### The Engine
+
 A C++14 capable compiler is required, any compiler came after 2014 should be ok. You need to get this repository before build:
 
 ```sh
@@ -134,7 +138,7 @@ git clone https://github.com/paladin-t/gbb.git
 cd gbb
 ```
 
-### Windows
+#### Windows
 
 Dependencies: Visual Studio (with C++ development tools installed).
 
@@ -151,7 +155,7 @@ Dependencies: Visual Studio (with C++ development tools installed).
 
 </details>
 
-### Linux
+#### Linux
 
 Dependencies: CMake, GCC.
 
@@ -188,7 +192,7 @@ cd ..
 
 </details>
 
-### MacOS
+#### MacOS
 
 Dependencies: Xcode.
 
@@ -206,7 +210,7 @@ Dependencies: Xcode.
 
 </details>
 
-### Other platforms
+#### Other platforms
 
 <details>
 <summary>Details</summary>
@@ -216,6 +220,10 @@ You can also setup your own build pipeline for other platforms. The "lib" and "s
 The "platform_*" files contain most platform dependent code, you'll probably make a specific port.
 
 </details>
+
+### The Kernel
+
+The required toolchain (GBDK-2020) has already been included in this repository. The source code of the kernel is under the "src/vm" directory. Just execute "gbbvm.cmd" or "gbbvm.sh" to build the default kernel.
 
 # Learning
 
