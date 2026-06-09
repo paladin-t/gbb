@@ -249,7 +249,7 @@ void vm_fill(SCRIPT_CTX * THIS, INT16 idx, INT16 value, INT16 count) OLDCALL BAN
 #define VM_IS_LOCKED                     (vm_lock_state != 0)
 
 // Returns zero if the script ends. The bank with the VM code must be active.
-BOOLEAN VM_STEP(SCRIPT_CTX * CTX) NAKED NONBANKED STEP_FUNC_ATTR;
+BOOLEAN VM_STEP(SCRIPT_CTX * CTX) NONBANKED NAKED STEP_FUNC_ATTR;
 
 // Initializes the script runner contexts.
 void script_runner_init(void) BANKED;

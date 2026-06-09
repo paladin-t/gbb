@@ -79,7 +79,7 @@ void effects_pulse_update(void) BANKED {
     }
 }
 
-void effects_parallax_sync(void) NAKED NONBANKED {
+void effects_parallax_sync(void) NONBANKED NAKED {
     if (LYC_REG == 0) {
         const INT16 x = scene_camera_x - graphics_map_x;
         effects_parallax_rows[0].scroll_x = x >> effects_parallax_rows[0].shift;
