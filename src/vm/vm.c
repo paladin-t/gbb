@@ -767,7 +767,7 @@ void vm_fill(SCRIPT_CTX * THIS, INT16 idx, INT16 value, INT16 count) OLDCALL BAN
 static FASTUINT8 current_fn_bank;
 static FASTUINT8 current_fn_nargs;
 static UINT16 current_sp;
-BOOLEAN VM_STEP(SCRIPT_CTX * CTX) NAKED NONBANKED STEP_FUNC_ATTR {
+BOOLEAN VM_STEP(SCRIPT_CTX * CTX) NONBANKED NAKED STEP_FUNC_ATTR {
     (void)CTX;
 
 #if defined __SDCC && defined NINTENDO
@@ -906,6 +906,7 @@ UINT8 vm_exception_source; // Exception source or parameters bank.
 UINT16 vm_exception_data;  // Exception data or parameters address.
 #endif /* VM_EXCEPTION_ENABLED */
 
+// V-blank ISR for viewport update, etc.
 void VBL_isr(void) NONBANKED {
     if (FEATURE_MAP_MOVEMENT_FLAG) {
         FEATURE_MAP_MOVEMENT_CLEAR;
@@ -914,6 +915,7 @@ void VBL_isr(void) NONBANKED {
 }
 
 #if USE_EFFECTS
+// LCD ISR for effects, etc.
 void LCD_isr(void) NONBANKED {
     if (FEATURE_EFFECT_PARALLAX_ENABLED) {
         effects_parallax_sync();
@@ -980,7 +982,7 @@ void script_runner_init(void) BANKED {
         LYC_REG = 0;
         STAT_REG = 0;
 #if USE_EFFECTS
-        add_LCD(LCD_isr);
+        // Do not `add_LCD(LCD_isr);` here, it will be installed in the effects module.
 #endif /* USE_EFFECTS */
     }
     set_interrupts(DEVICE_ISR_DEFAULT);

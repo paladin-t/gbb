@@ -16,6 +16,8 @@ BANKREF(VM_EFFECTS)
 
 #if USE_EFFECTS
 
+extern void LCD_isr(void) NONBANKED;
+
 static UINT8 effects_pulse_ticks;
 static UINT8 effects_pulse_interval;
 UINT8 effects_pulse_bank;
@@ -45,7 +47,11 @@ void effects_init(void) BANKED {
     effects_wobble         = 0;
 
     FEATURE_MAP_MOVEMENT_SET;
-    STAT_REG = 0;
+    CRITICAL {
+        LYC_REG = 0;
+        STAT_REG = 0;
+        remove_LCD(LCD_isr);
+    }
 }
 
 void effects_pulse_update(void) BANKED {
@@ -79,7 +85,7 @@ void effects_pulse_update(void) BANKED {
     }
 }
 
-void effects_parallax_sync(void) NAKED NONBANKED {
+void effects_parallax_sync(void) NONBANKED NAKED {
     if (LYC_REG == 0) {
         const INT16 x = scene_camera_x - graphics_map_x;
         effects_parallax_rows[0].scroll_x = x >> effects_parallax_rows[0].shift;
@@ -198,12 +204,18 @@ void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
             }
             if (n && (effects_parallax_rows[0].shift != 0 || effects_parallax_rows[1].shift != 0 || effects_parallax_rows[2].shift != 0)) {
                 effects_wobble        = 0;
-                LYC_REG = 0;
-                STAT_REG |= STATF_LYC;
+                CRITICAL {
+                    LYC_REG = 0;
+                    STAT_REG |= STATF_LYC;
+                    add_LCD(LCD_isr);
+                }
                 FEATURE_EFFECT_PARALLAX_ENABLE;
             } else {
                 FEATURE_EFFECT_PARALLAX_DISABLE;
-                STAT_REG &= ~(STATF_LYC | STATF_MODE00);
+                CRITICAL {
+                    STAT_REG &= ~(STATF_LYC | STATF_MODE00);
+                    remove_LCD(LCD_isr);
+                }
                 memcpy(effects_parallax_rows, parallax_rows_defaults, sizeof(effects_parallax_rows));
             }
         }
@@ -214,14 +226,20 @@ void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
             effects_wobble            = val;
             if (val) {
                 FEATURE_EFFECT_PARALLAX_DISABLE;
-                LYC_REG = 0;
-                if ((effects_wobble & 0x0F) == 1)
-                    STAT_REG |= STATF_MODE00;
-                else
-                    STAT_REG |= STATF_LYC;
+                CRITICAL {
+                    LYC_REG = 0;
+                    if ((effects_wobble & 0x0F) == 1)
+                        STAT_REG |= STATF_MODE00;
+                    else
+                        STAT_REG |= STATF_LYC;
+                    add_LCD(LCD_isr);
+                }
             } else {
-                LYC_REG = 0;
-                STAT_REG &= ~(STATF_LYC | STATF_MODE00);
+                CRITICAL {
+                    LYC_REG = 0;
+                    STAT_REG &= ~(STATF_LYC | STATF_MODE00);
+                    remove_LCD(LCD_isr);
+                }
                 FEATURE_MAP_MOVEMENT_SET;
             }
         }
