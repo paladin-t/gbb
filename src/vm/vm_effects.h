@@ -48,7 +48,7 @@ void effects_init(void) BANKED;
 
 void effects_pulse_update(void) BANKED; // UPDATE.
 
-void effects_parallax_sync(void) NAKED NONBANKED; // UPDATE.
+void effects_parallax_sync(void) NONBANKED NAKED; // UPDATE.
 
 void effects_wobble_sync(void) BANKED; // UPDATE.
 void effects_wobble_update(void) BANKED; // UPDATE.

@@ -115,6 +115,7 @@ call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_gui_label.o" "src\vm\vm_gui_labe
 call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_gui_menu.o" "src\vm\vm_gui_menu.c"
 call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_gui_progressbar.o" "src\vm\vm_gui_progressbar.c"
 call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_input.o" "src\vm\vm_input.c"
+call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_isr.o" "src\vm\vm_isr.c"
 call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_memory.o" "src\vm\vm_memory.c"
 call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_native.o" "src\vm\vm_native.c"
 call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_object.o" "src\vm\vm_object.c"
@@ -190,6 +191,7 @@ call %gbdk%\lcc.exe %lflag% -o "output\vm\gbbvm.gb" ^
   "output\vm\vm_gui_menu.o" ^
   "output\vm\vm_gui_progressbar.o" ^
   "output\vm\vm_input.o" ^
+  "output\vm\vm_isr.o" ^
   "output\vm\vm_memory.o" ^
   "output\vm\vm_native.o" ^
   "output\vm\vm_object.o" ^
