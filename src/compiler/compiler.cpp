@@ -295,7 +295,47 @@ namespace GBBASIC {
 #	define SCRIPT_MEMORY_ENTRY_NAME "script_memory" // DOC: RAM SCHEMA.
 #endif /* SCRIPT_MEMORY_ENTRY_NAME */
 
+// ISRs.
+#ifndef ON_VBL_ENTRY_NAME
+#	define ON_VBL_ENTRY_NAME "on vbl"
+#endif /* ON_VBL_ENTRY_NAME */
+#ifndef ON_LCD_ENTRY_NAME
+#	define ON_LCD_ENTRY_NAME "on lcd"
+#endif /* ON_LCD_ENTRY_NAME */
+
+#ifndef ISR_VBL_ENTRY_NAME
+#	define ISR_VBL_ENTRY_NAME "isr_vbl" // DOC: ROM SCHEMA.
+#endif /* ISR_VBL_ENTRY_NAME */
+#ifndef ISR_LCD_ENTRY_NAME
+#	define ISR_LCD_ENTRY_NAME "isr_lcd" // DOC: ROM SCHEMA.
+#endif /* ISR_LCD_ENTRY_NAME */
+
+#ifndef ISR_STUB_LOOKUP_COUNT
+#	define ISR_STUB_LOOKUP_COUNT 64
+#endif /* ISR_STUB_LOOKUP_COUNT */
+#ifndef ISR_STUB_OPCODE_SIZE
+#	define ISR_STUB_OPCODE_SIZE 1
+#endif /* ISR_STUB_OPCODE_SIZE */
+#ifndef ISR_STUB_BANKING_BYTES
+#	define ISR_STUB_BANKING_BYTES { 0x3e, 0xff } // Compiled from `ld a, #0xff`.
+#endif /* ISR_STUB_BANKING_BYTES */
+#ifndef ISR_STUB_ADDRESSING_BYTES
+#	define ISR_STUB_ADDRESSING_BYTES { 0x21, 0xff, 0xff } // Compiled from `ld hl, #0xffff`.
+#endif /* ISR_STUB_ADDRESSING_BYTES */
+
 // Native functions.
+#ifndef ENABLE_VBL_ISR_FUNCTION_NAME
+#	define ENABLE_VBL_ISR_FUNCTION_NAME "enable_vbl_isr" // DOC: ROM SCHEMA.
+#endif /* ENABLE_VBL_ISR_FUNCTION_NAME */
+#ifndef DISABLE_VBL_ISR_FUNCTION_NAME
+#	define DISABLE_VBL_ISR_FUNCTION_NAME "disable_vbl_isr" // DOC: ROM SCHEMA.
+#endif /* DISABLE_VBL_ISR_FUNCTION_NAME */
+#ifndef ENABLE_LCD_ISR_FUNCTION_NAME
+#	define ENABLE_LCD_ISR_FUNCTION_NAME "enable_lcd_isr" // DOC: ROM SCHEMA.
+#endif /* ENABLE_LCD_ISR_FUNCTION_NAME */
+#ifndef DISABLE_LCD_ISR_FUNCTION_NAME
+#	define DISABLE_LCD_ISR_FUNCTION_NAME "disable_lcd_isr" // DOC: ROM SCHEMA.
+#endif /* DISABLE_LCD_ISR_FUNCTION_NAME */
 #ifndef PEEK_BANKED_FUNCTION_NAME
 #	define PEEK_BANKED_FUNCTION_NAME "peek_banked" // DOC: ROM SCHEMA.
 #endif /* PEEK_BANKED_FUNCTION_NAME */
@@ -4810,7 +4850,7 @@ public:
 		const FunctionTable* functions = nullptr;                 // Stores the generic function information for `NodeRoutine` and `NodeFunction`.
 		const OperatorTable* operators = nullptr;                 // Stores the regular and function-like math operators.
 		MacroFunctionTable::Stack* macroFunctions = nullptr;      // FEAT: MACRO. Stores the user defined macro functions.
-		SymbolTable namedAssemblyBlocks;                          // Stores the user defined named assembly blocks. The `RomLocation` values store the final addresses in ROM.
+		SymbolTable* namedAssemblyBlocks = nullptr;               // Stores the user defined named assembly blocks. The `RomLocation` values store the final addresses in ROM.
 		Assembler::Ptr assembler = nullptr;                       // Stores the assembler.
 		Text::Array* assembledInformation = nullptr;              // Stores the assembled information.
 
@@ -10261,7 +10301,7 @@ public:
 					bool found = false;
 
 					SourceLocation target;
-					const RomLocation* romLocation = ctx.namedAssemblyBlocks.find(name);
+					const RomLocation* romLocation = ctx.namedAssemblyBlocks->find(name);
 					if (romLocation) {
 						bank = romLocation->bank;
 						found = true;
@@ -10512,7 +10552,7 @@ public:
 		case OperationTypes::ASM: {
 				const std::string &name = _scheduled.target.label;
 				std::string fuzzyName;
-				const RomLocation* romLocation = ctx.namedAssemblyBlocks.fuzzy(name, fuzzyName);
+				const RomLocation* romLocation = ctx.namedAssemblyBlocks->fuzzy(name, fuzzyName);
 				if (romLocation && name == fuzzyName) {
 					const int bank = romLocation->bank;
 
@@ -11155,7 +11195,7 @@ public:
 					bool found = false;
 
 					SourceLocation target;
-					const RomLocation* romLocation = ctx.namedAssemblyBlocks.find(name);
+					const RomLocation* romLocation = ctx.namedAssemblyBlocks->find(name);
 					if (romLocation) {
 						address = romLocation->address;
 						found = true;
@@ -11415,7 +11455,7 @@ public:
 		case OperationTypes::ASM: {
 				const std::string &name = _scheduled.target.label;
 				std::string fuzzyName;
-				const RomLocation* romLocation = ctx.namedAssemblyBlocks.fuzzy(name, fuzzyName);
+				const RomLocation* romLocation = ctx.namedAssemblyBlocks->fuzzy(name, fuzzyName);
 				if (romLocation && name == fuzzyName) {
 					const int address = romLocation->address;
 
@@ -15150,7 +15190,7 @@ public:
 					bool found = false;
 
 					// Search for named assembly block.
-					const RomLocation* romLocation = ctx.namedAssemblyBlocks.find(name);
+					const RomLocation* romLocation = ctx.namedAssemblyBlocks->find(name);
 					if (romLocation) {
 						bank = romLocation->bank;
 						address = romLocation->address;
@@ -15240,7 +15280,7 @@ public:
 				std::string fuzzyName;
 				{
 					const std::string &name = _scheduled.target.label;
-					romLocation = ctx.namedAssemblyBlocks.fuzzy(name, fuzzyName);
+					romLocation = ctx.namedAssemblyBlocks->fuzzy(name, fuzzyName);
 					if (romLocation && name == fuzzyName) {
 						const int bank = romLocation ? romLocation->bank : 0;
 						const int address = romLocation ? romLocation->address : -1;
@@ -15434,15 +15474,28 @@ public:
 				}
 			}
 
+			_name = name;
+			_inCode = tkbegin->begin();
+
+			const bool isOnVbl = name == ON_VBL_ENTRY_NAME;
+			const bool isOnLcd = name == ON_LCD_ENTRY_NAME;
+
 			// Add to the table if it's named.
+			int istSize = 0;
+			if (isOnVbl || isOnLcd) {
+				istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN].size;
+				istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::JUMP].size;
+			} else {
+				istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+			}
 			const int bank = state.inRom.bank;
-			const int address = state.inRom.address + ctx.startAddress + sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+			const int address = state.inRom.address + ctx.startAddress + istSize;
 			if (!name.empty()) {
-				const RomLocation* romLocation = ctx.namedAssemblyBlocks.find(name);
+				const RomLocation* romLocation = ctx.namedAssemblyBlocks->find(name);
 				if (romLocation) {
 					THROW_ID_HAS_BEEN_ALREADY_DECLARED(onError, nametk);
 				}
-				ctx.namedAssemblyBlocks.add(name, bank, address);
+				ctx.namedAssemblyBlocks->add(name, bank, address);
 			}
 
 			// Assemble the instructions.
@@ -15460,7 +15513,7 @@ public:
 					bool found = false;
 
 					// Search for named assembly block.
-					const RomLocation* romLocation = ctx.namedAssemblyBlocks.find(name);
+					const RomLocation* romLocation = ctx.namedAssemblyBlocks->find(name);
 					if (romLocation) {
 						bank = romLocation->bank;
 						address = romLocation->address;
@@ -15525,34 +15578,79 @@ public:
 					onError(err, err.format(), tk->begin());
 				}
 			);
-			Bytes::Ptr bytes_(Bytes::create());
+			Bytes::Ptr asmBytes(Bytes::create());
 			if (!ctx.assembler)
 				ctx.assembler = Assembler::Ptr(Assembler::create());
-			const bool ok = ctx.assembler->assemble(bytes_, _asmCtx, _asmTokens, options);
+			const bool ok = ctx.assembler->assemble(asmBytes, _asmCtx, _asmTokens, options);
 			if (!ok) { THROW_ASM_ERROR(onError, tkbegin); }
-			if (bytes_->empty())
+			if (asmBytes->empty())
 				return; // Ignore blank assembly.
 			if (!_asmCtx.hasRet) {
 				THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK(onError);
 			}
+			const int n = (int)asmBytes->count();
 
-			// Emit a `VM_ASM` instruction to set the data.
-			const int n = (int)bytes_->count();
-			Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
-			args = fill(args, (UInt16)n);
-			args = fill(args, (UInt16)address);
-			args = fill(args, (UInt8)bank);
+			// Emit the VM instructions.
+			if (isOnVbl) { // Specialized for "ON VBL".
+				// Find the ISR entry.
+				if (!ctx.symbols) { THROW_INVALID_OPERATION(onError, nullptr); }
+				const RomLocation* romLocation = ctx.symbols->find(ISR_VBL_ENTRY_NAME);
+				if (!romLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
 
-			_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
+				// Find the installer.
+				const RomLocation* isrInstallerRomLocation = ctx.symbols->find(ENABLE_VBL_ISR_FUNCTION_NAME);
+				if (!isrInstallerRomLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
+				const int isrInstallerBank = isrInstallerRomLocation->bank;
+				const int isrInstallerAddress = isrInstallerRomLocation->address;
 
-			// Emit the data.
-			emit(bytes, context, bytes_->pointer(), (size_t)n);
+				// Emit a `VM_INVOKE_FN` instruction.
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
+				args = fill(args, (Int16)0);
+				args = fill(args, (UInt8)0);
+				args = fill(args, (UInt16)isrInstallerAddress);
+				args = fill(args, (UInt8)isrInstallerBank);
 
-			// Output the assembled information.
-			_name = name;
-			_inCode = tkbegin->begin();
+				// Emit a `VM_JUMP` instruction.
+				args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
+				args = fill(args, (UInt16)(address + n));
+			} else if (isOnLcd) { // Specialized for "ON LCD".
+				// Find the ISR entry.
+				if (!ctx.symbols) { THROW_INVALID_OPERATION(onError, nullptr); }
+				const RomLocation* romLocation = ctx.symbols->find(ISR_LCD_ENTRY_NAME);
+				if (!romLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
+
+				// Find the installer.
+				const RomLocation* isrInstallerRomLocation = ctx.symbols->find(ENABLE_LCD_ISR_FUNCTION_NAME);
+				if (!isrInstallerRomLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
+				const int isrInstallerBank = isrInstallerRomLocation->bank;
+				const int isrInstallerAddress = isrInstallerRomLocation->address;
+
+				// Emit a `VM_INVOKE_FN` instruction.
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
+				args = fill(args, (Int16)0);
+				args = fill(args, (UInt8)0);
+				args = fill(args, (UInt16)isrInstallerAddress);
+				args = fill(args, (UInt8)isrInstallerBank);
+
+				// Emit a `VM_JUMP` instruction.
+				args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
+				args = fill(args, (UInt16)(address + n));
+			} else { // Normal assembly block.
+				// Emit a `VM_ASM` instruction to set the data.
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
+				args = fill(args, (UInt16)n);
+				args = fill(args, (UInt16)address);
+				args = fill(args, (UInt8)bank);
+
+				_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
+			}
+
+			// Emit the assembly instructions.
+			emit(bytes, context, asmBytes->pointer(), (size_t)n);
+
 			_inRom = RomLocation(bank, address, n);
 
+			// Output the assembled information.
 			std::string msg;
 			if (state.inCode.page != -1 || state.inCode.sub != -1) {
 				if (state.inCode.page != -1) {
@@ -42224,6 +42322,7 @@ private:
 	Node::MacroIdentifierAliasTable::Stack _macroIdentifierAliases;
 	Node::MacroStackReferenceTable::Stack _macroStackReferences;
 	Node::MacroStringTable::Stack _macroStrings;
+	SymbolTable _namedAssemblyBlocks;
 	BorderFrameResources _borderFrameResources;
 	SuperPaletteResources _superPaletteResources;
 	AssetsBundle::Ptr _assets = nullptr;
@@ -42409,16 +42508,18 @@ public:
 	Node::MacroStringTable::Stack &macroStrings(void) {
 		return _macroStrings;
 	}
-
-	const Bytes::Ptr &bytes(void) const {
-		return _bytes;
+	SymbolTable &namedAssemblyBlocks(void) {
+		return _namedAssemblyBlocks;
 	}
-
 	BorderFrameResources &borderFrameResources(void) {
 		return _borderFrameResources;
 	}
 	SuperPaletteResources &superPaletteResources(void) {
 		return _superPaletteResources;
+	}
+
+	const Bytes::Ptr &bytes(void) const {
+		return _bytes;
 	}
 
 	bool process(
@@ -42459,6 +42560,7 @@ public:
 			_macroIdentifierAliases,
 			_macroStackReferences,
 			_macroStrings,
+			_namedAssemblyBlocks,
 			assembledInformation,
 			_assets,
 			pipeline,
@@ -42501,6 +42603,7 @@ private:
 		Node::MacroIdentifierAliasTable::Stack &macroIdentifierAliases,
 		Node::MacroStackReferenceTable::Stack &macroStackReferences,
 		Node::MacroStringTable::Stack &macroStrings,
+		SymbolTable &namedAssemblyBlocks,
 		Text::Array* assembledInformation,
 		AssetsBundle::Ptr assets,
 		Pipeline::Ptr pipeline,
@@ -42543,6 +42646,7 @@ private:
 		(void)                                           macroIdentifierAliases; // FEAT: MACRO.
 		(void)                                           macroStackReferences;   // FEAT: MACRO.
 		(void)                                           macroStrings;           // FEAT: MACRO.
+		context.top().namedAssemblyBlocks             = &namedAssemblyBlocks;
 		context.top().assembledInformation            =  assembledInformation;
 		context.top().borderFrameResources            =  borderFrameResources;
 		context.top().superPaletteResources           =  superPaletteResources;
@@ -42811,6 +42915,7 @@ public:
 
 	bool process(
 		const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const FeatureUsages &featureUsages,
+		const SymbolTable &namedAssemblyBlocks,
 		const BorderFrameResources &borderFrameResources, const SuperPaletteResources &superPaletteResources,
 		Error::Handler onError
 	) {
@@ -42829,6 +42934,7 @@ public:
 		// Program the ROM with the specific bytes.
 		_bytes = program(
 			rom, compiled, featureUsages,
+			namedAssemblyBlocks,
 			borderFrameResources, superPaletteResources,
 			_options,
 			_symbols,
@@ -42842,6 +42948,7 @@ public:
 private:
 	static Bytes::Ptr program(
 		const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const FeatureUsages &featureUsages,
+		const SymbolTable &namedAssemblyBlocks,
 		const BorderFrameResources &borderFrameResources, const SuperPaletteResources &superPaletteResources,
 		const Options &options,
 		const SymbolTable &symbols,
@@ -42884,6 +42991,79 @@ private:
 				resized |= true;
 			}
 		}
+
+		// Install ISRs.
+		auto findIsrStub = [] (Bytes::Ptr &bytes, const RomLocation* isrRomLocation, int bankSize, const Byte* pattern, int patternSize) -> int {
+			const int isrBank = isrRomLocation->bank;
+			const int isrAddress = isrRomLocation->address;
+			const int absAddress = isrBank * bankSize + isrAddress;
+			int stubAddress = -1;
+			for (int t = 0; t < ISR_STUB_LOOKUP_COUNT; ++t) {
+				bool matched = true;
+				for (int i = 0; i < patternSize; ++i) {
+					const int p = absAddress + t + i;
+					if (p < 0 || p >= (int)bytes->count()) {
+						matched = false;
+
+						break;
+					}
+					const Byte b = bytes->get(p);
+					if (b != pattern[i]) {
+						matched = false;
+
+						break;
+					}
+				}
+				if (matched) {
+					stubAddress = absAddress + t;
+
+					break;
+				}
+			}
+
+			return stubAddress;
+		};
+
+		constexpr const Byte BANKING_BYTES[] = ISR_STUB_BANKING_BYTES;
+		constexpr const Byte ADDRESSING_BYTES[] = ISR_STUB_ADDRESSING_BYTES;
+
+		do {
+			const RomLocation* onVblRomLocation = namedAssemblyBlocks.find(ON_VBL_ENTRY_NAME);
+			if (!onVblRomLocation) // No overridden ISR.
+				break;
+			const int onVblBank = onVblRomLocation->bank;
+			const int onVblAddress = onVblRomLocation->address;
+
+			const RomLocation* isrRomLocation = symbols.find(ISR_VBL_ENTRY_NAME);
+			if (!isrRomLocation) {
+				const Error err("Invalid VBL ISR point", true);
+				onError(err, err.format(), TextLocation::INVALID());
+
+				break;
+			}
+
+			int stubAddress = findIsrStub(bytes, isrRomLocation, options.bankSize, BANKING_BYTES, GBBASIC_COUNTOF(BANKING_BYTES));
+			if (stubAddress == -1) {
+				const Error err("Invalid VBL ISR point", true);
+				onError(err, err.format(), TextLocation::INVALID());
+
+				break;
+			}
+			stubAddress += ISR_STUB_OPCODE_SIZE;
+			bytes->poke(stubAddress);
+			bytes->writeUInt8((UInt8)onVblBank);
+
+			stubAddress = findIsrStub(bytes, isrRomLocation, options.bankSize, ADDRESSING_BYTES, GBBASIC_COUNTOF(ADDRESSING_BYTES));
+			if (stubAddress == -1) {
+				const Error err("Invalid VBL ISR point", true);
+				onError(err, err.format(), TextLocation::INVALID());
+
+				break;
+			}
+			stubAddress += ISR_STUB_OPCODE_SIZE;
+			bytes->poke(stubAddress);
+			bytes->writeUInt16((UInt16)onVblAddress);
+		} while (false);
 
 		// Get the compatibility information.
 		const bool classic = (options.compatibility & GBBASIC::Options::Strategies::Compatibilities::CLASSIC) != GBBASIC::Options::Strategies::Compatibilities::NONE;
@@ -43996,6 +44176,7 @@ bool compile(Program &program, const Options &options) {
 		if (
 			!programmer.process(
 				program.rom, compiler.bytes(), program.compiled.featureUsages,
+				compiler.namedAssemblyBlocks(),
 				compiler.borderFrameResources(), compiler.superPaletteResources(),
 				onError
 			)

@@ -20,10 +20,10 @@ BANKREF_EXTERN(VM_ISR)
 void isr_vbl(void) NONBANKED NAKED;
 void isr_lcd(void) NONBANKED NAKED;
 
-BOOLEAN enable_vbl_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED;
-BOOLEAN disable_vbl_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED;
-BOOLEAN enable_lcd_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED;
-BOOLEAN disable_lcd_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED;
+BOOLEAN enable_vbl_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED; // Not documented. For internal use.
+BOOLEAN disable_vbl_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED; // Not documented. For internal use.
+BOOLEAN enable_lcd_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED; // Not documented. For internal use.
+BOOLEAN disable_lcd_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED; // Not documented. For internal use.
 
 #endif /* USE_ISR */
 
