@@ -206,6 +206,22 @@
     "offset": 0
   },
 
+  "ENABLE_VBL_ISR": {
+    "ref": "enable_vbl_isr",
+    "offset": 0
+  },
+  "DISABLE_VBL_ISR": {
+    "ref": "disable_vbl_isr",
+    "offset": 0
+  },
+  "ENABLE_LCD_ISR": {
+    "ref": "enable_lcd_isr",
+    "offset": 0
+  },
+  "DISABLE_LCD_ISR": {
+    "ref": "disable_lcd_isr",
+    "offset": 0
+  },
   "PEEK_BANKED": {
     "ref": "peek_banked",
     "offset": 0
