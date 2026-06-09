@@ -47,10 +47,10 @@ static constexpr const char* const ASSEMBLER_OPCODE_MNEMONICS[256] = {
 	/* 9x */ "sub a,b",    "sub a,c",   "sub a,d",    "sub a,e",   "sub a,h",     "sub a,l",   "sub a,(hl)", "sub a,a",   "sbc a,b",     "sbc a,c",   "sbc a,d",    "sbc a,e", "sbc a,h",    "sbc a,l",  "sbc a,(hl)", "sbc a,a",
 	/* Ax */ "and a,b",    "and a,c",   "and a,d",    "and a,e",   "and a,h",     "and a,l",   "and a,(hl)", "and a,a",   "xor a,b",     "xor a,c",   "xor a,d",    "xor a,e", "xor a,h",    "xor a,l",  "xor a,(hl)", "xor a,a",
 	/* Bx */ "or a,b",     "or a,c",    "or a,d",     "or a,e",    "or a,h",      "or a,l",    "or a,(hl)",  "or a,a",    "cp a,b",      "cp a,c",    "cp a,d",     "cp a,e",  "cp a,h",     "cp a,l",   "cp a,(hl)",  "cp a,a",
-	/* Cx */ "ret nz",     "pop bc",    "jp nz,a16",  "jp a16",    "call nz,a16", "push bc",   "add a,n8",   "rst 00H",   "ret z",       "ret",       "jp z,a16",   nullptr,   "call z,a16", "call a16", "adc a,n8",   "rst 08H",
-	/* Dx */ "ret nc",     "pop de",    "jp nc,a16",  nullptr,     "call nc,a16", "push de",   "sub a,n8",   "rst 10H",   "ret c",       "reti",      "jp c,a16",   nullptr,   "call c,a16", nullptr,    "sbc a,n8",   "rst 18H",
-	/* Ex */ "ldh (a8),a", "pop hl",    "ld (c),a",   nullptr,     nullptr,       "push hl",   "and a,n8",   "rst 20H",   "add sp,e8",   "jp hl",     "ld (a16),a", nullptr,   nullptr,      nullptr,    "xor a,n8",   "rst 28H",
-	/* Fx */ "ldh a,(a8)", "pop af",    "ld a,(c)",   "di",        nullptr,       "push af",   "or a,n8",    "rst 30H",   "ld hl,sp+e8", "ld sp,hl",  "ld a,(a16)", "ei",      nullptr,      nullptr,    "cp a,n8",    "rst 38H"
+	/* Cx */ "ret nz",     "pop bc",    "jp nz,a16",  "jp a16",    "call nz,a16", "push bc",   "add a,n8",   "rst 00h",   "ret z",       "ret",       "jp z,a16",   nullptr,   "call z,a16", "call a16", "adc a,n8",   "rst 08h",
+	/* Dx */ "ret nc",     "pop de",    "jp nc,a16",  nullptr,     "call nc,a16", "push de",   "sub a,n8",   "rst 10h",   "ret c",       "reti",      "jp c,a16",   nullptr,   "call c,a16", nullptr,    "sbc a,n8",   "rst 18h",
+	/* Ex */ "ldh (a8),a", "pop hl",    "ld (c),a",   nullptr,     nullptr,       "push hl",   "and a,n8",   "rst 20h",   "add sp,e8",   "jp hl",     "ld (a16),a", nullptr,   nullptr,      nullptr,    "xor a,n8",   "rst 28h",
+	/* Fx */ "ldh a,(a8)", "pop af",    "ld a,(c)",   "di",        nullptr,       "push af",   "or a,n8",    "rst 30h",   "ld hl,sp+e8", "ld sp,hl",  "ld a,(a16)", "ei",      nullptr,      nullptr,    "cp a,n8",    "rst 38h"
 };
 static constexpr const char* const ASSEMBLER_CB_OPCODE_MNEMONICS[256] = {
 	/*       x0         x1         x2         x3         x4         x5         x6            x7         x8         x9         xA         xB         xC         xD         xE            xF      */
@@ -222,6 +222,15 @@ public:
 			{ "ld (hld),a", "ld (hl-),a"  },
 			{ "ldd (hl),a", "ld (hl-),a"  },
 			{ "ldhl sp,e8", "ld hl,sp+e8" },
+
+			{ "rst 0x00",   "rst 00h"     },
+			{ "rst 0x08",   "rst 08h"     },
+			{ "rst 0x10",   "rst 10h"     },
+			{ "rst 0x18",   "rst 18h"     },
+			{ "rst 0x20",   "rst 20h"     },
+			{ "rst 0x28",   "rst 28h"     },
+			{ "rst 0x30",   "rst 30h"     },
+			{ "rst 0x38",   "rst 38h"     },
 
 			{ "add b",      "add a,b"     },
 			{ "add c",      "add a,c"     },
@@ -843,6 +852,22 @@ private:
 				int oprand = (int)(Int)tk->data();
 				if (opcode == "bit" || opcode == "res" || opcode == "set") {
 					mnemonic += Text::toString(oprand);
+				} else if (opcode == "rst") {
+					const int idx = cursor + 1;
+					bool endsWithH = false;
+					if (idx >= 0 && idx < (int)tokens.size()) {
+						const IToken::Ptr &ntk = tokens[idx];
+						std::string ntxt = (std::string)ntk->data();
+						Text::toLowerCase(ntxt);
+						if (ntxt == "h") {
+							endsWithH = true;
+							++cursor;
+						}
+					}
+					const std::string data = endsWithH ?
+						(Text::toHex(oprand, 2, '0', true) + "h") :
+						("0x" + Text::toHex(oprand, 2, '0', true));
+					mnemonic += data;
 				} else {
 					if (unpackLowByte)
 						oprand = oprand & 0xff;
