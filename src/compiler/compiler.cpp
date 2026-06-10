@@ -15615,6 +15615,8 @@ public:
 				// Emit a `VM_JUMP` instruction to skip the assembly block.
 				args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
 				args = fill(args, (UInt16)(address + n));
+
+				_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
 			} else if (isOnLcd) { // Specialized for "ON LCD".
 				// Find the ISR entry.
 				if (!ctx.symbols) { THROW_INVALID_OPERATION(onError, nullptr); }
@@ -15637,6 +15639,8 @@ public:
 				// Emit a `VM_JUMP` instruction to skip the assembly block.
 				args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
 				args = fill(args, (UInt16)(address + n));
+
+				_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
 			} else { // Normal assembly block.
 				// Emit a `VM_ASM` instruction to set the data.
 				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
