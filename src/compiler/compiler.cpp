@@ -15670,6 +15670,8 @@ public:
 			msg += ": ";
 			msg += "bank " + Text::toString(bank);
 			msg += ", address 0x" + Text::toHex(address, 4, '0', true);
+			if (isOnVbl) msg += " (VBL ISR)";
+			if (isOnLcd) msg += " (LCD ISR)";
 
 			if (ctx.assembledInformation)
 				ctx.assembledInformation->push_back(msg);

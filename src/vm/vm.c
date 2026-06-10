@@ -650,7 +650,7 @@ void vm_asm(DUMMY0_t dummy0, DUMMY1_t dummy1, SCRIPT_CTX * THIS, UINT8 bank, UIN
 
 #if defined __SDCC && defined NINTENDO
 __asm
-        ; THIS->PC += step.
+        ;; THIS->PC += step.
 
         ldhl sp, #6
         ld a, (hl+)
@@ -675,7 +675,7 @@ __asm
         dec hl
         ld (hl), e                  ; THIS->PC = DE.
 
-        ; Call the banked function.
+        ;; Call the banked function.
 
         ldhl sp, #8
         ld a, (hl)                  ; A = bank.
