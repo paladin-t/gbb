@@ -309,7 +309,8 @@ public:
 		_registers = {
 			"a", "b", "c", "d", "e", "h", "l",
 			"af", "bc", "de", "hl", "sp",
-			"z", "nz", /* "c" */ "nc"
+			"z", "nz", /* "c" */ "nc",
+			"hli", "hld"
 		};
 	}
 	virtual ~AssemblerImpl() override {
