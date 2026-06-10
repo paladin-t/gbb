@@ -14,20 +14,10 @@ BANKREF(VM_ISR)
 void isr_vbl(void) NONBANKED NAKED {
 #if defined __SDCC && defined NINTENDO
 __asm
-        ldh a, (__current_bank)
-        push af                     ; Save bank.
-
         ld a, #0xFF                 ; Can be overwritten by compiler. A = bank.
-        ldh (__current_bank), a
-        ld (_rROMB0), a             ; Switch bank.
-
+        ld e, a                     ; E = bank.
         ld hl, #0xFFFF              ; Can be overwritten by compiler. HL = fn.
-        rst 0x20                    ; Call HL.
-
-        pop af                      ; Restore bank.
-        ldh (__current_bank), a
-        ld (_rROMB0), a
-        ret
+        jp ___sdcc_bcall_ehl        ; Call E:HL.
 __endasm;
 #else /* __SDCC && NINTENDO */
 #   error "Not implemented."
@@ -37,20 +27,10 @@ __endasm;
 void isr_lcd(void) NONBANKED NAKED {
 #if defined __SDCC && defined NINTENDO
 __asm
-        ldh a, (__current_bank)
-        push af                     ; Save bank.
-
         ld a, #0xFF                 ; Can be overwritten by compiler. A = bank.
-        ldh (__current_bank), a
-        ld (_rROMB0), a             ; Switch bank.
-
+        ld e, a                     ; E = bank.
         ld hl, #0xFFFF              ; Can be overwritten by compiler. HL = fn.
-        rst 0x20                    ; Call HL.
-
-        pop af                      ; Restore bank.
-        ldh (__current_bank), a
-        ld (_rROMB0), a
-        ret
+        jp ___sdcc_bcall_ehl        ; Call E:HL.
 __endasm;
 #else /* __SDCC && NINTENDO */
 #   error "Not implemented."
