@@ -133,6 +133,7 @@ set -x
 "$gbdk/lcc" $cflag -c -o "output/vm/vm_gui_menu.o" "src/vm/vm_gui_menu.c"
 "$gbdk/lcc" $cflag -c -o "output/vm/vm_gui_progressbar.o" "src/vm/vm_gui_progressbar.c"
 "$gbdk/lcc" $cflag -c -o "output/vm/vm_input.o" "src/vm/vm_input.c"
+"$gbdk/lcc" $cflag -c -o "output/vm/vm_isr.o" "src/vm/vm_isr.c"
 "$gbdk/lcc" $cflag -c -o "output/vm/vm_memory.o" "src/vm/vm_memory.c"
 "$gbdk/lcc" $cflag -c -o "output/vm/vm_native.o" "src/vm/vm_native.c"
 "$gbdk/lcc" $cflag -c -o "output/vm/vm_object.o" "src/vm/vm_object.c"
@@ -216,6 +217,7 @@ set -x
   "output/vm/vm_gui_menu.o" \
   "output/vm/vm_gui_progressbar.o" \
   "output/vm/vm_input.o" \
+  "output/vm/vm_isr.o" \
   "output/vm/vm_memory.o" \
   "output/vm/vm_native.o" \
   "output/vm/vm_object.o" \

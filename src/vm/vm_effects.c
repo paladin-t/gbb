@@ -202,6 +202,10 @@ void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
                     EFFECTS_PARALLAX_SET(effects_parallax_rows[i], 0, 0, 0);
                 }
             }
+            CRITICAL {
+                STAT_REG &= ~(STATF_LYC | STATF_MODE00);
+                remove_LCD(LCD_isr);
+            }
             if (n && (effects_parallax_rows[0].shift != 0 || effects_parallax_rows[1].shift != 0 || effects_parallax_rows[2].shift != 0)) {
                 effects_wobble        = 0;
                 CRITICAL {
@@ -212,10 +216,6 @@ void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
                 FEATURE_EFFECT_PARALLAX_ENABLE;
             } else {
                 FEATURE_EFFECT_PARALLAX_DISABLE;
-                CRITICAL {
-                    STAT_REG &= ~(STATF_LYC | STATF_MODE00);
-                    remove_LCD(LCD_isr);
-                }
                 memcpy(effects_parallax_rows, parallax_rows_defaults, sizeof(effects_parallax_rows));
             }
         }
@@ -224,6 +224,11 @@ void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
     case EFFECTS_WOBBLE: {
             const UINT8 val = (UINT8)*(--THIS->stack_ptr);
             effects_wobble            = val;
+            CRITICAL {
+                LYC_REG = 0;
+                STAT_REG &= ~(STATF_LYC | STATF_MODE00);
+                remove_LCD(LCD_isr);
+            }
             if (val) {
                 FEATURE_EFFECT_PARALLAX_DISABLE;
                 CRITICAL {
@@ -235,11 +240,6 @@ void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
                     add_LCD(LCD_isr);
                 }
             } else {
-                CRITICAL {
-                    LYC_REG = 0;
-                    STAT_REG &= ~(STATF_LYC | STATF_MODE00);
-                    remove_LCD(LCD_isr);
-                }
                 FEATURE_MAP_MOVEMENT_SET;
             }
         }
