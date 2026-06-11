@@ -15280,8 +15280,11 @@ public:
 				std::string fuzzyName;
 				{
 					const std::string &name = _scheduled.target.label;
-					romLocation = ctx.namedAssemblyBlocks->fuzzy(name, fuzzyName);
-					if (romLocation && name == fuzzyName) {
+					std::string name_ = name;
+					if (ctx.caseInsensitive)
+						Text::toLowerCase(name_);
+					romLocation = ctx.namedAssemblyBlocks->fuzzy(name_, fuzzyName);
+					if (romLocation && name_ == fuzzyName) {
 						const int bank = romLocation ? romLocation->bank : 0;
 						const int address = romLocation ? romLocation->address : -1;
 
