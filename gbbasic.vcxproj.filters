@@ -551,6 +551,15 @@
     <ClCompile Include="src\compiler\assembler.cpp">
       <Filter>compiler</Filter>
     </ClCompile>
+    <ClCompile Include="src\utils\i18n.cpp">
+      <Filter>utils\assets</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\editor_i18n.cpp">
+      <Filter>app\editors</Filter>
+    </ClCompile>
+    <ClCompile Include="src\app\commands_i18n.cpp">
+      <Filter>app\editors\commands</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="utils">
@@ -1611,6 +1620,15 @@
     </ClInclude>
     <ClInclude Include="src\compiler\assembler.h">
       <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\i18n.h">
+      <Filter>utils\assets</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\editor_i18n.h">
+      <Filter>app\editors</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\commands_i18n.h">
+      <Filter>app\editors\commands</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
