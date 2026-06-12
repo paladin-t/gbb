@@ -317,7 +317,7 @@ namespace GBBASIC {
 #	define ISR_STUB_OPCODE_SIZE 1
 #endif /* ISR_STUB_OPCODE_SIZE */
 #ifndef ISR_STUB_BANKING_BYTES
-#	define ISR_STUB_BANKING_BYTES { 0x3e, 0xff } // Compiled from `ld a, #0xff`.
+#	define ISR_STUB_BANKING_BYTES { 0x1e, 0xff } // Compiled from `ld e, #0xff`.
 #endif /* ISR_STUB_BANKING_BYTES */
 #ifndef ISR_STUB_ADDRESSING_BYTES
 #	define ISR_STUB_ADDRESSING_BYTES { 0x21, 0xff, 0xff } // Compiled from `ld hl, #0xffff`.
