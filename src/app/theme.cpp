@@ -1106,11 +1106,11 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipFile_Save("Save (" GBBASIC_MODIFIER_KEY_NAME "+S)");
 
 	tooltipEdit_Actor("Actor/Projectile (" GBBASIC_MODIFIER_KEY_NAME "+5)");
-	tooltipEdit_Audio("Audio (" GBBASIC_MODIFIER_KEY_NAME "+7/8)");
+	tooltipEdit_Audio("Audio (" GBBASIC_MODIFIER_KEY_NAME "+8/9)");
 	tooltipEdit_Code("Code (" GBBASIC_MODIFIER_KEY_NAME "+1)");
-	tooltipEdit_Console("Console (" GBBASIC_MODIFIER_KEY_NAME "+9)");
+	tooltipEdit_Console("Console (" GBBASIC_MODIFIER_KEY_NAME "+0)");
 	tooltipEdit_Emulator("Emulator (" GBBASIC_MODIFIER_KEY_NAME "+`)");
-	tooltipEdit_Font("Font (" GBBASIC_MODIFIER_KEY_NAME "+6)");
+	tooltipEdit_FontAndI18n("Font/I18n (" GBBASIC_MODIFIER_KEY_NAME "+6/7)");
 #if GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CTRL
 	tooltipEdit_Magnifiable("(-/+ or Ctrl+Mouse Wheel)");
 #elif GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CMD
@@ -1589,10 +1589,11 @@ bool Theme::open(class Renderer* rnd) {
 	iconCursor(createTexture(rnd, RES_ICON_CURSOR, GBBASIC_COUNTOF(RES_ICON_CURSOR), &imageCursor()));
 
 	iconMainMenu(createTexture(rnd, RES_ICON_MAIN_MENU, GBBASIC_COUNTOF(RES_ICON_MAIN_MENU), nullptr));
-	iconFont(createTexture(rnd, RES_ICON_FONT, GBBASIC_COUNTOF(RES_ICON_FONT), nullptr));
 	iconCode(createTexture(rnd, RES_ICON_CODE, GBBASIC_COUNTOF(RES_ICON_CODE), nullptr));
 	iconTiles(createTexture(rnd, RES_ICON_TILES, GBBASIC_COUNTOF(RES_ICON_TILES), nullptr));
 	iconMap(createTexture(rnd, RES_ICON_MAP, GBBASIC_COUNTOF(RES_ICON_MAP), nullptr));
+	iconFont(createTexture(rnd, RES_ICON_FONT, GBBASIC_COUNTOF(RES_ICON_FONT), nullptr));
+	iconI18n(createTexture(rnd, RES_ICON_I18N, GBBASIC_COUNTOF(RES_ICON_I18N), nullptr));
 	iconAudio(createTexture(rnd, RES_ICON_AUDIO, GBBASIC_COUNTOF(RES_ICON_AUDIO), nullptr));
 	iconAudioMore(createTexture(rnd, RES_ICON_AUDIO_MORE, GBBASIC_COUNTOF(RES_ICON_AUDIO_MORE), nullptr));
 	iconMusic(createTexture(rnd, RES_ICON_MUSIC, GBBASIC_COUNTOF(RES_ICON_MUSIC), nullptr));
@@ -1757,10 +1758,11 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconCursor(), &imageCursor());
 
 	destroyTexture(rnd, iconMainMenu(), nullptr);
-	destroyTexture(rnd, iconFont(), nullptr);
 	destroyTexture(rnd, iconCode(), nullptr);
 	destroyTexture(rnd, iconTiles(), nullptr);
 	destroyTexture(rnd, iconMap(), nullptr);
+	destroyTexture(rnd, iconFont(), nullptr);
+	destroyTexture(rnd, iconI18n(), nullptr);
 	destroyTexture(rnd, iconAudio(), nullptr);
 	destroyTexture(rnd, iconAudioMore(), nullptr);
 	destroyTexture(rnd, iconMusic(), nullptr);

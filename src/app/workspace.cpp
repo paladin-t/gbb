@@ -7438,6 +7438,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 	const bool k          = ImGui::IsKeyPressed(SDL_SCANCODE_K);
 	const bool n          = ImGui::IsKeyPressed(SDL_SCANCODE_N);
 	const bool o          = ImGui::IsKeyPressed(SDL_SCANCODE_O);
+	const bool p          = ImGui::IsKeyPressed(SDL_SCANCODE_P);
 	const bool r          = ImGui::IsKeyPressed(SDL_SCANCODE_R);
 	const bool s          = ImGui::IsKeyPressed(SDL_SCANCODE_S);
 	const bool u          = ImGui::IsKeyPressed(SDL_SCANCODE_U);
@@ -8037,12 +8038,14 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 				} else if (num6) {
 					category(Categories::FONT);
 				} else if (num7) {
-					category(Categories::MUSIC);
+					// TODO
 				} else if (num8) {
-					category(Categories::SFX);
+					category(Categories::MUSIC);
 				} else if (num9) {
-					category(Categories::CONSOLE);
+					category(Categories::SFX);
 				} else if (num0) {
+					category(Categories::CONSOLE);
+				} else if (p) {
 					Project::Ptr &prj = currentProject();
 
 					showPaletteEditor(
@@ -8598,7 +8601,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 						Operations::projectRemoveSram(wnd, rnd, this, prj, false);
 					}
 					ImGui::Separator();
-					if (ImGui::MenuItem(theme()->menu_Palette(), GBBASIC_MODIFIER_KEY_NAME "+0")) {
+					if (ImGui::MenuItem(theme()->menu_Palette(), GBBASIC_MODIFIER_KEY_NAME "+P")) {
 						showPaletteEditor(
 							rnd,
 							-1,
@@ -10631,18 +10634,18 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 
 				if (category() == Categories::FONT) {
 					if (docOpened) {
-						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
+						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_FontAndI18n().c_str())) {
 							toggleDocument(nullptr);
 						}
 					} else {
 						WIDGETS_SELECTION_GUARD(theme());
 
-						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
+						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_FontAndI18n().c_str())) {
 							// Do nothing.
 						}
 					}
 				} else {
-					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str()) && !busy) {
+					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_FontAndI18n().c_str()) && !busy) {
 						if (docOpened)
 							toggleDocument(nullptr);
 						category(Categories::FONT);
@@ -10650,6 +10653,8 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 				}
 				ImGui::SameLine();
 				width += ImGui::GetItemRectSize().x;
+
+				// TODO: i18n
 
 				if (category() == Categories::MUSIC || category() == Categories::SFX) {
 					if (docOpened) {
