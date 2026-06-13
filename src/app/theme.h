@@ -156,6 +156,8 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Copy)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_CopyAsImage)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_CopyJumpCode)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_Csv)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_CsvFile)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Cut)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_DataSequence)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Dec)
@@ -778,6 +780,8 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_DeleteFrame)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_EjectSourceCodeVm)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_Export)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltip_FontAndI18n_Font)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltip_FontAndI18n_I18n)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ForAlignToTileMovementForControllers)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_ForAutoAlignToTileMovementForControllers)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltip_GenerateAndCopyCode)
@@ -948,6 +952,8 @@ public:
 
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipFont_Info)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipFont_Trim)
+
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipI18n_Info)
 
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_Attributes)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipMap_Bit0)

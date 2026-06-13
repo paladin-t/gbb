@@ -9128,6 +9128,94 @@ public:
 	using Node::dump;
 };
 
+class NodeDeg : public Node {
+public:
+	NodeDeg() {
+	}
+	virtual ~NodeDeg() override {
+	}
+
+	NODE_TYPE(Types::DEG)
+
+	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		const Generator_Void_Void generator = [&] (void) -> void {
+			// Prepare.
+			Context &ctx = context.top();
+			State &state = top();
+
+			const Asm::Instructions &INSTRUCTIONS = *ctx.instructions;
+
+			// Determine the location in the ROM.
+			state.inRom.bank = ctx.bank;
+			state.inRom.address = ctx.addressCursor;
+			state.inRom.size = 0;
+
+			// Consume the tokens.
+			if (ctx.expect.lnno) {
+				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				})) { THROW_INVALID_SYNTAX(onError); }
+			}
+			if (!consume(Token::Types::KEYWORD, "deg")) { THROW_INVALID_SYNTAX(onError); }
+			if (consume(Token::Types::OPERATOR, "(")) {
+				if (!consume(Token::Types::OPERATOR, ")")) { THROW_INVALID_SYNTAX(onError); }
+			}
+
+			// Check the children.
+			if (_children.empty()) {
+				THROW_TOO_FEW_ARGUMENTS(onError);
+			} else if (_children.size() == 1) {
+				// Do nothing.
+			} else {
+				THROW_TOO_MANY_ARGUMENTS(onError);
+			}
+
+			// Get the internal value of a specific degree.
+			Token::Ptr tk = nullptr;
+			int val = 0;
+			if (!isInt16(context, 0, val, &tk)) { THROW_TYPE_EXPECTED(onError, "Integer constant", tk); }
+			val = (int)(val * (256.0f / 360.0f));
+			const int deg = (val >= 0) ?
+				(val % 256) :
+				((val % 256 + 256) % 256);
+
+			// Set the stack footprint guard.
+			COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
+			COUNTER_GUARD(ctx, stk);
+
+			// Set the expression slot guard.
+			VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
+
+			// Emit the right hand value.
+			writeRightHand(
+				bytes, context, stk,
+				[&] (void) -> void {
+					// Emit a `VM_SET_CONST` instruction to set the data.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::SET_CONST]);
+					args = fill(args, (Int16)deg);
+					args = fill(args, (Int16)ARG0);
+				}, 0, true,
+				onError
+			);
+
+			// Check the stack footprint.
+			CHECK_COUNTER(ctx, onError);
+		};
+
+		write(bytes, context, generator, false, onError);
+	}
+
+	virtual Abstract abstract(void) const override {
+		return abstract("DEG");
+	}
+	using Node::abstract;
+
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "DEG");
+	}
+	using Node::dump;
+};
+
 class NodeAsc : public Node {
 public:
 	NodeAsc() {
@@ -9295,94 +9383,6 @@ public:
 
 	virtual std::string dump(int depth) const override {
 		return dump(depth, "ASC");
-	}
-	using Node::dump;
-};
-
-class NodeDeg : public Node {
-public:
-	NodeDeg() {
-	}
-	virtual ~NodeDeg() override {
-	}
-
-	NODE_TYPE(Types::DEG)
-
-	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
-		const Generator_Void_Void generator = [&] (void) -> void {
-			// Prepare.
-			Context &ctx = context.top();
-			State &state = top();
-
-			const Asm::Instructions &INSTRUCTIONS = *ctx.instructions;
-
-			// Determine the location in the ROM.
-			state.inRom.bank = ctx.bank;
-			state.inRom.address = ctx.addressCursor;
-			state.inRom.size = 0;
-
-			// Consume the tokens.
-			if (ctx.expect.lnno) {
-				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
-				})) { THROW_INVALID_SYNTAX(onError); }
-			}
-			if (!consume(Token::Types::KEYWORD, "deg")) { THROW_INVALID_SYNTAX(onError); }
-			if (consume(Token::Types::OPERATOR, "(")) {
-				if (!consume(Token::Types::OPERATOR, ")")) { THROW_INVALID_SYNTAX(onError); }
-			}
-
-			// Check the children.
-			if (_children.empty()) {
-				THROW_TOO_FEW_ARGUMENTS(onError);
-			} else if (_children.size() == 1) {
-				// Do nothing.
-			} else {
-				THROW_TOO_MANY_ARGUMENTS(onError);
-			}
-
-			// Get the internal value of a specific degree.
-			Token::Ptr tk = nullptr;
-			int val = 0;
-			if (!isInt16(context, 0, val, &tk)) { THROW_TYPE_EXPECTED(onError, "Integer constant", tk); }
-			val = (int)(val * (256.0f / 360.0f));
-			const int deg = (val >= 0) ?
-				(val % 256) :
-				((val % 256 + 256) % 256);
-
-			// Set the stack footprint guard.
-			COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
-			COUNTER_GUARD(ctx, stk);
-
-			// Set the expression slot guard.
-			VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
-
-			// Emit the right hand value.
-			writeRightHand(
-				bytes, context, stk,
-				[&] (void) -> void {
-					// Emit a `VM_SET_CONST` instruction to set the data.
-					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::SET_CONST]);
-					args = fill(args, (Int16)deg);
-					args = fill(args, (Int16)ARG0);
-				}, 0, true,
-				onError
-			);
-
-			// Check the stack footprint.
-			CHECK_COUNTER(ctx, onError);
-		};
-
-		write(bytes, context, generator, false, onError);
-	}
-
-	virtual Abstract abstract(void) const override {
-		return abstract("DEG");
-	}
-	using Node::abstract;
-
-	virtual std::string dump(int depth) const override {
-		return dump(depth, "DEG");
 	}
 	using Node::dump;
 };
@@ -31809,11 +31809,11 @@ public:
 			ADD_STATEMENT("min",               node<NodeMath>("min"),                      Token::Types::OPERATOR,       false);
 			ADD_STATEMENT("max",               node<NodeMath>("max"),                      Token::Types::OPERATOR,       false);
 
-			// `ASC(...)`.
-			ADD_STATEMENT("asc",               node<NodeAsc>(),                            Token::Types::KEYWORD,         true);
-
 			// `DEG(...)`.
 			ADD_STATEMENT("deg",               node<NodeDeg>(),                            Token::Types::KEYWORD,         true);
+
+			// `ASC(...)`.
+			ADD_STATEMENT("asc",               node<NodeAsc>(),                            Token::Types::KEYWORD,         true);
 
 			// `LEN(...)`.
 			ADD_STATEMENT("len",               node<NodeLen>(),                            Token::Types::KEYWORD,         true);

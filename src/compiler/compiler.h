@@ -115,7 +115,7 @@
 #	define COMPILER_FONT_END "</font>"
 #endif /* COMPILER_FONT_END */
 #ifndef COMPILER_I18N_BEGIN
-#	define COMPILER_I18N_BEGIN "<i18n>"
+#	define COMPILER_I18N_BEGIN "<i18n page=\"{0}\">"
 #endif /* COMPILER_I18N_BEGIN */
 #ifndef COMPILER_I18N_END
 #	define COMPILER_I18N_END "</i18n>"
@@ -585,8 +585,8 @@ public:
 		PREPROCESSOR_ERROR,
 		EXPRESSION,
 		MATH,
-		ASC,
 		DEG,
+		ASC,
 		LEN,
 		RANDOMIZE,
 		RND,

@@ -308,8 +308,8 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 		// Operators.
 		"mod", "and", "or", "not", "band", "bor", "bxor", "bnot", "lshift", "rshift",
 		"sgn", "abs", "sqr", "sqrt", "sin", "cos", "atan2", "pow", "min", "max",
-		"asc",
 		"deg",
+		"asc", "lstr",
 		"len",
 		"randomize", "rnd",
 		"bankof", "addressof",

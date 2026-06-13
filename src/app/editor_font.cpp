@@ -1983,6 +1983,20 @@ private:
 				ImGui::OpenPopup("@Views");
 			}
 			width_ += ImGui::GetItemRectSize().x;
+			ImGui::SameLine();
+			do {
+				WIDGETS_SELECTION_GUARD(ws->theme());
+
+				if (ImGui::ImageButton(ws->theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_FontAndI18n_Font().c_str())) {
+					// Do nothing.
+				}
+			} while (false);
+			width_ += ImGui::GetItemRectSize().x;
+			ImGui::SameLine();
+			if (ImGui::ImageButton(ws->theme()->iconI18n()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_FontAndI18n_I18n().c_str())) {
+				ws->category(Workspace::Categories::I18N);
+			}
+			width_ += ImGui::GetItemRectSize().x;
 			width_ += style.FramePadding.x;
 			_statusWidth = width_;
 		} while (false);

@@ -356,6 +356,8 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Copy("Copy");
 	menu_CopyAsImage("Copy as Image");
 	menu_CopyJumpCode("Copy Jump Code");
+	menu_Csv("CSV");
+	menu_CsvFile("CSV File...");
 	menu_Cut("Cut");
 	menu_DataSequence("Data Sequence");
 	menu_Dec("DEC");
@@ -1029,6 +1031,8 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_DeleteFrame("Delete frame");
 	tooltip_EjectSourceCodeVm("Eject Source Code (VM)");
 	tooltip_Export("Export");
+	tooltip_FontAndI18n_Font("Font (" GBBASIC_MODIFIER_KEY_NAME "+6)");
+	tooltip_FontAndI18n_I18n("Internationalization (" GBBASIC_MODIFIER_KEY_NAME "+7)");
 	tooltip_ForAlignToTileMovementForControllers(
 		"For align-to-tile movement for controllers\n"
 		"Enable for 16x16px aligned, otherwise 8x8px aligned\n"
@@ -1357,6 +1361,11 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipFont_Trim(
 		"Whether to trim glyph height.\n"
 		"It is recommended to keep this option checked."
+	);
+
+	tooltipI18n_Info(
+		"    Items: {0}\n"
+		"Languages: {1}"
 	);
 
 	tooltipMap_Attributes("Attributes:");

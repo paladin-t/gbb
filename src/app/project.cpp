@@ -3721,6 +3721,20 @@ bool Project::saveAssets(std::string &content, WarningOrErrorHandler onWarningOr
 		}
 	} while (false);
 
+	// Save i18n.
+	for (int i = 0; i < assets()->i18ns.count(); ++i) {
+		I18nAssets::Entry* entry = assets()->i18ns.get(i);
+		if (entry->editor && entry->editor->hasUnsavedChanges()) {
+			entry->editor->flush();
+			entry->editor->markChangesSaved();
+		}
+		std::string txt_;
+		if (!entry->toString(txt_, onWarningOrError))
+			continue;
+
+		put(content, Text::format(COMPILER_I18N_BEGIN, Text::toString(i), 0), COMPILER_I18N_END, txt_);
+	}
+
 	// Save code.
 	for (int i = 0; i < assets()->code.count(); ++i) {
 		CodeAssets::Entry* entry = assets()->code.get(i);
