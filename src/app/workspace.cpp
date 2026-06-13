@@ -14,6 +14,7 @@
 #include "editor_code_binding.h"
 #include "editor_console.h"
 #include "editor_font.h"
+#include "editor_i18n.h"
 #include "editor_map.h"
 #include "editor_music.h"
 #include "editor_palette.h"
@@ -89,6 +90,7 @@ EMSCRIPTEN_BINDINGS(Categories) {
 	emscripten::enum_<Workspace::Categories>("Categories")
 		.value("PALETTE",  Workspace::Categories::PALETTE)
 		.value("FONT",     Workspace::Categories::FONT)
+		.value("I18N",     Workspace::Categories::I18N)
 		.value("CODE",     Workspace::Categories::CODE)
 		.value("TILES",    Workspace::Categories::TILES)
 		.value("MAP",      Workspace::Categories::MAP)
@@ -502,6 +504,7 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 
 	showRecentProjects(showRecent);
 	category(Categories::HOME);
+	categoryOfFont(Categories::FONT);
 	categoryOfAudio(Categories::MUSIC);
 	categoryBeforeCompiling(Categories::HOME);
 	interactable(true);
@@ -1039,6 +1042,11 @@ void Workspace::category(const Categories &category) {
 	);
 
 	switch (_category) {
+	case Categories::FONT: // Fall through.
+	case Categories::I18N:
+		categoryOfFont(_category);
+
+		break;
 	case Categories::MUSIC: // Fall through.
 	case Categories::SFX:
 		categoryOfAudio(_category);
@@ -1085,6 +1093,15 @@ bool Workspace::changePage(Window*, Renderer*, Project* prj, Categories category
 			break;
 
 		prj->activeFontIndex(index);
+
+		result = true;
+
+		break;
+	case Categories::I18N:
+		if (index < 0 || index >= prj->i18nPageCount())
+			break;
+
+		prj->activeI18nIndex(index);
 
 		result = true;
 
@@ -1186,6 +1203,10 @@ void Workspace::pageAdded(Window* wnd, Renderer* rnd, Project* prj, Categories c
 			changePage(wnd, rnd, prj, Categories::FONT, prj->fontPageCount() - 1);
 
 			break;
+		case Categories::I18N:
+			changePage(wnd, rnd, prj, Categories::I18N, prj->codePageCount() - 1);
+
+			break;
 		case Categories::CODE:
 			changePage(wnd, rnd, prj, Categories::CODE, prj->codePageCount() - 1);
 
@@ -1245,6 +1266,20 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 
 				const int page_ = Math::clamp(index, 0, prj->fontPageCount() - 1);
 				changePage(wnd, rnd, prj, Categories::FONT, page_);
+			}
+
+			break;
+		case Categories::I18N:
+			if (prj->i18nPageCount() > 0) {
+				for (int i = index; i < prj->i18nPageCount(); ++i) {
+					I18nAssets::Entry* entry = prj->getI18n(i);
+					Editable* editor = entry->editor;
+					if (editor)
+						editor->post(Editable::UPDATE_INDEX, (Variant::Int)i);
+				}
+
+				const int page_ = Math::clamp(index, 0, prj->i18nPageCount() - 1);
+				changePage(wnd, rnd, prj, Categories::I18N, page_);
 			}
 
 			break;
@@ -2881,6 +2916,23 @@ class EditorFont* Workspace::touchFontEditor(Window* wnd, Renderer* rnd, Project
 	EditorFont* editor = (EditorFont*)entry->editor;
 	if (!editor) {
 		editor = EditorFont::create();
+		editor->open(wnd, rnd, this, prj, idx, (unsigned)(~0), -1);
+		editor->enter(this);
+		entry->editor = editor;
+	}
+
+	return editor;
+}
+
+class EditorI18n* Workspace::touchI18nEditor(Window* wnd, Renderer* rnd, Project* prj, int idx, I18nAssets::Entry* entry) {
+	if (!entry)
+		entry = prj->getI18n(idx);
+	if (!entry)
+		return nullptr;
+
+	EditorI18n* editor = (EditorI18n*)entry->editor;
+	if (!editor) {
+		editor = EditorI18n::create();
 		editor->open(wnd, rnd, this, prj, idx, (unsigned)(~0), -1);
 		editor->enter(this);
 		entry->editor = editor;
@@ -5423,6 +5475,33 @@ const Text::Array &Workspace::getFontPageNames(void) {
 	return assetPageNames().font;
 }
 
+void Workspace::clearI18nPageNames(void) {
+	assetPageNames().i18n.clear();
+}
+
+const Text::Array &Workspace::getI18nPageNames(void) {
+	const Project::Ptr &prj = currentProject();
+
+	const int n = prj->i18nPageCount();
+	if ((int)assetPageNames().i18n.size() < n) {
+		assetPageNames().i18n.resize(n);
+		assetPageNames().i18n.shrink_to_fit();
+
+		for (int i = 0; i < n; ++i) {
+			std::string pg = theme()->menu_Page() + " " + Text::toString(i);
+			const I18nAssets::Entry* entry = prj->getI18n(i);
+			if (entry && !entry->name.empty()) {
+				pg += " (";
+				pg += entry->name;
+				pg += ")";
+			}
+			assetPageNames().i18n[i] = pg;
+		}
+	}
+
+	return assetPageNames().i18n;
+}
+
 void Workspace::clearCodePageNames(void) {
 	assetPageNames().code.clear();
 }
@@ -7918,6 +7997,10 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 				Operations::fontAddPage(wnd, rnd, this);
 
 				break;
+			case Categories::I18N:
+				Operations::i18nAddPage(wnd, rnd, this);
+
+				break;
 			case Categories::CODE:
 				Operations::codeAddPage(wnd, rnd, this);
 
@@ -7962,6 +8045,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 
 			destroyAudioDevice();
 
+			categoryOfFont(Categories::FONT);
 			categoryOfAudio(Categories::MUSIC);
 
 			Operations::fileClose(wnd, rnd, this);
@@ -8038,7 +8122,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 				} else if (num6) {
 					category(Categories::FONT);
 				} else if (num7) {
-					// TODO
+					category(Categories::I18N);
 				} else if (num8) {
 					category(Categories::MUSIC);
 				} else if (num9) {
@@ -8731,6 +8815,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 
 				destroyAudioDevice();
 
+				categoryOfFont(Categories::FONT);
 				categoryOfAudio(Categories::MUSIC);
 
 				Operations::fileClose(wnd, rnd, this);
@@ -9055,6 +9140,48 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 						ImGui::Separator();
 						if (ImGui::MenuItem(theme()->menu_SortAssets(), GBBASIC_MODIFIER_KEY_NAME "+,")) {
 							Operations::editSortAssets(wnd, rnd, this, AssetsBundle::Categories::FONT);
+						}
+
+						ImGui::EndMenu();
+					}
+					if (buildMenu(wnd, rnd, true)) return;
+					ImGui::Separator();
+					if (projectMenu(wnd, rnd, opened, hasUnsavedChanges)) return;
+					ImGui::Separator();
+					if (applicationMenu(wnd, rnd)) return;
+					if (helpMenu(wnd, rnd)) return;
+					if (quitMenu(wnd, rnd)) return;
+				}
+
+				break;
+			case Categories::I18N: {
+					VariableGuard<decltype(style.ChildBorderSize)> guardChildBorderSize(&style.ChildBorderSize, style.ChildBorderSize, 1);
+
+					if (ImGui::BeginMenu(theme()->menu_I18n())) {
+						if (ImGui::MenuItem(theme()->menu_New(), GBBASIC_MODIFIER_KEY_NAME "+N")) {
+							Operations::i18nAddPage(wnd, rnd, this);
+						}
+						if (ImGui::MenuItem(theme()->menu_Remove())) {
+							Operations::i18nRemovePage(wnd, rnd, this);
+						}
+						ImGui::Separator();
+						if (ImGui::MenuItem(theme()->menu_Undo(), GBBASIC_MODIFIER_KEY_NAME "+Z", nullptr, !!undoable)) {
+							withCurrentAsset(
+								[] (Categories /* cat */, BaseAssets::Entry* entry, Editable* editor) -> void {
+									editor->undo(entry);
+								}
+							);
+						}
+						if (ImGui::MenuItem(theme()->menu_Redo(), GBBASIC_MODIFIER_KEY_NAME "+Y", nullptr, !!redoable)) {
+							withCurrentAsset(
+								[] (Categories /* cat */, BaseAssets::Entry* entry, Editable* editor) -> void {
+									editor->redo(entry);
+								}
+							);
+						}
+						ImGui::Separator();
+						if (ImGui::MenuItem(theme()->menu_SortAssets(), GBBASIC_MODIFIER_KEY_NAME "+,")) {
+							Operations::editSortAssets(wnd, rnd, this, AssetsBundle::Categories::I18N);
 						}
 
 						ImGui::EndMenu();
@@ -9722,6 +9849,40 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 			}
 			if (ImGui::MenuBarImageButton(theme()->iconMinus()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_Delete().c_str())) {
 				Operations::fontRemovePage(wnd, rnd, this);
+			}
+			if (hasUnsavedChanges) {
+				if (ImGui::MenuBarImageButton(theme()->iconSave()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipFile_Save().c_str())) {
+					if (showRecentProjects()) {
+						Operations::fileSave(wnd, rnd, this, false);
+					} else {
+						Operations::fileSaveForNotepad(wnd, rnd, this, false);
+					}
+				}
+			} else {
+				if (canvasDevice()) {
+					if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
+						stopProject(wnd, rnd, false);
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+					}
+				}
+			}
+			undoRedo();
+			download();
+		}
+
+		break;
+	case Categories::I18N: {
+			bool hasUnsavedChanges = false;
+			getCurrentProjectStates(nullptr, &hasUnsavedChanges, nullptr, nullptr);
+
+			if (ImGui::MenuBarImageButton(theme()->iconPlus()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_New().c_str())) {
+				Operations::i18nAddPage(wnd, rnd, this);
+			}
+			if (ImGui::MenuBarImageButton(theme()->iconMinus()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_Delete().c_str())) {
+				Operations::i18nRemovePage(wnd, rnd, this);
 			}
 			if (hasUnsavedChanges) {
 				if (ImGui::MenuBarImageButton(theme()->iconSave()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipFile_Save().c_str())) {
@@ -10482,6 +10643,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 
 		break;
 	case Categories::FONT: // Fall through.
+	case Categories::I18N: // Fall through.
 	case Categories::CODE: // Fall through.
 	case Categories::TILES: // Fall through.
 	case Categories::MAP: // Fall through.
@@ -10632,7 +10794,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 				ImGui::SameLine();
 				width += ImGui::GetItemRectSize().x;
 
-				if (category() == Categories::FONT) {
+				if (category() == Categories::FONT || category() == Categories::I18N) {
 					if (docOpened) {
 						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_FontAndI18n().c_str())) {
 							toggleDocument(nullptr);
@@ -10640,21 +10802,37 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					} else {
 						WIDGETS_SELECTION_GUARD(theme());
 
-						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_FontAndI18n().c_str())) {
-							// Do nothing.
+						if (ImGui::MenuBarImageButton(theme()->iconFontMore()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_FontAndI18n().c_str())) {
+							ImGui::OpenPopup("@Fnt");
+
+							bubble(nullptr);
 						}
 					}
+
+					do {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+						VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+						if (ImGui::BeginPopup("@Fnt")) {
+							if (ImGui::MenuItem(theme()->menu_Font(), GBBASIC_MODIFIER_KEY_NAME "+6", category() == Categories::FONT)) {
+								category(Categories::FONT);
+							}
+							if (ImGui::MenuItem(theme()->menu_I18n(), GBBASIC_MODIFIER_KEY_NAME "+7", category() == Categories::I18N)) {
+								category(Categories::I18N);
+							}
+
+							ImGui::EndPopup();
+						}
+					} while (false);
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_FontAndI18n().c_str()) && !busy) {
 						if (docOpened)
 							toggleDocument(nullptr);
-						category(Categories::FONT);
+						category(categoryOfFont());
 					}
 				}
 				ImGui::SameLine();
 				width += ImGui::GetItemRectSize().x;
-
-				// TODO: i18n
 
 				if (category() == Categories::MUSIC || category() == Categories::SFX) {
 					if (docOpened) {
@@ -10676,10 +10854,10 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 						VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
 
 						if (ImGui::BeginPopup("@Aud")) {
-							if (ImGui::MenuItem(theme()->menu_Music(), GBBASIC_MODIFIER_KEY_NAME "+7", category() == Categories::MUSIC)) {
+							if (ImGui::MenuItem(theme()->menu_Music(), GBBASIC_MODIFIER_KEY_NAME "+8", category() == Categories::MUSIC)) {
 								category(Categories::MUSIC);
 							}
-							if (ImGui::MenuItem(theme()->menu_Sfx(), GBBASIC_MODIFIER_KEY_NAME "+8", category() == Categories::SFX)) {
+							if (ImGui::MenuItem(theme()->menu_Sfx(), GBBASIC_MODIFIER_KEY_NAME "+9", category() == Categories::SFX)) {
 								category(Categories::SFX);
 							}
 
@@ -10883,6 +11061,10 @@ void Workspace::body(Window* wnd, Renderer* rnd, double delta, unsigned fps, boo
 		break;
 	case Categories::FONT:
 		font(wnd, rnd, menuH, searchResultH, delta);
+
+		break;
+	case Categories::I18N:
+		i18n(wnd, rnd, menuH, searchResultH, delta);
 
 		break;
 	case Categories::CODE:
@@ -11496,6 +11678,44 @@ void Workspace::font(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 				);
 		} else {
 			blank(wnd, rnd, marginTop, marginBottom, Categories::FONT);
+		}
+
+		ImGui::End();
+	}
+}
+
+void Workspace::i18n(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, double delta) {
+	Project::Ptr &prj = currentProject();
+	if (!prj)
+		return;
+
+	ImGuiStyle &style = ImGui::GetStyle();
+
+	VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
+	VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2());
+
+	ImGuiWindowFlags flags = WORKSPACE_WND_FLAGS_CONTENT;
+
+	ImGui::SetNextWindowPos(ImVec2(0, marginTop), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(
+		ImVec2((float)rnd->width(), (float)rnd->height() - (marginTop + marginBottom)),
+		ImGuiCond_Always
+	);
+	I18nAssets::Entry* entry = prj->getI18n(prj->activeI18nIndex());
+	if (!entry)
+		flags |= ImGuiWindowFlags_NoScrollWithMouse;
+	if (ImGui::Begin("#In", nullptr, flags)) {
+		if (entry) {
+			touchI18nEditor(wnd, rnd, prj.get(), prj->activeI18nIndex(), entry)
+				->update(
+					wnd, rnd,
+					this,
+					prj->title().c_str(),
+					0, marginTop, (float)rnd->width(), (float)rnd->height() - (marginTop + marginBottom),
+					delta
+				);
+		} else {
+			blank(wnd, rnd, marginTop, marginBottom, Categories::I18N);
 		}
 
 		ImGui::End();
@@ -12194,6 +12414,10 @@ void Workspace::blank(Window* wnd, Renderer* rnd, float marginTop, float marginB
 				Operations::fontAddPage(wnd, rnd, this);
 
 				break;
+			case Categories::I18N:
+				Operations::i18nAddPage(wnd, rnd, this);
+
+				break;
 			case Categories::CODE:
 				// Possibly is working with an invalid/non-editable project.
 				// Do nothing.
@@ -12752,6 +12976,8 @@ int Workspace::currentAssetPage(void) const {
 	switch (category()) {
 	case Categories::FONT:
 		return prj->activeFontIndex();
+	case Categories::I18N:
+		return prj->activeI18nIndex();
 	case Categories::CODE:
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 		if (prj->isMajorCodeEditorActive())
@@ -12789,6 +13015,10 @@ int Workspace::withCurrentAsset(EditorHandler handler) const {
 	switch (category()) {
 	case Categories::FONT:
 		entry = prj->getFont(prj->activeFontIndex());
+
+		break;
+	case Categories::I18N:
+		entry = prj->getI18n(prj->activeI18nIndex());
 
 		break;
 	case Categories::CODE:

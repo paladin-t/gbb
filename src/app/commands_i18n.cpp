@@ -17,7 +17,7 @@ namespace Commands {
 
 namespace I18n {
 
-// TODO
+// TODO: i18n.
 
 }
 

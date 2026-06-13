@@ -170,6 +170,7 @@ public:
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 	GBBASIC_PROPERTY             (int,                           activePaletteIndex                               ) // Non-serialized.
 	GBBASIC_PROPERTY             (int,                           activeFontIndex                                  ) // Non-serialized.
+	GBBASIC_PROPERTY             (int,                           activeI18nIndex                                  ) // Non-serialized.
 	GBBASIC_PROPERTY             (float,                         fontPreviewHeight                                ) // Serialized in workspace.
 	GBBASIC_PROPERTY             (int,                           activeTilesIndex                                 ) // Non-serialized.
 	GBBASIC_PROPERTY             (int,                           activeMapIndex                                   ) // Non-serialized.
@@ -238,6 +239,12 @@ public:
 	FontAssets::Entry* getFont(int index);
 	bool canRenameFont(int index, const std::string &name, int* another /* nullable */) const;
 	std::string getUsableFontName(int index) const;
+
+	int i18nPageCount(void) const;
+	bool addI18nPage(const std::string &val);
+	bool removeI18nPage(int index);
+	const I18nAssets::Entry* getI18n(int index) const;
+	I18nAssets::Entry* getI18n(int index);
 
 	int codePageCount(void) const;
 	bool addCodePage(const std::string &val);

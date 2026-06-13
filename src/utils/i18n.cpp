@@ -15,11 +15,11 @@
 
 class I18nImpl : public I18n {
 private:
-	// TODO
+	// TODO: i18n.
 
 public:
 	I18nImpl() {
-		// TODO
+		// TODO: i18n.
 	}
 	virtual ~I18nImpl() override {
 		clear();
@@ -36,7 +36,7 @@ public:
 		*ptr = nullptr;
 
 		I18nImpl* result = static_cast<I18nImpl*>(I18n::create());
-		// TODO
+		// TODO: i18n.
 
 		*ptr = result;
 
@@ -59,12 +59,12 @@ public:
 		return nullptr;
 	}
 
-	// TODO
+	// TODO: i18n.
 
 	virtual bool toJson(rapidjson::Value &val, rapidjson::Document &doc) const override {
 		val.SetObject();
 
-		// TODO
+		// TODO: i18n.
 		(void)doc;
 
 		return true;
@@ -78,7 +78,7 @@ public:
 		if (!val.IsObject())
 			return false;
 
-		// TODO
+		// TODO: i18n.
 
 		return true;
 	}
@@ -90,7 +90,7 @@ public:
 
 private:
 	void clear(void) {
-		// TODO
+		// TODO: i18n.
 	}
 };
 

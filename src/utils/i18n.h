@@ -41,7 +41,7 @@ public:
 	 */
 	virtual void* pointer(void) = 0;
 
-	// TODO
+	// TODO: i18n.
 
 	/**
 	 * @param[out] val

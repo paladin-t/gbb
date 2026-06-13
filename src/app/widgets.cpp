@@ -835,6 +835,8 @@ AssetsSortingPopupBox::AssetsSortingPopupBox(
 	for (int i = 0; i < _project->fontPageCount(); ++i)
 		_orders[(unsigned)AssetsBundle::Categories::FONT].push_back(i);
 	for (int i = 0; i < _project->musicPageCount(); ++i)
+		_orders[(unsigned)AssetsBundle::Categories::I18N].push_back(i);
+	for (int i = 0; i < _project->i18nPageCount(); ++i)
 		_orders[(unsigned)AssetsBundle::Categories::MUSIC].push_back(i);
 	for (int i = 0; i < _project->sfxPageCount(); ++i)
 		_orders[(unsigned)AssetsBundle::Categories::SFX].push_back(i);
@@ -1231,6 +1233,75 @@ void AssetsSortingPopupBox::update(Workspace* ws) {
 							for (int i = 0; i < (int)order.size(); ++i) {
 								const int idx = order[i];
 								FontAssets::Entry* entry = _project->getFont(idx);
+								const std::string &name = entry->name;
+
+								PushID(name);
+								{
+									VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(0, 0));
+
+									const ImVec2 spos = GetCursorScreenPos();
+									const ImVec2 pos = GetCursorPos();
+									const ImVec2 size(width - style.ChildBorderSize - style.ScrollbarSize - style.WindowPadding.x, 19.0f);
+									Dummy(
+										size,
+										GetStyleColorVec4(IsMouseHoveringRect(spos, spos + size) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg)
+									);
+									SetCursorPos(pos);
+
+									if (i == 0) {
+										BeginDisabled();
+										{
+											ImageButton(_theme->iconUp()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE));
+										}
+										EndDisabled();
+									} else {
+										if (ImageButton(_theme->iconUp()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE))) {
+											std::swap(order[i], order[i - 1]);
+										}
+									}
+									SameLine();
+									if (i == (int)order.size() - 1) {
+										BeginDisabled();
+										{
+											ImageButton(_theme->iconDown()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE));
+										}
+										EndDisabled();
+									} else {
+										if (ImageButton(_theme->iconDown()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE))) {
+											std::swap(order[i], order[i + 1]);
+										}
+									}
+									SameLine();
+
+									Dummy(ImVec2(4, 0));
+									SameLine();
+
+									AlignTextToFramePadding();
+									TextUnformatted(name);
+								}
+								PopID();
+							}
+						}
+					}
+					EndChild();
+				}
+
+				EndTabItem();
+			}
+			if (BeginTabItem(_theme->menu_I18n(), nullptr, ImGuiTabItemFlags_NoTooltip | (selectTab == AssetsBundle::Categories::I18N ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None), _theme->style()->tabTextColor)) {
+				{
+					VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(1, 1));
+
+					BeginChild("@Msc", ImVec2(width - style.WindowPadding.x * 2, height), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
+					{
+						Order &order = _ordersShadow[(unsigned)AssetsBundle::Categories::I18N];
+						if (order.empty()) {
+							AlignTextToFramePadding();
+							TextUnformatted(_theme->generic_Empty());
+						} else {
+							for (int i = 0; i < (int)order.size(); ++i) {
+								const int idx = order[i];
+								I18nAssets::Entry* entry = _project->getI18n(idx);
 								const std::string &name = entry->name;
 
 								PushID(name);

@@ -13,6 +13,7 @@
 #include "actor.h"
 #include "bytes.h"
 #include "font.h"
+#include "i18n.h"
 #include "image.h"
 #include "music.h"
 #include "scene.h"
@@ -647,6 +648,40 @@ struct FontAssets {
 
 /*
 ** {===========================================================================
+** I18n assets
+*/
+
+struct I18nAssets {
+	struct Entry : public BaseAssets::Entry {
+		I18n::Ptr data = nullptr;
+		std::string name;
+
+		Entry();
+		Entry(const std::string &val);
+
+		size_t hash(void) const;
+		int compare(const Entry &other) const;
+
+		bool toString(std::string &val, WarningOrErrorHandler onWarningOrError /* nullable */) const;
+		bool fromString(const std::string &val, WarningOrErrorHandler onWarningOrError /* nullable */);
+		bool fromString(const char* val, size_t len, WarningOrErrorHandler onWarningOrError /* nullable */);
+	};
+	typedef std::vector<Entry> Array;
+
+	Array entries;
+
+	bool empty(void) const;
+	int count(void) const;
+	bool add(const Entry &entry);
+	bool remove(int index);
+	const Entry* get(int index) const;
+	Entry* get(int index);
+};
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Code assets
 */
 
@@ -1254,6 +1289,7 @@ struct AssetsBundle {
 		NONE    = (unsigned)(~0),
 		PALETTE = 0,
 		FONT,
+		I18N,
 		CODE,
 		TILES,                         // References to `PALETTE`.
 		MAP,                           // References to `TILES`.
@@ -1270,6 +1306,7 @@ struct AssetsBundle {
 
 	PaletteAssets palette;
 	FontAssets fonts;
+	I18nAssets i18ns;
 	CodeAssets code;
 	TilesAssets tiles;
 	MapAssets maps;

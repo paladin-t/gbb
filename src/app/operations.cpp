@@ -10,6 +10,7 @@
 #include "editor_actor.h"
 #include "editor_code.h"
 #include "editor_font.h"
+#include "editor_i18n.h"
 #include "editor_map.h"
 #include "editor_music.h"
 #include "editor_scene.h"
@@ -464,6 +465,33 @@ promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspac
 							prj->assets()->fonts.entries.push_back(fonts[idx]);
 						}
 						ws->clearFontPageNames();
+					} while (false);
+
+					do {
+						Changing changing;
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::I18N];
+						for (int i = 0; i < (int)order.size(); ++i) {
+							const int idx = order[i];
+							if (idx != i)
+								changing[idx] = i;
+						}
+
+						for (Changing::iterator it = changing.begin(); it != changing.end(); ++it) {
+							const int from = it->first;
+							const int to = it->second;
+							I18nAssets::Entry* entry = prj->getI18n(from);
+							Editable* editor = entry->editor;
+							if (editor)
+								editor->post(Editable::UPDATE_INDEX, (Variant::Int)to);
+						}
+
+						I18nAssets::Array i18ns = prj->assets()->i18ns.entries;
+						prj->assets()->i18ns.entries.clear();
+						for (int i = 0; i < (int)order.size(); ++i) {
+							const int idx = order[i];
+							prj->assets()->i18ns.entries.push_back(i18ns[idx]);
+						}
+						ws->clearI18nPageNames();
 					} while (false);
 
 					do {
@@ -1041,6 +1069,7 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			const PaletteAssets &paletteData = prj->touchPalette();
 
 			prj->activeFontIndex(0);
+			prj->activeI18nIndex(0);
 
 			prj->activeMajorCodeIndex(0);
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
@@ -1290,6 +1319,7 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 						ws->activeKernelIndex(0);
 						ws->popupBox(nullptr);
 						ws->category(Workspace::Categories::HOME);
+						ws->categoryOfFont(Workspace::Categories::FONT);
 						ws->categoryOfAudio(Workspace::Categories::MUSIC);
 						ws->categoryBeforeCompiling(Workspace::Categories::HOME);
 						ws->tabsWidth(0.0f);
@@ -3099,6 +3129,82 @@ promise::Promise Operations::fontRemovePage(Window* wnd, Renderer* rnd, Workspac
 								prj->hasDirtyAsset(true);
 
 								ws->pageRemoved(wnd, rnd, prj.get(), Workspace::Categories::FONT, page);
+
+								df.resolve(true);
+
+								return;
+							} else {
+								df.reject();
+
+								return;
+							}
+						} else {
+							df.resolve(false);
+						}
+					}
+				)
+				.fail(
+					[ws, df] (void) -> void {
+						WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+						df.reject();
+					}
+				);
+		}
+	);
+}
+
+promise::Promise Operations::i18nAddPage(Window* wnd, Renderer* rnd, Workspace* ws) {
+	return promise::newPromise(
+		[&] (promise::Defer df) -> void {
+			Project::Ptr &prj = ws->currentProject();
+			if (prj->i18nPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
+				df.reject();
+
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+
+				return;
+			}
+
+			std::string str;
+			I18nAssets::Entry default_;
+			default_.toString(str, nullptr);
+
+			const bool added = prj->addI18nPage(str);
+			prj->hasDirtyAsset(true);
+
+			if (added)
+				ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::I18N);
+			else
+				ws->bubble(ws->theme()->dialogPrompt_AssetPageNotAdded(), nullptr);
+
+			df.resolve(true);
+		}
+	);
+}
+
+promise::Promise Operations::i18nRemovePage(Window* wnd, Renderer* rnd, Workspace* ws) {
+	return promise::newPromise(
+		[&] (promise::Defer df) -> void {
+			Project::Ptr &prj = ws->currentProject();
+			const int page = prj->activeI18nIndex();
+
+			if (prj->i18nPageCount() == 0) {
+				df.reject();
+
+				return;
+			}
+
+			popupMessage(wnd, rnd, ws, ws->theme()->dialogAsk_RemoveTheCurrentAssetPage().c_str(), true, false)
+				.then(
+					[wnd, rnd, ws, df, prj, page] (bool ok) -> void {
+						WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+						if (ok) {
+							if (prj->removeI18nPage(page)) {
+								prj->hasDirtyAsset(true);
+
+								ws->pageRemoved(wnd, rnd, prj.get(), Workspace::Categories::I18N, page);
 
 								df.resolve(true);
 

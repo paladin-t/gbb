@@ -9,6 +9,7 @@
 #include "editor_actor.h"
 #include "editor_code.h"
 #include "editor_font.h"
+#include "editor_i18n.h"
 #include "editor_map.h"
 #include "editor_music.h"
 #include "editor_scene.h"
@@ -130,6 +131,7 @@ Project::Project(class Window* wnd, Renderer* rnd, class Workspace* ws) {
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 	activePaletteIndex(-1);
 	activeFontIndex(-1);
+	activeI18nIndex(-1);
 	fontPreviewHeight(0.0f);
 	activeTilesIndex(-1);
 	activeMapIndex(-1);
@@ -268,6 +270,7 @@ Project &Project::operator = (const Project &other) {
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 	activePaletteIndex(other.activePaletteIndex());
 	activeFontIndex(other.activeFontIndex());
+	activeI18nIndex(other.activeI18nIndex());
 	fontPreviewHeight(other.fontPreviewHeight());
 	activeTilesIndex(other.activeTilesIndex());
 	activeMapIndex(other.activeMapIndex());
@@ -956,6 +959,65 @@ std::string Project::getUsableFontName(int index) const {
 	}
 
 	return name;
+}
+
+int Project::i18nPageCount(void) const {
+	if (!assets())
+		return 0;
+
+	const I18nAssets &assets_ = assets()->i18ns;
+
+	return assets_.count();
+}
+
+bool Project::addI18nPage(const std::string &val) {
+	if (!assets())
+		return false;
+
+	I18nAssets &assets_ = assets()->i18ns;
+	const bool result = assets_.add(val);
+	for (int i = 0; i < assets_.count(); ++i) {
+		I18nAssets::Entry* entry = assets_.get(i);
+		if (entry->editor)
+			entry->editor->statusInvalidated();
+	}
+
+	return result;
+}
+
+bool Project::removeI18nPage(int index) {
+	I18nAssets &assets_ = assets()->i18ns;
+	if (index < 0 || index >= assets_.count())
+		return false;
+
+	I18nAssets::Entry* entry = assets_.get(index);
+	if (entry->editor) {
+		entry->editor->close(index);
+		EditorI18n::destroy((EditorI18n*)entry->editor);
+		entry->editor = nullptr;
+	}
+	if (!assets_.remove(index))
+		return false;
+
+	return true;
+}
+
+const I18nAssets::Entry* Project::getI18n(int index) const {
+	if (!assets())
+		return nullptr;
+
+	I18nAssets &assets_ = assets()->i18ns;
+
+	return assets_.get(index);
+}
+
+I18nAssets::Entry* Project::getI18n(int index) {
+	if (!assets())
+		return nullptr;
+
+	I18nAssets &assets_ = assets()->i18ns;
+
+	return assets_.get(index);
 }
 
 int Project::codePageCount(void) const {
@@ -2200,6 +2262,12 @@ bool Project::close(bool deep) {
 				entry->editor = nullptr;
 
 				break;
+			case AssetsBundle::Categories::I18N:
+				editor->close(index);
+				EditorI18n::destroy((EditorI18n*)editor);
+				entry->editor = nullptr;
+
+				break;
 			case AssetsBundle::Categories::CODE:
 				editor->close(index);
 				EditorCode::destroy((EditorCode*)editor);
@@ -2403,6 +2471,12 @@ void Project::foreach(AssetHandler handle) {
 	for (int i = 0; i < fonts.count(); ++i) {
 		FontAssets::Entry* entry = fonts.get(i);
 		handle(AssetsBundle::Categories::FONT, i, entry, entry->editor);
+	}
+
+	I18nAssets &i18ns = assets()->i18ns;
+	for (int i = 0; i < i18ns.count(); ++i) {
+		I18nAssets::Entry* entry = i18ns.get(i);
+		handle(AssetsBundle::Categories::I18N, i, entry, entry->editor);
 	}
 
 	CodeAssets &codes = assets()->code;
@@ -2669,6 +2743,8 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		activePaletteIndex(-1);
 
 		activeFontIndex(-1);
+
+		activeI18nIndex(-1);
 
 		fontPreviewHeight(0.0f);
 
@@ -3428,6 +3504,26 @@ bool Project::loadAssets(const char* fontConfigPath, const std::string &content,
 
 	if (fontPageCount() > 0)
 		activeFontIndex(Math::clamp(activeFontIndex(), 0, fontPageCount() - 1));
+
+	// Load i18n.
+	for (int i = 0; ; ++i) {
+		std::string section;
+		if (
+			!retrieve(
+				content,
+				Text::format(COMPILER_I18N_BEGIN, Text::toString(i), 0), COMPILER_I18N_END,
+				section
+			)
+		) {
+			break;
+		}
+		section = Text::trim(section);
+
+		addI18nPage(section);
+	}
+
+	if (i18nPageCount() > 0)
+		activeI18nIndex(Math::clamp(activeI18nIndex(), 0, i18nPageCount() - 1));
 
 	// Load code.
 	for (int i = 0; ; ++i) {

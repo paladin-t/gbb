@@ -159,10 +159,11 @@ public:
 		JSON      = 3,
 		IMAGE     = 4,
 		FONT      = 5,
-		VGM       = 6,
-		WAV       = 7,
-		FX_HAMMER = 8,
-		ANY       = 9
+		CSV       = 6,
+		VGM       = 7,
+		WAV       = 8,
+		FX_HAMMER = 9,
+		ANY       = 10
 	};
 
 private:

@@ -2407,6 +2407,7 @@ public:
 
 		// Output the duplicate assets.
 		checkDuplication <FontAssets>(hashedFonts,  AssetsBundle::Categories::FONT,  "Font",  assets->fonts );
+		// TODO: i18n.
 		checkDuplication <CodeAssets>(hashedCode,   AssetsBundle::Categories::CODE,  "Code",  assets->code  );
 		checkDuplication<TilesAssets>(hashedTiles,  AssetsBundle::Categories::TILES, "Tiles", assets->tiles );
 		checkDuplication  <MapAssets>(hashedMaps,   AssetsBundle::Categories::MAP,   "Map",   assets->maps  );
@@ -2424,6 +2425,7 @@ public:
 				// Do nothing.
 
 				break;
+			// TODO: i18n.
 			case AssetsBundle::Categories::CODE:
 				// Do nothing.
 
@@ -2801,6 +2803,7 @@ private:
 		auto canAllocate = [] (const Source &src) -> bool {
 			switch (src.category) {
 			case AssetsBundle::Categories::FONT:       // Fall through.
+			// TODO: i18n.
 			case AssetsBundle::Categories::TILES:      // Fall through.
 			case AssetsBundle::Categories::MAP:        // Fall through.
 			case AssetsBundle::Categories::MUSIC:      // Fall through.

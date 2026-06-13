@@ -48,7 +48,7 @@ public:
 		_project = project;
 		_index = index;
 
-		// TODO
+		// TODO: i18n.
 		(void)ws;
 
 		fprintf(stdout, "Font editor opened: #%d.\n", _index);
@@ -63,7 +63,7 @@ public:
 		_project = nullptr;
 		_index = -1;
 
-		// TODO
+		// TODO: i18n.
 	}
 
 	virtual int index(void) const override {
@@ -99,21 +99,21 @@ public:
 	}
 
 	virtual void copy(void) override {
-		// TODO
+		// TODO: i18n.
 	}
 	virtual void cut(void) override {
-		// TODO
+		// TODO: i18n.
 	}
 	virtual bool pastable(void) const override {
-		// TODO
+		// TODO: i18n.
 
 		return Platform::hasClipboardText();
 	}
 	virtual void paste(void) override {
-		// TODO
+		// TODO: i18n.
 	}
 	virtual void del(bool) override {
-		// TODO
+		// TODO: i18n.
 	}
 	virtual bool selectable(void) const override {
 		return true;
@@ -139,7 +139,7 @@ public:
 		if (!cmd)
 			return;
 
-		// TODO
+		// TODO: i18n.
 
 		_project->toPollEditor(true);
 	}
@@ -148,7 +148,7 @@ public:
 		if (!cmd)
 			return;
 
-		// TODO
+		// TODO: i18n.
 
 		_project->toPollEditor(true);
 	}
@@ -174,7 +174,7 @@ public:
 
 		shortcuts(wnd, rnd, ws);
 
-		// TODO
+		// TODO: i18n.
 		(void)io;
 		(void)style;
 		(void)title;
@@ -184,7 +184,7 @@ public:
 	}
 
 	virtual void statusInvalidated(void) override {
-		// TODO
+		// TODO: i18n.
 	}
 
 	virtual void added(BaseAssets::Entry* /* entry */, int /* index */) override {
@@ -218,25 +218,25 @@ private:
 		(void)rnd;
 		(void)ws;
 
-		// TODO
+		// TODO: i18n.
 	}
 
 	void context(Window*, Renderer*, Workspace* ws) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
-		// TODO
+		// TODO: i18n.
 		(void)style;
 		(void)ws;
 	}
 
 	void refreshStatus(Window*, Renderer*, Workspace* ws) {
-		// TODO
+		// TODO: i18n.
 		(void)ws;
 	}
 	void renderStatus(Window* wnd, Renderer* rnd, Workspace* ws, float width, float height, bool actived) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
-		// TODO
+		// TODO: i18n.
 		(void)wnd;
 		(void)rnd;
 		(void)ws;
@@ -254,7 +254,7 @@ private:
 		return result;
 	}
 	void refresh(Workspace* ws, const Command* cmd) {
-		// TODO
+		// TODO: i18n.
 		(void)ws;
 		(void)cmd;
 	}

@@ -72,6 +72,8 @@ public:
 	static promise::Promise fontAddPage(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise fontDuplicatePage(Window* wnd, Renderer* rnd, Workspace* ws, int index);
 	static promise::Promise fontRemovePage(Window* wnd, Renderer* rnd, Workspace* ws);
+	static promise::Promise i18nAddPage(Window* wnd, Renderer* rnd, Workspace* ws);
+	static promise::Promise i18nRemovePage(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise codeAddPage(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise codeRemovePage(Window* wnd, Renderer* rnd, Workspace* ws);
 	static promise::Promise tilesAddPage(Window* wnd, Renderer* rnd, Workspace* ws);

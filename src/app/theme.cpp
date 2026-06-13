@@ -381,6 +381,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Hex("HEX");
 	menu_Hflip("H-flip");
 	menu_Howto("Howto");
+	menu_I18n("I18n");
 	menu_Image("Image");
 	menu_ImageFile("Image File...");
 	menu_Import("Import...");
@@ -1245,7 +1246,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipAudio_InsertRowOfOrders("Insert row of orders");
 	tooltipAudio_MoveRowOfOrdersDown("Move row of orders down");
 	tooltipAudio_MoveRowOfOrdersUp("Move row of orders up");
-	tooltipAudio_Music("Music (" GBBASIC_MODIFIER_KEY_NAME "+7)");
+	tooltipAudio_Music("Music (" GBBASIC_MODIFIER_KEY_NAME "+8)");
 	tooltipAudio_MusicEffects().push_back("Fx: Arpeggio");
 	tooltipAudio_MusicEffects().push_back("Fx: Portamento up");
 	tooltipAudio_MusicEffects().push_back("Fx: Portamento down");
@@ -1289,7 +1290,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipAudio_PlayMusic("Play music");
 	tooltipAudio_PlaySfx("Play SFX");
 	tooltipAudio_ResetInstrument("Reset instrument");
-	tooltipAudio_Sfx("SFX (" GBBASIC_MODIFIER_KEY_NAME "+8)");
+	tooltipAudio_Sfx("SFX (" GBBASIC_MODIFIER_KEY_NAME "+9)");
 	tooltipAudio_SfxChannelDuty1("Duty 1");
 	tooltipAudio_SfxChannelDuty2("Duty 2");
 	tooltipAudio_SfxChannelNoise("Noise");
@@ -1593,6 +1594,7 @@ bool Theme::open(class Renderer* rnd) {
 	iconTiles(createTexture(rnd, RES_ICON_TILES, GBBASIC_COUNTOF(RES_ICON_TILES), nullptr));
 	iconMap(createTexture(rnd, RES_ICON_MAP, GBBASIC_COUNTOF(RES_ICON_MAP), nullptr));
 	iconFont(createTexture(rnd, RES_ICON_FONT, GBBASIC_COUNTOF(RES_ICON_FONT), nullptr));
+	iconFontMore(createTexture(rnd, RES_ICON_FONT_MORE, GBBASIC_COUNTOF(RES_ICON_FONT_MORE), nullptr));
 	iconI18n(createTexture(rnd, RES_ICON_I18N, GBBASIC_COUNTOF(RES_ICON_I18N), nullptr));
 	iconAudio(createTexture(rnd, RES_ICON_AUDIO, GBBASIC_COUNTOF(RES_ICON_AUDIO), nullptr));
 	iconAudioMore(createTexture(rnd, RES_ICON_AUDIO_MORE, GBBASIC_COUNTOF(RES_ICON_AUDIO_MORE), nullptr));
@@ -1762,6 +1764,7 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconTiles(), nullptr);
 	destroyTexture(rnd, iconMap(), nullptr);
 	destroyTexture(rnd, iconFont(), nullptr);
+	destroyTexture(rnd, iconFontMore(), nullptr);
 	destroyTexture(rnd, iconI18n(), nullptr);
 	destroyTexture(rnd, iconAudio(), nullptr);
 	destroyTexture(rnd, iconAudioMore(), nullptr);

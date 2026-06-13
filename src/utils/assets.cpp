@@ -2715,6 +2715,94 @@ int FontAssets::getBits(const Colour &col, bool isTwoBitsPerPixel, const int thr
 
 /*
 ** {===========================================================================
+** I18n assets
+*/
+
+I18nAssets::Entry::Entry() {
+}
+
+I18nAssets::Entry::Entry(const std::string &val) {
+	// TODO: i18n.
+	(void)val;
+}
+
+bool I18nAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler) {
+	// TODO: i18n.
+	(void)val;
+
+	return true;
+}
+
+size_t I18nAssets::Entry::hash(void) const {
+	return Math::hash(0, data);
+}
+
+int I18nAssets::Entry::compare(const Entry &other) const {
+	if (data < other.data)
+		return -1;
+	else if (data > other.data)
+		return 1;
+
+	return 0;
+}
+
+bool I18nAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarningOrError) const {
+	// TODO: i18n.
+	(void)val;
+	(void)onWarningOrError;
+
+	return true;
+}
+
+bool I18nAssets::Entry::fromString(const char* val, size_t len, WarningOrErrorHandler) {
+	// TODO: i18n.
+	(void)val;
+	(void)len;
+
+	return true;
+}
+
+bool I18nAssets::empty(void) const {
+	return entries.empty();
+}
+
+int I18nAssets::count(void) const {
+	return (int)entries.size();
+}
+
+bool I18nAssets::add(const Entry &entry) {
+	entries.push_back(entry);
+
+	return true;
+}
+
+bool I18nAssets::remove(int index) {
+	if (index < 0 || index >= (int)entries.size())
+		return false;
+
+	entries.erase(entries.begin() + index);
+
+	return true;
+}
+
+const I18nAssets::Entry* I18nAssets::get(int index) const {
+	if (index < 0 || index >= (int)entries.size())
+		return nullptr;
+
+	return &entries[index];
+}
+
+I18nAssets::Entry* I18nAssets::get(int index) {
+	if (index < 0 || index >= (int)entries.size())
+		return nullptr;
+
+	return &entries[index];
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Code assets
 */
 
@@ -8182,6 +8270,8 @@ std::string AssetsBundle::nameOf(Categories category) {
 		return "palette";
 	case Categories::FONT:
 		return "font";
+	case Categories::I18N:
+		return "i18n";
 	case Categories::CODE:
 		return "code";
 	case Categories::TILES:
