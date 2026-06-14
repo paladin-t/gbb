@@ -16,6 +16,20 @@
 
 /*
 ** {===========================================================================
+** Macros and constants
+*/
+
+#ifndef I18N_KEY_COLUMN_NAME
+#	define I18N_KEY_COLUMN_NAME "key"
+#endif /* I18N_KEY_COLUMN_NAME */
+#ifndef I18N_ENGLISH_COLUMN_NAME
+#	define I18N_ENGLISH_COLUMN_NAME "english"
+#endif /* I18N_ENGLISH_COLUMN_NAME */
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** I18n
 */
 
@@ -40,18 +54,24 @@ public:
 	virtual int compare(const I18n* other) const = 0;
 
 	/**
-	 * @return `nullptr`.
+	 * @return Items.
 	 */
 	virtual void* pointer(void) = 0;
 
 	virtual int languageCount(void) const = 0;
-	virtual int itemCount(void) const = 0;
-
-	virtual bool addLanguage(int index) = 0;
+	virtual bool addLanguage(int index, const std::string &lang) = 0;
 	virtual bool deleteLanguage(int index) = 0;
+	virtual int getLanguageIndex(const std::string &lang) const = 0;
+
+	virtual int itemCount(void) const = 0;
 	virtual bool addItem(int index) = 0;
 	virtual bool deleteItem(int index) = 0;
 
+	/**
+	 * @param[out] lang_
+	 * @param[out] item
+	 */
+	virtual const char* get(const std::string &lang, const std::string &key, int* lang_ /* nullable */, int* item /* nullable */) const = 0;
 	virtual const char* get(int lang, int item) const = 0;
 	virtual bool set(int lang, int item, const std::string &val) = 0;
 
