@@ -662,6 +662,9 @@ struct I18nAssets {
 		size_t hash(void) const;
 		int compare(const Entry &other) const;
 
+		bool serializeJson(std::string &val, bool pretty) const;
+		bool parseJson(I18n::Ptr &i18n, const std::string &val, ParsingStatuses &status) const;
+
 		bool toString(std::string &val, WarningOrErrorHandler onWarningOrError /* nullable */) const;
 		bool fromString(const std::string &val, WarningOrErrorHandler onWarningOrError /* nullable */);
 		bool fromString(const char* val, size_t len, WarningOrErrorHandler onWarningOrError /* nullable */);

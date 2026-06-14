@@ -55,11 +55,104 @@ public:
 		return true;
 	}
 
+	virtual size_t hash(void) const override {
+		size_t result = 0;
+
+		// TODO: i18n.
+
+		return result;
+	}
+	virtual int compare(const I18n* other) const override {
+		if (this == other)
+			return 0;
+
+		if (!other)
+			return 1;
+
+		// TODO: i18n.
+
+		return 0;
+	}
+
 	virtual void* pointer(void) override {
 		return nullptr;
 	}
 
-	// TODO: i18n.
+	virtual int languageCount(void) const override {
+		// TODO: i18n.
+
+		return 0;
+	}
+	virtual int itemCount(void) const override {
+		// TODO: i18n.
+
+		return 0;
+	}
+
+	virtual bool addLanguage(int index) override {
+		// TODO: i18n.
+		(void)index;
+
+		return false;
+	}
+	virtual bool deleteLanguage(int index) override {
+		// TODO: i18n.
+		(void)index;
+
+		return false;
+	}
+	virtual bool addItem(int index) override {
+		// TODO: i18n.
+		(void)index;
+
+		return false;
+	}
+	virtual bool deleteItem(int index) override {
+		// TODO: i18n.
+		(void)index;
+
+		return false;
+	}
+
+	virtual const char* get(int lang, int item) const override {
+		// TODO: i18n.
+		(void)lang;
+		(void)item;
+
+		return nullptr;
+	}
+	virtual bool set(int lang, int item, const std::string &val) override {
+		// TODO: i18n.
+		(void)lang;
+		(void)item;
+		(void)val;
+
+		return false;
+	}
+
+	virtual bool fromBlank(void) override {
+		// TODO: i18n.
+
+		return false;
+	}
+
+	virtual bool toCsv(std::string &val) const override {
+		val.clear();
+
+		// TODO: i18n.
+
+		return true;
+	}
+	virtual bool fromCsv(const std::string &val) override {
+		clear();
+
+		if (val.empty())
+			return false;
+
+		// TODO: i18n.
+
+		return true;
+	}
 
 	virtual bool toJson(rapidjson::Value &val, rapidjson::Document &doc) const override {
 		val.SetObject();

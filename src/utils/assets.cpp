@@ -2719,47 +2719,192 @@ int FontAssets::getBits(const Colour &col, bool isTwoBitsPerPixel, const int thr
 */
 
 I18nAssets::Entry::Entry() {
+	data = I18n::Ptr(I18n::create());
+
+	data->fromBlank();
 }
 
 I18nAssets::Entry::Entry(const std::string &val) {
-	// TODO: i18n.
-	(void)val;
-}
+	data = I18n::Ptr(I18n::create());
 
-bool I18nAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler) {
-	// TODO: i18n.
-	(void)val;
-
-	return true;
+	if (!fromString(val, nullptr)) {
+		data->fromBlank();
+	}
 }
 
 size_t I18nAssets::Entry::hash(void) const {
-	return Math::hash(0, data);
+	size_t result = 0;
+
+	if (data)
+		result = Math::hash(result, data->hash());
+
+	return result;
 }
 
 int I18nAssets::Entry::compare(const Entry &other) const {
-	if (data < other.data)
-		return -1;
-	else if (data > other.data)
-		return 1;
+	int ret = 0;
+
+	if (data && other.data)
+		ret = data->compare(other.data.get());
+	if (ret != 0)
+		return ret;
 
 	return 0;
 }
 
-bool I18nAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarningOrError) const {
-	// TODO: i18n.
-	(void)val;
-	(void)onWarningOrError;
+bool I18nAssets::Entry::serializeJson(std::string &val, bool pretty) const {
+	// Prepare.
+	val.clear();
 
+	// Serialize the dictionary.
+	rapidjson::Document doc;
+
+	Jpath::set(doc, doc, Jpath::ANY(), "dictionary");
+	rapidjson::Value* dictionary = nullptr;
+	Jpath::get(doc, dictionary, "dictionary");
+
+	rapidjson::Document doc_;
+	if (!data->toJson(doc_))
+		return false;
+	dictionary->Set(doc_.GetObject());
+
+	// Convert to string.
+	std::string str;
+	if (!Json::toString(doc, str, pretty))
+		return false;
+
+	val = str;
+
+	// Finish.
 	return true;
 }
 
-bool I18nAssets::Entry::fromString(const char* val, size_t len, WarningOrErrorHandler) {
-	// TODO: i18n.
-	(void)val;
-	(void)len;
+bool I18nAssets::Entry::parseJson(I18n::Ptr &i18n, const std::string &val, ParsingStatuses &status) const {
+	// Prepare.
+	i18n = nullptr;
+	status = ParsingStatuses::SUCCESS;
 
+	// Convert from string.
+	rapidjson::Document doc;
+	if (!Json::fromString(doc, val.c_str()))
+		return false;
+
+	if (!doc.IsObject())
+		return false;
+
+	// Parse the dictionary.
+	const rapidjson::Value* dictionary = nullptr;
+	if (!Jpath::get(doc, dictionary, "dictionary"))
+		return false;
+	if (!dictionary || !dictionary->IsObject())
+		return false;
+
+	// Fill in an i18n.
+	I18n* ptr = nullptr;
+	if (!data->clone(&ptr))
+		return false;
+	i18n = I18n::Ptr(ptr);
+
+	if (!i18n->fromJson(*dictionary))
+		return false;
+
+	// Finish.
 	return true;
+}
+
+bool I18nAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarningOrError) const {
+	// Prepare.
+	val.clear();
+
+	// Serialize the ref and dictionary.
+	rapidjson::Document doc;
+
+	Jpath::set(doc, doc, name, "name");
+
+	Jpath::set(doc, doc, Jpath::ANY(), "dictionary");
+	rapidjson::Value* dictionary = nullptr;
+	Jpath::get(doc, dictionary, "dictionary");
+
+	rapidjson::Document doc_;
+	if (!data->toJson(doc_)) {
+		assetsRaiseWarningOrError("Cannot serialize i18n to JSON.", false, onWarningOrError);
+
+		return false;
+	}
+	dictionary->Set(doc_.GetObject());
+
+	// Convert to string.
+	Json::Ptr json(Json::create());
+	if (!json->fromJson(doc)) {
+		assetsRaiseWarningOrError("Cannot convert i18n to JSON.", false, onWarningOrError);
+
+		return false;
+	}
+	std::string str;
+	if (!json->toString(str, ASSETS_PRETTY_JSON_ENABLED)) {
+		assetsRaiseWarningOrError("Cannot serialize JSON.", false, onWarningOrError);
+
+		return false;
+	}
+
+	val = str;
+
+	// Finish.
+	return true;
+}
+
+bool I18nAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler onWarningOrError) {
+	// Convert from string.
+	Json::Ptr json(Json::create());
+	if (!json->fromString(val)) {
+		assetsRaiseWarningOrError("Cannot parse JSON.", false, onWarningOrError);
+
+		return false;
+	}
+	rapidjson::Document doc;
+	if (!json->toJson(doc)) {
+		assetsRaiseWarningOrError("Cannot convert i18n from JSON.", false, onWarningOrError);
+
+		return false;
+	}
+
+	if (!doc.IsObject()) {
+		assetsRaiseWarningOrError("Invalid JSON object.", false, onWarningOrError);
+
+		return false;
+	}
+
+	// Parse the ref and dictionary.
+	if (!Jpath::get(doc, name, "name"))
+		name.clear();
+
+	const rapidjson::Value* dictionary = nullptr;
+	if (!Jpath::get(doc, dictionary, "dictionary")) {
+		assetsRaiseWarningOrError("Cannot find \"dictionary\" entry in JSON.", false, onWarningOrError);
+
+		return false;
+	}
+	if (!dictionary || !dictionary->IsObject()) {
+		assetsRaiseWarningOrError("Invalid \"dictionary\" entry.", false, onWarningOrError);
+
+		return false;
+	}
+
+	// Fill in with the dictionary.
+	if (!data->fromJson(*dictionary)) {
+		assetsRaiseWarningOrError("Cannot convert i18n from JSON.", false, onWarningOrError);
+
+		return false;
+	}
+
+	// Finish.
+	return true;
+}
+
+bool I18nAssets::Entry::fromString(const char* val, size_t len, WarningOrErrorHandler onWarningOrError) {
+	const std::string val_(val, len);
+
+	return fromString(val_, onWarningOrError);
 }
 
 bool I18nAssets::empty(void) const {
@@ -2811,12 +2956,6 @@ CodeAssets::Entry::Entry(const std::string &val) :
 {
 }
 
-bool CodeAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler) {
-	data = val;
-
-	return true;
-}
-
 size_t CodeAssets::Entry::hash(void) const {
 	return Math::hash(0, data);
 }
@@ -2839,6 +2978,12 @@ bool CodeAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarni
 
 		return false;
 	}
+
+	return true;
+}
+
+bool CodeAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler) {
+	data = val;
 
 	return true;
 }
@@ -3510,11 +3655,11 @@ bool TilesAssets::Entry::fromString(const std::string &val, WarningOrErrorHandle
 	if (!Jpath::get(doc, ref, "ref"))
 		ref = 0;
 
-	if (!Jpath::get(doc, magnification, "magnification"))
-		magnification = -1;
-
 	if (!Jpath::get(doc, name, "name"))
 		name.clear();
+
+	if (!Jpath::get(doc, magnification, "magnification"))
+		magnification = -1;
 
 	const rapidjson::Value* pixels = nullptr;
 	if (!Jpath::get(doc, pixels, "pixels")) {

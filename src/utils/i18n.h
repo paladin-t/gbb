@@ -36,12 +36,32 @@ public:
 	using Cloneable<I18n>::clone;
 	using Object::clone;
 
+	virtual size_t hash(void) const = 0;
+	virtual int compare(const I18n* other) const = 0;
+
 	/**
 	 * @return `nullptr`.
 	 */
 	virtual void* pointer(void) = 0;
 
-	// TODO: i18n.
+	virtual int languageCount(void) const = 0;
+	virtual int itemCount(void) const = 0;
+
+	virtual bool addLanguage(int index) = 0;
+	virtual bool deleteLanguage(int index) = 0;
+	virtual bool addItem(int index) = 0;
+	virtual bool deleteItem(int index) = 0;
+
+	virtual const char* get(int lang, int item) const = 0;
+	virtual bool set(int lang, int item, const std::string &val) = 0;
+
+	virtual bool fromBlank(void) = 0;
+
+	/**
+	 * @param[out] val
+	 */
+	virtual bool toCsv(std::string &val) const = 0;
+	virtual bool fromCsv(const std::string &val) = 0;
 
 	/**
 	 * @param[out] val
