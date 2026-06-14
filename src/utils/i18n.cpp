@@ -212,6 +212,35 @@ public:
 		return true;
 	}
 
+	virtual bool swapLanguages(int l, int r) override {
+		if (l < 0 || l >= (int)_languages.size())
+			return false;
+		if (r < 0 || r >= (int)_languages.size())
+			return false;
+
+		if (l == r)
+			return true;
+
+		std::swap(_languages[l], _languages[r]);
+		for (int i = 0; i < (int)_items.size(); ++i)
+			std::swap(_items[i][l], _items[i][r]);
+
+		return true;
+	}
+	virtual bool swapItems(int l, int r) override {
+		if (l < 0 || l >= (int)_items.size())
+			return false;
+		if (r < 0 || r >= (int)_items.size())
+			return false;
+
+		if (l == r)
+			return true;
+
+		std::swap(_items[l], _items[r]);
+
+		return true;
+	}
+
 	virtual const char* get(const std::string &lang, const std::string &key, int* lang_, int* item) const override {
 		if (lang_)
 			*lang_ = -1;

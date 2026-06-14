@@ -67,6 +67,9 @@ public:
 	virtual bool addItem(int index) = 0;
 	virtual bool deleteItem(int index) = 0;
 
+	virtual bool swapLanguages(int l, int r) = 0;
+	virtual bool swapItems(int l, int r) = 0;
+
 	/**
 	 * @param[out] lang_
 	 * @param[out] item
