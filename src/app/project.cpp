@@ -971,12 +971,18 @@ int Project::i18nPageCount(void) const {
 	return assets_.count();
 }
 
-bool Project::addI18nPage(const std::string &val) {
+bool Project::addI18nPage(const std::string &val, bool isNew) {
 	if (!assets())
 		return false;
 
 	I18nAssets &assets_ = assets()->i18ns;
 	const bool result = assets_.add(val);
+	if (result && isNew) {
+		const int index = assets_.count() - 1;
+		I18nAssets::Entry* entry = assets_.get(index);
+		if (entry->name.empty())
+			entry->name = getUsableI18nName(index); // Unique name.
+	}
 	for (int i = 0; i < assets_.count(); ++i) {
 		I18nAssets::Entry* entry = assets_.get(i);
 		if (entry->editor)
@@ -3565,7 +3571,7 @@ bool Project::loadAssets(const char* fontConfigPath, const std::string &content,
 		}
 		section = Text::trim(section);
 
-		addI18nPage(section);
+		addI18nPage(section, false);
 	}
 
 	if (i18nPageCount() > 0)

@@ -662,6 +662,9 @@ struct I18nAssets {
 		size_t hash(void) const;
 		int compare(const Entry &other) const;
 
+		bool serializeCsv(std::string &val) const;
+		bool parseCsv(I18n::Ptr &i18n, const std::string &val, ParsingStatuses &status) const;
+
 		bool serializeJson(std::string &val, bool pretty) const;
 		bool parseJson(I18n::Ptr &i18n, const std::string &val, ParsingStatuses &status) const;
 

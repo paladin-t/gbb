@@ -95,10 +95,16 @@ private:
 		}
 	} _ref;
 	struct Tools {
+		std::string namableText;
+
 		bool focused = false;
+		bool inputFieldFocused = false;
 
 		void clear(void) {
+			namableText.clear();
+
 			focused = false;
+			inputFieldFocused = false;
 		}
 	} _tools;
 
@@ -110,6 +116,7 @@ public:
 			->reg<Commands::I18n::AddLanguage>()
 			->reg<Commands::I18n::DeleteLanguage>()
 			->reg<Commands::I18n::ChangeContent>()
+			->reg<Commands::I18n::SetName>()
 			->reg<Commands::I18n::Import>();
 	}
 	virtual ~EditorI18nImpl() override {
@@ -133,8 +140,9 @@ public:
 
 		_refresh = std::bind(&EditorI18nImpl::refresh, this, ws, std::placeholders::_1);
 
+		_tools.namableText = entry()->name;
+
 		// TODO: i18n.
-		(void)ws;
 
 		fprintf(stdout, "Font editor opened: #%d.\n", _index);
 	}
@@ -297,7 +305,35 @@ public:
 		ImGui::SameLine();
 		ImGui::BeginChild("@Tls", ImVec2(splitter.second, height - statusBarHeight), true, _ref.windowFlags());
 		{
-			// TODO: i18n.
+			bool inputFieldFocused = false;
+			bool inputFieldFocused_ = false;
+
+			const float spwidth = _ref.windowWidth(splitter.second);
+
+			if (
+				Editing::Tools::namable(
+					rnd, ws,
+					entry()->name, _tools.namableText,
+					spwidth,
+					nullptr, &inputFieldFocused_,
+					ws->theme()->dialogPrompt_Name().c_str()
+				)
+			) {
+				if (_project->canRenameTiles(_index, _tools.namableText, nullptr)) {
+					Command* cmd = enqueue<Commands::I18n::SetName>()
+						->with(_tools.namableText)
+						->exec(object());
+
+					_refresh(cmd);
+				} else {
+					_tools.namableText = entry()->name;
+
+					warn(ws, ws->theme()->warning_TilesNameIsAlreadyInUse(), true);
+				}
+			}
+			inputFieldFocused |= inputFieldFocused_;
+
+			_tools.inputFieldFocused = inputFieldFocused;
 
 			_tools.focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows); // Ignore shortcuts when the window is not focused.
 			statusBarActived |= ImGui::IsWindowFocused();
@@ -341,12 +377,16 @@ public:
 	}
 
 private:
-	void shortcuts(Window* wnd, Renderer* rnd, Workspace* ws) {
-		(void)wnd;
-		(void)rnd;
-		(void)ws;
+	bool shortcuts(Window* wnd, Renderer* rnd, Workspace* ws) {
+		if (_tools.inputFieldFocused || !ws->canUseShortcuts()) {
+			return true;
+		}
 
 		// TODO: i18n.
+		(void)wnd;
+		(void)rnd;
+
+		return true;
 	}
 
 	void context(Window*, Renderer*, Workspace* ws) {
@@ -418,9 +458,8 @@ private:
 			ImGui::SetCursorPosX(wndWidth - _statusWidth);
 			if (wndWidth >= 430) {
 				if (_status.info.empty()) {
-					const int ln = 0;
-					const int col = 0;
-					// TODO: i18n.
+					const int ln = object()->itemCount();
+					const int col = object()->languageCount();
 					_status.info = Text::format(
 						ws->theme()->tooltipI18n_Info(),
 						{
@@ -520,12 +559,19 @@ private:
 
 					const std::string osstr = Platform::getClipboardText();
 					const std::string txt = Unicode::fromOs(osstr);
-					Image::Ptr newObj = nullptr;
+					I18n::Ptr newObj = nullptr;
 					BaseAssets::Entry::ParsingStatuses status = BaseAssets::Entry::ParsingStatuses::SUCCESS;
-					// TODO: i18n.
-					(void)status;
+					if (!entry()->parseJson(newObj, txt, status)) {
+						ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
 
-					//_refresh(cmd);
+						break;
+					}
+
+					Command* cmd = enqueue<Commands::I18n::Import>()
+						->with(newObj)
+						->exec(object());
+
+					_refresh(cmd);
 
 					ws->bubble(ws->theme()->dialogPrompt_ImportedAsset(), nullptr);
 				} while (false);
@@ -566,12 +612,19 @@ private:
 					}
 					file->close(); FileMonitor::unuse(path);
 
-					Image::Ptr newObj = nullptr;
+					I18n::Ptr newObj = nullptr;
 					BaseAssets::Entry::ParsingStatuses status = BaseAssets::Entry::ParsingStatuses::SUCCESS;
-					// TODO: i18n.
-					(void)status;
+					if (!entry()->parseJson(newObj, txt, status)) {
+						ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
 
-					//_refresh(cmd);
+						break;
+					}
+
+					Command* cmd = enqueue<Commands::I18n::Import>()
+						->with(newObj)
+						->exec(object());
+
+					_refresh(cmd);
 
 					ws->bubble(ws->theme()->dialogPrompt_ImportedAsset(), nullptr);
 				} while (false);
@@ -586,12 +639,19 @@ private:
 
 					const std::string osstr = Platform::getClipboardText();
 					const std::string txt = Unicode::fromOs(osstr);
-					Image::Ptr newObj = nullptr;
+					I18n::Ptr newObj = nullptr;
 					BaseAssets::Entry::ParsingStatuses status = BaseAssets::Entry::ParsingStatuses::SUCCESS;
-					// TODO: i18n.
-					(void)status;
+					if (!entry()->parseCsv(newObj, txt, status)) {
+						ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
 
-					//_refresh(cmd);
+						break;
+					}
+
+					Command* cmd = enqueue<Commands::I18n::Import>()
+						->with(newObj)
+						->exec(object());
+
+					_refresh(cmd);
 
 					ws->bubble(ws->theme()->dialogPrompt_ImportedAsset(), nullptr);
 				} while (false);
@@ -632,12 +692,19 @@ private:
 					}
 					file->close(); FileMonitor::unuse(path);
 
-					Image::Ptr newObj = nullptr;
+					I18n::Ptr newObj = nullptr;
 					BaseAssets::Entry::ParsingStatuses status = BaseAssets::Entry::ParsingStatuses::SUCCESS;
-					// TODO: i18n.
-					(void)status;
+					if (!entry()->parseCsv(newObj, txt, status)) {
+						ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
 
-					//_refresh(cmd);
+						break;
+					}
+
+					Command* cmd = enqueue<Commands::I18n::Import>()
+						->with(newObj)
+						->exec(object());
+
+					_refresh(cmd);
 
 					ws->bubble(ws->theme()->dialogPrompt_ImportedAsset(), nullptr);
 				} while (false);
@@ -651,7 +718,8 @@ private:
 			if (ImGui::MenuItem(ws->theme()->menu_Json())) {
 				do {
 					std::string txt;
-					// TODO: i18n.
+					if (!entry()->serializeJson(txt, true))
+						break;
 
 					Platform::setClipboardText(txt.c_str());
 
@@ -681,7 +749,8 @@ private:
 						path += ".json";
 
 					std::string txt;
-					// TODO: i18n.
+					if (!entry()->serializeJson(txt, true))
+						break;
 
 					File::Ptr file(File::create());
 					if (!file->open(path.c_str(), Stream::WRITE))
@@ -702,7 +771,8 @@ private:
 			if (ImGui::MenuItem(ws->theme()->menu_Csv())) {
 				do {
 					std::string txt;
-					// TODO: i18n.
+					if (!entry()->serializeCsv(txt))
+						break;
 
 					Platform::setClipboardText(txt.c_str());
 
@@ -732,7 +802,8 @@ private:
 						path += ".csv";
 
 					std::string txt;
-					// TODO: i18n.
+					if (!entry()->serializeCsv(txt))
+						break;
 
 					File::Ptr file(File::create());
 					if (!file->open(path.c_str(), Stream::WRITE))
@@ -781,9 +852,15 @@ private:
 		return result;
 	}
 	void refresh(Workspace* ws, const Command* cmd) {
+		const bool refillName =
+			Command::is<Commands::I18n::SetName>(cmd);
+
+		if (refillName) {
+			_tools.namableText = entry()->name;
+			ws->clearTilesPageNames();
+		}
+
 		// TODO: i18n.
-		(void)ws;
-		(void)cmd;
 	}
 
 	I18nAssets::Entry* entry(void) const {

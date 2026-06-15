@@ -19,6 +19,7 @@ namespace Commands {
 namespace I18n {
 
 AddItem::AddItem() {
+	index(0);
 }
 
 AddItem::~AddItem() {
@@ -35,7 +36,9 @@ const char* AddItem::toString(void) const {
 Command* AddItem::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	Layered::Layered::redo(obj, argc, argv);
 
-	// TODO: i18n.
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	ptr->addItem(index());
 
 	return this;
 }
@@ -43,7 +46,15 @@ Command* AddItem::redo(Object::Ptr obj, int argc, const Variant* argv) {
 Command* AddItem::undo(Object::Ptr obj, int argc, const Variant* argv) {
 	Layered::Layered::undo(obj, argc, argv);
 
-	// TODO: i18n.
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	ptr->deleteItem(index());
+
+	return this;
+}
+
+AddItem* AddItem::with(int index_) {
+	index(index_);
 
 	return this;
 }
@@ -64,6 +75,9 @@ void AddItem::destroy(Command* ptr) {
 }
 
 DeleteItem::DeleteItem() {
+	index(0);
+
+	filled(false);
 }
 
 DeleteItem::~DeleteItem() {
@@ -80,7 +94,17 @@ const char* DeleteItem::toString(void) const {
 Command* DeleteItem::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	Layered::Layered::redo(obj, argc, argv);
 
-	// TODO: i18n.
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	if (filled()) {
+		for (int l = 0; l < ptr->languageCount(); ++l) {
+			const char* val = ptr->get(l, index());
+			old().push_back(val ? val : "");
+		}
+
+		filled(true);
+	}
+	ptr->deleteItem(index());
 
 	return this;
 }
@@ -88,7 +112,18 @@ Command* DeleteItem::redo(Object::Ptr obj, int argc, const Variant* argv) {
 Command* DeleteItem::undo(Object::Ptr obj, int argc, const Variant* argv) {
 	Layered::Layered::undo(obj, argc, argv);
 
-	// TODO: i18n.
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	ptr->addItem(index());
+	for (int l = 0; l < (int)old().size(); ++l) {
+		ptr->set(l, index(), old()[l]);
+	}
+
+	return this;
+}
+
+DeleteItem* DeleteItem::with(int index_) {
+	index(index_);
 
 	return this;
 }
@@ -109,6 +144,7 @@ void DeleteItem::destroy(Command* ptr) {
 }
 
 AddLanguage::AddLanguage() {
+	index(0);
 }
 
 AddLanguage::~AddLanguage() {
@@ -125,7 +161,9 @@ const char* AddLanguage::toString(void) const {
 Command* AddLanguage::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	Layered::Layered::redo(obj, argc, argv);
 
-	// TODO: i18n.
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	ptr->addLanguage(index(), language());
 
 	return this;
 }
@@ -133,7 +171,16 @@ Command* AddLanguage::redo(Object::Ptr obj, int argc, const Variant* argv) {
 Command* AddLanguage::undo(Object::Ptr obj, int argc, const Variant* argv) {
 	Layered::Layered::undo(obj, argc, argv);
 
-	// TODO: i18n.
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	ptr->deleteLanguage(index());
+
+	return this;
+}
+
+AddLanguage* AddLanguage::with(int index_, const std::string &lang) {
+	index(index_);
+	language(lang);
 
 	return this;
 }
@@ -154,6 +201,9 @@ void AddLanguage::destroy(Command* ptr) {
 }
 
 DeleteLanguage::DeleteLanguage() {
+	index(0);
+
+	filled(false);
 }
 
 DeleteLanguage::~DeleteLanguage() {
@@ -170,7 +220,23 @@ const char* DeleteLanguage::toString(void) const {
 Command* DeleteLanguage::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	Layered::Layered::redo(obj, argc, argv);
 
-	// TODO: i18n.
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	if (!filled()) {
+		std::string lang;
+		if (ptr->getLanguage(index(), lang)) {
+			oldLanguage(lang);
+		}
+
+		oldColumn().clear();
+		for (int i = 0; i < ptr->itemCount(); ++i) {
+			const char* val = ptr->get(index(), i);
+			oldColumn().push_back(val ? val : "");
+		}
+
+		filled(true);
+	}
+	ptr->deleteLanguage(index());
 
 	return this;
 }
@@ -178,7 +244,17 @@ Command* DeleteLanguage::redo(Object::Ptr obj, int argc, const Variant* argv) {
 Command* DeleteLanguage::undo(Object::Ptr obj, int argc, const Variant* argv) {
 	Layered::Layered::undo(obj, argc, argv);
 
-	// TODO: i18n.
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	ptr->addLanguage(index(), oldLanguage());
+	for (int i = 0; i < (int)oldColumn().size(); ++i)
+		ptr->set(index(), i, oldColumn()[i]);
+
+	return this;
+}
+
+DeleteLanguage* DeleteLanguage::with(int index_) {
+	index(index_);
 
 	return this;
 }
@@ -198,7 +274,76 @@ void DeleteLanguage::destroy(Command* ptr) {
 	delete impl;
 }
 
+RenameLanguage::RenameLanguage() {
+	index(0);
+
+	filled(false);
+}
+
+RenameLanguage::~RenameLanguage() {
+}
+
+unsigned RenameLanguage::type(void) const {
+	return TYPE();
+}
+
+const char* RenameLanguage::toString(void) const {
+	return "Rename language";
+}
+
+Command* RenameLanguage::redo(Object::Ptr obj, int argc, const Variant* argv) {
+	Layered::Layered::redo(obj, argc, argv);
+
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	if (!filled()) {
+		std::string lang;
+		if (ptr->getLanguage(index(), lang))
+			old(lang);
+		filled(true);
+	}
+	ptr->setLanguage(index(), language());
+
+	return this;
+}
+
+Command* RenameLanguage::undo(Object::Ptr obj, int argc, const Variant* argv) {
+	Layered::Layered::undo(obj, argc, argv);
+
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	ptr->setLanguage(index(), old());
+
+	return this;
+}
+
+RenameLanguage* RenameLanguage::with(int index_, const std::string &lang) {
+	index(index_);
+	language(lang);
+
+	return this;
+}
+
+Command* RenameLanguage::exec(Object::Ptr obj, int argc, const Variant* argv) {
+	return redo(obj, argc, argv);
+}
+
+Command* RenameLanguage::create(void) {
+	RenameLanguage* result = new RenameLanguage();
+
+	return result;
+}
+
+void RenameLanguage::destroy(Command* ptr) {
+	RenameLanguage* impl = static_cast<RenameLanguage*>(ptr);
+	delete impl;
+}
+
 ChangeContent::ChangeContent() {
+	index(0);
+	language(0);
+
+	filled(false);
 }
 
 ChangeContent::~ChangeContent() {
@@ -209,13 +354,20 @@ unsigned ChangeContent::type(void) const {
 }
 
 const char* ChangeContent::toString(void) const {
-	return "Delete language";
+	return "Change content";
 }
 
 Command* ChangeContent::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	Layered::Layered::redo(obj, argc, argv);
 
-	// TODO: i18n.
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	if (!filled()) {
+		const char* val = ptr->get(language(), index());
+		old(val ? val : "");
+		filled(true);
+	}
+	ptr->set(language(), index(), content());
 
 	return this;
 }
@@ -223,7 +375,17 @@ Command* ChangeContent::redo(Object::Ptr obj, int argc, const Variant* argv) {
 Command* ChangeContent::undo(Object::Ptr obj, int argc, const Variant* argv) {
 	Layered::Layered::undo(obj, argc, argv);
 
-	// TODO: i18n.
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	ptr->set(language(), index(), old());
+
+	return this;
+}
+
+ChangeContent* ChangeContent::with(int lang, int index_, const std::string &newVal_) {
+	language(lang);
+	index(index_);
+	content(newVal_);
 
 	return this;
 }
@@ -243,6 +405,64 @@ void ChangeContent::destroy(Command* ptr) {
 	delete impl;
 }
 
+SetName::SetName() {
+}
+
+SetName::~SetName() {
+}
+
+unsigned SetName::type(void) const {
+	return TYPE();
+}
+
+const char* SetName::toString(void) const {
+	return "Set name";
+}
+
+Command* SetName::redo(Object::Ptr obj, int argc, const Variant* argv) {
+	::Image::Ptr ptr = Object::as<::Image::Ptr>(obj);
+	(void)ptr;
+	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
+	TilesAssets::Entry* entry = (TilesAssets::Entry*)(arg0);
+
+	old(entry->name);
+	entry->name = name();
+
+	return this;
+}
+
+Command* SetName::undo(Object::Ptr obj, int argc, const Variant* argv) {
+	::Image::Ptr ptr = Object::as<::Image::Ptr>(obj);
+	(void)ptr;
+	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
+	TilesAssets::Entry* entry = (TilesAssets::Entry*)(arg0);
+
+	entry->name = old();
+
+	return this;
+}
+
+SetName* SetName::with(const std::string &n) {
+	name(n);
+
+	return this;
+}
+
+Command* SetName::exec(Object::Ptr obj, int argc, const Variant* argv) {
+	return redo(obj, argc, argv);
+}
+
+Command* SetName::create(void) {
+	SetName* result = new SetName();
+
+	return result;
+}
+
+void SetName::destroy(Command* ptr) {
+	SetName* impl = static_cast<SetName*>(ptr);
+	delete impl;
+}
+
 Import::Import() {
 	bytes(0);
 }
@@ -259,75 +479,75 @@ const char* Import::toString(void) const {
 }
 
 Command* Import::redo(Object::Ptr obj, int argc, const Variant* argv) {
-	auto redo_ = [] (::I18n::Ptr i18n, int &bytes, Bytes::Ptr &old, ::I18n::Ptr i18n_) -> void {
-		if (!old) {
-			old = Bytes::Ptr(Bytes::create());
-
-			Bytes::Ptr tmp(Bytes::create());
-			rapidjson::Document doc;
-			i18n_->toJson(doc);
-			std::string str;
-			Json::toString(doc, str, false);
-			tmp->writeString(str);
-			bytes = (int)tmp->count();
-			int n = LZ4_compressBound((int)tmp->count());
-			old->resize((size_t)n);
-			n = LZ4_compress_default(
-				(const char*)tmp->pointer(), (char*)old->pointer(),
-				(int)tmp->count(), (int)old->count()
-			);
-			GBBASIC_ASSERT(n);
-			if (n < (int)tmp->count()) {
-				old->resize((size_t)n);
-			} else {
-				bytes = 0;
-				old->clear();
-				old->writeBytes(tmp.get());
-			}
-		}
-		rapidjson::Document doc;
-		i18n->toJson(doc);
-		i18n_->fromJson(doc);
-	};
-
 	Layered::Layered::redo(obj, argc, argv);
 
-	// TODO: i18n.
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	if (!old()) {
+		old(Bytes::Ptr(Bytes::create()));
+
+		Bytes::Ptr tmp(Bytes::create());
+		rapidjson::Document doc;
+		ptr->toJson(doc);
+		std::string str;
+		Json::toString(doc, str, true);
+		tmp->writeString(str);
+		bytes((int)tmp->count());
+		int n = LZ4_compressBound((int)tmp->count());
+		if (n < (int)tmp->count()) {
+			old()->resize((size_t)n);
+			n = LZ4_compress_default(
+				(const char*)tmp->pointer(), (char*)old()->pointer(),
+				(int)tmp->count(), (int)old()->count()
+			);
+			GBBASIC_ASSERT(n);
+			old()->resize((size_t)n);
+		} else {
+			bytes(0);
+			old()->clear();
+			old()->writeBytes(tmp.get());
+		}
+	}
+	rapidjson::Document doc;
+	i18n()->toJson(doc);
+	ptr->fromJson(doc);
 
 	return this;
 }
 
 Command* Import::undo(Object::Ptr obj, int argc, const Variant* argv) {
-	auto undo_ = [] (::I18n::Ptr i18n, int bytes, Bytes::Ptr old, ::I18n::Ptr i18n_) -> void {
-		(void)i18n;
-
-		if (bytes) {
-			Bytes::Ptr tmp(Bytes::create());
-			tmp->resize(bytes);
-			const int n = LZ4_decompress_safe(
-				(const char*)old->pointer(), (char*)tmp->pointer(),
-				(int)old->count(), (int)tmp->count()
-			);
-			(void)n;
-			GBBASIC_ASSERT(n == (int)bytes);
-			std::string str;
-			tmp->readString(str);
-			rapidjson::Document doc;
-			Json::fromString(doc, str.c_str());
-			i18n_->fromJson(doc);
-		} else {
-			std::string str;
-			old->poke(0);
-			old->readString(str);
-			rapidjson::Document doc;
-			Json::fromString(doc, str.c_str());
-			i18n_->fromJson(doc);
-		}
-	};
-
 	Layered::Layered::undo(obj, argc, argv);
 
-	// TODO: i18n.
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	if (bytes()) {
+		Bytes::Ptr tmp(Bytes::create());
+		tmp->resize(bytes());
+		const int n = LZ4_decompress_safe(
+			(const char*)old()->pointer(), (char*)tmp->pointer(),
+			(int)old()->count(), (int)tmp->count()
+		);
+		(void)n;
+		GBBASIC_ASSERT(n == (int)bytes());
+		std::string str;
+		tmp->readString(str);
+		rapidjson::Document doc;
+		Json::fromString(doc, str.c_str());
+		ptr->fromJson(doc);
+	} else {
+		std::string str;
+		old()->poke(0);
+		old()->readString(str);
+		rapidjson::Document doc;
+		Json::fromString(doc, str.c_str());
+		ptr->fromJson(doc);
+	}
+
+	return this;
+}
+
+Import* Import::with(const ::I18n::Ptr &i18n_) {
+	i18n(i18n_);
 
 	return this;
 }

@@ -2752,6 +2752,32 @@ int I18nAssets::Entry::compare(const Entry &other) const {
 	return 0;
 }
 
+bool I18nAssets::Entry::serializeCsv(std::string &val) const {
+	// Prepare.
+	val.clear();
+
+	// Serialize the dictionary.
+	return data->toCsv(val);
+}
+
+bool I18nAssets::Entry::parseCsv(I18n::Ptr &i18n, const std::string &val, ParsingStatuses &status) const {
+	// Prepare.
+	i18n = nullptr;
+	status = ParsingStatuses::SUCCESS;
+
+	// Fill in an i18n.
+	I18n* ptr = nullptr;
+	if (!data->clone(&ptr))
+		return false;
+	i18n = I18n::Ptr(ptr);
+
+	if (!i18n->fromCsv(val))
+		return false;
+
+	// Finish.
+	return true;
+}
+
 bool I18nAssets::Entry::serializeJson(std::string &val, bool pretty) const {
 	// Prepare.
 	val.clear();

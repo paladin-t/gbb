@@ -242,7 +242,7 @@ public:
 	std::string getUsableFontName(int index) const;
 
 	int i18nPageCount(void) const;
-	bool addI18nPage(const std::string &val);
+	bool addI18nPage(const std::string &val, bool isNew);
 	bool removeI18nPage(int index);
 	const I18nAssets::Entry* getI18n(int index) const;
 	I18nAssets::Entry* getI18n(int index);

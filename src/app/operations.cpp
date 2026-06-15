@@ -3170,7 +3170,7 @@ promise::Promise Operations::i18nAddPage(Window* wnd, Renderer* rnd, Workspace* 
 			I18nAssets::Entry default_;
 			default_.toString(str, nullptr);
 
-			const bool added = prj->addI18nPage(str);
+			const bool added = prj->addI18nPage(str, true);
 			prj->hasDirtyAsset(true);
 
 			if (added)

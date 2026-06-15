@@ -11,6 +11,7 @@
 
 #include "commands_layered.h"
 #include "../utils/assets.h"
+#include "../utils/text.h"
 
 /*
 ** {===========================================================================
@@ -24,9 +25,6 @@ namespace I18n {
 class AddItem : public Layered::Layered {
 public:
 	GBBASIC_PROPERTY(int, index)
-	// TODO: i18n.
-
-	GBBASIC_PROPERTY(bool, filled)
 
 public:
 	AddItem();
@@ -43,7 +41,7 @@ public:
 	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::undo;
 
-	// TODO: i18n.
+	virtual AddItem* with(int index_);
 	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
@@ -56,9 +54,9 @@ public:
 class DeleteItem : public Layered::Layered {
 public:
 	GBBASIC_PROPERTY(int, index)
-	// TODO: i18n.
 
 	GBBASIC_PROPERTY(bool, filled)
+	GBBASIC_PROPERTY(Text::Array, old)
 
 public:
 	DeleteItem();
@@ -75,7 +73,7 @@ public:
 	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::undo;
 
-	// TODO: i18n.
+	virtual DeleteItem* with(int index_);
 	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
@@ -88,9 +86,7 @@ public:
 class AddLanguage : public Layered::Layered {
 public:
 	GBBASIC_PROPERTY(int, index)
-	// TODO: i18n.
-
-	GBBASIC_PROPERTY(bool, filled)
+	GBBASIC_PROPERTY(std::string, language)
 
 public:
 	AddLanguage();
@@ -107,7 +103,7 @@ public:
 	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::undo;
 
-	// TODO: i18n.
+	virtual AddLanguage* with(int index_, const std::string &lang);
 	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
@@ -120,9 +116,10 @@ public:
 class DeleteLanguage : public Layered::Layered {
 public:
 	GBBASIC_PROPERTY(int, index)
-	// TODO: i18n.
 
 	GBBASIC_PROPERTY(bool, filled)
+	GBBASIC_PROPERTY(std::string, oldLanguage)
+	GBBASIC_PROPERTY(Text::Array, oldColumn)
 
 public:
 	DeleteLanguage();
@@ -139,7 +136,40 @@ public:
 	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::undo;
 
-	// TODO: i18n.
+	virtual DeleteLanguage* with(int index_);
+	using Layered::Layered::with;
+
+	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::exec;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class RenameLanguage : public Layered::Layered {
+public:
+	GBBASIC_PROPERTY(int, index)
+	GBBASIC_PROPERTY(std::string, language)
+
+	GBBASIC_PROPERTY(bool, filled)
+	GBBASIC_PROPERTY(std::string, old)
+
+public:
+	RenameLanguage();
+	virtual ~RenameLanguage() override;
+
+	GBBASIC_CLASS_TYPE('R', 'N', 'L', 'I')
+
+	virtual unsigned type(void) const override;
+
+	virtual const char* toString(void) const override;
+
+	virtual Command* redo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::redo;
+	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::undo;
+
+	virtual RenameLanguage* with(int index_, const std::string &lang);
 	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
@@ -152,9 +182,11 @@ public:
 class ChangeContent : public Layered::Layered {
 public:
 	GBBASIC_PROPERTY(int, index)
-	// TODO: i18n.
+	GBBASIC_PROPERTY(int, language)
+	GBBASIC_PROPERTY(std::string, content)
 
 	GBBASIC_PROPERTY(bool, filled)
+	GBBASIC_PROPERTY(std::string, old)
 
 public:
 	ChangeContent();
@@ -171,8 +203,38 @@ public:
 	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::undo;
 
-	// TODO: i18n.
+	virtual ChangeContent* with(int lang, int index_, const std::string &newVal_);
 	using Layered::Layered::with;
+
+	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::exec;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class SetName : public Command {
+public:
+	GBBASIC_PROPERTY(std::string, name)
+
+	GBBASIC_PROPERTY(std::string, old)
+
+public:
+	SetName();
+	virtual ~SetName() override;
+
+	GBBASIC_CLASS_TYPE('S', 'N', 'M', 'I')
+
+	virtual unsigned type(void) const override;
+
+	virtual const char* toString(void) const override;
+
+	virtual Command* redo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::redo;
+	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::undo;
+
+	virtual SetName* with(const std::string &n);
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;
@@ -183,7 +245,7 @@ public:
 
 class Import : public Layered::Layered {
 public:
-	// TODO: i18n.
+	GBBASIC_PROPERTY(::I18n::Ptr, i18n)
 
 	GBBASIC_PROPERTY(int, bytes)
 	GBBASIC_PROPERTY(Bytes::Ptr, old)
@@ -203,7 +265,7 @@ public:
 	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::undo;
 
-	// TODO: i18n.
+	virtual Import* with(const ::I18n::Ptr &i18n_);
 	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
