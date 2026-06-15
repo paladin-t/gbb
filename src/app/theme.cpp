@@ -1561,12 +1561,18 @@ bool Theme::open(class Renderer* rnd) {
 	warning_ActorDuplicateActorNameAtPages("Duplicate actor name \"{0}\" at page {1} and {2}");
 	warning_ActorFrameIndexOutOfBoundsOfAnimationN("Frame index out of bounds of animation \"{0}\"");
 	warning_ActorNameIsAlreadyInUse("Name is already in use");
+	warning_FontDuplicateFontNameAtPages("Duplicate font name \"{0}\" at page {1} and {2}");
+	warning_FontFontNameIsEmptyAtPage("Font name is empty at page {0}");
 	warning_FontMaxSizeOutOfBounds("Max size out of bounds");
 	warning_FontNameIsAlreadyInUse("Name is already in use");
 	warning_FontOutlineOutOfBounds("Outline out of bounds");
 	warning_FontPreviewContentIsTooLong("Preview content is too long");
 	warning_FontShadowOutOfBounds("Shadow out of bounds");
 	warning_FontSizeOutOfBounds("Size out of bounds");
+	warning_I18nDuplicateI18nNameAtPages("Duplicate i18n name \"{0}\" at page {1} and {2}");
+	warning_I18nI18nNameIsEmptyAtPage("I18n name is empty at page {0}");
+	warning_MapDuplicateMapNameAtPages("Duplicate map name \"{0}\" at page {1} and {2}");
+	warning_MapMapNameIsEmptyAtPage("Map name is empty at page {0}");
 	warning_MapNameIsAlreadyInUse("Name is already in use");
 	warning_MapSizeOutOfBounds("Size out of bounds");
 	warning_MusicDuplicateMusicInstrumentNameAt("Duplicate music instrument name \"{0}\" at {1} and {2}");
@@ -1588,9 +1594,11 @@ bool Theme::open(class Renderer* rnd) {
 	warning_SfxSfxNameIsEmptyAtPage("SFX name is empty at page {0}");
 	warning_SfxTimeoutWhenRenderingSoundShapeAtPage("Timeout when rendering sound shape at page {0}");
 	warning_TileSizeOutOfBounds("Size out of bounds");
+	warning_TilesDuplicateTilesNameAtPages("Duplicate tiles name \"{0}\" at page {1} and {2}");
 	warning_TilesNameIsAlreadyInUse("Name is already in use");
 	warning_TilesPitchOutOfBounds("Pitch out of bounds");
 	warning_TilesSizeOutOfBounds("Size out of bounds");
+	warning_TilesTilesNameIsEmptyAtPage("Tiles name is empty at page {0}");
 
 	iconAnchor(createTexture(rnd, RES_ICON_ANCHOR, GBBASIC_COUNTOF(RES_ICON_ANCHOR), nullptr));
 

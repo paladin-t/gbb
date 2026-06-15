@@ -109,6 +109,7 @@ public:
 	GBBASIC_PROPERTY             (bool,                          strictOn                                         ) // Serialized in project.
 	GBBASIC_PROPERTY             (bool,                          optimize                                         ) // Serialized in project.
 	GBBASIC_PROPERTY             (std::string,                   preDefinedMacros                                 ) // Serialized in project.
+	GBBASIC_PROPERTY             (std::string,                   i18nLanguage                                     ) // Serialized in project.
 	GBBASIC_PROPERTY             (bool,                          superFeaturesEnabled                             ) // Serialized in project.
 	GBBASIC_FIELD_READONLY       (BorderFrameTypes,              borderFrameType                                  ) // Serialized in project.
 	GBBASIC_FIELD_READONLY       (std::string,                   borderFrameCode                                  ) // Serialized in project.
@@ -245,6 +246,8 @@ public:
 	bool removeI18nPage(int index);
 	const I18nAssets::Entry* getI18n(int index) const;
 	I18nAssets::Entry* getI18n(int index);
+	bool canRenameI18n(int index, const std::string &name, int* another /* nullable */) const;
+	std::string getUsableI18nName(int index) const;
 
 	int codePageCount(void) const;
 	bool addCodePage(const std::string &val);

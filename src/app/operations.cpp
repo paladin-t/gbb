@@ -913,10 +913,10 @@ promise::Promise Operations::popupRomBuildSettings(Window*, Renderer* rnd, Works
 			}
 
 			ImGui::RomBuildSettingsPopupBox::ConfirmedHandler confirm(
-				[ws, df] (const char* cartType, const char* sramType, bool hasRtc, bool hasRumble) -> void {
+				[ws, df] (const char* cartType, const char* sramType, bool hasRtc, bool hasRumble, const char* i18nLang) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
-					df.resolve(true, cartType, sramType, hasRtc, hasRumble);
+					df.resolve(true, cartType, sramType, hasRtc, hasRumble, i18nLang);
 				},
 				nullptr
 			);
@@ -947,14 +947,14 @@ promise::Promise Operations::popupEmulatorBuildSettings(Window*, Renderer* rnd, 
 			}
 
 			ImGui::EmulatorBuildSettingsPopupBox::ConfirmedHandler confirm(
-				[ws, df] (const char* settings, const char* args, Bytes::Ptr icon) -> void {
+				[ws, df] (const char* settings, const char* args, Bytes::Ptr icon, const char* i18nLang) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
 					ws->settings().exporterSettings = settings;
 					ws->settings().exporterArgs = args;
 					ws->settings().exporterIcon = icon;
 
-					df.resolve(true);
+					df.resolve(true, i18nLang);
 				},
 				nullptr
 			);
@@ -4360,9 +4360,11 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 	);
 }
 
-promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspace* ws, const char* cartType_, const char* sramType_, bool* hasRtc_, bool* hasRumble_, const char* fontConfigPath, bool useInRam) {
+promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspace* ws, const char* cartType_, const char* sramType_, bool* hasRtc_, bool* hasRumble_, const char* i18nLang_, const char* fontConfigPath, bool useInRam) {
+	const std::string i18nLang = i18nLang_ ? i18nLang_ : "";
+
 	return promise::newPromise(
-		[&] (promise::Defer df) -> void {
+		[&, i18nLang] (promise::Defer df) -> void {
 			// Prepare.
 			const Project::Ptr &prj = ws->currentProject();
 			const std::string path = prj->path();
@@ -4476,6 +4478,7 @@ promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspac
 			arguments[COMPILER_ALIASES_OPTION_KEY]                          = aliases;
 			arguments[COMPILER_FONT_OPTION_KEY]                             = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
 			// Do not: `arguments[COMPILER_MACROS_OPTION_KEY]               = "";`.
+			arguments[COMPILER_I18N_LANGUAGE_OPTION_KEY]                    = i18nLang;
 #if defined GBBASIC_DEBUG
 			arguments[COMPILER_AST_OPTION_KEY]                              = "stdout";
 #else /* GBBASIC_DEBUG */

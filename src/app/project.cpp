@@ -169,6 +169,7 @@ Project &Project::operator = (const Project &other) {
 	strictOn(other.strictOn());
 	optimize(other.optimize());
 	preDefinedMacros(other.preDefinedMacros());
+	i18nLanguage(other.i18nLanguage());
 	superFeaturesEnabled(other.superFeaturesEnabled());
 	borderFrameType(other.borderFrameType());
 	borderFrameCode(other.borderFrameCode());
@@ -1018,6 +1019,41 @@ I18nAssets::Entry* Project::getI18n(int index) {
 	I18nAssets &assets_ = assets()->i18ns;
 
 	return assets_.get(index);
+}
+
+bool Project::canRenameI18n(int index, const std::string &name, int* another) const {
+	if (another)
+		*another = -1;
+
+	if (name.empty())
+		return false;
+
+	const I18nAssets &assets_ = assets()->i18ns;
+	for (int i = 0; i < assets_.count(); ++i) {
+		if (i == index)
+			continue;
+
+		const I18nAssets::Entry* entry = assets_.get(i);
+		if (entry->name == name) {
+			if (another)
+				*another = i;
+
+			return false;
+		}
+	}
+
+	return true;
+}
+
+std::string Project::getUsableI18nName(int index) const {
+	int id = 0;
+	std::string name = "I18n" + Text::toString(id);
+	while (!canRenameI18n(index, name, nullptr)) {
+		++id;
+		name = "I18n" + Text::toString(id);
+	}
+
+	return name;
 }
 
 int Project::codePageCount(void) const {
@@ -2131,6 +2167,7 @@ bool Project::open(const char* path_) {
 		strictOn(true);
 		optimize(true);
 		preDefinedMacros("");
+		i18nLanguage("");
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
 		created(now);
@@ -2204,6 +2241,7 @@ bool Project::open(const char* path_) {
 		strictOn(true);
 		optimize(true);
 		preDefinedMacros("");
+		i18nLanguage("");
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
 		created(now);
@@ -2689,6 +2727,7 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		strictOn(true);
 		optimize(true);
 		preDefinedMacros("");
+		i18nLanguage("");
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
 		created(now);
@@ -3094,6 +3133,11 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 		preDefinedMacros("");
 	}
 
+	i18nLanguage("");
+	if (!Jpath::get(doc, i18nLanguage(), "i18n_language")) {
+		i18nLanguage("");
+	}
+
 	superFeaturesEnabled(false);
 	if (!Jpath::get(doc, superFeaturesEnabled(), "super_features", "enabled")) {
 		superFeaturesEnabled(false);
@@ -3358,6 +3402,8 @@ bool Project::saveInformation(std::string &content) {
 	Jpath::set(doc, doc, optimize(), "optimize");
 
 	Jpath::set(doc, doc, preDefinedMacros(), "pre_defined_macros");
+
+	Jpath::set(doc, doc, i18nLanguage(), "i18n_language");
 
 	Jpath::set(doc, doc, superFeaturesEnabled(), "super_features", "enabled");
 

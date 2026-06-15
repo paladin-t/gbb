@@ -190,6 +190,24 @@ public:
 
 		return result;
 	}
+	virtual bool getLanguage(int index, std::string &lang) override {
+		lang.clear();
+
+		if (index < 0 || index >= (int)_languages.size())
+			return false;
+
+		lang = _languages[index];
+
+		return true;
+	}
+	virtual bool setLanguage(int index, const std::string &lang) override {
+		if (index < 0 || index >= (int)_languages.size())
+			return false;
+
+		_languages[index] = lang;
+
+		return true;
+	}
 
 	virtual int itemCount(void) const override {
 		return (int)_items.size();
@@ -299,9 +317,10 @@ public:
 	virtual bool fromBlank(void) override {
 		clear();
 
+		_languages.push_back(I18N_KEY_COLUMN_NAME);
 		_languages.push_back(I18N_ENGLISH_COLUMN_NAME);
 		_languages.shrink_to_fit();
-		_items.push_back(Item(1));
+		_items.push_back(Item(_languages.size()));
 		_items.shrink_to_fit();
 
 		return true;

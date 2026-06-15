@@ -61,7 +61,12 @@ public:
 	GBBASIC_CLASS_TYPE('A', 'N', 'L', 'Z')
 
 	virtual bool analyzing(void) const = 0;
-	virtual bool analyze(const Kernel* krnl, AssetsBundle::Ptr assets, const std::string &preDefinedMacros, AnalyzedHandler analyzed) = 0;
+	virtual bool analyze(
+		const Kernel* krnl,
+		AssetsBundle::Ptr assets,
+		const std::string &preDefinedMacros, const std::string &i18nLang,
+		AnalyzedHandler analyzed
+	) = 0;
 
 	virtual unsigned getLanguegeDefinitionRevision(void) const = 0;
 

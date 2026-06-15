@@ -1161,9 +1161,14 @@ private:
 	void closeFilter(void);
 	void sortProjects(void);
 	void validateProject(const Project* prj);
+	/**
+	 * @param[out] lang
+	 */
+	bool getProjectI18nLanguage(const Project* prj, std::string &lang) const;
 	void launchProject(
 		Window* wnd, Renderer* rnd,
 		const char* cartType /* nullable */, const char* sramType /* nullable */, bool* hasRtc /* nullable */, bool* hasRumble /* nullable */,
+		const char* i18nLang /* nullable */,
 		bool toRun_, int toExport_
 	);
 	void runProject(Window* wnd, Renderer* rnd, Bytes::Ptr rom);

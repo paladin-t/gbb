@@ -22,6 +22,9 @@
 #ifndef I18N_KEY_COLUMN_NAME
 #	define I18N_KEY_COLUMN_NAME "key"
 #endif /* I18N_KEY_COLUMN_NAME */
+#ifndef I18N_DEFAULT_COLUMN_NAME
+#	define I18N_DEFAULT_COLUMN_NAME "default"
+#endif /* I18N_DEFAULT_COLUMN_NAME */
 #ifndef I18N_ENGLISH_COLUMN_NAME
 #	define I18N_ENGLISH_COLUMN_NAME "english"
 #endif /* I18N_ENGLISH_COLUMN_NAME */
@@ -62,6 +65,11 @@ public:
 	virtual bool addLanguage(int index, const std::string &lang) = 0;
 	virtual bool deleteLanguage(int index) = 0;
 	virtual int getLanguageIndex(const std::string &lang) const = 0;
+	/**
+	 * @param[out] lang
+	 */
+	virtual bool getLanguage(int index, std::string &lang) = 0;
+	virtual bool setLanguage(int index, const std::string &lang) = 0;
 
 	virtual int itemCount(void) const = 0;
 	virtual bool addItem(int index) = 0;

@@ -395,7 +395,7 @@ public:
 
 class RomBuildSettingsPopupBox : public PopupBox {
 public:
-	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, const char*, const char*, bool, bool> {
+	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, const char*, const char*, bool, bool, const char*> {
 		using Handler::Handler;
 	};
 	struct CanceledHandler : public Handler<CanceledHandler, void> {
@@ -411,6 +411,7 @@ private:
 	std::string _sramType;
 	bool _hasRtc = false;
 	bool _hasRumble = false;
+	std::string _i18nLanguage;
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;
@@ -435,7 +436,7 @@ public:
 
 class EmulatorBuildSettingsPopupBox : public PopupBox {
 public:
-	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, const char*, const char*, Bytes::Ptr> {
+	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, const char*, const char*, Bytes::Ptr, const char*> {
 		using Handler::Handler;
 	};
 	struct CanceledHandler : public Handler<CanceledHandler, void> {
@@ -459,6 +460,7 @@ private:
 	int _activeClassicPaletteIndex = -1;
 	int _activeGamepadIndex = -1;
 	int _activeButtonIndex = -1;
+	std::string _i18nLanguage;
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;
@@ -473,6 +475,7 @@ public:
 		Input* input, Theme* theme,
 		const std::string &title,
 		const std::string &settings, const char* args, bool hasIcon,
+		const std::string &i18nLang,
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */
 	);

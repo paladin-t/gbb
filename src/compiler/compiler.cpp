@@ -43814,6 +43814,7 @@ bool load(Program &program, Options &options) {
 bool compile(Program &program, const Options &options) {
 	// Prepare.
 	const std::string &macros                                                  = options.macros;
+	const std::string &language                                                = options.language;
 	const std::string &ast                                                     = options.ast;
 	const Options::Passes passes                                               = options.passes;
 	const Bytes::Ptr &icon                                                     = options.icon;
@@ -43914,6 +43915,9 @@ bool compile(Program &program, const Options &options) {
 	Error::Handler onError = [onError_] (const Error &err, const std::string &msg, const TextLocation &loc) -> void {
 		onError_(msg, err.isWarning, loc.page, loc.row, loc.column);
 	};
+
+	// TODO: i18n.
+	(void)language;
 
 	Parser parser;
 	parser.option("compatibility", (Variant::Long)compatibility);

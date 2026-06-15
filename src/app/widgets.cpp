@@ -1582,6 +1582,7 @@ RomBuildSettingsPopupBox::RomBuildSettingsPopupBox(
 	_sramType = _project->sramType();
 	_hasRtc = _project->hasRtc();
 	_hasRumble = _project->hasRumble();
+	_i18nLanguage = _project->i18nLanguage();
 }
 
 RomBuildSettingsPopupBox::~RomBuildSettingsPopupBox() {
@@ -1700,6 +1701,9 @@ void RomBuildSettingsPopupBox::update(Workspace*) {
 		}
 		PopID();
 
+		// TODO: i18n.
+		(void)_i18nLanguage;
+
 		const char* confirm = _confirmText.empty() ? "Build" : _confirmText.c_str();
 		const char* cancel = _cancelText.empty() ? "Cancel" : _cancelText.c_str();
 
@@ -1736,7 +1740,7 @@ void RomBuildSettingsPopupBox::update(Workspace*) {
 		_init.reset();
 
 		if (!_confirmedHandler.empty()) {
-			_confirmedHandler(_cartType.c_str(), _sramType.c_str(), _hasRtc, _hasRumble);
+			_confirmedHandler(_cartType.c_str(), _sramType.c_str(), _hasRtc, _hasRumble, _i18nLanguage.c_str());
 
 			return;
 		}
@@ -1757,12 +1761,14 @@ EmulatorBuildSettingsPopupBox::EmulatorBuildSettingsPopupBox(
 	Input* input, Theme* theme,
 	const std::string &title,
 	const std::string &settings, const char* args, bool hasIcon,
+	const std::string &i18nLang,
 	const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 	const char* confirmTxt, const char* cancelTxt
 ) : _renderer(rnd),
 	_input(input), _theme(theme),
 	_title(title),
 	_hasIcon(hasIcon),
+	_i18nLanguage(i18nLang),
 	_confirmedHandler(confirm), _canceledHandler(cancel)
 {
 	_settings.fromString(settings);
@@ -1931,6 +1937,9 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 					}
 					PopID();
 				}
+
+				// TODO: i18n.
+				(void)_i18nLanguage;
 
 				EndTabItem();
 			}
@@ -2123,7 +2132,7 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 		if (!_confirmedHandler.empty()) {
 			std::string str;
 			_settings.toString(str);
-			_confirmedHandler(str.c_str(), _argsBuffer, _icon);
+			_confirmedHandler(str.c_str(), _argsBuffer, _icon, _i18nLanguage.c_str());
 
 			return;
 		}
