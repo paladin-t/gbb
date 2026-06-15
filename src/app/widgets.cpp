@@ -1733,7 +1733,7 @@ void RomBuildSettingsPopupBox::update(Workspace*) {
 				EndDisabled();
 			} else {
 				const char* const* items = &_allI18nLanguagePointers.front();
-				if (Combo("", &_i18nLanguageIndex, items, _allI18nLanguagePointers.size())) {
+				if (Combo("", &_i18nLanguageIndex, items, (int)_allI18nLanguagePointers.size())) {
 					if (_i18nLanguageIndex == 0)
 						_i18nLanguage.clear();
 					else
@@ -2012,7 +2012,7 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 						EndDisabled();
 					} else {
 						const char* const* items = &_allI18nLanguagePointers.front();
-						if (Combo("", &_i18nLanguageIndex, items, _allI18nLanguagePointers.size())) {
+						if (Combo("", &_i18nLanguageIndex, items, (int)_allI18nLanguagePointers.size())) {
 							if (_i18nLanguageIndex == 0)
 								_i18nLanguage.clear();
 							else
@@ -4411,7 +4411,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 							EndDisabled();
 						} else {
 							const char* const* items = &_allI18nLanguagePointers.front();
-							if (Combo("", &_i18nLanguageIndex, items, _allI18nLanguagePointers.size())) {
+							if (Combo("", &_i18nLanguageIndex, items, (int)_allI18nLanguagePointers.size())) {
 								if (_i18nLanguageIndex == 0)
 									_i18nLanguage.clear();
 								else
@@ -4431,7 +4431,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 							const char* const* items = &_allI18nLanguagePointers.front();
 							BeginDisabled();
 							{
-								Combo("", &_i18nLanguageIndex, items, _allI18nLanguagePointers.size());
+								Combo("", &_i18nLanguageIndex, items, (int)_allI18nLanguagePointers.size());
 							}
 							EndDisabled();
 						}
