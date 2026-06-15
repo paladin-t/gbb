@@ -808,7 +808,11 @@ bool Theme::open(class Renderer* rnd) {
 	windowBuildingSettings("Build Settings");
 	windowBuildingSettings_Cart("Cart");
 	windowBuildingSettings_CartridgeTypeOfOutputRom("Cartridge type of output ROM:");
+	windowBuildingSettings_GameLanguage("Game language:");
+	windowBuildingSettings_I18n("I18n");
+	windowBuildingSettings_I18n_("I18n            ");
 	windowBuildingSettings_Misc("Misc");
+	windowBuildingSettings_NotSpecified("Not specified");
 	windowBuildingSettings_Rtc("RTC");
 	windowBuildingSettings_Rumble("Rumble");
 	windowBuildingSettings_Sram("SRAM");
@@ -837,7 +841,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Main_Tab8SpacesWide("Tab (8 spaces wide)");
 	windowPreferences_Emulator_ApplicationIcon("Application icon");
 	windowPreferences_Emulator_InvalidIconSize_512x512IsRecommended("Invalid icon size, 512x512 is recommended");
-	windowPreferences_Emulator_LaunchOptions("Launch options");
+	windowPreferences_Emulator_LaunchOptions("Launch options  ");
 	windowPreferences_Emulator_ShowPreferenceDialogOnEscPress("Show preference dialog on ESC press");
 	windowPreferences_Emulator_ShowStatusBar("Show status bar");
 	windowPreferences_Emulator_ShowTitleBar("Show title bar");
@@ -895,6 +899,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowProjectProperty_Project_Sram_None("0KB (None)");
 	windowProjectProperty_Project_Running_StartOnOpen("Start on open");
 	windowProjectProperty_Compiling_Compiler("Compiler:");
+	windowProjectProperty_Compiling_Compiler_I18n("  I18n");
 	windowProjectProperty_Compiling_Compiler_Macros("Macros");
 	windowProjectProperty_Compiling_Compiler_Optimize("Optimize");
 	windowProjectProperty_Compiling_Compiler_StrictOn("Strict on");

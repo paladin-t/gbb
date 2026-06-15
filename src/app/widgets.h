@@ -403,6 +403,9 @@ public:
 	};
 
 private:
+	typedef std::vector<const char*> TextPointers;
+
+private:
 	Renderer* _renderer = nullptr; // Foreign.
 	Theme* _theme = nullptr; // Foreign.
 	std::string _title;
@@ -412,6 +415,9 @@ private:
 	bool _hasRtc = false;
 	bool _hasRumble = false;
 	std::string _i18nLanguage;
+	int _i18nLanguageIndex = 0;
+	Text::Array _allI18nLanguages;
+	TextPointers _allI18nLanguagePointers;
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;
@@ -425,6 +431,7 @@ public:
 		Renderer* rnd,
 		Theme* theme,
 		const std::string &title,
+		Workspace* ws,
 		Project* project,
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */
@@ -444,6 +451,9 @@ public:
 	};
 
 private:
+	typedef std::vector<const char*> TextPointers;
+
+private:
 	Renderer* _renderer = nullptr; // Foreign.
 	Input* _input = nullptr; // Foreign.
 	Theme* _theme = nullptr; // Foreign.
@@ -461,6 +471,9 @@ private:
 	int _activeGamepadIndex = -1;
 	int _activeButtonIndex = -1;
 	std::string _i18nLanguage;
+	int _i18nLanguageIndex = 0;
+	Text::Array _allI18nLanguages;
+	TextPointers _allI18nLanguagePointers;
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;
@@ -476,6 +489,8 @@ public:
 		const std::string &title,
 		const std::string &settings, const char* args, bool hasIcon,
 		const std::string &i18nLang,
+		Workspace* ws,
+		Project* project,
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */
 	);
@@ -939,11 +954,18 @@ public:
 	};
 
 private:
+	typedef std::vector<const char*> TextPointers;
+
+private:
 	Renderer* _renderer = nullptr; // Foreign.
 	Theme* _theme = nullptr; // Foreign.
 	std::string _title;
 	char _titleBuffer[WIDGETS_TEXT_BUFFER_SIZE]; // Fixed size.
 	char _macrosBuffer[1024]; // Fixed size.
+	std::string _i18nLanguage;
+	int _i18nLanguageIndex = 0;
+	Text::Array _allI18nLanguages;
+	TextPointers _allI18nLanguagePointers;
 	float _superFeaturesBeginX = 0.0f;
 	float _superFeaturesEndX = 0.0f;
 	float _superFeaturesEnabledWidth = 72.0f;
@@ -953,6 +975,7 @@ private:
 	bool _activeSuperPaletteShowColorPicker = false;
 	int _activeSuperPaletteIndex = -1;
 	Text::Array _superPaletteNames;
+	bool _isProjectOpened = false;
 	Project* _project = nullptr; // Foreign.
 	Project* _projectShadow = nullptr;
 
@@ -970,7 +993,8 @@ public:
 		Renderer* rnd,
 		Theme* theme,
 		const std::string &title,
-		Project* project,
+		Workspace* ws,
+		Project* project, bool isOpened,
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel, const AppliedHandler &apply,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */, const char* applyTxt /* nullable */
 	);

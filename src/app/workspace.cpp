@@ -977,6 +977,64 @@ void Workspace::reloadKernels(void) {
 	loadKernels();
 }
 
+Text::Array Workspace::getAllI18nLanguages(const Project* prj, bool includeKey) const {
+	Text::Array result;
+	if (!prj)
+		return result;
+
+	for (int index = 0; index < prj->i18nPageCount(); ++index) {
+		const I18nAssets::Entry* entry = prj->getI18n(index);
+		const I18n::Ptr &i18n = entry->data;
+		if (!i18n)
+			continue;
+
+		for (int i = 0; i < i18n->languageCount(); ++i) {
+			std::string lang_;
+			if (i18n->getLanguage(i, lang_) && !lang_.empty()) {
+				if (lang_ == I18N_KEY_COLUMN_NAME && !includeKey)
+					continue;
+
+				if (std::find(result.begin(), result.end(), lang_) == result.end())
+					result.push_back(lang_);
+			}
+		}
+	}
+
+	return result;
+}
+
+bool Workspace::getDefaultI18nLanguage(const Project* prj, std::string &lang) const {
+	lang.clear();
+
+	if (!prj)
+		return false;
+
+	const Text::Array languages = getAllI18nLanguages(prj, true);
+	if (languages.empty())
+		return false;
+
+	if (std::find(languages.begin(), languages.end(), I18N_DEFAULT_COLUMN_NAME) != languages.end()) {
+		lang = I18N_DEFAULT_COLUMN_NAME;
+
+		return true;
+	}
+	if (std::find(languages.begin(), languages.end(), I18N_ENGLISH_COLUMN_NAME) != languages.end()) {
+		lang = I18N_ENGLISH_COLUMN_NAME;
+
+		return true;
+	}
+
+	for (const std::string &lang_ : languages) {
+		if (!lang_.empty() && lang_ != I18N_KEY_COLUMN_NAME) {
+			lang = lang_;
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void Workspace::addMapPageFrom(Window* wnd, Renderer* rnd, int index) {
 	Project::Ptr &prj = currentProject();
 	if (!prj)
@@ -4273,6 +4331,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		prj->strictOn(prj_->strictOn());
 		prj->optimize(prj_->optimize());
 		prj->preDefinedMacros(prj_->preDefinedMacros());
+		prj->i18nLanguage(prj_->i18nLanguage());
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
 		prj->borderFrameCode(prj_->borderFrameCode());
@@ -4306,14 +4365,19 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 	auto set = [this, prj, isOpened, save] (Project* prj_) -> void {
 		// Prepare.
 		const bool needReloadKernel =
-			prj->kernel()           != prj_->kernel();
+			prj->kernel()               != prj_->kernel();
 		const bool needReAnalyze =
-			prj->kernel()           != prj_->kernel()        ||
-			prj->cartridgeType()    != prj_->cartridgeType() ||
-			prj->sramType()         != prj_->sramType()      ||
-			prj->hasRtc()           != prj_->hasRtc()        ||
-			prj->hasRumble()        != prj_->hasRumble()     ||
-			prj->preDefinedMacros() != prj_->preDefinedMacros();
+			prj->kernel()               != prj_->kernel()           ||
+			prj->cartridgeType()        != prj_->cartridgeType()    ||
+			prj->sramType()             != prj_->sramType()         ||
+			prj->hasRtc()               != prj_->hasRtc()           ||
+			prj->hasRumble()            != prj_->hasRumble()        ||
+			prj->caseInsensitive()      != prj_->caseInsensitive()  ||
+			prj->strictOn()             != prj_->strictOn()         ||
+			prj->optimize()             != prj_->optimize()         ||
+			prj->preDefinedMacros()     != prj_->preDefinedMacros() ||
+			prj->i18nLanguage()         != prj_->i18nLanguage()     ||
+			prj->superFeaturesEnabled() != prj_->superFeaturesEnabled();
 
 		if (!prj_->title().empty())
 			prj_->title(Text::sanitizeProperty(prj_->title()));
@@ -4343,6 +4407,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		prj->strictOn(prj_->strictOn());
 		prj->optimize(prj_->optimize());
 		prj->preDefinedMacros(prj_->preDefinedMacros());
+		prj->i18nLanguage(prj_->i18nLanguage());
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
 		prj->borderFrameCode(prj_->borderFrameCode());
@@ -4412,7 +4477,8 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 				rnd,
 				theme(),
 				theme()->windowProjectProperty(),
-				prj,
+				this,
+				prj, isOpened,
 				confirm, cancel, apply,
 				theme()->generic_Ok().c_str(), theme()->generic_Cancel().c_str(), theme()->generic_Apply().c_str()
 			)
@@ -4447,6 +4513,7 @@ void Workspace::showRomBuildSettings(
 				rnd,
 				theme(),
 				theme()->windowBuildingSettings(),
+				this,
 				currentProject().get(),
 				confirm, cancel,
 				btnConfirm, btnCancel
@@ -4488,6 +4555,8 @@ void Workspace::showEmulatorBuildSettings(
 				theme()->windowBuildingSettings(),
 				settings, args, hasIcon,
 				i18nLang,
+				this,
+				prj.get(),
 				confirm, cancel,
 				btnConfirm, btnCancel
 			)
@@ -13469,49 +13538,6 @@ void Workspace::validateProject(const Project* prj) {
 	}
 }
 
-bool Workspace::getProjectI18nLanguage(const Project* prj, std::string &lang) const {
-	lang.clear();
-
-	if (!prj)
-		return false;
-
-	for (int index = 0; index < prj->i18nPageCount(); ++index) {
-		const I18nAssets::Entry* entry = prj->getI18n(index);
-		const I18n::Ptr &i18n = entry->data;
-		if (!i18n)
-			continue;
-
-		if (i18n->getLanguageIndex(I18N_DEFAULT_COLUMN_NAME) >= 0) {
-			lang = I18N_DEFAULT_COLUMN_NAME;
-
-			return true;
-		}
-		if (i18n->getLanguageIndex(I18N_ENGLISH_COLUMN_NAME) >= 0) {
-			lang = I18N_ENGLISH_COLUMN_NAME;
-
-			return true;
-		}
-	}
-
-	for (int index = 0; index < prj->i18nPageCount(); ++index) {
-		const I18nAssets::Entry* entry = prj->getI18n(index);
-		const I18n::Ptr &i18n = entry->data;
-		if (!i18n)
-			continue;
-
-		for (int i = 0; i < i18n->languageCount(); ++i) {
-			std::string lang_;
-			if (i18n->getLanguage(i, lang_) && !lang_.empty() && lang_ != I18N_KEY_COLUMN_NAME) {
-				lang = lang_;
-
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
 void Workspace::launchProject(
 	Window* wnd, Renderer* rnd,
 	const char* cartType, const char* sramType, bool* hasRtc, bool* hasRumble,
@@ -13526,7 +13552,7 @@ void Workspace::launchProject(
 		std::string lang = i18nLang ? i18nLang : "";
 		if (lang.empty()) {
 			std::string lang_;
-			if (getProjectI18nLanguage(prj.get(), lang_) && !lang_.empty())
+			if (getDefaultI18nLanguage(prj.get(), lang_) && !lang_.empty())
 				lang = lang_;
 		}
 

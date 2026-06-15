@@ -1564,6 +1564,7 @@ RomBuildSettingsPopupBox::RomBuildSettingsPopupBox(
 	Renderer* rnd,
 	Theme* theme,
 	const std::string &title,
+	Workspace* ws,
 	Project* project,
 	const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 	const char* confirmTxt, const char* cancelTxt
@@ -1583,6 +1584,17 @@ RomBuildSettingsPopupBox::RomBuildSettingsPopupBox(
 	_hasRtc = _project->hasRtc();
 	_hasRumble = _project->hasRumble();
 	_i18nLanguage = _project->i18nLanguage();
+
+	_allI18nLanguages = ws->getAllI18nLanguages(project, false);
+	_allI18nLanguages.insert(_allI18nLanguages.begin(), theme->windowBuildingSettings_NotSpecified());
+	for (int i = 0; i < (int)_allI18nLanguages.size(); ++i) {
+		const std::string &lang = _allI18nLanguages[i];
+		if (_i18nLanguage == lang)
+			_i18nLanguageIndex = i;
+		_allI18nLanguagePointers.push_back(lang.c_str());
+	}
+	if (_i18nLanguage.empty())
+		_i18nLanguageIndex = 0;
 }
 
 RomBuildSettingsPopupBox::~RomBuildSettingsPopupBox() {
@@ -1701,8 +1713,35 @@ void RomBuildSettingsPopupBox::update(Workspace*) {
 		}
 		PopID();
 
-		// TODO: i18n.
-		(void)_i18nLanguage;
+		AlignTextToFramePadding();
+		TextUnformatted(_theme->windowBuildingSettings_GameLanguage());
+
+		PushID("#I18n");
+		{
+			AlignTextToFramePadding();
+			TextUnformatted(_theme->windowBuildingSettings_I18n());
+
+			SameLine();
+
+			SetNextItemWidth(GetContentRegionAvail().x);
+			if (_allI18nLanguagePointers.empty()) {
+				BeginDisabled();
+				{
+					const char* items[] = { "" };
+					Combo("", &_i18nLanguageIndex, items, GBBASIC_COUNTOF(items));
+				}
+				EndDisabled();
+			} else {
+				const char* const* items = &_allI18nLanguagePointers.front();
+				if (Combo("", &_i18nLanguageIndex, items, _allI18nLanguagePointers.size())) {
+					if (_i18nLanguageIndex == 0)
+						_i18nLanguage.clear();
+					else
+						_i18nLanguage = _allI18nLanguages[_i18nLanguageIndex];
+				}
+			}
+		}
+		PopID();
 
 		const char* confirm = _confirmText.empty() ? "Build" : _confirmText.c_str();
 		const char* cancel = _cancelText.empty() ? "Cancel" : _cancelText.c_str();
@@ -1762,6 +1801,8 @@ EmulatorBuildSettingsPopupBox::EmulatorBuildSettingsPopupBox(
 	const std::string &title,
 	const std::string &settings, const char* args, bool hasIcon,
 	const std::string &i18nLang,
+	Workspace* ws,
+	Project* project,
 	const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 	const char* confirmTxt, const char* cancelTxt
 ) : _renderer(rnd),
@@ -1777,6 +1818,19 @@ EmulatorBuildSettingsPopupBox::EmulatorBuildSettingsPopupBox(
 	memset(_argsBuffer, 0, sizeof(_argsBuffer));
 	if (args)
 		memcpy(_argsBuffer, args, Math::min(sizeof(_argsBuffer) - 1, strlen(args)));
+
+	_i18nLanguage = project->i18nLanguage();
+
+	_allI18nLanguages = ws->getAllI18nLanguages(project, false);
+	_allI18nLanguages.insert(_allI18nLanguages.begin(), theme->windowBuildingSettings_NotSpecified());
+	for (int i = 0; i < (int)_allI18nLanguages.size(); ++i) {
+		const std::string &lang = _allI18nLanguages[i];
+		if (_i18nLanguage == lang)
+			_i18nLanguageIndex = i;
+		_allI18nLanguagePointers.push_back(lang.c_str());
+	}
+	if (_i18nLanguage.empty())
+		_i18nLanguageIndex = 0;
 
 	if (confirmTxt)
 		_confirmText = confirmTxt;
@@ -1938,8 +1992,35 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 					PopID();
 				}
 
-				// TODO: i18n.
-				(void)_i18nLanguage;
+				AlignTextToFramePadding();
+				TextUnformatted(_theme->windowBuildingSettings_GameLanguage());
+
+				PushID("#I18n");
+				{
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowBuildingSettings_I18n_());
+
+					SameLine();
+
+					SetNextItemWidth(GetContentRegionAvail().x);
+					if (_allI18nLanguagePointers.empty()) {
+						BeginDisabled();
+						{
+							const char* items[] = { "" };
+							Combo("", &_i18nLanguageIndex, items, GBBASIC_COUNTOF(items));
+						}
+						EndDisabled();
+					} else {
+						const char* const* items = &_allI18nLanguagePointers.front();
+						if (Combo("", &_i18nLanguageIndex, items, _allI18nLanguagePointers.size())) {
+							if (_i18nLanguageIndex == 0)
+								_i18nLanguage.clear();
+							else
+								_i18nLanguage = _allI18nLanguages[_i18nLanguageIndex];
+						}
+					}
+				}
+				PopID();
 
 				EndTabItem();
 			}
@@ -3623,13 +3704,15 @@ ProjectPropertyPopupBox::ProjectPropertyPopupBox(
 	Renderer* rnd,
 	Theme* theme,
 	const std::string &title,
-	Project* project,
+	Workspace* ws,
+	Project* project, bool isOpened,
 	const ConfirmedHandler &confirm, const CanceledHandler &cancel, const AppliedHandler &apply,
 	const char* confirmTxt, const char* cancelTxt, const char* applyTxt
 ) : _renderer(rnd),
 	_theme(theme),
 	_title(title),
 	_project(project),
+	_isProjectOpened(isOpened),
 	_confirmedHandler(confirm), _canceledHandler(cancel), _appliedHandler(apply)
 {
 	_projectShadow = new Project(_project->window(), rnd, _project->workspace());
@@ -3642,6 +3725,22 @@ ProjectPropertyPopupBox::ProjectPropertyPopupBox(
 	const std::string &preDefinedMacros = _project->preDefinedMacros();
 	memset(_macrosBuffer, 0, sizeof(_macrosBuffer));
 	memcpy(_macrosBuffer, preDefinedMacros.c_str(), Math::min(sizeof(_macrosBuffer) - 1, preDefinedMacros.length()));
+
+	_i18nLanguage = _project->i18nLanguage();
+
+	if (_isProjectOpened || _i18nLanguage.empty())
+		_allI18nLanguages = ws->getAllI18nLanguages(project, false);
+	else
+		_allI18nLanguages.push_back(_i18nLanguage);
+	_allI18nLanguages.insert(_allI18nLanguages.begin(), theme->windowBuildingSettings_NotSpecified());
+	for (int i = 0; i < (int)_allI18nLanguages.size(); ++i) {
+		const std::string &lang = _allI18nLanguages[i];
+		if (_i18nLanguage == lang)
+			_i18nLanguageIndex = i;
+		_allI18nLanguagePointers.push_back(lang.c_str());
+	}
+	if (_i18nLanguage.empty())
+		_i18nLanguageIndex = 0;
 
 	if (confirmTxt)
 		_confirmText = confirmTxt;
@@ -4290,6 +4389,56 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				}
 				PopID();
 
+				Separator();
+
+				TextUnformatted(_theme->windowBuildingSettings_GameLanguage());
+
+				PushID("#I18n");
+				{
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Compiling_Compiler_I18n());
+
+					SameLine();
+
+					SetNextItemWidth(GetContentRegionAvail().x);
+					if (_isProjectOpened && isEditable) {
+						if (_allI18nLanguagePointers.empty()) {
+							BeginDisabled();
+							{
+								const char* items[] = { "" };
+								Combo("", &_i18nLanguageIndex, items, GBBASIC_COUNTOF(items));
+							}
+							EndDisabled();
+						} else {
+							const char* const* items = &_allI18nLanguagePointers.front();
+							if (Combo("", &_i18nLanguageIndex, items, _allI18nLanguagePointers.size())) {
+								if (_i18nLanguageIndex == 0)
+									_i18nLanguage.clear();
+								else
+									_i18nLanguage = _allI18nLanguages[_i18nLanguageIndex];
+								prj->i18nLanguage(_i18nLanguage);
+							}
+						}
+					} else {
+						if (_allI18nLanguagePointers.empty()) {
+							BeginDisabled();
+							{
+								const char* items[] = { "" };
+								Combo("", &_i18nLanguageIndex, items, GBBASIC_COUNTOF(items));
+							}
+							EndDisabled();
+						} else {
+							const char* const* items = &_allI18nLanguagePointers.front();
+							BeginDisabled();
+							{
+								Combo("", &_i18nLanguageIndex, items, _allI18nLanguagePointers.size());
+							}
+							EndDisabled();
+						}
+					}
+				}
+				PopID();
+
 				EndTabItem();
 			}
 			if (BeginTabItem(_theme->tabProjectProperty_Advanced(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
@@ -4752,6 +4901,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			prj->strictOn()                != _project->strictOn()             ||
 			prj->optimize()                != _project->optimize()             ||
 			prj->preDefinedMacros()        != _project->preDefinedMacros()     ||
+			prj->i18nLanguage()            != _project->i18nLanguage()         ||
 			prj->superFeaturesEnabled()    != _project->superFeaturesEnabled() ||
 			prj->borderFrameType()         != _project->borderFrameType()      ||
 			prj->borderFrameCode()         != _project->borderFrameCode()      ||
