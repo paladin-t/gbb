@@ -2718,6 +2718,161 @@ int FontAssets::getBits(const Colour &col, bool isTwoBitsPerPixel, const int thr
 ** I18n assets
 */
 
+Table::Cursor::Cursor() {
+}
+
+Table::Cursor::Cursor(int r, int col) : row(r), column(col) {
+}
+
+Table::Cursor::Cursor(const Cursor &other) {
+	row = other.row;
+	column = other.column;
+}
+
+Table::Cursor &Table::Cursor::operator = (const Cursor &other) {
+	row = other.row;
+	column = other.column;
+
+	return *this;
+}
+
+bool Table::Cursor::operator == (const Cursor &other) const {
+	return equals(other);
+}
+
+bool Table::Cursor::operator != (const Cursor &other) const {
+	return !equals(other);
+}
+
+bool Table::Cursor::operator < (const Cursor &other) const {
+	return compare(other) < 0;
+}
+
+bool Table::Cursor::operator <= (const Cursor &other) const {
+	return compare(other) <= 0;
+}
+
+bool Table::Cursor::operator > (const Cursor &other) const {
+	return compare(other) > 0;
+}
+
+bool Table::Cursor::operator >= (const Cursor &other) const {
+	return compare(other) >= 0;
+}
+
+int Table::Cursor::compare(const Cursor &other) const {
+	if (row < other.row)
+		return -1;
+	else if (row > other.row)
+		return 1;
+
+	if (column < other.column)
+		return -1;
+	else if (column > other.column)
+		return 1;
+
+	return 0;
+}
+
+bool Table::Cursor::equals(const Cursor &other) const {
+	return compare(other) == 0;
+}
+
+bool Table::Cursor::valid(void) const {
+	if (row == -1)
+		return false;
+	if (column == -1)
+		return false;
+
+	return true;
+}
+
+void Table::Cursor::set(int r, int col) {
+	row = r;
+	column = col;
+}
+
+Table::Cursor Table::Cursor::INVALID(void) {
+	return Cursor(-1, -1);
+}
+
+Table::Range::Range() {
+}
+
+void Table::Range::start(int r, int col) {
+	first.set(r, col);
+}
+
+void Table::Range::start(const Cursor &where) {
+	first.set(where.row, where.column);
+}
+
+void Table::Range::end(int r, int col) {
+	second.set(r, col);
+}
+
+void Table::Range::end(const Cursor &where) {
+	second.set(where.row, where.column);
+}
+
+Table::Cursor Table::Range::min(void) const {
+	const Cursor result(Math::min(first.row, second.row), Math::min(first.column, second.column));
+
+	return result;
+}
+
+Table::Cursor Table::Range::max(void) const {
+	const Cursor result(Math::max(first.row, second.row), Math::max(first.column, second.column));
+
+	return result;
+}
+
+Math::Vec2i Table::Range::size(void) const {
+	const Math::Vec2i result(max().row - min().row + 1, max().column - min().column + 1);
+
+	return result;
+}
+
+bool Table::Range::startsWith(int r, int col) const {
+	return
+		first.row == r &&
+		first.column == col;
+}
+
+bool Table::Range::startsWith(const Cursor &where) const {
+	return
+		first.row == where.row &&
+		first.column == where.column;
+}
+
+bool Table::Range::endsWith(int r, int col) const {
+	return
+		second.row == r &&
+		second.column == col;
+}
+
+bool Table::Range::endsWith(const Cursor &where) const {
+	return
+		second.row == where.row &&
+		second.column == where.column;
+}
+
+bool Table::Range::single(void) const {
+	if (first == Cursor::INVALID())
+		return false;
+
+	return first == second;
+}
+
+bool Table::Range::invalid(void) const {
+	return first == Cursor::INVALID() || second == Cursor::INVALID();
+}
+
+void Table::Range::clear(void) {
+	first = Cursor::INVALID();
+	second = Cursor::INVALID();
+}
+
 I18nAssets::Entry::Entry() {
 	data = I18n::Ptr(I18n::create());
 

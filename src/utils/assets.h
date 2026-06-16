@@ -651,6 +651,58 @@ struct FontAssets {
 ** I18n assets
 */
 
+struct Table {
+	struct Cursor {
+		int row = 0;
+		int column = 0;
+
+		Cursor();
+		Cursor(int r, int col);
+		Cursor(const Cursor &other);
+
+		Cursor &operator = (const Cursor &other);
+		bool operator == (const Cursor &other) const;
+		bool operator != (const Cursor &other) const;
+		bool operator < (const Cursor &other) const;
+		bool operator <= (const Cursor &other) const;
+		bool operator > (const Cursor &other) const;
+		bool operator >= (const Cursor &other) const;
+
+		int compare(const Cursor &other) const;
+		bool equals(const Cursor &other) const;
+
+		bool valid(void) const;
+		void set(int r, int col);
+
+		static Cursor INVALID(void);
+	};
+
+	struct Range {
+		Cursor first = Cursor::INVALID();
+		Cursor second = Cursor::INVALID();
+
+		Range();
+
+		void start(int r, int col);
+		void start(const Cursor &where);
+		void end(int r, int col);
+		void end(const Cursor &where);
+
+		Cursor min(void) const;
+		Cursor max(void) const;
+
+		Math::Vec2i size(void) const;
+
+		bool startsWith(int r, int col) const;
+		bool startsWith(const Cursor &where) const;
+		bool endsWith(int r, int col) const;
+		bool endsWith(const Cursor &where) const;
+		bool single(void) const;
+		bool invalid(void) const;
+		void clear(void);
+	};
+};
+
 struct I18nAssets {
 	struct Entry : public BaseAssets::Entry {
 		I18n::Ptr data = nullptr;

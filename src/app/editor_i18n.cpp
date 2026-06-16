@@ -13,10 +13,11 @@
 #include "../utils/encoding.h"
 #include "../utils/file_sandbox.h"
 #include "../utils/filesystem.h"
+#include <SDL.h>
 
 /*
 ** {===========================================================================
-** Font editor
+** I18n editor
 */
 
 class EditorI18nImpl : public EditorI18n {
@@ -27,6 +28,7 @@ private:
 	int _index = -1;
 	CommandQueue* _commands = nullptr;
 
+	Table::Range _selection;
 	struct {
 		std::string text;
 		bool filled = false;
@@ -115,6 +117,7 @@ public:
 			->reg<Commands::I18n::DeleteItem>()
 			->reg<Commands::I18n::AddLanguage>()
 			->reg<Commands::I18n::DeleteLanguage>()
+			->reg<Commands::I18n::RenameLanguage>()
 			->reg<Commands::I18n::ChangeContent>()
 			->reg<Commands::I18n::SetName>()
 			->reg<Commands::I18n::Import>();
@@ -138,24 +141,36 @@ public:
 		_project = project;
 		_index = index;
 
+		int another = -1;
+		if (entry()->name.empty() || !_project->canRenameI18n(_index, entry()->name, &another)) {
+			if (entry()->name.empty()) {
+				const std::string msg = Text::format(ws->theme()->warning_I18nI18nNameIsEmptyAtPage(), { Text::toString(_index) });
+				warn(ws, msg, true);
+			} else {
+				const std::string msg = Text::format(ws->theme()->warning_I18nDuplicateI18nNameAtPages(), { entry()->name, Text::toString(_index), Text::toString(another) });
+				warn(ws, msg, true);
+			}
+			entry()->name = _project->getUsableI18nName(_index); // Unique name.
+			_project->hasDirtyAsset(true);
+		}
+
 		_refresh = std::bind(&EditorI18nImpl::refresh, this, ws, std::placeholders::_1);
 
 		_tools.namableText = entry()->name;
 
-		// TODO: i18n.
-
-		fprintf(stdout, "Font editor opened: #%d.\n", _index);
+		fprintf(stdout, "I18n editor opened: #%d.\n", _index);
 	}
 	virtual void close(int /* index */) override {
 		if (!_opened)
 			return;
 		_opened = false;
 
-		fprintf(stdout, "Font editor closed: #%d.\n", _index);
+		fprintf(stdout, "I18n editor closed: #%d.\n", _index);
 
 		_project = nullptr;
 		_index = -1;
 
+		_selection.clear();
 		_page.clear();
 		_status.clear();
 		_statusWidth = 0.0f;
@@ -164,8 +179,6 @@ public:
 
 		_ref.clear();
 		_tools.clear();
-
-		// TODO: i18n.
 	}
 
 	virtual int index(void) const override {
@@ -186,7 +199,7 @@ public:
 	virtual bool readonly(void) const override {
 		return false;
 	}
-	virtual void readonly(bool /* ro */) override {
+	virtual void readonly(bool) override {
 		// Do nothing.
 	}
 
@@ -241,6 +254,8 @@ public:
 		if (!cmd)
 			return;
 
+		_commands->redo(object());
+
 		_refresh(cmd);
 
 		_project->toPollEditor(true);
@@ -250,15 +265,31 @@ public:
 		if (!cmd)
 			return;
 
+		_commands->undo(object());
+
 		_refresh(cmd);
 
 		_project->toPollEditor(true);
 	}
 
 	virtual Variant post(unsigned msg, int argc, const Variant* argv) override {
-		(void)msg;
-		(void)argc;
-		(void)argv;
+		switch (msg) {
+		case SELECT_ALL:
+			// TODO: i18n.
+
+			return Variant(true);
+		case UPDATE_INDEX: {
+				const Variant::Int index = unpack<Variant::Int>(argc, argv, 0, _index);
+
+				_index = (int)index;
+
+				statusInvalidated();
+			}
+
+			return Variant(true);
+		default: // Do nothing.
+			break;
+		}
 
 		return Variant(false);
 	}
@@ -292,8 +323,13 @@ public:
 
 		ImGui::BeginChild("@Pat", ImVec2(splitter.first, height - statusBarHeight), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
 		{
-			// TODO: i18n.
-			(void)io;
+			const int col = object()->languageCount() + 1;
+			ImGui::BeginTable("@Tbl", col, 0);
+			{
+				// TODO: i18n.
+				(void)io;
+			}
+			ImGui::EndTable();
 
 			statusBarActived |= ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
 
@@ -333,6 +369,8 @@ public:
 			}
 			inputFieldFocused |= inputFieldFocused_;
 
+			// TODO: i18n.
+
 			_tools.inputFieldFocused = inputFieldFocused;
 
 			_tools.focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows); // Ignore shortcuts when the window is not focused.
@@ -347,8 +385,6 @@ public:
 
 	virtual void statusInvalidated(void) override {
 		_page.filled = false;
-
-		// TODO: i18n.
 	}
 
 	virtual void added(BaseAssets::Entry* /* entry */, int /* index */) override {
@@ -382,19 +418,68 @@ private:
 			return true;
 		}
 
-		// TODO: i18n.
-		(void)wnd;
-		(void)rnd;
+#if defined GBBASIC_OS_APPLE
+		const Editing::Shortcut pgUp(SDL_SCANCODE_PAGEUP, false, false, false, false, false, true);
+		const Editing::Shortcut pgDown(SDL_SCANCODE_PAGEDOWN, false, false, false, false, false, true);
+#else /* GBBASIC_OS_APPLE */
+		const Editing::Shortcut pgUp(SDL_SCANCODE_PAGEUP, true);
+		const Editing::Shortcut pgDown(SDL_SCANCODE_PAGEDOWN, true);
+#endif /* GBBASIC_OS_APPLE */
+		if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+			if (pgUp.pressed()) {
+				int index = _index - 1;
+				if (index < 0)
+					index = _project->i18nPageCount() - 1;
+				if (index != _index)
+					ws->changePage(wnd, rnd, _project, Workspace::Categories::I18N, index);
+			} else if (pgDown.pressed()) {
+				int index = _index + 1;
+				if (index >= _project->i18nPageCount())
+					index = 0;
+				if (index != _index)
+					ws->changePage(wnd, rnd, _project, Workspace::Categories::I18N, index);
+			}
+		}
 
 		return true;
 	}
 
-	void context(Window*, Renderer*, Workspace* ws) {
+	bool context(Window*, Renderer*, Workspace* ws) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
-		// TODO: i18n.
-		(void)style;
-		(void)ws;
+		if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+			ImGui::OpenPopup("@Ctx");
+
+			ws->bubble(nullptr);
+		}
+
+		VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+		VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+		bool result = false;
+		if (ImGui::BeginPopup("@Ctx")) {
+			if (ImGui::MenuItem(ws->theme()->menu_Cut())) {
+				cut();
+			}
+			if (ImGui::MenuItem(ws->theme()->menu_Copy())) {
+				copy();
+			}
+			if (ImGui::MenuItem(ws->theme()->menu_Paste(), nullptr, nullptr, pastable())) {
+				paste();
+			}
+			if (ImGui::MenuItem(ws->theme()->menu_Delete())) {
+				del(false);
+			}
+			if (ImGui::MenuItem(ws->theme()->menu_SelectAll())) {
+				post(Editable::SELECT_ALL);
+			}
+
+			ImGui::EndPopup();
+
+			result = true;
+		}
+
+		return result;
 	}
 
 	void refreshStatus(Window*, Renderer*, Workspace* ws) {
@@ -859,8 +944,6 @@ private:
 			_tools.namableText = entry()->name;
 			ws->clearTilesPageNames();
 		}
-
-		// TODO: i18n.
 	}
 
 	I18nAssets::Entry* entry(void) const {
