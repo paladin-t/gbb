@@ -398,60 +398,106 @@ public:
 
 			while (object()->itemCount() < 100) // TODO: DELETE ME.
 				object()->addItem(object()->itemCount());
-			/*while (object()->languageCount() < 10)
-				object()->addLanguage(object()->languageCount(), "L " + Text::toString(object()->languageCount()));*/
+			while (object()->languageCount() < 10)
+				object()->addLanguage(object()->languageCount(), "L " + Text::toString(object()->languageCount()));
 
 			const ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
 				ImGuiTableFlags_Resizable |
 				ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
 			const int cols = Math::min(object()->columnCount(), I18N_MAX_COLUMN_COUNT);
 			const int rows = object()->rowCount();
+			const int finalCols = cols + 1 /* row number */ + 1 /* extra */;
 			/*const float tblWidth = (lineNoWidth + style.FramePadding.x * 2) + (cellWidth + style.FramePadding.x * 2) * cols;
 			const float tblHeight = (ImGui::GetTextLineHeight() + style.CellPadding.y * 2) * (rows + 1);*/
 			const float tblWidth = splitter.first;
 			const float tblHeight = height - statusBarHeight;
-			// TODO: actions.
-			if (ImGui::BeginTable("@Tbl", cols + 1, flags, ImVec2(tblWidth, tblHeight))) {
+			const ImVec2 btnSize(ImGui::GetTextLineHeight() + style.CellPadding.y * 2, ImGui::GetTextLineHeight() + style.CellPadding.y * 2);
+			if (ImGui::BeginTable("@Tbl", finalCols, flags, ImVec2(tblWidth, tblHeight))) {
 				ImGui::TableSetupScrollFreeze(2, 2);
 				if (_tools.magnificationChanged) {
 					_tools.magnificationChanged = false;
-					for (int i = 0; i < cols + 1; ++i) {
+					for (int i = 0; i < finalCols; ++i) {
 						if (i == 0)
 							ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, lineNoWidth);
-						else if (i == cols)
+						else if (i == finalCols - 1)
 							ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, cellWidth);
 						else
 							ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, cellWidth);
 					}
 				} else {
-					for (int i = 0; i < cols + 1; ++i) {
+					for (int i = 0; i < finalCols; ++i) {
 						if (i == 0)
 							ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, lineNoWidth);
-						else if (i == cols)
+						else if (i == finalCols - 1)
 							ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, cellWidth);
 						else
 							ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed, cellWidth);
 					}
 				}
-				// TODO: actions.
 				ImGui::TableHeadersRow();
 
 				for (int row = 0; row < rows; ++row) {
 					ImGui::TableNextRow();
 
 					ImGui::TableSetColumnIndex(0);
-					if (row == 0)
+					if (row == 0) {
 						ImGui::TextUnformatted(ws->theme()->dialogPrompt_Languages());
-					else
+					} else {
+						/*const float y_ = ImGui::GetCursorPosY();
+						ImGui::SetCursorPosY(y_ + style.CellPadding.y);*/
 						ImGui::Text("%d", row);
+
+						ImGui::SameLine();
+						const float x = ImGui::GetCursorPosX()
+							+ ImGui::GetColumnWidth(0) - btnSize.x + style.CellPadding.x;
+						const float y = /*y_*/ImGui::GetCursorPosY()
+							- style.CellPadding.y + 1;
+						ImGui::SetCursorPos(ImVec2(x, y));
+						ImGui::Button("?", btnSize); // TODO
+					}
 
 					for (int col = 0; col < cols; ++col) {
 						ImGui::TableSetColumnIndex(col + 1);
 						const char* txt = object()->get(col, row);
 						ImGui::TextUnformatted(txt ? txt : "");
+
+						if (row == 0 && col >= 1) {
+							ImGui::SameLine();
+							const float x = ImGui::GetCursorPosX()
+								+ ImGui::GetColumnWidth(0) - btnSize.x + style.CellPadding.x;
+							const float y = /*y_*/ImGui::GetCursorPosY()
+								- style.CellPadding.y + 1;
+							ImGui::SetCursorPos(ImVec2(x, y));
+							ImGui::Button("!", btnSize); // TODO
+						}
 					}
 
-					// TODO: actions.
+					ImGui::TableSetColumnIndex(finalCols - 1);
+					ImGui::TextUnformatted("..."); // TODO
+				}
+
+				{
+					ImGui::TableNextRow();
+
+					ImGui::TableSetColumnIndex(0);
+					{
+						/*const float y_ = ImGui::GetCursorPosY();
+						ImGui::SetCursorPosY(y_ + style.CellPadding.y);*/
+						ImGui::Text("%d", rows);
+
+						ImGui::SameLine();
+						const float x = ImGui::GetCursorPosX()
+							+ ImGui::GetColumnWidth(0) - btnSize.x + style.CellPadding.x;
+						const float y = /*y_*/ImGui::GetCursorPosY()
+							- style.CellPadding.y + 1;
+						ImGui::SetCursorPos(ImVec2(x, y));
+						ImGui::Dummy(btnSize);
+					}
+
+					for (int col = 0; col < cols; ++col) {
+						ImGui::TableSetColumnIndex(col + 1);
+						ImGui::TextUnformatted("..."); // TODO
+					}
 				}
 
 				ImGui::EndTable();
