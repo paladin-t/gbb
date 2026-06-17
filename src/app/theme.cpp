@@ -605,6 +605,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_InvalidFile("Invalid file.");
 	dialogPrompt_Inverted("Inverted");
 	dialogPrompt_JumpGravity("Jump gravity");
+	dialogPrompt_Languages("Languages");
 	dialogPrompt_Length("Length");
 	dialogPrompt_LifeTime("Lift time");
 	dialogPrompt_LinuxFileDialogRequirements(

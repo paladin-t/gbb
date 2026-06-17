@@ -338,6 +338,20 @@ public:
 		return true;
 	}
 
+	virtual int columnCount(void) const override {
+		if (_table.empty())
+			return 0;
+
+		const Row &row = _table.front();
+
+		return (int)row.size();
+	}
+	virtual int rowCount(void) const override {
+		if (_table.empty())
+			return 0;
+
+		return (int)_table.size();
+	}
 	virtual const char* get(int col, int row) const override {
 		if (row < 0 || row >= (int)_table.size())
 			return nullptr;

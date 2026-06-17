@@ -17,6 +17,43 @@
 
 /*
 ** {===========================================================================
+** Macros and constants
+*/
+
+const char* EDITOR_I18N_TABLE_HEADER[256] = {
+	/* 1-10    */  "A",  "B",  "C",  "D",  "E",  "F",  "G",  "H",  "I",  "J",
+	/* 11-20   */  "K",  "L",  "M",  "N",  "O",  "P",  "Q",  "R",  "S",  "T",
+	/* 21-30   */  "U",  "V",  "W",  "X",  "Y",  "Z", "AA", "AB", "AC", "AD",
+	/* 31-40   */ "AE", "AF", "AG", "AH", "AI", "AJ", "AK", "AL", "AM", "AN",
+	/* 41-50   */ "AO", "AP", "AQ", "AR", "AS", "AT", "AU", "AV", "AW", "AX",
+	/* 51-60   */ "AY", "AZ", "BA", "BB", "BC", "BD", "BE", "BF", "BG", "BH",
+	/* 61-70   */ "BI", "BJ", "BK", "BL", "BM", "BN", "BO", "BP", "BQ", "BR",
+	/* 71-80   */ "BS", "BT", "BU", "BV", "BW", "BX", "BY", "BZ", "CA", "CB",
+	/* 81-90   */ "CC", "CD", "CE", "CF", "CG", "CH", "CI", "CJ", "CK", "CL",
+	/* 91-100  */ "CM", "CN", "CO", "CP", "CQ", "CR", "CS", "CT", "CU", "CV",
+	/* 101-110 */ "CW", "CX", "CY", "CZ", "DA", "DB", "DC", "DD", "DE", "DF",
+	/* 111-120 */ "DG", "DH", "DI", "DJ", "DK", "DL", "DM", "DN", "DO", "DP",
+	/* 121-130 */ "DQ", "DR", "DS", "DT", "DU", "DV", "DW", "DX", "DY", "DZ",
+	/* 131-140 */ "EA", "EB", "EC", "ED", "EE", "EF", "EG", "EH", "EI", "EJ",
+	/* 141-150 */ "EK", "EL", "EM", "EN", "EO", "EP", "EQ", "ER", "ES", "ET",
+	/* 151-160 */ "EU", "EV", "EW", "EX", "EY", "EZ", "FA", "FB", "FC", "FD",
+	/* 161-170 */ "FE", "FF", "FG", "FH", "FI", "FJ", "FK", "FL", "FM", "FN",
+	/* 171-180 */ "FO", "FP", "FQ", "FR", "FS", "FT", "FU", "FV", "FW", "FX",
+	/* 181-190 */ "FY", "FZ", "GA", "GB", "GC", "GD", "GE", "GF", "GG", "GH",
+	/* 191-200 */ "GI", "GJ", "GK", "GL", "GM", "GN", "GO", "GP", "GQ", "GR",
+	/* 201-210 */ "GS", "GT", "GU", "GV", "GW", "GX", "GY", "GZ", "HA", "HB",
+	/* 211-220 */ "HC", "HD", "HE", "HF", "HG", "HH", "HI", "HJ", "HK", "HL",
+	/* 221-230 */ "HM", "HN", "HO", "HP", "HQ", "HR", "HS", "HT", "HU", "HV",
+	/* 231-240 */ "HW", "HX", "HY", "HZ", "IA", "IB", "IC", "ID", "IE", "IF",
+	/* 241-250 */ "IG", "IH", "II", "IJ", "IK", "IL", "IM", "IN", "IO", "IP",
+	/* 251-256 */ "IQ", "IR", "IS", "IT", "IU", "IV"
+};
+static_assert(GBBASIC_COUNTOF(EDITOR_I18N_TABLE_HEADER) == I18N_MAX_COLUMN_COUNT, "Wrong data.");
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** I18n editor
 */
 
@@ -323,13 +360,36 @@ public:
 
 		ImGui::BeginChild("@Pat", ImVec2(splitter.first, height - statusBarHeight), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
 		{
-			const int col = object()->languageCount() + 1;
-			ImGui::BeginTable("@Tbl", col, 0);
-			{
-				// TODO: i18n.
-				(void)io;
+			const ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable;
+			const int cols = Math::min(object()->columnCount(), I18N_MAX_COLUMN_COUNT);
+			const int rows = object()->rowCount();
+			if (ImGui::BeginTable("@Tbl", cols + 1, flags)) {
+				for (int i = 0; i < cols + 1; ++i) {
+					if (i == 0)
+						ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+					else
+						ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed, 70.0f);
+				}
+				ImGui::TableHeadersRow();
+
+				for (int row = 0; row < rows; ++row) {
+					ImGui::TableNextRow();
+
+					ImGui::TableSetColumnIndex(0);
+					if (row == 0)
+						ImGui::TextUnformatted(ws->theme()->dialogPrompt_Languages());
+					else
+						ImGui::Text("%d", row);
+
+					for (int col = 0; col < cols; ++col) {
+						ImGui::TableSetColumnIndex(col + 1);
+						const char* txt = object()->get(col, row);
+						ImGui::TextUnformatted(txt ? txt : "");
+					}
+				}
+
+				ImGui::EndTable();
 			}
-			ImGui::EndTable();
 
 			statusBarActived |= ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
 
@@ -370,6 +430,7 @@ public:
 			inputFieldFocused |= inputFieldFocused_;
 
 			// TODO: i18n.
+			(void)io;
 
 			_tools.inputFieldFocused = inputFieldFocused;
 

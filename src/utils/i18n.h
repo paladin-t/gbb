@@ -29,6 +29,10 @@
 #	define I18N_ENGLISH_COLUMN_NAME "english"
 #endif /* I18N_ENGLISH_COLUMN_NAME */
 
+#ifndef I18N_MAX_COLUMN_COUNT
+#	define I18N_MAX_COLUMN_COUNT 256
+#endif /* I18N_MAX_COLUMN_COUNT */
+
 /* ===========================================================================} */
 
 /*
@@ -118,6 +122,8 @@ public:
 	 */
 	virtual bool setContent(int lang, int item, const std::string &val) = 0;
 
+	virtual int columnCount(void) const = 0;
+	virtual int rowCount(void) const = 0;
 	virtual const char* get(int col, int row) const = 0;
 	virtual bool set(int col, int row, const std::string &val) = 0;
 

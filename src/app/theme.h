@@ -396,6 +396,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_InvalidFile)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Inverted)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_JumpGravity)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Languages)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Length)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_LifeTime)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_LinuxFileDialogRequirements)
