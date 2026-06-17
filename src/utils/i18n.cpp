@@ -66,14 +66,11 @@ static std::string i18nCsvUnquote(const std::string &val) {
 
 class I18nImpl : public I18n {
 private:
-	typedef std::vector<std::string> Languages;
-
-	typedef std::vector<std::string> Item;
-	typedef std::vector<Item> Items;
+	typedef std::vector<std::string> Row;
+	typedef std::vector<Row> Table;
 
 private:
-	Languages _languages;
-	Items _items;
+	Table _table;
 
 public:
 	I18nImpl() {
@@ -93,8 +90,7 @@ public:
 		*ptr = nullptr;
 
 		I18nImpl* result = static_cast<I18nImpl*>(I18n::create());
-		result->_languages = _languages;
-		result->_items = _items;
+		result->_table = _table;
 
 		*ptr = result;
 
@@ -115,11 +111,9 @@ public:
 
 	virtual size_t hash(void) const override {
 		size_t result = 0;
-		for (int i = 0; i < (int)_languages.size(); ++i)
-			result = Math::hash(result, _languages[i]);
-		for (int i = 0; i < (int)_items.size(); ++i) {
-			for (int j = 0; j < (int)_items[i].size(); ++j)
-				result = Math::hash(result, _items[i][j]);
+		for (int i = 0; i < (int)_table.size(); ++i) {
+			for (int j = 0; j < (int)_table[i].size(); ++j)
+				result = Math::hash(result, _table[i][j]);
 		}
 
 		return result;
@@ -127,21 +121,16 @@ public:
 	virtual int compare(const I18n* other) const override {
 		const I18nImpl* rhs = static_cast<const I18nImpl*>(other);
 
-		if (_languages.size() != rhs->_languages.size())
-			return (int)_languages.size() < (int)rhs->_languages.size() ? -1 : 1;
-		for (int i = 0; i < (int)_languages.size(); ++i) {
-			if (_languages[i] != rhs->_languages[i])
-				return _languages[i] < rhs->_languages[i] ? -1 : 1;
-		}
+		if (_table.size() != rhs->_table.size())
+			return (int)_table.size() < (int)rhs->_table.size() ? -1 : 1;
 
-		if (_items.size() != rhs->_items.size())
-			return (int)_items.size() < (int)rhs->_items.size() ? -1 : 1;
-		for (int i = 0; i < (int)_items.size(); ++i) {
-			if (_items[i].size() != rhs->_items[i].size())
-				return (int)_items[i].size() < (int)rhs->_items[i].size() ? -1 : 1;
-			for (int j = 0; j < (int)_items[i].size(); ++j) {
-				if (_items[i][j] != rhs->_items[i][j])
-					return _items[i][j] < rhs->_items[i][j] ? -1 : 1;
+		for (int i = 0; i < (int)_table.size(); ++i) {
+			if (_table[i].size() != rhs->_table[i].size())
+				return (int)_table[i].size() < (int)rhs->_table[i].size() ? -1 : 1;
+
+			for (int j = 0; j < (int)_table[i].size(); ++j) {
+				if (_table[i][j] != rhs->_table[i][j])
+					return _table[i][j] < rhs->_table[i][j] ? -1 : 1;
 			}
 		}
 
@@ -149,39 +138,57 @@ public:
 	}
 
 	virtual void* pointer(void) override {
-		return &_items;
+		return &_table;
 	}
 
 	virtual int languageCount(void) const override {
-		return (int)_languages.size();
+		if (_table.empty())
+			return 0;
+
+		return (int)_table.front().size();
 	}
-	virtual bool addLanguage(int index, const std::string &lang) override {
-		if (index < 0 || index > (int)_languages.size())
+	virtual bool addLanguage(int col, const std::string &lang) override {
+		if (col < 0 || col > languageCount())
 			return false;
 
-		_languages.insert(_languages.begin() + index, lang);
-		_languages.shrink_to_fit();
-		for (int i = 0; i < (int)_items.size(); ++i) {
-			_items[i].insert(_items[i].begin() + index, std::string());
-			_items[i].shrink_to_fit();
+		if (_table.empty()) {
+			_table.push_back(Row());
+			_table.shrink_to_fit();
+		}
+
+		Row &head = _table.front();
+		head.insert(head.begin() + col, lang);
+		head.shrink_to_fit();
+		for (int i = 1; i < (int)_table.size(); ++i) {
+			_table[i].insert(_table[i].begin() + col, std::string());
+			_table[i].shrink_to_fit();
 		}
 
 		return true;
 	}
-	virtual bool deleteLanguage(int index) override {
-		if (index < 0 || index >= (int)_languages.size())
+	virtual bool deleteLanguage(int col) override {
+		if (col < 0 || col >= languageCount())
 			return false;
 
-		_languages.erase(_languages.begin() + index);
-		for (int i = 0; i < (int)_items.size(); ++i)
-			_items[i].erase(_items[i].begin() + index);
+		if (_table.empty())
+			return false;
+
+		Row &head = _table.front();
+		head.erase(head.begin() + col);
+
+		for (int i = 1; i < (int)_table.size(); ++i)
+			_table[i].erase(_table[i].begin() + col);
 
 		return true;
 	}
 	virtual int getLanguageIndex(const std::string &lang) const override {
+		if (_table.empty())
+			return -1;
+
+		const Row &head = _table.front();
 		int result = -1;
-		for (int i = 0; i < (int)_languages.size(); ++i) {
-			if (_languages[i] == lang) {
+		for (int i = 0; i < (int)head.size(); ++i) {
+			if (head[i] == lang) {
 				result = i;
 
 				break;
@@ -190,76 +197,91 @@ public:
 
 		return result;
 	}
-	virtual bool getLanguage(int index, std::string &lang) override {
+	virtual bool getLanguage(int col, std::string &lang) const override {
 		lang.clear();
 
-		if (index < 0 || index >= (int)_languages.size())
+		if (_table.empty())
 			return false;
 
-		lang = _languages[index];
+		const Row &head = _table.front();
+		if (col < 0 || col >= (int)head.size())
+			return false;
+
+		lang = head[col];
 
 		return true;
 	}
-	virtual bool setLanguage(int index, const std::string &lang) override {
-		if (index < 0 || index >= (int)_languages.size())
+	virtual bool setLanguage(int col, const std::string &lang) override {
+		if (_table.empty())
 			return false;
 
-		_languages[index] = lang;
+		Row &head = _table.front();
+		if (col < 0 || col >= (int)head.size())
+			return false;
+
+		head[col] = lang;
 
 		return true;
 	}
 
 	virtual int itemCount(void) const override {
-		return (int)_items.size();
+		if (_table.empty())
+			return 0;
+
+		return (int)_table.size() - 1;
 	}
-	virtual bool addItem(int index) override {
-		if (index < 0 || index > (int)_items.size())
+	virtual bool addItem(int row) override {
+		++row;
+		if (row < 1 || row > (int)_table.size())
 			return false;
 
-		_items.insert(_items.begin() + index, Item(_languages.size()));
-		_items.shrink_to_fit();
+		_table.insert(_table.begin() + row, Row(languageCount()));
+		_table.shrink_to_fit();
 
 		return true;
 	}
-	virtual bool deleteItem(int index) override {
-		if (index < 0 || index >= (int)_items.size())
+	virtual bool deleteItem(int row) override {
+		++row;
+		if (row < 1 || row >= (int)_table.size())
 			return false;
 
-		_items.erase(_items.begin() + index);
+		_table.erase(_table.begin() + row);
 
 		return true;
 	}
 
 	virtual bool swapLanguages(int l, int r) override {
-		if (l < 0 || l >= (int)_languages.size())
+		const int n = languageCount();
+		if (l < 0 || l >= n)
 			return false;
-		if (r < 0 || r >= (int)_languages.size())
+		if (r < 0 || r >= n)
 			return false;
 
 		if (l == r)
 			return true;
 
-		std::swap(_languages[l], _languages[r]);
-		for (int i = 0; i < (int)_items.size(); ++i)
-			std::swap(_items[i][l], _items[i][r]);
+		for (int i = 0; i < (int)_table.size(); ++i)
+			std::swap(_table[i][l], _table[i][r]);
 
 		return true;
 	}
 	virtual bool swapItems(int l, int r) override {
-		if (l < 0 || l >= (int)_items.size())
+		++l;
+		++r;
+		if (l < 1 || l >= (int)_table.size())
 			return false;
-		if (r < 0 || r >= (int)_items.size())
+		if (r < 1 || r >= (int)_table.size())
 			return false;
 
 		if (l == r)
 			return true;
 
-		std::swap(_items[l], _items[r]);
+		std::swap(_table[l], _table[r]);
 
 		return true;
 	}
 
-	virtual const char* get(const std::string &lang, const std::string &key, int* lang_, int* item) const override {
+	virtual const char* getContent(const std::string &lang, const std::string &key, int* lang_, int* item) const override {
 		if (lang_)
 			*lang_ = -1;
 		if (item)
@@ -281,35 +303,60 @@ public:
 		if (item)
 			*item = itemLoc;
 
-		return get(langLoc, itemLoc);
+		return getContent(langLoc, itemLoc);
 	}
-	virtual const char* get(int lang, int item) const override {
-		if (lang < 0 || lang >= (int)_languages.size())
+	virtual const char* getContent(int lang, int item) const override {
+		++item;
+		if (lang < 0 || lang >= languageCount())
 			return nullptr;
-		if (item < 0 || item >= (int)_items.size())
+		if (item < 1 || item >= (int)_table.size())
 			return nullptr;
 
-		if (lang >= (int)_items[item].size()) {
+		if (lang >= (int)_table[item].size()) {
 			GBBASIC_ASSERT(false && "Wrong data.");
 
 			return nullptr;
 		}
 
-		return _items[item][lang].c_str();
+		return _table[item][lang].c_str();
 	}
-	virtual bool set(int lang, int item, const std::string &val) override {
-		if (lang < 0 || lang >= (int)_languages.size())
+	virtual bool setContent(int lang, int item, const std::string &val) override {
+		++item;
+		if (lang < 0 || lang >= languageCount())
 			return false;
-		if (item < 0 || item >= (int)_items.size())
+		if (item < 1 || item >= (int)_table.size())
 			return false;
 
-		if (lang >= (int)_items[item].size()) {
+		if (lang >= (int)_table[item].size()) {
 			GBBASIC_ASSERT(false && "Wrong data.");
 
 			return nullptr;
 		}
 
-		_items[item][lang] = val;
+		_table[item][lang] = val;
+
+		return true;
+	}
+
+	virtual const char* get(int col, int row) const override {
+		if (row < 0 || row >= (int)_table.size())
+			return nullptr;
+
+		const Row &row_ = _table[row];
+		if (col < 0 || col >= (int)row_.size())
+			return false;
+
+		return _table[row][col].c_str();
+	}
+	virtual bool set(int col, int row, const std::string &val) override {
+		if (row < 0 || row >= (int)_table.size())
+			return false;
+
+		Row &row_ = _table[row];
+		if (col < 0 || col >= (int)row_.size())
+			return false;
+
+		_table[row][col] = val;
 
 		return true;
 	}
@@ -317,11 +364,9 @@ public:
 	virtual bool fromBlank(void) override {
 		clear();
 
-		_languages.push_back(I18N_KEY_COLUMN_NAME);
-		_languages.push_back(I18N_ENGLISH_COLUMN_NAME);
-		_languages.shrink_to_fit();
-		_items.push_back(Item(_languages.size()));
-		_items.shrink_to_fit();
+		addLanguage(0, I18N_KEY_COLUMN_NAME);
+		addLanguage(1, I18N_ENGLISH_COLUMN_NAME);
+		addItem(0);
 
 		return true;
 	}
@@ -329,22 +374,14 @@ public:
 	virtual bool toCsv(std::string &val) const override {
 		val.clear();
 
-		if (_languages.empty())
+		if (_table.empty())
 			return true;
 
-		for (int i = 0; i < (int)_languages.size(); ++i) {
-			if (i > 0)
-				val += ',';
-			const std::string &name = _languages[i];
-			val += i18nCsvQuote(name);
-		}
-		val += "\r\n";
-
-		for (int i = 0; i < (int)_items.size(); ++i) {
-			for (int j = 0; j < (int)_languages.size(); ++j) {
+		for (int i = 0; i < (int)_table.size(); ++i) {
+			for (int j = 0; j < (int)_table[i].size(); ++j) {
 				if (j > 0)
 					val += ',';
-				val += i18nCsvQuote(_items[i][j]);
+				val += i18nCsvQuote(_table[i][j]);
 			}
 			val += "\r\n";
 		}
@@ -364,24 +401,25 @@ public:
 			return true;
 
 		const Text::Array headers = Text::split(lines[0], ',', '"');
+		Text::Array languages;
 		for (int i = 0; i < (int)headers.size(); ++i) {
 			const std::string name = i18nCsvUnquote(headers[i]);
-			_languages.push_back(name);
+			languages.push_back(name);
 		}
-		_languages.shrink_to_fit();
+		languages.shrink_to_fit();
 
-		for (int i = 1; i < (int)lines.size(); ++i) {
+		for (int i = 0; i < (int)lines.size(); ++i) {
 			if (lines[i].empty())
 				continue;
 
 			const Text::Array fields = Text::split(lines[i], ',', '"');
-			Item row(_languages.size());
-			for (int j = 0; j < (int)fields.size() && j < (int)_languages.size(); ++j)
+			Row row(languages.size());
+			for (int j = 0; j < (int)fields.size() && j < (int)languages.size(); ++j)
 				row[j] = i18nCsvUnquote(fields[j]);
 			row.shrink_to_fit();
-			_items.push_back(row);
+			_table.push_back(row);
 		}
-		_items.shrink_to_fit();
+		_table.shrink_to_fit();
 
 		return true;
 	}
@@ -389,16 +427,17 @@ public:
 	virtual bool toJson(rapidjson::Value &val, rapidjson::Document &doc) const override {
 		val.SetObject();
 
-		for (int i = 0; i < (int)_languages.size(); ++i) {
+		for (int i = 0; i < languageCount(); ++i) {
 			rapidjson::Value jkey;
-			const std::string &name = _languages[i];
+			std::string name;
+			getLanguage(i, name);
 			jkey.SetString(name.c_str(), doc.GetAllocator());
 
 			rapidjson::Value jarr;
 			jarr.SetArray();
-			for (int j = 0; j < (int)_items.size(); ++j) {
+			for (int j = 1; j < (int)_table.size(); ++j) {
 				rapidjson::Value jval;
-				jval.SetString(_items[j][i].c_str(), (rapidjson::SizeType)_items[j][i].size(), doc.GetAllocator());
+				jval.SetString(_table[j][i].c_str(), (rapidjson::SizeType)_table[j][i].size(), doc.GetAllocator());
 				jarr.PushBack(jval, doc.GetAllocator());
 			}
 
@@ -427,9 +466,8 @@ public:
 			if (!it->value.IsArray())
 				return false;
 
-			_languages.push_back(key);
+			addLanguage(languageCount(), key);
 		}
-		_languages.shrink_to_fit();
 
 		int itemCount = 0;
 		for (auto it = val.MemberBegin(); it != val.MemberEnd(); ++it) {
@@ -437,23 +475,17 @@ public:
 				itemCount = (int)it->value.Size();
 		}
 
-		_items.resize(itemCount);
-		_items.shrink_to_fit();
-		for (int i = 0; i < itemCount; ++i) {
-			_items[i].resize(_languages.size());
-			_items[i].shrink_to_fit();
+		_table.resize(itemCount + 1);
+		_table.shrink_to_fit();
+		const int n = languageCount();
+		for (int i = 1; i < (int)_table.size(); ++i) {
+			_table[i].resize(n);
+			_table[i].shrink_to_fit();
 		}
 
 		for (auto it = val.MemberBegin(); it != val.MemberEnd(); ++it) {
 			const std::string key(it->name.GetString(), it->name.GetStringLength());
-			int langIdx = -1;
-			for (int i = 0; i < (int)_languages.size(); ++i) {
-				if (_languages[i] == key) {
-					langIdx = i;
-
-					break;
-				}
-			}
+			const int langIdx = getLanguageIndex(key);
 			if (langIdx < 0)
 				continue;
 
@@ -461,9 +493,11 @@ public:
 			if (!jarr.IsArray())
 				continue;
 
-			for (int j = 0; j < (int)jarr.Size() && j < itemCount; ++j) {
+			for (int j = 1; j < (int)jarr.Size() && j < itemCount; ++j) {
+				std::string content;
 				if (jarr[j].IsString())
-					_items[j][langIdx] = jarr[j].GetString();
+					content = jarr[j].GetString();
+				setContent(langIdx, j - 1, content);
 			}
 		}
 
@@ -477,10 +511,13 @@ public:
 
 private:
 	void clear(void) {
-		_languages.clear();
-		_items.clear();
+		_table.clear();
 	}
 
+	/**
+	 * @param[out] lang_
+	 * @param[out] item Starts from 0, already skipped the No. 0 row for languages.
+	 */
 	bool getLocation(const std::string &lang, const std::string &key, int &lang_, int &item) const {
 		lang_ = -1;
 		item = -1;
@@ -490,7 +527,7 @@ private:
 			return false;
 		int keyRow = -1;
 		for (int i = 0; i < itemCount(); ++i) {
-			const char* key_ = get(keyCol, i);
+			const char* key_ = getContent(keyCol, i);
 			if (!key_)
 				continue;
 

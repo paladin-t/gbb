@@ -38,6 +38,16 @@
 
 /**
  * @brief I18n resource object.
+ *
+ * Stores internationalization dictionary as a 2D table. The key and languages
+ * are stored as table header (row 0), followed with item content row by row.
+ * I.e.
+ *   |     | 0      | 1           | 2           | ... |
+ *   |-----|--------|-------------|-------------|-----|
+ *   | 0   | key    | language 1  | language 2  | ... |
+ *   | 1   | item 1 | content 1-1 | content 1-2 | ... |
+ *   | 2   | item 2 | content 2-1 | content 2-2 | ... |
+ *   | ... | ...    | ...         | ...         | ... |
  */
 class I18n : public Cloneable<I18n>, public virtual Object {
 public:
@@ -61,30 +71,55 @@ public:
 	 */
 	virtual void* pointer(void) = 0;
 
+	/**
+	 * @brief Gets the count of all columns, including "key" and languages.
+	 */
 	virtual int languageCount(void) const = 0;
-	virtual bool addLanguage(int index, const std::string &lang) = 0;
-	virtual bool deleteLanguage(int index) = 0;
+	virtual bool addLanguage(int col, const std::string &lang) = 0;
+	virtual bool deleteLanguage(int col) = 0;
 	virtual int getLanguageIndex(const std::string &lang) const = 0;
 	/**
 	 * @param[out] lang
 	 */
-	virtual bool getLanguage(int index, std::string &lang) = 0;
-	virtual bool setLanguage(int index, const std::string &lang) = 0;
+	virtual bool getLanguage(int col, std::string &lang) const = 0;
+	virtual bool setLanguage(int col, const std::string &lang) = 0;
 
+	/**
+	 * @brief Gets the count of all items, not including the No. 0 row for languages.
+	 */
 	virtual int itemCount(void) const = 0;
-	virtual bool addItem(int index) = 0;
-	virtual bool deleteItem(int index) = 0;
+	/**
+	 * @param[in] row Starts from 0, already skipped the No. 0 row for languages.
+	 */
+	virtual bool addItem(int row) = 0;
+	/**
+	 * @param[in] row Starts from 0, already skipped the No. 0 row for languages.
+	 */
+	virtual bool deleteItem(int row) = 0;
 
 	virtual bool swapLanguages(int l, int r) = 0;
+	/**
+	 * @param[in] l Starts from 0, already skipped the No. 0 row for languages.
+	 * @param[in] r Starts from 0, already skipped the No. 0 row for languages.
+	 */
 	virtual bool swapItems(int l, int r) = 0;
 
 	/**
 	 * @param[out] lang_
-	 * @param[out] item
+	 * @param[out] item Starts from 0, already skipped the No. 0 row for languages.
 	 */
-	virtual const char* get(const std::string &lang, const std::string &key, int* lang_ /* nullable */, int* item /* nullable */) const = 0;
-	virtual const char* get(int lang, int item) const = 0;
-	virtual bool set(int lang, int item, const std::string &val) = 0;
+	virtual const char* getContent(const std::string &lang, const std::string &key, int* lang_ /* nullable */, int* item /* nullable */) const = 0;
+	/**
+	 * @param[in] item Starts from 0, already skipped the No. 0 row for languages.
+	 */
+	virtual const char* getContent(int lang, int item) const = 0;
+	/**
+	 * @param[in] item Starts from 0, already skipped the No. 0 row for languages.
+	 */
+	virtual bool setContent(int lang, int item, const std::string &val) = 0;
+
+	virtual const char* get(int col, int row) const = 0;
+	virtual bool set(int col, int row, const std::string &val) = 0;
 
 	virtual bool fromBlank(void) = 0;
 

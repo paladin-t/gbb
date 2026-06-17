@@ -98,7 +98,7 @@ Command* DeleteItem::redo(Object::Ptr obj, int argc, const Variant* argv) {
 
 	if (filled()) {
 		for (int l = 0; l < ptr->languageCount(); ++l) {
-			const char* val = ptr->get(l, index());
+			const char* val = ptr->getContent(l, index());
 			old().push_back(val ? val : "");
 		}
 
@@ -116,7 +116,7 @@ Command* DeleteItem::undo(Object::Ptr obj, int argc, const Variant* argv) {
 
 	ptr->addItem(index());
 	for (int l = 0; l < (int)old().size(); ++l) {
-		ptr->set(l, index(), old()[l]);
+		ptr->setContent(l, index(), old()[l]);
 	}
 
 	return this;
@@ -230,7 +230,7 @@ Command* DeleteLanguage::redo(Object::Ptr obj, int argc, const Variant* argv) {
 
 		oldColumn().clear();
 		for (int i = 0; i < ptr->itemCount(); ++i) {
-			const char* val = ptr->get(index(), i);
+			const char* val = ptr->getContent(index(), i);
 			oldColumn().push_back(val ? val : "");
 		}
 
@@ -248,7 +248,7 @@ Command* DeleteLanguage::undo(Object::Ptr obj, int argc, const Variant* argv) {
 
 	ptr->addLanguage(index(), oldLanguage());
 	for (int i = 0; i < (int)oldColumn().size(); ++i)
-		ptr->set(index(), i, oldColumn()[i]);
+		ptr->setContent(index(), i, oldColumn()[i]);
 
 	return this;
 }
@@ -363,11 +363,11 @@ Command* ChangeContent::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	if (!filled()) {
-		const char* val = ptr->get(language(), index());
+		const char* val = ptr->getContent(language(), index());
 		old(val ? val : "");
 		filled(true);
 	}
-	ptr->set(language(), index(), content());
+	ptr->setContent(language(), index(), content());
 
 	return this;
 }
@@ -377,7 +377,7 @@ Command* ChangeContent::undo(Object::Ptr obj, int argc, const Variant* argv) {
 
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
-	ptr->set(language(), index(), old());
+	ptr->setContent(language(), index(), old());
 
 	return this;
 }
