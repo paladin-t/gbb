@@ -3002,6 +3002,8 @@ bool I18nAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarni
 
 	Jpath::set(doc, doc, name, "name");
 
+	Jpath::set(doc, doc, magnification, "magnification");
+
 	Jpath::set(doc, doc, Jpath::ANY(), "dictionary");
 	rapidjson::Value* dictionary = nullptr;
 	Jpath::get(doc, dictionary, "dictionary");
@@ -3058,6 +3060,9 @@ bool I18nAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler
 	// Parse the ref and dictionary.
 	if (!Jpath::get(doc, name, "name"))
 		name.clear();
+
+	if (!Jpath::get(doc, magnification, "magnification"))
+		magnification = -1;
 
 	const rapidjson::Value* dictionary = nullptr;
 	if (!Jpath::get(doc, dictionary, "dictionary")) {

@@ -707,6 +707,7 @@ struct I18nAssets {
 	struct Entry : public BaseAssets::Entry {
 		I18n::Ptr data = nullptr;
 		std::string name;
+		int magnification = -1; // Non-polluting.
 
 		Entry();
 		Entry(const std::string &val);

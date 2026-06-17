@@ -134,16 +134,22 @@ private:
 		}
 	} _ref;
 	struct Tools {
+		int magnification = -1;
+		bool magnificationChanged = false;
 		std::string namableText;
 
 		bool focused = false;
 		bool inputFieldFocused = false;
+		bool fineZooming = false;
 
 		void clear(void) {
+			magnification = -1;
+			magnificationChanged = false;
 			namableText.clear();
 
 			focused = false;
 			inputFieldFocused = false;
+			fineZooming = false;
 		}
 	} _tools;
 
@@ -193,7 +199,9 @@ public:
 
 		_refresh = std::bind(&EditorI18nImpl::refresh, this, ws, std::placeholders::_1);
 
+		_tools.magnification = entry()->magnification;
 		_tools.namableText = entry()->name;
+		_tools.fineZooming = _project->preferencesFineZooming();
 
 		fprintf(stdout, "I18n editor opened: #%d.\n", _index);
 	}
@@ -358,18 +366,74 @@ public:
 			return;
 		}
 
-		ImGui::BeginChild("@Pat", ImVec2(splitter.first, height - statusBarHeight), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
+		constexpr const int MAGNIFICATIONS[] = {
+			1, 2, 4, 8
+		};
+		ImGui::BeginChild("@Pat", ImVec2(splitter.first, height - statusBarHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav);
 		{
-			const ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable;
+			constexpr const float SUGGESTED_CELL_WIDTH = 70.0f;
+			if (_tools.magnification == -1) {
+				const float PADDING = 32.0f;
+				const float s = (splitter.first + PADDING) / (object()->languageCount() + 1);
+				int m = 0;
+				for (int i = 0; i < GBBASIC_COUNTOF(MAGNIFICATIONS); ++i) {
+					if (s > SUGGESTED_CELL_WIDTH * MAGNIFICATIONS[i])
+						m = i;
+				}
+				_tools.magnification = m;
+			}
+			if (_tools.fineZooming) {
+				_tools.magnification = Math::clamp(_tools.magnification, MAGNIFICATIONS[0], MAGNIFICATIONS[GBBASIC_COUNTOF(MAGNIFICATIONS) - 1]);
+			} else {
+				_tools.magnification = Math::clamp(_tools.magnification, 0, (int)GBBASIC_COUNTOF(MAGNIFICATIONS) - 1);
+			}
+
+			const float lineNoWidth = SUGGESTED_CELL_WIDTH;
+			float cellWidth = SUGGESTED_CELL_WIDTH;
+			if (_tools.fineZooming) {
+				cellWidth *= (float)_tools.magnification;
+			} else {
+				cellWidth *= (float)(MAGNIFICATIONS[_tools.magnification]);
+			}
+
+			while (object()->itemCount() < 100) // TODO: DELETE ME.
+				object()->addItem(object()->itemCount());
+			/*while (object()->languageCount() < 10)
+				object()->addLanguage(object()->languageCount(), "L " + Text::toString(object()->languageCount()));*/
+
+			const ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+				ImGuiTableFlags_Resizable |
+				ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
 			const int cols = Math::min(object()->columnCount(), I18N_MAX_COLUMN_COUNT);
 			const int rows = object()->rowCount();
-			if (ImGui::BeginTable("@Tbl", cols + 1, flags)) {
-				for (int i = 0; i < cols + 1; ++i) {
-					if (i == 0)
-						ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 70.0f);
-					else
-						ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed, 70.0f);
+			/*const float tblWidth = (lineNoWidth + style.FramePadding.x * 2) + (cellWidth + style.FramePadding.x * 2) * cols;
+			const float tblHeight = (ImGui::GetTextLineHeight() + style.CellPadding.y * 2) * (rows + 1);*/
+			const float tblWidth = splitter.first;
+			const float tblHeight = height - statusBarHeight;
+			// TODO: actions.
+			if (ImGui::BeginTable("@Tbl", cols + 1, flags, ImVec2(tblWidth, tblHeight))) {
+				ImGui::TableSetupScrollFreeze(2, 2);
+				if (_tools.magnificationChanged) {
+					_tools.magnificationChanged = false;
+					for (int i = 0; i < cols + 1; ++i) {
+						if (i == 0)
+							ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, lineNoWidth);
+						else if (i == cols)
+							ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, cellWidth);
+						else
+							ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, cellWidth);
+					}
+				} else {
+					for (int i = 0; i < cols + 1; ++i) {
+						if (i == 0)
+							ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, lineNoWidth);
+						else if (i == cols)
+							ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, cellWidth);
+						else
+							ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed, cellWidth);
+					}
 				}
+				// TODO: actions.
 				ImGui::TableHeadersRow();
 
 				for (int row = 0; row < rows; ++row) {
@@ -386,6 +450,8 @@ public:
 						const char* txt = object()->get(col, row);
 						ImGui::TextUnformatted(txt ? txt : "");
 					}
+
+					// TODO: actions.
 				}
 
 				ImGui::EndTable();
@@ -403,9 +469,30 @@ public:
 		{
 			bool inputFieldFocused = false;
 			bool inputFieldFocused_ = false;
+			auto canUseShortcuts = [ws, this] (void) -> bool {
+				return !_tools.inputFieldFocused && ws->canUseShortcuts() && !ImGui::IsMouseDown(ImGuiMouseButton_Left);
+			};
 
 			const float spwidth = _ref.windowWidth(splitter.second);
 
+			if (_tools.fineZooming) {
+				if (
+					Editing::Tools::magnifiable(
+						rnd, ws,
+						&_tools.magnification,
+						MAGNIFICATIONS[0], MAGNIFICATIONS[GBBASIC_COUNTOF(MAGNIFICATIONS) - 1],
+						spwidth, canUseShortcuts(),
+						&inputFieldFocused_
+					)
+				) {
+					_tools.magnificationChanged = true;
+				}
+			} else {
+				if (Editing::Tools::magnifiable(rnd, ws, &_tools.magnification, spwidth, canUseShortcuts()))
+					_tools.magnificationChanged = true;
+			}
+
+			Editing::Tools::separate(rnd, ws, spwidth);
 			if (
 				Editing::Tools::namable(
 					rnd, ws,
@@ -644,6 +731,11 @@ private:
 			ImGui::SameLine();
 			if (ImGui::ImageButton(ws->theme()->iconExport()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_Export().c_str())) {
 				ImGui::OpenPopup("@Xpt");
+			}
+			width_ += ImGui::GetItemRectSize().x;
+			ImGui::SameLine();
+			if (ImGui::ImageButton(ws->theme()->iconViews()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_View().c_str())) {
+				ImGui::OpenPopup("@Views");
 			}
 			width_ += ImGui::GetItemRectSize().x;
 			ImGui::SameLine();
@@ -966,6 +1058,19 @@ private:
 
 					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 				} while (false);
+			}
+
+			ImGui::EndPopup();
+		}
+
+		// Views.
+		if (ImGui::BeginPopup("@Views")) {
+			if (ImGui::MenuItem(ws->theme()->menu_FineZooming(), nullptr, &_tools.fineZooming)) {
+				_tools.magnification = -1;
+
+				_project->preferencesFineZooming(_tools.fineZooming);
+
+				_project->hasDirtyEditor(true);
 			}
 
 			ImGui::EndPopup();
