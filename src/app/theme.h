@@ -75,6 +75,8 @@ public:
 		ImU32 errorColor;
 		ImU32 debugColor;
 
+		ImU32 i18nHeadColor;
+
 		ImU32 musicSideColor;
 		ImU32 musicNoteColor;
 		ImU32 musicInstrumentColor;

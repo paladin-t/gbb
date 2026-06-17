@@ -283,6 +283,7 @@ bool Theme::open(class Renderer* rnd) {
 	styleDefault().warningColor                             = ImGui::GetColorU32(ImVec4(0.95f, 0.93f, 0.10f, 1.00f));
 	styleDefault().errorColor                               = ImGui::GetColorU32(ImVec4(0.93f, 0.00f, 0.00f, 1.00f));
 	styleDefault().debugColor                               = ImGui::GetColorU32(ImVec4(0.00f, 0.58f, 1.00f, 1.00f));
+	styleDefault().i18nHeadColor                            = ImGui::GetColorU32(ImVec4(0.17f, 0.57f, 0.69f, 1.00f));
 	styleDefault().musicSideColor                           = ImGui::GetColorU32(ImVec4(0.17f, 0.57f, 0.69f, 1.00f));
 	styleDefault().musicNoteColor                           = ImGui::GetColorU32(ImVec4(0.95f, 0.50f, 0.04f, 1.00f));
 	styleDefault().musicInstrumentColor                     = ImGui::GetColorU32(ImVec4(0.17f, 0.48f, 0.16f, 1.00f));
@@ -2152,6 +2153,8 @@ void Theme::setColor(const std::string &idx, const ImColor &col) {
 		styleDefault().errorColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "debug")
 		styleDefault().debugColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "i18n_head")
+		styleDefault().i18nHeadColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "music_side")
 		styleDefault().musicSideColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "music_note")

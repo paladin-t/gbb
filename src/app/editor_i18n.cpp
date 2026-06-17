@@ -367,7 +367,7 @@ public:
 		}
 
 		constexpr const int MAGNIFICATIONS[] = {
-			1, 2, 4, 8
+			1, 2, 3, 4
 		};
 		ImGui::BeginChild("@Pat", ImVec2(splitter.first, height - statusBarHeight), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav);
 		{
@@ -401,9 +401,11 @@ public:
 			while (object()->languageCount() < 10)
 				object()->addLanguage(object()->languageCount(), "L " + Text::toString(object()->languageCount()));
 
-			const ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-				ImGuiTableFlags_Resizable |
-				ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
+			ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+			if (_tools.magnificationChanged)
+				flags |= ImGuiTableFlags_NoHostExtendX;
+			else
+				flags |= ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
 			const int cols = Math::min(object()->columnCount(), I18N_MAX_COLUMN_COUNT);
 			const int rows = object()->rowCount();
 			const int finalCols = cols + 1 /* row number */ + 1 /* extra */;
@@ -414,6 +416,8 @@ public:
 			const ImVec2 btnSize(ImGui::GetTextLineHeight() + style.CellPadding.y * 2, ImGui::GetTextLineHeight() + style.CellPadding.y * 2);
 			if (ImGui::BeginTable("@Tbl", finalCols, flags, ImVec2(tblWidth, tblHeight))) {
 				ImGui::TableSetupScrollFreeze(2, 2);
+				const ImU32 col = ws->theme()->style()->i18nHeadColor;
+				ImGui::PushStyleColor(ImGuiCol_Text, col);
 				if (_tools.magnificationChanged) {
 					_tools.magnificationChanged = false;
 					for (int i = 0; i < finalCols; ++i) {
@@ -435,17 +439,28 @@ public:
 					}
 				}
 				ImGui::TableHeadersRow();
+				ImGui::PopStyleColor();
 
 				for (int row = 0; row < rows; ++row) {
 					ImGui::TableNextRow();
 
 					ImGui::TableSetColumnIndex(0);
 					if (row == 0) {
-						ImGui::TextUnformatted(ws->theme()->dialogPrompt_Languages());
+						const ImU32 col = ws->theme()->style()->i18nHeadColor;
+						ImGui::PushStyleColor(ImGuiCol_Text, col);
+						{
+							ImGui::TextUnformatted(ws->theme()->dialogPrompt_Languages());
+						}
+						ImGui::PopStyleColor();
 					} else {
 						/*const float y_ = ImGui::GetCursorPosY();
 						ImGui::SetCursorPosY(y_ + style.CellPadding.y);*/
-						ImGui::Text("%d", row);
+						const ImU32 col = ws->theme()->style()->i18nHeadColor;
+						ImGui::PushStyleColor(ImGuiCol_Text, col);
+						{
+							ImGui::Text("%d", row);
+						}
+						ImGui::PopStyleColor();
 
 						ImGui::SameLine();
 						const float x = ImGui::GetCursorPosX()
@@ -459,7 +474,16 @@ public:
 					for (int col = 0; col < cols; ++col) {
 						ImGui::TableSetColumnIndex(col + 1);
 						const char* txt = object()->get(col, row);
-						ImGui::TextUnformatted(txt ? txt : "");
+						if (row == 0) {
+							const ImU32 col = ws->theme()->style()->i18nHeadColor;
+							ImGui::PushStyleColor(ImGuiCol_Text, col);
+							{
+								ImGui::TextUnformatted(txt ? txt : "");
+							}
+							ImGui::PopStyleColor();
+						} else {
+							ImGui::TextUnformatted(txt ? txt : "");
+						}
 
 						if (row == 0 && col >= 1) {
 							ImGui::SameLine();
@@ -473,7 +497,16 @@ public:
 					}
 
 					ImGui::TableSetColumnIndex(finalCols - 1);
-					ImGui::TextUnformatted("..."); // TODO
+					if (row == 0) {
+						const ImU32 col = ws->theme()->style()->i18nHeadColor;
+						ImGui::PushStyleColor(ImGuiCol_Text, col);
+						{
+							ImGui::TextUnformatted("..."); // TODO
+						}
+						ImGui::PopStyleColor();
+					} else {
+						ImGui::TextUnformatted("..."); // TODO
+					}
 				}
 
 				{
@@ -483,7 +516,12 @@ public:
 					{
 						/*const float y_ = ImGui::GetCursorPosY();
 						ImGui::SetCursorPosY(y_ + style.CellPadding.y);*/
-						ImGui::Text("%d", rows);
+						const ImU32 col = ws->theme()->style()->i18nHeadColor;
+						ImGui::PushStyleColor(ImGuiCol_Text, col);
+						{
+							ImGui::Text("%d", rows);
+						}
+						ImGui::PopStyleColor();
 
 						ImGui::SameLine();
 						const float x = ImGui::GetCursorPosX()
@@ -521,6 +559,7 @@ public:
 
 			const float spwidth = _ref.windowWidth(splitter.second);
 
+			ImGui::NewLine(1);
 			if (_tools.fineZooming) {
 				if (
 					Editing::Tools::magnifiable(
