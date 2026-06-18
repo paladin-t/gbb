@@ -25,6 +25,7 @@ namespace I18n {
 class AddItem : public Layered::Layered {
 public:
 	GBBASIC_PROPERTY(int, index)
+	GBBASIC_PROPERTY(std::string, item)
 
 public:
 	AddItem();
@@ -42,6 +43,7 @@ public:
 	using Command::undo;
 
 	virtual AddItem* with(int index_);
+	virtual AddItem* with(int index_, const std::string &item_);
 	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
@@ -74,6 +76,36 @@ public:
 	using Command::undo;
 
 	virtual DeleteItem* with(int index_);
+	using Layered::Layered::with;
+
+	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::exec;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class SwapItems : public Layered::Layered {
+public:
+	GBBASIC_PROPERTY(int, index0)
+	GBBASIC_PROPERTY(int, index1)
+
+public:
+	SwapItems();
+	virtual ~SwapItems() override;
+
+	GBBASIC_CLASS_TYPE('S', 'W', 'I', 'I')
+
+	virtual unsigned type(void) const override;
+
+	virtual const char* toString(void) const override;
+
+	virtual Command* redo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::redo;
+	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::undo;
+
+	virtual SwapItems* with(int index0_, int index1_);
 	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
@@ -137,6 +169,36 @@ public:
 	using Command::undo;
 
 	virtual DeleteLanguage* with(int index_);
+	using Layered::Layered::with;
+
+	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::exec;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class SwapLanguages : public Layered::Layered {
+public:
+	GBBASIC_PROPERTY(int, index0)
+	GBBASIC_PROPERTY(int, index1)
+
+public:
+	SwapLanguages();
+	virtual ~SwapLanguages() override;
+
+	GBBASIC_CLASS_TYPE('S', 'W', 'L', 'I')
+
+	virtual unsigned type(void) const override;
+
+	virtual const char* toString(void) const override;
+
+	virtual Command* redo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::redo;
+	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::undo;
+
+	virtual SwapLanguages* with(int index0_, int index1_);
 	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;

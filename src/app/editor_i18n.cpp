@@ -164,8 +164,10 @@ public:
 		_commands = (new CommandQueue(GBBASIC_EDITOR_MAX_COMMAND_COUNT))
 			->reg<Commands::I18n::AddItem>()
 			->reg<Commands::I18n::DeleteItem>()
+			->reg<Commands::I18n::SwapItems>()
 			->reg<Commands::I18n::AddLanguage>()
 			->reg<Commands::I18n::DeleteLanguage>()
+			->reg<Commands::I18n::SwapLanguages>()
 			->reg<Commands::I18n::RenameLanguage>()
 			->reg<Commands::I18n::ChangeContent>()
 			->reg<Commands::I18n::SetName>()
@@ -724,33 +726,139 @@ private:
 		}
 
 		if (ImGui::BeginPopup("@Act")) {
+			const int idx = _tools.actingIndex;
+
 			if (_tools.isActingLanguages) {
+				const int cols = object()->columnCount();
+
 				if (ImGui::MenuItem(ws->theme()->menu_Add())) {
-					// TODO: i18n.
+					ImGui::InputPopupBox::ConfirmedHandler confirm(
+						[ws, this, idx] (const char* txt) -> void {
+							if (!txt || !*txt) {
+								ws->popupBox(nullptr);
+
+								return;
+							}
+							if (object()->getLanguageIndex(txt) != -1) {
+								ws->messagePopupBox(ws->theme()->dialogPrompt_LanguageAlreadyExists(), nullptr, nullptr, nullptr);
+
+								ws->popupBox(nullptr);
+
+								return;
+							}
+
+							Command* cmd = enqueue<Commands::I18n::AddLanguage>()
+								->with(idx, txt)
+								->exec(object());
+
+							_refresh(cmd);
+
+							ws->popupBox(nullptr);
+						},
+						nullptr
+					);
+					ImGui::InputPopupBox::CanceledHandler cancel(
+						[ws] (void) -> void {
+							// Do nothing.
+
+							ws->popupBox(nullptr);
+						},
+						nullptr
+					);
+					ws->inputPopupBox(
+						ws->theme()->dialogInput_Input(),
+						"", 0,
+						confirm,
+						cancel
+					);
 				}
 				if (ImGui::MenuItem(ws->theme()->menu_Delete())) {
-					// TODO: i18n.
+					Command* cmd = enqueue<Commands::I18n::DeleteLanguage>()
+						->with(idx)
+						->exec(object());
+
+					_refresh(cmd);
 				}
 				ImGui::Separator();
-				if (ImGui::MenuItem(ws->theme()->menu_MoveLeft())) {
-					// TODO: i18n.
+				if (ImGui::MenuItem(ws->theme()->menu_MoveLeft(), nullptr, nullptr, idx > 1)) {
+					Command* cmd = enqueue<Commands::I18n::SwapLanguages>()
+						->with(idx, idx - 1)
+						->exec(object());
+
+					_refresh(cmd);
 				}
-				if (ImGui::MenuItem(ws->theme()->menu_MoveRight())) {
-					// TODO: i18n.
+				if (ImGui::MenuItem(ws->theme()->menu_MoveRight(), nullptr, nullptr, idx < cols - 1)) {
+					Command* cmd = enqueue<Commands::I18n::SwapLanguages>()
+						->with(idx, idx + 1)
+						->exec(object());
+
+					_refresh(cmd);
 				}
 			} else {
+				const int rows = object()->rowCount();
+
 				if (ImGui::MenuItem(ws->theme()->menu_Add())) {
-					// TODO: i18n.
+					ImGui::InputPopupBox::ConfirmedHandler confirm(
+						[ws, this, idx] (const char* txt) -> void {
+							if (!txt || !*txt) {
+								ws->popupBox(nullptr);
+
+								return;
+							}
+							if (object()->getLanguageIndex(txt) != -1) {
+								ws->messagePopupBox(ws->theme()->dialogPrompt_ItemAlreadyExists(), nullptr, nullptr, nullptr);
+
+								ws->popupBox(nullptr);
+
+								return;
+							}
+
+							Command* cmd = enqueue<Commands::I18n::AddItem>()
+								->with(idx, txt)
+								->exec(object());
+
+							_refresh(cmd);
+
+							ws->popupBox(nullptr);
+						},
+						nullptr
+					);
+					ImGui::InputPopupBox::CanceledHandler cancel(
+						[ws] (void) -> void {
+							// Do nothing.
+
+							ws->popupBox(nullptr);
+						},
+						nullptr
+					);
+					ws->inputPopupBox(
+						ws->theme()->dialogInput_Input(),
+						"", 0,
+						confirm,
+						cancel
+					);
 				}
 				if (ImGui::MenuItem(ws->theme()->menu_Delete())) {
-					// TODO: i18n.
+					Command* cmd = enqueue<Commands::I18n::DeleteItem>()
+						->with(idx)
+						->exec(object());
+
+					_refresh(cmd);
 				}
 				ImGui::Separator();
-				if (ImGui::MenuItem(ws->theme()->menu_MoveUp())) {
-					// TODO: i18n.
+				if (ImGui::MenuItem(ws->theme()->menu_MoveUp(), nullptr, nullptr, idx > 1)) {
+					Command* cmd = enqueue<Commands::I18n::SwapItems>()
+						->with(idx, idx - 1)
+						->exec(object());
+
+					_refresh(cmd);
 				}
-				if (ImGui::MenuItem(ws->theme()->menu_MoveDown())) {
-					// TODO: i18n.
+				if (ImGui::MenuItem(ws->theme()->menu_MoveDown(), nullptr, nullptr, idx < rows - 1)) {
+					Command* cmd = enqueue<Commands::I18n::SwapItems>()
+						->with(idx, idx + 1)
+						->exec(object());
+
+					_refresh(cmd);
 				}
 			}
 

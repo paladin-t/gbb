@@ -230,12 +230,16 @@ public:
 
 		return (int)_table.size() - 1;
 	}
-	virtual bool addItem(int row) override {
+	virtual bool addItem(int row, const char* item) override {
 		++row;
 		if (row < 1 || row > (int)_table.size())
 			return false;
 
-		_table.insert(_table.begin() + row, Row(languageCount()));
+		Row row_(languageCount());
+		if (item && !row_.empty())
+			row_[0] = item;
+
+		_table.insert(_table.begin() + row, row_);
 		_table.shrink_to_fit();
 
 		return true;
@@ -248,6 +252,22 @@ public:
 		_table.erase(_table.begin() + row);
 
 		return true;
+	}
+	virtual int getItemIndex(const std::string &item) const override {
+		const int keyCol = getLanguageIndex(I18N_KEY_COLUMN_NAME);
+		if (keyCol == -1)
+			return -1;
+
+		for (int i = 0; i < itemCount(); ++i) {
+			const char* key_ = getContent(keyCol, i);
+			if (!key_)
+				continue;
+
+			if (item == key_)
+				return i;
+		}
+
+		return -1;
 	}
 
 	virtual bool swapLanguages(int l, int r) override {
@@ -380,7 +400,8 @@ public:
 
 		addLanguage(0, I18N_KEY_COLUMN_NAME);
 		addLanguage(1, I18N_ENGLISH_COLUMN_NAME);
-		addItem(0);
+		addItem(0, "hello");
+		setContent(1, 0, "Hello");
 
 		return true;
 	}
@@ -507,11 +528,11 @@ public:
 			if (!jarr.IsArray())
 				continue;
 
-			for (int j = 1; j < (int)jarr.Size() && j < itemCount; ++j) {
+			for (int j = 0; j < (int)jarr.Size() && j < itemCount; ++j) {
 				std::string content;
 				if (jarr[j].IsString())
 					content = jarr[j].GetString();
-				setContent(langIdx, j - 1, content);
+				setContent(langIdx, j, content);
 			}
 		}
 
@@ -539,6 +560,7 @@ private:
 		const int keyCol = getLanguageIndex(I18N_KEY_COLUMN_NAME);
 		if (keyCol == -1)
 			return false;
+
 		int keyRow = -1;
 		for (int i = 0; i < itemCount(); ++i) {
 			const char* key_ = getContent(keyCol, i);

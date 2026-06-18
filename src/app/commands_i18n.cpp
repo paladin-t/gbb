@@ -38,7 +38,7 @@ Command* AddItem::redo(Object::Ptr obj, int argc, const Variant* argv) {
 
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
-	ptr->addItem(index());
+	ptr->addItem(index(), item().empty() ? nullptr : item().c_str());
 
 	return this;
 }
@@ -55,6 +55,13 @@ Command* AddItem::undo(Object::Ptr obj, int argc, const Variant* argv) {
 
 AddItem* AddItem::with(int index_) {
 	index(index_);
+
+	return this;
+}
+
+AddItem* AddItem::with(int index_, const std::string &item_) {
+	index(index_);
+	item(item_);
 
 	return this;
 }
@@ -114,10 +121,9 @@ Command* DeleteItem::undo(Object::Ptr obj, int argc, const Variant* argv) {
 
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
-	ptr->addItem(index());
-	for (int l = 0; l < (int)old().size(); ++l) {
+	ptr->addItem(index(), nullptr);
+	for (int l = 0; l < (int)old().size(); ++l)
 		ptr->setContent(l, index(), old()[l]);
-	}
 
 	return this;
 }
@@ -140,6 +146,64 @@ Command* DeleteItem::create(void) {
 
 void DeleteItem::destroy(Command* ptr) {
 	DeleteItem* impl = static_cast<DeleteItem*>(ptr);
+	delete impl;
+}
+
+SwapItems::SwapItems() {
+	index0(0);
+	index1(0);
+}
+
+SwapItems::~SwapItems() {
+}
+
+unsigned SwapItems::type(void) const {
+	return TYPE();
+}
+
+const char* SwapItems::toString(void) const {
+	return "Swap items";
+}
+
+Command* SwapItems::redo(Object::Ptr obj, int argc, const Variant* argv) {
+	Layered::Layered::redo(obj, argc, argv);
+
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	ptr->swapItems(index0(), index1());
+
+	return this;
+}
+
+Command* SwapItems::undo(Object::Ptr obj, int argc, const Variant* argv) {
+	Layered::Layered::undo(obj, argc, argv);
+
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	ptr->swapItems(index0(), index1());
+
+	return this;
+}
+
+SwapItems* SwapItems::with(int index0_, int index1_) {
+	index0(index0_);
+	index1(index1_);
+
+	return this;
+}
+
+Command* SwapItems::exec(Object::Ptr obj, int argc, const Variant* argv) {
+	return redo(obj, argc, argv);
+}
+
+Command* SwapItems::create(void) {
+	SwapItems* result = new SwapItems();
+
+	return result;
+}
+
+void SwapItems::destroy(Command* ptr) {
+	SwapItems* impl = static_cast<SwapItems*>(ptr);
 	delete impl;
 }
 
@@ -271,6 +335,64 @@ Command* DeleteLanguage::create(void) {
 
 void DeleteLanguage::destroy(Command* ptr) {
 	DeleteLanguage* impl = static_cast<DeleteLanguage*>(ptr);
+	delete impl;
+}
+
+SwapLanguages::SwapLanguages() {
+	index0(0);
+	index1(0);
+}
+
+SwapLanguages::~SwapLanguages() {
+}
+
+unsigned SwapLanguages::type(void) const {
+	return TYPE();
+}
+
+const char* SwapLanguages::toString(void) const {
+	return "Swap languages";
+}
+
+Command* SwapLanguages::redo(Object::Ptr obj, int argc, const Variant* argv) {
+	Layered::Layered::redo(obj, argc, argv);
+
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	ptr->swapLanguages(index0(), index1());
+
+	return this;
+}
+
+Command* SwapLanguages::undo(Object::Ptr obj, int argc, const Variant* argv) {
+	Layered::Layered::undo(obj, argc, argv);
+
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+
+	ptr->swapLanguages(index0(), index1());
+
+	return this;
+}
+
+SwapLanguages* SwapLanguages::with(int index0_, int index1_) {
+	index0(index0_);
+	index1(index1_);
+
+	return this;
+}
+
+Command* SwapLanguages::exec(Object::Ptr obj, int argc, const Variant* argv) {
+	return redo(obj, argc, argv);
+}
+
+Command* SwapLanguages::create(void) {
+	SwapLanguages* result = new SwapLanguages();
+
+	return result;
+}
+
+void SwapLanguages::destroy(Command* ptr) {
+	SwapLanguages* impl = static_cast<SwapLanguages*>(ptr);
 	delete impl;
 }
 

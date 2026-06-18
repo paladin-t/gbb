@@ -95,11 +95,12 @@ public:
 	/**
 	 * @param[in] row Starts from 0, already skipped the No. 0 row for languages.
 	 */
-	virtual bool addItem(int row) = 0;
+	virtual bool addItem(int row, const char* item /* nullable */) = 0;
 	/**
 	 * @param[in] row Starts from 0, already skipped the No. 0 row for languages.
 	 */
 	virtual bool deleteItem(int row) = 0;
+	virtual int getItemIndex(const std::string &item) const = 0;
 
 	virtual bool swapLanguages(int l, int r) = 0;
 	/**

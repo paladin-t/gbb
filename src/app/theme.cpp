@@ -610,7 +610,9 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_InvalidDataSeeTheConsoleWindowForDetails("Invalid data; see the console window for details.");
 	dialogPrompt_InvalidFile("Invalid file.");
 	dialogPrompt_Inverted("Inverted");
+	dialogPrompt_ItemAlreadyExists("Item already exists.");
 	dialogPrompt_JumpGravity("Jump gravity");
+	dialogPrompt_LanguageAlreadyExists("Language already exists.");
 	dialogPrompt_Languages("Languages");
 	dialogPrompt_Length("Length");
 	dialogPrompt_LifeTime("Lift time");
