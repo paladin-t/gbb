@@ -814,7 +814,7 @@ private:
 							}
 
 							Command* cmd = enqueue<Commands::I18n::AddItem>()
-								->with(idx, txt)
+								->with(idx - 1, txt)
 								->exec(object());
 
 							_refresh(cmd);
@@ -840,7 +840,7 @@ private:
 				}
 				if (ImGui::MenuItem(ws->theme()->menu_Delete())) {
 					Command* cmd = enqueue<Commands::I18n::DeleteItem>()
-						->with(idx)
+						->with(idx - 1)
 						->exec(object());
 
 					_refresh(cmd);

@@ -8549,6 +8549,7 @@ void AssetsBundle::clone(AssetsBundle* other, FontGetter getFont, CodeGetter get
 
 	other->palette = palette;
 	other->fonts = fonts;
+	other->i18ns = i18ns;
 	other->code = code;
 	other->tiles = tiles;
 	other->maps = maps;

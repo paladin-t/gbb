@@ -103,7 +103,7 @@ Command* DeleteItem::redo(Object::Ptr obj, int argc, const Variant* argv) {
 
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
-	if (filled()) {
+	if (!filled()) {
 		for (int l = 0; l < ptr->languageCount(); ++l) {
 			const char* val = ptr->getContent(l, index());
 			old().push_back(val ? val : "");

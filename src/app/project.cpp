@@ -1975,6 +1975,18 @@ bool Project::dirty(void) {
 		if (hasDirtyEditor())
 			break;
 
+		I18nAssets &i18ns = assets()->i18ns;
+		for (int i = 0; i < i18ns.count(); ++i) {
+			I18nAssets::Entry* entry = i18ns.get(i);
+			if (entry->editor && entry->editor->hasUnsavedChanges()) {
+				hasDirtyEditor(true);
+
+				break;
+			}
+		}
+		if (hasDirtyEditor())
+			break;
+
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 		if (minorCodeEditor() && minorCodeEditor()->hasUnsavedChanges()) {
 			hasDirtyEditor(true);
