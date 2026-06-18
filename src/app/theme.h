@@ -128,6 +128,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Activities)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Actor)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Actors)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_Add)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Anchor)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Application)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Attributes)
@@ -204,7 +205,11 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Map)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_MoreOfficialKernels)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_MoveBackward)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_MoveDown)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_MoveForward)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_MoveLeft)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_MoveRight)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_MoveUp)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Music)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_New)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_OnscreenDebug)
@@ -1174,6 +1179,8 @@ public:
 	GBBASIC_PROPERTY_PTR(class Texture, iconDual)
 	GBBASIC_PROPERTY_PTR(class Texture, iconMajor)
 	GBBASIC_PROPERTY_PTR(class Texture, iconMinor)
+
+	GBBASIC_PROPERTY_PTR(class Texture, iconTableDropdown)
 
 	GBBASIC_PROPERTY_PTR(class Texture, iconBackground)
 

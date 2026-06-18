@@ -6231,6 +6231,78 @@ ImVec2 ScrollbarSize(bool horizontal) {
 	return ImVec2(rect.GetWidth(), rect.GetHeight());
 }
 
+bool CompactButton(const char* label, const ImVec2 &pos, const ImVec2 &size, const char* tooltip, ImGuiButtonFlags flags) {
+	ImGuiContext &g = *GImGui;
+	ImGuiStyle &style = GetStyle();
+
+	ImGuiWindow* window = GetCurrentWindow();
+	if (window->SkipItems)
+		return false;
+
+	const ImGuiID id = GetID(label);
+	const ImVec2 labelSize = CalcTextSize(label, nullptr, true);
+
+	const ImRect bb(pos, pos + size);
+	if (!ItemAdd(bb, id))
+		return false;
+
+	if (g.LastItemData.InFlags & ImGuiItemFlags_ButtonRepeat)
+		flags |= ImGuiButtonFlags_Repeat;
+
+	bool hovered = false, held = false;
+	const bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
+
+	const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+    RenderNavHighlight(bb, id);
+    RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
+
+	RenderTextClipped(bb.Min, bb.Max, label, nullptr, &labelSize, style.ButtonTextAlign, &bb);
+
+	if (tooltip && IsItemHovered()) {
+		VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+		SetTooltip(tooltip);
+	}
+
+	return pressed;
+}
+
+bool CompactButton(ImTextureID texture_id, const ImVec2 &pos, const ImVec2 &size, const ImVec4 &tint_col, const char* tooltip, ImGuiButtonFlags flags) {
+	ImGuiContext &g = *GImGui;
+	ImGuiStyle &style = GetStyle();
+
+	ImGuiWindow* window = GetCurrentWindow();
+	if (window->SkipItems)
+		return false;
+
+	PushID((void*)(intptr_t)texture_id);
+	const ImGuiID id = window->GetID("#image");
+	PopID();
+
+	const ImRect bb(pos, pos + size);
+	if (!ItemAdd(bb, id))
+		return false;
+
+	if (g.LastItemData.InFlags & ImGuiItemFlags_ButtonRepeat)
+		flags |= ImGuiButtonFlags_Repeat;
+
+	bool hovered = false, held = false;
+	const bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
+
+	const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+	RenderNavHighlight(bb, id);
+	RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
+	window->DrawList->AddImage(texture_id, bb.Min, bb.Max, ImVec2(0, 0), ImVec2(1, 1), GetColorU32(tint_col));
+
+	if (tooltip && IsItemHovered()) {
+		VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+		SetTooltip(tooltip);
+	}
+
+	return pressed;
+}
+
 ImVec2 CustomButtonAutoPosition(void) {
 	return ImVec2(-1, -1);
 }

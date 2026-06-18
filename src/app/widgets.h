@@ -1228,6 +1228,9 @@ bool TitleBarCustomButton(const char* label, ImVec2* pos, ButtonDrawer draw, con
 
 ImVec2 ScrollbarSize(bool horizontal);
 
+bool CompactButton(const char* label, const ImVec2 &pos, const ImVec2 &size, const char* tooltip = nullptr, ImGuiButtonFlags flags = ImGuiButtonFlags_None);
+bool CompactButton(ImTextureID texture_id, const ImVec2 &pos, const ImVec2 &size, const ImVec4 &tint_col, const char* tooltip = nullptr, ImGuiButtonFlags flags = ImGuiButtonFlags_None);
+
 ImVec2 CustomButtonAutoPosition(void);
 
 bool CustomButton(const char* label, ImVec2* pos, ButtonDrawer draw, const char* tooltip = nullptr);

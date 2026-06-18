@@ -141,6 +141,9 @@ private:
 		bool focused = false;
 		bool inputFieldFocused = false;
 		bool fineZooming = false;
+		bool isActingOnTable = false;
+		bool isActingLanguages = false;
+		int actingIndex = -1;
 
 		void clear(void) {
 			magnification = -1;
@@ -150,6 +153,9 @@ private:
 			focused = false;
 			inputFieldFocused = false;
 			fineZooming = false;
+			isActingOnTable = false;
+			isActingLanguages = false;
+			actingIndex = -1;
 		}
 	} _tools;
 
@@ -396,11 +402,6 @@ public:
 				cellWidth *= (float)(MAGNIFICATIONS[_tools.magnification]);
 			}
 
-			while (object()->itemCount() < 100) // TODO: DELETE ME.
-				object()->addItem(object()->itemCount());
-			while (object()->languageCount() < 10)
-				object()->addLanguage(object()->languageCount(), "L " + Text::toString(object()->languageCount()));
-
 			ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
 			if (_tools.magnificationChanged)
 				flags |= ImGuiTableFlags_NoHostExtendX;
@@ -413,9 +414,9 @@ public:
 			const float tblHeight = (ImGui::GetTextLineHeight() + style.CellPadding.y * 2) * (rows + 1);*/
 			const float tblWidth = splitter.first;
 			const float tblHeight = height - statusBarHeight;
-			const ImVec2 btnSize(ImGui::GetTextLineHeight() + style.CellPadding.y * 2, ImGui::GetTextLineHeight() + style.CellPadding.y * 2);
+			const ImVec2 btnSize(ImGui::GetTextLineHeight() + style.CellPadding.y * 2, ImGui::GetTextLineHeight() + style.CellPadding.y * 2 - 1);
 			if (ImGui::BeginTable("@Tbl", finalCols, flags, ImVec2(tblWidth, tblHeight))) {
-				ImGui::TableSetupScrollFreeze(2, 2);
+				ImGui::TableSetupScrollFreeze(1, 2);
 				const ImU32 col = ws->theme()->style()->i18nHeadColor;
 				ImGui::PushStyleColor(ImGuiCol_Text, col);
 				if (_tools.magnificationChanged) {
@@ -442,6 +443,8 @@ public:
 				ImGui::PopStyleColor();
 
 				for (int row = 0; row < rows; ++row) {
+					ImGui::PushID(row);
+
 					ImGui::TableNextRow();
 
 					ImGui::TableSetColumnIndex(0);
@@ -453,8 +456,6 @@ public:
 						}
 						ImGui::PopStyleColor();
 					} else {
-						/*const float y_ = ImGui::GetCursorPosY();
-						ImGui::SetCursorPosY(y_ + style.CellPadding.y);*/
 						const ImU32 col = ws->theme()->style()->i18nHeadColor;
 						ImGui::PushStyleColor(ImGuiCol_Text, col);
 						{
@@ -463,15 +464,20 @@ public:
 						ImGui::PopStyleColor();
 
 						ImGui::SameLine();
-						const float x = ImGui::GetCursorPosX()
+						const float x = ImGui::GetCursorScreenPos().x
 							+ ImGui::GetColumnWidth(0) - btnSize.x + style.CellPadding.x;
-						const float y = /*y_*/ImGui::GetCursorPosY()
+						const float y = ImGui::GetCursorScreenPos().y
 							- style.CellPadding.y + 1;
-						ImGui::SetCursorPos(ImVec2(x, y));
-						ImGui::Button("?", btnSize); // TODO
+						if (ImGui::CompactButton(ws->theme()->iconTableDropdown()->pointer(rnd), ImVec2(x, y), btnSize, ImVec4(1, 1, 1, 1))) {
+							_tools.isActingOnTable = true;
+							_tools.isActingLanguages = false;
+							_tools.actingIndex = row;
+						}
 					}
 
 					for (int col = 0; col < cols; ++col) {
+						ImGui::PushID(col);
+
 						ImGui::TableSetColumnIndex(col + 1);
 						const char* txt = object()->get(col, row);
 						if (row == 0) {
@@ -482,18 +488,23 @@ public:
 							}
 							ImGui::PopStyleColor();
 						} else {
-							ImGui::TextUnformatted(txt ? txt : "");
+							ImGui::TextUnformatted(txt ? txt : ""); // TODO
 						}
 
 						if (row == 0 && col >= 1) {
 							ImGui::SameLine();
-							const float x = ImGui::GetCursorPosX()
+							const float x = ImGui::GetCursorScreenPos().x
 								+ ImGui::GetColumnWidth(0) - btnSize.x + style.CellPadding.x;
-							const float y = /*y_*/ImGui::GetCursorPosY()
+							const float y = ImGui::GetCursorScreenPos().y
 								- style.CellPadding.y + 1;
-							ImGui::SetCursorPos(ImVec2(x, y));
-							ImGui::Button("!", btnSize); // TODO
+							if (ImGui::CompactButton(ws->theme()->iconTableDropdown()->pointer(rnd), ImVec2(x, y), btnSize, ImVec4(1, 1, 1, 1))) {
+								_tools.isActingOnTable = true;
+								_tools.isActingLanguages = true;
+								_tools.actingIndex = col;
+							}
 						}
+
+						ImGui::PopID();
 					}
 
 					ImGui::TableSetColumnIndex(finalCols - 1);
@@ -507,6 +518,8 @@ public:
 					} else {
 						ImGui::TextUnformatted("..."); // TODO
 					}
+
+					ImGui::PopID();
 				}
 
 				{
@@ -514,22 +527,12 @@ public:
 
 					ImGui::TableSetColumnIndex(0);
 					{
-						/*const float y_ = ImGui::GetCursorPosY();
-						ImGui::SetCursorPosY(y_ + style.CellPadding.y);*/
 						const ImU32 col = ws->theme()->style()->i18nHeadColor;
 						ImGui::PushStyleColor(ImGuiCol_Text, col);
 						{
 							ImGui::Text("%d", rows);
 						}
 						ImGui::PopStyleColor();
-
-						ImGui::SameLine();
-						const float x = ImGui::GetCursorPosX()
-							+ ImGui::GetColumnWidth(0) - btnSize.x + style.CellPadding.x;
-						const float y = /*y_*/ImGui::GetCursorPosY()
-							- style.CellPadding.y + 1;
-						ImGui::SetCursorPos(ImVec2(x, y));
-						ImGui::Dummy(btnSize);
 					}
 
 					for (int col = 0; col < cols; ++col) {
@@ -710,6 +713,48 @@ private:
 			ImGui::EndPopup();
 
 			result = true;
+		}
+
+		if (_tools.isActingOnTable) {
+			_tools.isActingOnTable = false;
+
+			ImGui::OpenPopup("@Act");
+
+			ws->bubble(nullptr);
+		}
+
+		if (ImGui::BeginPopup("@Act")) {
+			if (_tools.isActingLanguages) {
+				if (ImGui::MenuItem(ws->theme()->menu_Add())) {
+					// TODO: i18n.
+				}
+				if (ImGui::MenuItem(ws->theme()->menu_Delete())) {
+					// TODO: i18n.
+				}
+				ImGui::Separator();
+				if (ImGui::MenuItem(ws->theme()->menu_MoveLeft())) {
+					// TODO: i18n.
+				}
+				if (ImGui::MenuItem(ws->theme()->menu_MoveRight())) {
+					// TODO: i18n.
+				}
+			} else {
+				if (ImGui::MenuItem(ws->theme()->menu_Add())) {
+					// TODO: i18n.
+				}
+				if (ImGui::MenuItem(ws->theme()->menu_Delete())) {
+					// TODO: i18n.
+				}
+				ImGui::Separator();
+				if (ImGui::MenuItem(ws->theme()->menu_MoveUp())) {
+					// TODO: i18n.
+				}
+				if (ImGui::MenuItem(ws->theme()->menu_MoveDown())) {
+					// TODO: i18n.
+				}
+			}
+
+			ImGui::EndPopup();
 		}
 
 		return result;

@@ -327,6 +327,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Activities("Activities...");
 	menu_Actor("Actor");
 	menu_Actors("Actors");
+	menu_Add("Add");
 	menu_Anchor("Anchor");
 	menu_Application("Application");
 	menu_Attributes("Attributes");
@@ -403,7 +404,11 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Map("Map");
 	menu_MoreOfficialKernels("More Official Kernels");
 	menu_MoveBackward("Move Backward");
+	menu_MoveDown("Move Down");
 	menu_MoveForward("Move Forward");
+	menu_MoveLeft("Move Left");
+	menu_MoveRight("Move Right");
+	menu_MoveUp("Move Up");
 	menu_New("New");
 	menu_OnscreenDebug("Onscreen Debug");
 	menu_OnscreenGamepad("Onscreen Gamepad");
@@ -1698,6 +1703,8 @@ bool Theme::open(class Renderer* rnd) {
 	iconMajor(createTexture(rnd, RES_ICON_MAJOR, GBBASIC_COUNTOF(RES_ICON_MAJOR), nullptr));
 	iconMinor(createTexture(rnd, RES_ICON_MINOR, GBBASIC_COUNTOF(RES_ICON_MINOR), nullptr));
 
+	iconTableDropdown(createTexture(rnd, RES_ICON_DROPDOWN, GBBASIC_COUNTOF(RES_ICON_DROPDOWN), nullptr));
+
 	iconBackground(createTexture(rnd, RES_ICON_BACKGROUND, GBBASIC_COUNTOF(RES_ICON_BACKGROUND), nullptr));
 
 	iconTransparent(createTexture(rnd, RES_ICON_TRANSPARENT, GBBASIC_COUNTOF(RES_ICON_TRANSPARENT), nullptr));
@@ -1867,6 +1874,8 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconDual(), nullptr);
 	destroyTexture(rnd, iconMajor(), nullptr);
 	destroyTexture(rnd, iconMinor(), nullptr);
+
+	destroyTexture(rnd, iconTableDropdown(), nullptr);
 
 	destroyTexture(rnd, iconBackground(), nullptr);
 
