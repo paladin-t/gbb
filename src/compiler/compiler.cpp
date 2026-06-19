@@ -36028,6 +36028,12 @@ private:
 						}
 					}
 				}
+				if ((id = forward(Token::Types::SYMBOL)(q.index))) {
+					name = (std::string)id->data();
+					if (name == "lstr") { // Object type determination.
+						// TODO: i18n.
+					}
+				}
 
 				if (forward(Token::Types::COMMENT)(q.index)) {
 					break;

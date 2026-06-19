@@ -531,6 +531,8 @@ private:
 	void updateTable(Renderer* rnd, Workspace* ws, float tblWidth, float tblHeight, float lineNoWidth, float cellWidth) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
+		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+
 		ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
 		if (_tools.magnificationChanged)
 			flags |= ImGuiTableFlags_NoHostExtendX;
@@ -606,17 +608,25 @@ private:
 					ImGui::TableSetColumnIndex(col + 1);
 					const char* txt = object()->get(col, row);
 					if (_cursor.row == row && _cursor.column == col) {
-						VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+						VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, style.CellPadding);
 
-						ImGui::SetNextItemWidth(-FLT_MIN);
+						const float colWidth = ImGui::GetColumnWidth(col);
+						ImGui::SetNextItemWidth(colWidth + style.CellPadding.x * 2);
+						const float x = ImGui::GetCursorScreenPos().x
+							- style.CellPadding.x;
+						const float y = ImGui::GetCursorScreenPos().y
+							- style.CellPadding.y;
+						ImGui::SetCursorScreenPos(ImVec2(x, y));
 						if (!_cursor.activated) {
 							ImGui::SetKeyboardFocusHere(0);
 							_cursor.activated = true;
 						}
+						const ImGui::ItemSizeData data = ImGui::ReserveItemSizeData();
 						if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue))
 							commitCell(ws);
 						else if (_cursor.activated && ImGui::IsItemDeactivated())
 							commitCell(ws);
+						ImGui::RestoreItemSizeData(data);
 					} else {
 						const ImVec2 cellMin = ImGui::GetCursorScreenPos();
 						if (row == 0) {
@@ -659,17 +669,25 @@ private:
 
 				ImGui::TableSetColumnIndex(finalCols - 1);
 				if (_cursor.row == row && _cursor.column == cols) {
-					VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+					VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, style.CellPadding);
 
-					ImGui::SetNextItemWidth(-FLT_MIN);
+					const float colWidth = ImGui::GetColumnWidth(col);
+					ImGui::SetNextItemWidth(colWidth + style.CellPadding.x * 2);
+					const float x = ImGui::GetCursorScreenPos().x
+						- style.CellPadding.x;
+					const float y = ImGui::GetCursorScreenPos().y
+						- style.CellPadding.y;
+					ImGui::SetCursorScreenPos(ImVec2(x, y));
 					if (!_cursor.activated) {
 						ImGui::SetKeyboardFocusHere(0);
 						_cursor.activated = true;
 					}
+					const ImGui::ItemSizeData data = ImGui::ReserveItemSizeData();
 					if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue))
 						commitCell(ws);
 					else if (_cursor.activated && ImGui::IsItemDeactivated())
 						commitCell(ws);
+					ImGui::RestoreItemSizeData(data);
 				} else {
 					const ImVec2 cellMin = ImGui::GetCursorScreenPos();
 					if (row == 0) {
@@ -718,17 +736,25 @@ private:
 				for (int col = 0; col < cols; ++col) {
 					ImGui::TableSetColumnIndex(col + 1);
 					if (_cursor.row == rows && _cursor.column == col) {
-						VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+						VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, style.CellPadding);
 
-						ImGui::SetNextItemWidth(-FLT_MIN);
+						const float colWidth = ImGui::GetColumnWidth(col);
+						ImGui::SetNextItemWidth(colWidth + style.CellPadding.x * 2);
+						const float x = ImGui::GetCursorScreenPos().x
+							- style.CellPadding.x;
+						const float y = ImGui::GetCursorScreenPos().y
+							- style.CellPadding.y + 1;
+						ImGui::SetCursorScreenPos(ImVec2(x, y));
 						if (!_cursor.activated) {
 							ImGui::SetKeyboardFocusHere(0);
 							_cursor.activated = true;
 						}
+						const ImGui::ItemSizeData data = ImGui::ReserveItemSizeData();
 						if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue))
 							commitCell(ws);
 						else if (_cursor.activated && ImGui::IsItemDeactivated())
 							commitCell(ws);
+						ImGui::RestoreItemSizeData(data);
 					} else {
 						const ImVec2 cellMin = ImGui::GetCursorScreenPos();
 						ImVec4 col_ = ImGui::GetStyleColorVec4(ImGuiCol_Text);

@@ -6062,6 +6062,35 @@ void PushID(const std::string &str_id) {
 	PushID(str_id.c_str(), str_id.c_str() + str_id.length());
 }
 
+ItemSizeData ReserveItemSizeData(void) {
+	ImGuiContext &g = *GImGui;
+	ImGuiWindow* window = g.CurrentWindow;
+
+	ItemSizeData itemSizeData;
+	itemSizeData.CursorPosPrevLine = window->DC.CursorPosPrevLine;
+	itemSizeData.CursorPos = window->DC.CursorPos;
+	itemSizeData.CursorMaxPos = window->DC.CursorMaxPos;
+	itemSizeData.PrevLineSizeY = window->DC.PrevLineSize.y;
+	itemSizeData.CurrLineSizeY = window->DC.CurrLineSize.y;
+	itemSizeData.PrevLineTextBaseOffset = window->DC.PrevLineTextBaseOffset;
+	itemSizeData.CurrLineTextBaseOffset = window->DC.CurrLineTextBaseOffset;
+
+	return itemSizeData;
+}
+
+void RestoreItemSizeData(const ItemSizeData &itemSizeData) {
+	ImGuiContext &g = *GImGui;
+	ImGuiWindow* window = g.CurrentWindow;
+
+	window->DC.CursorPosPrevLine = itemSizeData.CursorPosPrevLine;
+	window->DC.CursorPos = itemSizeData.CursorPos;
+	window->DC.CursorMaxPos = itemSizeData.CursorMaxPos;
+	window->DC.PrevLineSize.y = itemSizeData.PrevLineSizeY;
+	window->DC.CurrLineSize.y = itemSizeData.CurrLineSizeY;
+	window->DC.PrevLineTextBaseOffset = itemSizeData.PrevLineTextBaseOffset;
+	window->DC.CurrLineTextBaseOffset = itemSizeData.CurrLineTextBaseOffset;
+}
+
 Rect LastItemRect(void) {
 	ImGuiContext &g = *GetCurrentContext();
 

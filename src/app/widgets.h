@@ -1203,6 +1203,18 @@ ImVec2 GetMousePosOnCurrentItem(const ImVec2* ref_pos = nullptr);
 
 void PushID(const std::string &str_id);
 
+struct ItemSizeData {
+	ImVec2 CursorPosPrevLine;
+	ImVec2 CursorPos;
+	ImVec2 CursorMaxPos;
+	float PrevLineSizeY;
+	float CurrLineSizeY;
+	float PrevLineTextBaseOffset;
+	float CurrLineTextBaseOffset;
+};
+ItemSizeData ReserveItemSizeData(void);
+void RestoreItemSizeData(const ItemSizeData &itemSizeData);
+
 Rect LastItemRect(void);
 
 void Dummy(const ImVec2 &size, ImU32 col);
