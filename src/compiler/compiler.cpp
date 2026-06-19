@@ -36030,7 +36030,7 @@ private:
 				}
 				if ((id = forward(Token::Types::SYMBOL)(q.index))) {
 					name = (std::string)id->data();
-					if (name == "lstr") { // Object type determination.
+					if (name == "lstr") { // I18n dictionary lookup.
 						// TODO: i18n.
 					}
 				}
