@@ -510,8 +510,8 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_CameraDeadZone("Camera dead zone");
 	dialogPrompt_CameraPosition("Camera position");
 	dialogPrompt_CannotAddMoreFrames("Cannot add more frames.");
-	dialogPrompt_CannotAddMoreItems("Cannot add more items.");
-	dialogPrompt_CannotAddMoreLanguages("Cannot add more languages.");
+	dialogPrompt_CannotAddMoreItems("Cannot add more items");
+	dialogPrompt_CannotAddMoreLanguages("Cannot add more languages");
 	dialogPrompt_CannotAddMorePages("Cannot add more pages.");
 	dialogPrompt_CannotAddMoreTilesPages("Cannot add more tiles pages.");
 	dialogPrompt_CannotDecodeBorderImage("Cannot decode border image");
@@ -613,9 +613,9 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_InvalidDataSeeTheConsoleWindowForDetails("Invalid data; see the console window for details.");
 	dialogPrompt_InvalidFile("Invalid file.");
 	dialogPrompt_Inverted("Inverted");
-	dialogPrompt_ItemAlreadyExists("Item already exists.");
+	dialogPrompt_ItemAlreadyExists("Item already exists");
 	dialogPrompt_JumpGravity("Jump gravity");
-	dialogPrompt_LanguageAlreadyExists("Language already exists.");
+	dialogPrompt_LanguageAlreadyExists("Language already exists");
 	dialogPrompt_Languages("Languages");
 	dialogPrompt_Length("Length");
 	dialogPrompt_LifeTime("Lift time");

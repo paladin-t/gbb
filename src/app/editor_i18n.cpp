@@ -543,6 +543,9 @@ private:
 		const int finalCols = cols + 1 /* row number */ + 1 /* extra */;
 		const ImVec2 btnSize(ImGui::GetTextLineHeight() + style.CellPadding.y * 2, ImGui::GetTextLineHeight() + style.CellPadding.y * 2 - 1);
 		if (ImGui::BeginTable("@Tbl", finalCols, flags, ImVec2(tblWidth, tblHeight))) {
+			const Editing::Shortcut tab(SDL_SCANCODE_TAB);
+			bool tabbed = false;
+
 			ImGui::TableSetupScrollFreeze(1, 2);
 			const ImU32 col = ws->theme()->style()->i18nHeadColor;
 			ImGui::PushStyleColor(ImGuiCol_Text, col);
@@ -551,8 +554,8 @@ private:
 				for (int i = 0; i < finalCols; ++i) {
 					if (i == 0)
 						ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, lineNoWidth);
-					else if (i == finalCols - 1)
-						ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, cellWidth);
+					/*else if (i == finalCols - 1)
+						ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, cellWidth);*/
 					else
 						ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, cellWidth);
 				}
@@ -560,8 +563,8 @@ private:
 				for (int i = 0; i < finalCols; ++i) {
 					if (i == 0)
 						ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, lineNoWidth);
-					else if (i == finalCols - 1)
-						ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, cellWidth);
+					/*else if (i == finalCols - 1)
+						ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed, cellWidth);*/
 					else
 						ImGui::TableSetupColumn(EDITOR_I18N_TABLE_HEADER[i - 1], ImGuiTableColumnFlags_WidthFixed, cellWidth);
 				}
@@ -622,10 +625,18 @@ private:
 							_cursor.activated = true;
 						}
 						const ImGui::ItemSizeData data = ImGui::ReserveItemSizeData();
-						if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue))
-							commitCell(ws);
-						else if (_cursor.activated && ImGui::IsItemDeactivated())
-							commitCell(ws);
+						{
+							if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue)) {
+								commitCell(ws);
+							} else if (_cursor.activated && ImGui::IsItemDeactivated()) {
+								commitCell(ws);
+							} else if (tab.pressed() && !tabbed) {
+								tabbed = true;
+								commitCell(ws);
+								if (col + 1 < cols)
+									editCell(row, col + 1);
+							}
+						}
 						ImGui::RestoreItemSizeData(data);
 					} else {
 						const ImVec2 cellMin = ImGui::GetCursorScreenPos();
@@ -671,7 +682,7 @@ private:
 				if (_cursor.row == row && _cursor.column == cols) {
 					VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, style.CellPadding);
 
-					const float colWidth = ImGui::GetColumnWidth(col);
+					const float colWidth = ImGui::GetColumnWidth(_cursor.column);
 					ImGui::SetNextItemWidth(colWidth + style.CellPadding.x * 2);
 					const float x = ImGui::GetCursorScreenPos().x
 						- style.CellPadding.x;
@@ -683,10 +694,19 @@ private:
 						_cursor.activated = true;
 					}
 					const ImGui::ItemSizeData data = ImGui::ReserveItemSizeData();
-					if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue))
-						commitCell(ws);
-					else if (_cursor.activated && ImGui::IsItemDeactivated())
-						commitCell(ws);
+					{
+						if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue)) {
+							commitCell(ws);
+						} else if (_cursor.activated && ImGui::IsItemDeactivated()) {
+							commitCell(ws);
+						} else if (tab.pressed() && !tabbed) {
+							tabbed = true;
+							const int col_ = _cursor.column;
+							commitCell(ws);
+							if (col_ + 1 < cols)
+								editCell(row, col_ + 1);
+						}
+					}
 					ImGui::RestoreItemSizeData(data);
 				} else {
 					const ImVec2 cellMin = ImGui::GetCursorScreenPos();
@@ -750,10 +770,12 @@ private:
 							_cursor.activated = true;
 						}
 						const ImGui::ItemSizeData data = ImGui::ReserveItemSizeData();
-						if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue))
-							commitCell(ws);
-						else if (_cursor.activated && ImGui::IsItemDeactivated())
-							commitCell(ws);
+						{
+							if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue))
+								commitCell(ws);
+							else if (_cursor.activated && ImGui::IsItemDeactivated())
+								commitCell(ws);
+						}
 						ImGui::RestoreItemSizeData(data);
 					} else {
 						const ImVec2 cellMin = ImGui::GetCursorScreenPos();
@@ -823,12 +845,12 @@ private:
 				return;
 
 			if (rows >= I18N_MAX_ROW_COUNT) {
-				ws->messagePopupBox(ws->theme()->dialogPrompt_CannotAddMoreItems(), nullptr, nullptr, nullptr);
+				ws->bubble(ws->theme()->dialogPrompt_CannotAddMoreItems(), nullptr);
 
 				return;
 			}
 			if (object()->getItemIndex(txt) != -1) {
-				ws->messagePopupBox(ws->theme()->dialogPrompt_ItemAlreadyExists(), nullptr, nullptr, nullptr);
+				ws->bubble(ws->theme()->dialogPrompt_ItemAlreadyExists(), nullptr);
 
 				return;
 			}
@@ -843,12 +865,12 @@ private:
 				return;
 
 			if (cols >= I18N_MAX_COLUMN_COUNT) {
-				ws->messagePopupBox(ws->theme()->dialogPrompt_CannotAddMoreLanguages(), nullptr, nullptr, nullptr);
+				ws->bubble(ws->theme()->dialogPrompt_CannotAddMoreLanguages(), nullptr);
 
 				return;
 			}
 			if (object()->getLanguageIndex(txt) != -1) {
-				ws->messagePopupBox(ws->theme()->dialogPrompt_LanguageAlreadyExists(), nullptr, nullptr, nullptr);
+				ws->bubble(ws->theme()->dialogPrompt_LanguageAlreadyExists(), nullptr);
 
 				return;
 			}
@@ -966,7 +988,7 @@ private:
 
 				if (ImGui::MenuItem(ws->theme()->menu_Add())) {
 					if (cols >= I18N_MAX_COLUMN_COUNT) {
-						ws->messagePopupBox(ws->theme()->dialogPrompt_CannotAddMoreLanguages(), nullptr, nullptr, nullptr);
+						ws->bubble(ws->theme()->dialogPrompt_CannotAddMoreLanguages(), nullptr);
 					} else {
 						ImGui::InputPopupBox::ConfirmedHandler confirm(
 							[ws, this, idx] (const char* txt) -> void {
@@ -976,7 +998,7 @@ private:
 									return;
 								}
 								if (object()->getLanguageIndex(txt) != -1) {
-									ws->messagePopupBox(ws->theme()->dialogPrompt_LanguageAlreadyExists(), nullptr, nullptr, nullptr);
+									ws->bubble(ws->theme()->dialogPrompt_LanguageAlreadyExists(), nullptr);
 
 									ws->popupBox(nullptr);
 
@@ -1034,7 +1056,7 @@ private:
 
 				if (ImGui::MenuItem(ws->theme()->menu_Add())) {
 					if (rows >= I18N_MAX_ROW_COUNT) {
-						ws->messagePopupBox(ws->theme()->dialogPrompt_CannotAddMoreItems(), nullptr, nullptr, nullptr);
+						ws->bubble(ws->theme()->dialogPrompt_CannotAddMoreItems(), nullptr);
 					} else {
 						ImGui::InputPopupBox::ConfirmedHandler confirm(
 							[ws, this, idx] (const char* txt) -> void {
@@ -1044,7 +1066,7 @@ private:
 									return;
 								}
 								if (object()->getItemIndex(txt) != -1) {
-									ws->messagePopupBox(ws->theme()->dialogPrompt_ItemAlreadyExists(), nullptr, nullptr, nullptr);
+									ws->bubble(ws->theme()->dialogPrompt_ItemAlreadyExists(), nullptr);
 
 									ws->popupBox(nullptr);
 
