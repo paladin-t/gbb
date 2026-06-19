@@ -385,7 +385,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Hex("HEX");
 	menu_Hflip("H-flip");
 	menu_Howto("Howto");
-	menu_I18n("I18n");
+	menu_I18n("I18n dictionary");
 	menu_Image("Image");
 	menu_ImageFile("Image File...");
 	menu_Import("Import...");
@@ -509,9 +509,11 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Byte("Byte");
 	dialogPrompt_CameraDeadZone("Camera dead zone");
 	dialogPrompt_CameraPosition("Camera position");
-	dialogPrompt_CannotAddMoreFrame("Cannot add more frame.");
-	dialogPrompt_CannotAddMorePage("Cannot add more page.");
-	dialogPrompt_CannotAddMoreTilesPage("Cannot add more tiles page.");
+	dialogPrompt_CannotAddMoreFrames("Cannot add more frames.");
+	dialogPrompt_CannotAddMoreItems("Cannot add more items.");
+	dialogPrompt_CannotAddMoreLanguages("Cannot add more languages.");
+	dialogPrompt_CannotAddMorePages("Cannot add more pages.");
+	dialogPrompt_CannotAddMoreTilesPages("Cannot add more tiles pages.");
 	dialogPrompt_CannotDecodeBorderImage("Cannot decode border image");
 	dialogPrompt_CannotExportProject("Cannot export project.");
 	dialogPrompt_CannotFindAnyKernel("Cannot find any kernel.");
@@ -534,6 +536,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_CannotUseThisImage("Cannot use this image");
 	dialogPrompt_Checking("Checking...");
 	dialogPrompt_ClearedProjects("Cleared projects");
+	dialogPrompt_ClickToEdit("Click to edit");
 	dialogPrompt_ClickToPut("Click to put");
 	dialogPrompt_ClimbVelocity("Climb velocity");
 	dialogPrompt_CollisionGroup("Collision group");
@@ -1046,7 +1049,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_EjectSourceCodeVm("Eject Source Code (VM)");
 	tooltip_Export("Export");
 	tooltip_FontAndI18n_Font("Font (" GBBASIC_MODIFIER_KEY_NAME "+6)");
-	tooltip_FontAndI18n_I18n("Internationalization (" GBBASIC_MODIFIER_KEY_NAME "+7)");
+	tooltip_FontAndI18n_I18n("Internationalization\ndictionary (" GBBASIC_MODIFIER_KEY_NAME "+7)");
 	tooltip_ForAlignToTileMovementForControllers(
 		"For align-to-tile movement for controllers\n"
 		"Enable for 16x16px aligned, otherwise 8x8px aligned\n"
@@ -1129,7 +1132,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEdit_Code("Code (" GBBASIC_MODIFIER_KEY_NAME "+1)");
 	tooltipEdit_Console("Console (" GBBASIC_MODIFIER_KEY_NAME "+0)");
 	tooltipEdit_Emulator("Emulator (" GBBASIC_MODIFIER_KEY_NAME "+`)");
-	tooltipEdit_FontAndI18n("Font/I18n (" GBBASIC_MODIFIER_KEY_NAME "+6/7)");
+	tooltipEdit_FontAndI18n("Font/I18n dictionary (" GBBASIC_MODIFIER_KEY_NAME "+6/7)");
 #if GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CTRL
 	tooltipEdit_Magnifiable("(-/+ or Ctrl+Mouse Wheel)");
 #elif GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CMD

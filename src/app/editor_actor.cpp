@@ -3490,7 +3490,7 @@ private:
 
 	void frameAdded(Renderer* rnd, Workspace* ws, int frame, bool append) {
 		if (object()->count() >= GBBASIC_ACTOR_FRAME_MAX_COUNT) {
-			ws->messagePopupBox(ws->theme()->dialogPrompt_CannotAddMoreFrame(), nullptr, nullptr, nullptr);
+			ws->messagePopupBox(ws->theme()->dialogPrompt_CannotAddMoreFrames(), nullptr, nullptr, nullptr);
 
 			return;
 		}

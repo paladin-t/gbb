@@ -3000,7 +3000,7 @@ promise::Promise Operations::fontAddPage(Window* wnd, Renderer* rnd, Workspace* 
 			if (prj->fontPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3074,7 +3074,7 @@ promise::Promise Operations::fontDuplicatePage(Window* wnd, Renderer* rnd, Works
 			if (prj->fontPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3161,7 +3161,7 @@ promise::Promise Operations::i18nAddPage(Window* wnd, Renderer* rnd, Workspace* 
 			if (prj->i18nPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3237,7 +3237,7 @@ promise::Promise Operations::codeAddPage(Window* wnd, Renderer* rnd, Workspace* 
 			if (prj->codePageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3342,7 +3342,7 @@ promise::Promise Operations::tilesAddPage(Window* wnd, Renderer* rnd, Workspace*
 			if (prj->tilesPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3418,7 +3418,7 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 			if (prj->mapPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3484,7 +3484,7 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 							if (prj->tilesPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 								df.reject();
 
-								popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMoreTilesPage().c_str());
+								popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMoreTilesPages().c_str());
 
 								return;
 							}
@@ -3682,7 +3682,7 @@ promise::Promise Operations::musicAddPage(Window* wnd, Renderer* rnd, Workspace*
 			if (prj->musicPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3760,7 +3760,7 @@ promise::Promise Operations::sfxAddPage(Window* wnd, Renderer* rnd, Workspace* w
 			if (prj->sfxPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3843,7 +3843,7 @@ promise::Promise Operations::actorAddPage(Window* wnd, Renderer* rnd, Workspace*
 			if (prj->actorPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3919,7 +3919,7 @@ promise::Promise Operations::sceneAddPage(Window* wnd, Renderer* rnd, Workspace*
 			if (prj->scenePageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
