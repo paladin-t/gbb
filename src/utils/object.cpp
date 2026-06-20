@@ -52,12 +52,12 @@ Variant::Union::~Union() {
 }
 
 Variant::Variant() {
-	_type = NIL;
+	_type = NOTHING;
 	memset(&_var, 0, sizeof(Union));
 }
 
 Variant::Variant(std::nullptr_t) {
-	_type = NIL;
+	_type = NOTHING;
 	memset(&_var, 0, sizeof(Union));
 }
 
@@ -106,7 +106,7 @@ Variant::Variant(const Variant &other) {
 
 	_type = other._type;
 	switch (_type) {
-	case NIL:
+	case NOTHING:
 		memset(&_var, 0, sizeof(Union));
 
 		break;
@@ -150,7 +150,7 @@ Variant &Variant::operator = (const Variant &other) {
 
 	_type = other._type;
 	switch (_type) {
-	case NIL:
+	case NOTHING:
 		memset(&_var, 0, sizeof(Union));
 
 		break;
@@ -244,7 +244,7 @@ Variant Variant::operator [] (const std::string &key) const {
 }
 
 Variant::operator std::nullptr_t (void) const {
-	if (_type == NIL)
+	if (_type == NOTHING)
 		return nullptr;
 
 	return nullptr;
@@ -252,7 +252,7 @@ Variant::operator std::nullptr_t (void) const {
 
 Variant::operator bool (void) const {
 	switch (_type) {
-	case NIL: return false;
+	case NOTHING: return false;
 	case BOOLEAN: return _var.boolean;
 	case INTEGER: return !!_var.integer;
 	case LONG: return !!_var.long_;
@@ -267,7 +267,7 @@ Variant::operator bool (void) const {
 
 Variant::operator Int (void) const {
 	switch (_type) {
-	case NIL: return 0;
+	case NOTHING: return 0;
 	case BOOLEAN: return _var.boolean ? 1 : 0;
 	case INTEGER: return _var.integer;
 	case LONG: return (Int)_var.long_;
@@ -282,7 +282,7 @@ Variant::operator Int (void) const {
 
 Variant::operator Long (void) const {
 	switch (_type) {
-	case NIL: return 0;
+	case NOTHING: return 0;
 	case BOOLEAN: return _var.boolean ? 1 : 0;
 	case INTEGER: return _var.integer;
 	case LONG: return _var.long_;
@@ -297,7 +297,7 @@ Variant::operator Long (void) const {
 
 Variant::operator Real (void) const {
 	switch (_type) {
-	case NIL: return 0;
+	case NOTHING: return 0;
 	case BOOLEAN: return _var.boolean ? 1 : 0;
 	case INTEGER: return (Real)_var.integer;
 	case LONG: return (Real)_var.long_;
@@ -349,7 +349,7 @@ int Variant::compare(const Variant &other) const {
 		return 1;
 
 	switch (_type) {
-	case NIL:
+	case NOTHING:
 		return 0;
 	case BOOLEAN:
 		if (!_var.boolean && other._var.boolean)
@@ -419,7 +419,7 @@ bool Variant::equals(const Variant &other) const {
 
 void Variant::clear(void) {
 	switch (_type) {
-	case NIL: // Do nothing.
+	case NOTHING: // Do nothing.
 		break;
 	case BOOLEAN:
 		_var.boolean = false;
@@ -458,8 +458,8 @@ bool Variant::isNumber(void) const {
 
 std::string Variant::toString(void) const {
 	switch (_type) {
-	case NIL:
-		return "nil";
+	case NOTHING:
+		return "nothing";
 	case BOOLEAN:
 		return Text::toString(_var.boolean);
 	case INTEGER:
@@ -502,7 +502,7 @@ ReadOnceVariant &ReadOnceVariant::operator = (const Variant &other) {
 }
 
 ReadOnceVariant::operator std::nullptr_t (void) {
-	if (_variant.type() == Variant::NIL)
+	if (_variant.type() == Variant::NOTHING)
 		return nullptr;
 
 	return nullptr;
@@ -573,7 +573,7 @@ Variant &ReadOnceVariant::ref(void) {
 }
 
 bool ReadOnceVariant::isNull(void) const {
-	return _variant.type() == Variant::NIL;
+	return _variant.type() == Variant::NOTHING;
 }
 
 void ReadOnceVariant::reset(void) {

@@ -163,7 +163,7 @@ private:
 			jval.SetBool((bool)val);
 
 			break;
-		case Variant::NIL:
+		case Variant::NOTHING:
 			jval.SetNull();
 
 			break;

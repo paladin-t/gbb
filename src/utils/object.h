@@ -89,7 +89,7 @@ public:
 	typedef std::pair<Variant, Variant> Pair;
 
 	enum Types : unsigned char {
-		NIL,
+		NOTHING,
 		BOOLEAN,
 		INTEGER,
 		LONG,

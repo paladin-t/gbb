@@ -3130,6 +3130,85 @@ I18nAssets::Entry* I18nAssets::get(int index) {
 	return &entries[index];
 }
 
+const I18nAssets::Entry* I18nAssets::find(const std::string &name, int* index) const {
+	if (index)
+		*index = -1;
+
+	if (entries.empty())
+		return nullptr;
+
+	for (int i = 0; i < (int)entries.size(); ++i) {
+		const Entry &entry = entries[i];
+		if (entry.name == name) {
+			if (index)
+				*index = i;
+
+			return &entry;
+		}
+	}
+
+	return nullptr;
+}
+
+const I18nAssets::Entry* I18nAssets::fuzzy(const std::string &name, int* index, std::string &gotName) const {
+	if (index)
+		*index = -1;
+	gotName.clear();
+
+	if (entries.empty())
+		return nullptr;
+
+	double fuzzyScore = 0.0;
+	int fuzzyIdx = -1;
+	std::string fuzzyName;
+	for (int i = 0; i < (int)entries.size(); ++i) {
+		const Entry &entry = entries[i];
+		if (entry.name == name) {
+			if (index)
+				*index = i;
+
+			gotName = entry.name;
+
+			return &entry;
+		}
+
+		if (entry.name.empty())
+			continue;
+
+		const double score = rapidfuzz::fuzz::ratio(entry.name, name);
+		if (score < ASSET_FUZZY_MATCHING_SCORE_THRESHOLD)
+			continue;
+		if (score > fuzzyScore) {
+			fuzzyScore = score;
+			fuzzyIdx = i;
+			fuzzyName = entry.name;
+		}
+	}
+
+	if (fuzzyIdx >= 0) {
+		if (index)
+			*index = fuzzyIdx;
+
+		gotName = fuzzyName;
+
+		const Entry &entry = entries[fuzzyIdx];
+
+		return &entry;
+	}
+
+	return nullptr;
+}
+
+int I18nAssets::indexOf(const std::string &name) const {
+	for (int i = 0; i < (int)entries.size(); ++i) {
+		const Entry &entry = entries[i];
+		if (entry.name == name)
+			return i;
+	}
+
+	return -1;
+}
+
 /* ===========================================================================} */
 
 /*

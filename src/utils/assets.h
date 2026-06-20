@@ -735,6 +735,9 @@ struct I18nAssets {
 	bool remove(int index);
 	const Entry* get(int index) const;
 	Entry* get(int index);
+	const Entry* find(const std::string &name, int* index /* nullable */) const;
+	const Entry* fuzzy(const std::string &name, int* index /* nullable */, std::string &gotName) const;
+	int indexOf(const std::string &name) const;
 };
 
 /* ===========================================================================} */

@@ -1262,7 +1262,7 @@ void Workspace::pageAdded(Window* wnd, Renderer* rnd, Project* prj, Categories c
 
 			break;
 		case Categories::I18N:
-			changePage(wnd, rnd, prj, Categories::I18N, prj->codePageCount() - 1);
+			changePage(wnd, rnd, prj, Categories::I18N, prj->i18nPageCount() - 1);
 
 			break;
 		case Categories::CODE:
