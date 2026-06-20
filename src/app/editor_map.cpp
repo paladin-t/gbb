@@ -4351,7 +4351,7 @@ private:
 		int ref = -1;
 		if (createNew) {
 			if (_project->tilesPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
-				ws->bubble(ws->theme()->dialogPrompt_CannotAddMorePage(), nullptr);
+				ws->bubble(ws->theme()->dialogPrompt_CannotAddMorePages(), nullptr);
 
 				return false;
 			}

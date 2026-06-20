@@ -13,6 +13,7 @@
 #include "actor.h"
 #include "bytes.h"
 #include "font.h"
+#include "i18n.h"
 #include "image.h"
 #include "music.h"
 #include "scene.h"
@@ -647,6 +648,102 @@ struct FontAssets {
 
 /*
 ** {===========================================================================
+** I18n assets
+*/
+
+struct Table {
+	struct Cursor {
+		int row = 0;
+		int column = 0;
+
+		Cursor();
+		Cursor(int r, int col);
+		Cursor(const Cursor &other);
+
+		Cursor &operator = (const Cursor &other);
+		bool operator == (const Cursor &other) const;
+		bool operator != (const Cursor &other) const;
+		bool operator < (const Cursor &other) const;
+		bool operator <= (const Cursor &other) const;
+		bool operator > (const Cursor &other) const;
+		bool operator >= (const Cursor &other) const;
+
+		int compare(const Cursor &other) const;
+		bool equals(const Cursor &other) const;
+
+		bool valid(void) const;
+		void set(int r, int col);
+
+		static Cursor INVALID(void);
+	};
+
+	struct Range {
+		Cursor first = Cursor::INVALID();
+		Cursor second = Cursor::INVALID();
+
+		Range();
+
+		void start(int r, int col);
+		void start(const Cursor &where);
+		void end(int r, int col);
+		void end(const Cursor &where);
+
+		Cursor min(void) const;
+		Cursor max(void) const;
+
+		Math::Vec2i size(void) const;
+
+		bool startsWith(int r, int col) const;
+		bool startsWith(const Cursor &where) const;
+		bool endsWith(int r, int col) const;
+		bool endsWith(const Cursor &where) const;
+		bool single(void) const;
+		bool invalid(void) const;
+		void clear(void);
+	};
+};
+
+struct I18nAssets {
+	struct Entry : public BaseAssets::Entry {
+		I18n::Ptr data = nullptr;
+		std::string name;
+		int magnification = -1; // Non-polluting.
+
+		Entry();
+		Entry(const std::string &val);
+
+		size_t hash(void) const;
+		int compare(const Entry &other) const;
+
+		bool serializeCsv(std::string &val) const;
+		bool parseCsv(I18n::Ptr &i18n, const std::string &val, ParsingStatuses &status) const;
+
+		bool serializeJson(std::string &val, bool pretty) const;
+		bool parseJson(I18n::Ptr &i18n, const std::string &val, ParsingStatuses &status) const;
+
+		bool toString(std::string &val, WarningOrErrorHandler onWarningOrError /* nullable */) const;
+		bool fromString(const std::string &val, WarningOrErrorHandler onWarningOrError /* nullable */);
+		bool fromString(const char* val, size_t len, WarningOrErrorHandler onWarningOrError /* nullable */);
+	};
+	typedef std::vector<Entry> Array;
+
+	Array entries;
+
+	bool empty(void) const;
+	int count(void) const;
+	bool add(const Entry &entry);
+	bool remove(int index);
+	const Entry* get(int index) const;
+	Entry* get(int index);
+	const Entry* find(const std::string &name, int* index /* nullable */) const;
+	const Entry* fuzzy(const std::string &name, int* index /* nullable */, std::string &gotName) const;
+	int indexOf(const std::string &name) const;
+};
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Code assets
 */
 
@@ -1254,6 +1351,7 @@ struct AssetsBundle {
 		NONE    = (unsigned)(~0),
 		PALETTE = 0,
 		FONT,
+		I18N,
 		CODE,
 		TILES,                         // References to `PALETTE`.
 		MAP,                           // References to `TILES`.
@@ -1270,6 +1368,7 @@ struct AssetsBundle {
 
 	PaletteAssets palette;
 	FontAssets fonts;
+	I18nAssets i18ns;
 	CodeAssets code;
 	TilesAssets tiles;
 	MapAssets maps;

@@ -835,6 +835,8 @@ AssetsSortingPopupBox::AssetsSortingPopupBox(
 	for (int i = 0; i < _project->fontPageCount(); ++i)
 		_orders[(unsigned)AssetsBundle::Categories::FONT].push_back(i);
 	for (int i = 0; i < _project->musicPageCount(); ++i)
+		_orders[(unsigned)AssetsBundle::Categories::I18N].push_back(i);
+	for (int i = 0; i < _project->i18nPageCount(); ++i)
 		_orders[(unsigned)AssetsBundle::Categories::MUSIC].push_back(i);
 	for (int i = 0; i < _project->sfxPageCount(); ++i)
 		_orders[(unsigned)AssetsBundle::Categories::SFX].push_back(i);
@@ -1286,6 +1288,75 @@ void AssetsSortingPopupBox::update(Workspace* ws) {
 
 				EndTabItem();
 			}
+			if (BeginTabItem(_theme->menu_I18n(), nullptr, ImGuiTabItemFlags_NoTooltip | (selectTab == AssetsBundle::Categories::I18N ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None), _theme->style()->tabTextColor)) {
+				{
+					VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(1, 1));
+
+					BeginChild("@Msc", ImVec2(width - style.WindowPadding.x * 2, height), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
+					{
+						Order &order = _ordersShadow[(unsigned)AssetsBundle::Categories::I18N];
+						if (order.empty()) {
+							AlignTextToFramePadding();
+							TextUnformatted(_theme->generic_Empty());
+						} else {
+							for (int i = 0; i < (int)order.size(); ++i) {
+								const int idx = order[i];
+								I18nAssets::Entry* entry = _project->getI18n(idx);
+								const std::string &name = entry->name;
+
+								PushID(name);
+								{
+									VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(0, 0));
+
+									const ImVec2 spos = GetCursorScreenPos();
+									const ImVec2 pos = GetCursorPos();
+									const ImVec2 size(width - style.ChildBorderSize - style.ScrollbarSize - style.WindowPadding.x, 19.0f);
+									Dummy(
+										size,
+										GetStyleColorVec4(IsMouseHoveringRect(spos, spos + size) ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg)
+									);
+									SetCursorPos(pos);
+
+									if (i == 0) {
+										BeginDisabled();
+										{
+											ImageButton(_theme->iconUp()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE));
+										}
+										EndDisabled();
+									} else {
+										if (ImageButton(_theme->iconUp()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE))) {
+											std::swap(order[i], order[i - 1]);
+										}
+									}
+									SameLine();
+									if (i == (int)order.size() - 1) {
+										BeginDisabled();
+										{
+											ImageButton(_theme->iconDown()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE));
+										}
+										EndDisabled();
+									} else {
+										if (ImageButton(_theme->iconDown()->pointer(_renderer), ImVec2(13, 13), ImColor(IM_COL32_WHITE))) {
+											std::swap(order[i], order[i + 1]);
+										}
+									}
+									SameLine();
+
+									Dummy(ImVec2(4, 0));
+									SameLine();
+
+									AlignTextToFramePadding();
+									TextUnformatted(name);
+								}
+								PopID();
+							}
+						}
+					}
+					EndChild();
+				}
+
+				EndTabItem();
+			}
 			if (BeginTabItem(_theme->menu_Music(), nullptr, ImGuiTabItemFlags_NoTooltip | (selectTab == AssetsBundle::Categories::MUSIC ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None), _theme->style()->tabTextColor)) {
 				{
 					VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(1, 1));
@@ -1493,6 +1564,7 @@ RomBuildSettingsPopupBox::RomBuildSettingsPopupBox(
 	Renderer* rnd,
 	Theme* theme,
 	const std::string &title,
+	Workspace* ws,
 	Project* project,
 	const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 	const char* confirmTxt, const char* cancelTxt
@@ -1511,6 +1583,18 @@ RomBuildSettingsPopupBox::RomBuildSettingsPopupBox(
 	_sramType = _project->sramType();
 	_hasRtc = _project->hasRtc();
 	_hasRumble = _project->hasRumble();
+	_i18nLanguage = _project->i18nLanguage();
+
+	_allI18nLanguages = ws->getAllI18nLanguages(project, false);
+	_allI18nLanguages.insert(_allI18nLanguages.begin(), theme->windowBuildingSettings_NotSpecified());
+	for (int i = 0; i < (int)_allI18nLanguages.size(); ++i) {
+		const std::string &lang = _allI18nLanguages[i];
+		if (_i18nLanguage == lang)
+			_i18nLanguageIndex = i;
+		_allI18nLanguagePointers.push_back(lang.c_str());
+	}
+	if (_i18nLanguage.empty())
+		_i18nLanguageIndex = 0;
 }
 
 RomBuildSettingsPopupBox::~RomBuildSettingsPopupBox() {
@@ -1629,6 +1713,36 @@ void RomBuildSettingsPopupBox::update(Workspace*) {
 		}
 		PopID();
 
+		AlignTextToFramePadding();
+		TextUnformatted(_theme->windowBuildingSettings_GameLanguage());
+
+		PushID("#I18n");
+		{
+			AlignTextToFramePadding();
+			TextUnformatted(_theme->windowBuildingSettings_I18n());
+
+			SameLine();
+
+			SetNextItemWidth(GetContentRegionAvail().x);
+			if (_allI18nLanguagePointers.empty()) {
+				BeginDisabled();
+				{
+					const char* items[] = { "" };
+					Combo("", &_i18nLanguageIndex, items, GBBASIC_COUNTOF(items));
+				}
+				EndDisabled();
+			} else {
+				const char* const* items = &_allI18nLanguagePointers.front();
+				if (Combo("", &_i18nLanguageIndex, items, (int)_allI18nLanguagePointers.size())) {
+					if (_i18nLanguageIndex == 0)
+						_i18nLanguage.clear();
+					else
+						_i18nLanguage = _allI18nLanguages[_i18nLanguageIndex];
+				}
+			}
+		}
+		PopID();
+
 		const char* confirm = _confirmText.empty() ? "Build" : _confirmText.c_str();
 		const char* cancel = _cancelText.empty() ? "Cancel" : _cancelText.c_str();
 
@@ -1665,7 +1779,7 @@ void RomBuildSettingsPopupBox::update(Workspace*) {
 		_init.reset();
 
 		if (!_confirmedHandler.empty()) {
-			_confirmedHandler(_cartType.c_str(), _sramType.c_str(), _hasRtc, _hasRumble);
+			_confirmedHandler(_cartType.c_str(), _sramType.c_str(), _hasRtc, _hasRumble, _i18nLanguage.c_str());
 
 			return;
 		}
@@ -1686,12 +1800,16 @@ EmulatorBuildSettingsPopupBox::EmulatorBuildSettingsPopupBox(
 	Input* input, Theme* theme,
 	const std::string &title,
 	const std::string &settings, const char* args, bool hasIcon,
+	const std::string &i18nLang,
+	Workspace* ws,
+	Project* project,
 	const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 	const char* confirmTxt, const char* cancelTxt
 ) : _renderer(rnd),
 	_input(input), _theme(theme),
 	_title(title),
 	_hasIcon(hasIcon),
+	_i18nLanguage(i18nLang),
 	_confirmedHandler(confirm), _canceledHandler(cancel)
 {
 	_settings.fromString(settings);
@@ -1700,6 +1818,19 @@ EmulatorBuildSettingsPopupBox::EmulatorBuildSettingsPopupBox(
 	memset(_argsBuffer, 0, sizeof(_argsBuffer));
 	if (args)
 		memcpy(_argsBuffer, args, Math::min(sizeof(_argsBuffer) - 1, strlen(args)));
+
+	_i18nLanguage = project->i18nLanguage();
+
+	_allI18nLanguages = ws->getAllI18nLanguages(project, false);
+	_allI18nLanguages.insert(_allI18nLanguages.begin(), theme->windowBuildingSettings_NotSpecified());
+	for (int i = 0; i < (int)_allI18nLanguages.size(); ++i) {
+		const std::string &lang = _allI18nLanguages[i];
+		if (_i18nLanguage == lang)
+			_i18nLanguageIndex = i;
+		_allI18nLanguagePointers.push_back(lang.c_str());
+	}
+	if (_i18nLanguage.empty())
+		_i18nLanguageIndex = 0;
 
 	if (confirmTxt)
 		_confirmText = confirmTxt;
@@ -1860,6 +1991,36 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 					}
 					PopID();
 				}
+
+				AlignTextToFramePadding();
+				TextUnformatted(_theme->windowBuildingSettings_GameLanguage());
+
+				PushID("#I18n");
+				{
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowBuildingSettings_I18n_());
+
+					SameLine();
+
+					SetNextItemWidth(GetContentRegionAvail().x);
+					if (_allI18nLanguagePointers.empty()) {
+						BeginDisabled();
+						{
+							const char* items[] = { "" };
+							Combo("", &_i18nLanguageIndex, items, GBBASIC_COUNTOF(items));
+						}
+						EndDisabled();
+					} else {
+						const char* const* items = &_allI18nLanguagePointers.front();
+						if (Combo("", &_i18nLanguageIndex, items, (int)_allI18nLanguagePointers.size())) {
+							if (_i18nLanguageIndex == 0)
+								_i18nLanguage.clear();
+							else
+								_i18nLanguage = _allI18nLanguages[_i18nLanguageIndex];
+						}
+					}
+				}
+				PopID();
 
 				EndTabItem();
 			}
@@ -2052,7 +2213,7 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 		if (!_confirmedHandler.empty()) {
 			std::string str;
 			_settings.toString(str);
-			_confirmedHandler(str.c_str(), _argsBuffer, _icon);
+			_confirmedHandler(str.c_str(), _argsBuffer, _icon, _i18nLanguage.c_str());
 
 			return;
 		}
@@ -3543,13 +3704,15 @@ ProjectPropertyPopupBox::ProjectPropertyPopupBox(
 	Renderer* rnd,
 	Theme* theme,
 	const std::string &title,
-	Project* project,
+	Workspace* ws,
+	Project* project, bool isOpened,
 	const ConfirmedHandler &confirm, const CanceledHandler &cancel, const AppliedHandler &apply,
 	const char* confirmTxt, const char* cancelTxt, const char* applyTxt
 ) : _renderer(rnd),
 	_theme(theme),
 	_title(title),
 	_project(project),
+	_isProjectOpened(isOpened),
 	_confirmedHandler(confirm), _canceledHandler(cancel), _appliedHandler(apply)
 {
 	_projectShadow = new Project(_project->window(), rnd, _project->workspace());
@@ -3562,6 +3725,22 @@ ProjectPropertyPopupBox::ProjectPropertyPopupBox(
 	const std::string &preDefinedMacros = _project->preDefinedMacros();
 	memset(_macrosBuffer, 0, sizeof(_macrosBuffer));
 	memcpy(_macrosBuffer, preDefinedMacros.c_str(), Math::min(sizeof(_macrosBuffer) - 1, preDefinedMacros.length()));
+
+	_i18nLanguage = _project->i18nLanguage();
+
+	if (_isProjectOpened || _i18nLanguage.empty())
+		_allI18nLanguages = ws->getAllI18nLanguages(project, false);
+	else
+		_allI18nLanguages.push_back(_i18nLanguage);
+	_allI18nLanguages.insert(_allI18nLanguages.begin(), theme->windowBuildingSettings_NotSpecified());
+	for (int i = 0; i < (int)_allI18nLanguages.size(); ++i) {
+		const std::string &lang = _allI18nLanguages[i];
+		if (_i18nLanguage == lang)
+			_i18nLanguageIndex = i;
+		_allI18nLanguagePointers.push_back(lang.c_str());
+	}
+	if (_i18nLanguage.empty())
+		_i18nLanguageIndex = 0;
 
 	if (confirmTxt)
 		_confirmText = confirmTxt;
@@ -4210,6 +4389,56 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 				}
 				PopID();
 
+				Separator();
+
+				TextUnformatted(_theme->windowBuildingSettings_GameLanguage());
+
+				PushID("#I18n");
+				{
+					AlignTextToFramePadding();
+					TextUnformatted(_theme->windowProjectProperty_Compiling_Compiler_I18n());
+
+					SameLine();
+
+					SetNextItemWidth(GetContentRegionAvail().x);
+					if (_isProjectOpened && isEditable) {
+						if (_allI18nLanguagePointers.empty()) {
+							BeginDisabled();
+							{
+								const char* items[] = { "" };
+								Combo("", &_i18nLanguageIndex, items, GBBASIC_COUNTOF(items));
+							}
+							EndDisabled();
+						} else {
+							const char* const* items = &_allI18nLanguagePointers.front();
+							if (Combo("", &_i18nLanguageIndex, items, (int)_allI18nLanguagePointers.size())) {
+								if (_i18nLanguageIndex == 0)
+									_i18nLanguage.clear();
+								else
+									_i18nLanguage = _allI18nLanguages[_i18nLanguageIndex];
+								prj->i18nLanguage(_i18nLanguage);
+							}
+						}
+					} else {
+						if (_allI18nLanguagePointers.empty()) {
+							BeginDisabled();
+							{
+								const char* items[] = { "" };
+								Combo("", &_i18nLanguageIndex, items, GBBASIC_COUNTOF(items));
+							}
+							EndDisabled();
+						} else {
+							const char* const* items = &_allI18nLanguagePointers.front();
+							BeginDisabled();
+							{
+								Combo("", &_i18nLanguageIndex, items, (int)_allI18nLanguagePointers.size());
+							}
+							EndDisabled();
+						}
+					}
+				}
+				PopID();
+
 				EndTabItem();
 			}
 			if (BeginTabItem(_theme->tabProjectProperty_Advanced(), nullptr, ImGuiTabItemFlags_NoTooltip, _theme->style()->tabTextColor)) {
@@ -4672,6 +4901,7 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 			prj->strictOn()                != _project->strictOn()             ||
 			prj->optimize()                != _project->optimize()             ||
 			prj->preDefinedMacros()        != _project->preDefinedMacros()     ||
+			prj->i18nLanguage()            != _project->i18nLanguage()         ||
 			prj->superFeaturesEnabled()    != _project->superFeaturesEnabled() ||
 			prj->borderFrameType()         != _project->borderFrameType()      ||
 			prj->borderFrameCode()         != _project->borderFrameCode()      ||
@@ -5832,6 +6062,35 @@ void PushID(const std::string &str_id) {
 	PushID(str_id.c_str(), str_id.c_str() + str_id.length());
 }
 
+ItemSizeData ReserveItemSizeData(void) {
+	ImGuiContext &g = *GImGui;
+	ImGuiWindow* window = g.CurrentWindow;
+
+	ItemSizeData itemSizeData;
+	itemSizeData.CursorPosPrevLine = window->DC.CursorPosPrevLine;
+	itemSizeData.CursorPos = window->DC.CursorPos;
+	itemSizeData.CursorMaxPos = window->DC.CursorMaxPos;
+	itemSizeData.PrevLineSizeY = window->DC.PrevLineSize.y;
+	itemSizeData.CurrLineSizeY = window->DC.CurrLineSize.y;
+	itemSizeData.PrevLineTextBaseOffset = window->DC.PrevLineTextBaseOffset;
+	itemSizeData.CurrLineTextBaseOffset = window->DC.CurrLineTextBaseOffset;
+
+	return itemSizeData;
+}
+
+void RestoreItemSizeData(const ItemSizeData &itemSizeData) {
+	ImGuiContext &g = *GImGui;
+	ImGuiWindow* window = g.CurrentWindow;
+
+	window->DC.CursorPosPrevLine = itemSizeData.CursorPosPrevLine;
+	window->DC.CursorPos = itemSizeData.CursorPos;
+	window->DC.CursorMaxPos = itemSizeData.CursorMaxPos;
+	window->DC.PrevLineSize.y = itemSizeData.PrevLineSizeY;
+	window->DC.CurrLineSize.y = itemSizeData.CurrLineSizeY;
+	window->DC.PrevLineTextBaseOffset = itemSizeData.PrevLineTextBaseOffset;
+	window->DC.CurrLineTextBaseOffset = itemSizeData.CurrLineTextBaseOffset;
+}
+
 Rect LastItemRect(void) {
 	ImGuiContext &g = *GetCurrentContext();
 
@@ -5999,6 +6258,78 @@ ImVec2 ScrollbarSize(bool horizontal) {
 	const ImRect rect = GetWindowScrollbarRect(window, horizontal ? ImGuiAxis_X : ImGuiAxis_Y);
 
 	return ImVec2(rect.GetWidth(), rect.GetHeight());
+}
+
+bool CompactButton(const char* label, const ImVec2 &pos, const ImVec2 &size, const char* tooltip, ImGuiButtonFlags flags) {
+	ImGuiContext &g = *GImGui;
+	ImGuiStyle &style = GetStyle();
+
+	ImGuiWindow* window = GetCurrentWindow();
+	if (window->SkipItems)
+		return false;
+
+	const ImGuiID id = GetID(label);
+	const ImVec2 labelSize = CalcTextSize(label, nullptr, true);
+
+	const ImRect bb(pos, pos + size);
+	if (!ItemAdd(bb, id))
+		return false;
+
+	if (g.LastItemData.InFlags & ImGuiItemFlags_ButtonRepeat)
+		flags |= ImGuiButtonFlags_Repeat;
+
+	bool hovered = false, held = false;
+	const bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
+
+	const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+    RenderNavHighlight(bb, id);
+    RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
+
+	RenderTextClipped(bb.Min, bb.Max, label, nullptr, &labelSize, style.ButtonTextAlign, &bb);
+
+	if (tooltip && IsItemHovered()) {
+		VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+		SetTooltip(tooltip);
+	}
+
+	return pressed;
+}
+
+bool CompactButton(ImTextureID texture_id, const ImVec2 &pos, const ImVec2 &size, const ImVec4 &tint_col, const char* tooltip, ImGuiButtonFlags flags) {
+	ImGuiContext &g = *GImGui;
+	ImGuiStyle &style = GetStyle();
+
+	ImGuiWindow* window = GetCurrentWindow();
+	if (window->SkipItems)
+		return false;
+
+	PushID((void*)(intptr_t)texture_id);
+	const ImGuiID id = window->GetID("#image");
+	PopID();
+
+	const ImRect bb(pos, pos + size);
+	if (!ItemAdd(bb, id))
+		return false;
+
+	if (g.LastItemData.InFlags & ImGuiItemFlags_ButtonRepeat)
+		flags |= ImGuiButtonFlags_Repeat;
+
+	bool hovered = false, held = false;
+	const bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
+
+	const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+	RenderNavHighlight(bb, id);
+	RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
+	window->DrawList->AddImage(texture_id, bb.Min, bb.Max, ImVec2(0, 0), ImVec2(1, 1), GetColorU32(tint_col));
+
+	if (tooltip && IsItemHovered()) {
+		VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+		SetTooltip(tooltip);
+	}
+
+	return pressed;
 }
 
 ImVec2 CustomButtonAutoPosition(void) {

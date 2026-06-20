@@ -87,18 +87,23 @@ public:
 	virtual bool analyzing(void) const override {
 		return !!_analyzing;
 	}
-	virtual bool analyze(const Kernel* krnl, AssetsBundle::Ptr assets, const std::string &preDefinedMacros, AnalyzedHandler analyzed) override {
+	virtual bool analyze(
+		const Kernel* krnl,
+		AssetsBundle::Ptr assets,
+		const std::string &preDefinedMacros, const std::string &i18nLang,
+		AnalyzedHandler analyzed
+	) override {
 		++_analyzing;
 
 		_analyzeHandler(
 			std::bind(
-				[this] (WorkTask* /* task */, const Kernel* krnl, AssetsBundle::Ptr assets, const std::string &preDefinedMacros) -> uintptr_t { // On work thread.
+				[this] (WorkTask* /* task */, const Kernel* krnl, AssetsBundle::Ptr assets, const std::string &preDefinedMacros, const std::string &i18nLang) -> uintptr_t { // On work thread.
 					Result* result = new Result();
-					doAnalyze(result, krnl, assets, preDefinedMacros);
+					doAnalyze(result, krnl, assets, preDefinedMacros, i18nLang);
 
 					return (uintptr_t)result;
 				},
-				std::placeholders::_1, krnl, assets, preDefinedMacros
+				std::placeholders::_1, krnl, assets, preDefinedMacros, i18nLang
 			),
 			[this] (WorkTask* /* task */, uintptr_t ptr) -> void { // On main thread.
 				Result* result = (Result*)ptr;
@@ -228,7 +233,12 @@ public:
 	}
 
 private:
-	static void doAnalyze(Result* result, const Kernel* krnl, const AssetsBundle::Ptr &assets, const std::string &preDefinedMacros) { // On work thread.
+	static void doAnalyze( // On work thread.
+		Result* result,
+		const Kernel* krnl,
+		const AssetsBundle::Ptr &assets,
+		const std::string &preDefinedMacros, const std::string &i18nLang
+	) {
 		// Prepare.
 		std::string dir;
 		Path::split(krnl->path(), nullptr, nullptr, &dir);
@@ -249,6 +259,7 @@ private:
 		options.sym = sym;
 		options.aliases = aliases;
 		options.macros = preDefinedMacros; // Inject pre-defined macros from the project properties.
+		options.language = i18nLang;
 		options.passes = Options::Passes::GENERATE; // Only parse the source code and generate for the first pass.
 		options.strategies.compatibility = Options::Strategies::Compatibilities::COLORED | Options::Strategies::Compatibilities::EXTENSION;
 		options.strategies.bootstrapBank = bootstrapBank;

@@ -47,6 +47,9 @@
 #ifndef COMPILER_HEAP_SIZE_OPTION_KEY
 #	define COMPILER_HEAP_SIZE_OPTION_KEY "h"
 #endif /* COMPILER_HEAP_SIZE_OPTION_KEY */
+#ifndef COMPILER_I18N_LANGUAGE_OPTION_KEY
+#	define COMPILER_I18N_LANGUAGE_OPTION_KEY "x"
+#endif /* COMPILER_I18N_LANGUAGE_OPTION_KEY */
 #ifndef COMPILER_INPUT_OPTION_KEY
 #	define COMPILER_INPUT_OPTION_KEY ""
 #endif /* COMPILER_INPUT_OPTION_KEY */
@@ -114,6 +117,12 @@
 #ifndef COMPILER_FONT_END
 #	define COMPILER_FONT_END "</font>"
 #endif /* COMPILER_FONT_END */
+#ifndef COMPILER_I18N_BEGIN
+#	define COMPILER_I18N_BEGIN "<i18n page=\"{0}\">"
+#endif /* COMPILER_I18N_BEGIN */
+#ifndef COMPILER_I18N_END
+#	define COMPILER_I18N_END "</i18n>"
+#endif /* COMPILER_I18N_END */
 #ifndef COMPILER_CODE_BEGIN
 #	define COMPILER_CODE_BEGIN "<code page=\"{0}\">"
 #endif /* COMPILER_CODE_BEGIN */
@@ -579,8 +588,8 @@ public:
 		PREPROCESSOR_ERROR,
 		EXPRESSION,
 		MATH,
-		ASC,
 		DEG,
+		ASC,
 		LEN,
 		RANDOMIZE,
 		RND,
@@ -1068,6 +1077,10 @@ struct Options {
 	 * @brief The pre-defined macros.
 	 */
 	std::string macros;
+	/**
+	 * @brief The i18n language.
+	 */
+	std::string language;
 	/**
 	 * @brief The path or target of the AST output, can be "none", "stdout" or
 	 *   file path.

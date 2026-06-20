@@ -3281,7 +3281,7 @@ public:
 		case Types::NUMBER: case Types::INTEGER: case Types::REAL:       // Fall through.
 		default:
 			switch (_data.type()) {
-			case Variant::NIL:
+			case Variant::NOTHING:
 				result += "nothing";
 
 				break;
@@ -9128,6 +9128,94 @@ public:
 	using Node::dump;
 };
 
+class NodeDeg : public Node {
+public:
+	NodeDeg() {
+	}
+	virtual ~NodeDeg() override {
+	}
+
+	NODE_TYPE(Types::DEG)
+
+	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		const Generator_Void_Void generator = [&] (void) -> void {
+			// Prepare.
+			Context &ctx = context.top();
+			State &state = top();
+
+			const Asm::Instructions &INSTRUCTIONS = *ctx.instructions;
+
+			// Determine the location in the ROM.
+			state.inRom.bank = ctx.bank;
+			state.inRom.address = ctx.addressCursor;
+			state.inRom.size = 0;
+
+			// Consume the tokens.
+			if (ctx.expect.lnno) {
+				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				})) { THROW_INVALID_SYNTAX(onError); }
+			}
+			if (!consume(Token::Types::KEYWORD, "deg")) { THROW_INVALID_SYNTAX(onError); }
+			if (consume(Token::Types::OPERATOR, "(")) {
+				if (!consume(Token::Types::OPERATOR, ")")) { THROW_INVALID_SYNTAX(onError); }
+			}
+
+			// Check the children.
+			if (_children.empty()) {
+				THROW_TOO_FEW_ARGUMENTS(onError);
+			} else if (_children.size() == 1) {
+				// Do nothing.
+			} else {
+				THROW_TOO_MANY_ARGUMENTS(onError);
+			}
+
+			// Get the internal value of a specific degree.
+			Token::Ptr tk = nullptr;
+			int val = 0;
+			if (!isInt16(context, 0, val, &tk)) { THROW_TYPE_EXPECTED(onError, "Integer constant", tk); }
+			val = (int)(val * (256.0f / 360.0f));
+			const int deg = (val >= 0) ?
+				(val % 256) :
+				((val % 256 + 256) % 256);
+
+			// Set the stack footprint guard.
+			COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
+			COUNTER_GUARD(ctx, stk);
+
+			// Set the expression slot guard.
+			VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
+
+			// Emit the right hand value.
+			writeRightHand(
+				bytes, context, stk,
+				[&] (void) -> void {
+					// Emit a `VM_SET_CONST` instruction to set the data.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::SET_CONST]);
+					args = fill(args, (Int16)deg);
+					args = fill(args, (Int16)ARG0);
+				}, 0, true,
+				onError
+			);
+
+			// Check the stack footprint.
+			CHECK_COUNTER(ctx, onError);
+		};
+
+		write(bytes, context, generator, false, onError);
+	}
+
+	virtual Abstract abstract(void) const override {
+		return abstract("DEG");
+	}
+	using Node::abstract;
+
+	virtual std::string dump(int depth) const override {
+		return dump(depth, "DEG");
+	}
+	using Node::dump;
+};
+
 class NodeAsc : public Node {
 public:
 	NodeAsc() {
@@ -9295,94 +9383,6 @@ public:
 
 	virtual std::string dump(int depth) const override {
 		return dump(depth, "ASC");
-	}
-	using Node::dump;
-};
-
-class NodeDeg : public Node {
-public:
-	NodeDeg() {
-	}
-	virtual ~NodeDeg() override {
-	}
-
-	NODE_TYPE(Types::DEG)
-
-	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
-		const Generator_Void_Void generator = [&] (void) -> void {
-			// Prepare.
-			Context &ctx = context.top();
-			State &state = top();
-
-			const Asm::Instructions &INSTRUCTIONS = *ctx.instructions;
-
-			// Determine the location in the ROM.
-			state.inRom.bank = ctx.bank;
-			state.inRom.address = ctx.addressCursor;
-			state.inRom.size = 0;
-
-			// Consume the tokens.
-			if (ctx.expect.lnno) {
-				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
-				})) { THROW_INVALID_SYNTAX(onError); }
-			}
-			if (!consume(Token::Types::KEYWORD, "deg")) { THROW_INVALID_SYNTAX(onError); }
-			if (consume(Token::Types::OPERATOR, "(")) {
-				if (!consume(Token::Types::OPERATOR, ")")) { THROW_INVALID_SYNTAX(onError); }
-			}
-
-			// Check the children.
-			if (_children.empty()) {
-				THROW_TOO_FEW_ARGUMENTS(onError);
-			} else if (_children.size() == 1) {
-				// Do nothing.
-			} else {
-				THROW_TOO_MANY_ARGUMENTS(onError);
-			}
-
-			// Get the internal value of a specific degree.
-			Token::Ptr tk = nullptr;
-			int val = 0;
-			if (!isInt16(context, 0, val, &tk)) { THROW_TYPE_EXPECTED(onError, "Integer constant", tk); }
-			val = (int)(val * (256.0f / 360.0f));
-			const int deg = (val >= 0) ?
-				(val % 256) :
-				((val % 256 + 256) % 256);
-
-			// Set the stack footprint guard.
-			COND_VAR_GUARD(ctx.expect.lnno, ctx.stackFootprint, Counter::Ptr(new Counter()));
-			COUNTER_GUARD(ctx, stk);
-
-			// Set the expression slot guard.
-			VAR_GUARD(ctx.expression.slots, Context::Expression::Slots(new Context::Expression::Slots::element_type));
-
-			// Emit the right hand value.
-			writeRightHand(
-				bytes, context, stk,
-				[&] (void) -> void {
-					// Emit a `VM_SET_CONST` instruction to set the data.
-					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::SET_CONST]);
-					args = fill(args, (Int16)deg);
-					args = fill(args, (Int16)ARG0);
-				}, 0, true,
-				onError
-			);
-
-			// Check the stack footprint.
-			CHECK_COUNTER(ctx, onError);
-		};
-
-		write(bytes, context, generator, false, onError);
-	}
-
-	virtual Abstract abstract(void) const override {
-		return abstract("DEG");
-	}
-	using Node::abstract;
-
-	virtual std::string dump(int depth) const override {
-		return dump(depth, "DEG");
 	}
 	using Node::dump;
 };
@@ -31546,6 +31546,8 @@ public:
 
 	typedef std::map<std::string, Variant> Macros;
 
+	typedef std::function<bool(std::string &, const Variant &, const Variant &, const TextLocation &, const TextLocation &)> I18nLookupHandler;
+
 private:
 	struct Options {
 		GBBASIC::Options::Strategies::Compatibilities compatibility = GBBASIC::Options::Strategies::Compatibilities::CLASSIC | GBBASIC::Options::Strategies::Compatibilities::COLORED;
@@ -31809,11 +31811,14 @@ public:
 			ADD_STATEMENT("min",               node<NodeMath>("min"),                      Token::Types::OPERATOR,       false);
 			ADD_STATEMENT("max",               node<NodeMath>("max"),                      Token::Types::OPERATOR,       false);
 
+			// `DEG(...)`.
+			ADD_STATEMENT("deg",               node<NodeDeg>(),                            Token::Types::KEYWORD,         true);
+
 			// `ASC(...)`.
 			ADD_STATEMENT("asc",               node<NodeAsc>(),                            Token::Types::KEYWORD,         true);
 
-			// `DEG(...)`.
-			ADD_STATEMENT("deg",               node<NodeDeg>(),                            Token::Types::KEYWORD,         true);
+			// `LSTR(...)`.
+			ADD_STATEMENT("lstr",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 
 			// `LEN(...)`.
 			ADD_STATEMENT("len",               node<NodeLen>(),                            Token::Types::KEYWORD,         true);
@@ -32568,6 +32573,7 @@ public:
 		Node::MacroStringTable::Stack &macroStrings,
 		Macro::List &macros,
 		const Macros &preDefinedMacros,
+		I18nLookupHandler i18nLookup,
 		Prompt::Handler onPrint,
 		Error::Handler onError
 	) {
@@ -32608,6 +32614,7 @@ public:
 			                             macroStrings,
 			                             macros,
 			                             preDefinedMacros_,
+			                             i18nLookup,
 			                             _options,
 			                             onPrint,
 			                             gotError
@@ -33292,6 +33299,7 @@ private:
 		Node::MacroStringTable::Stack &macroStrings,
 		Macro::List &macros,
 		const Macros &preDefinedMacros,
+		I18nLookupHandler i18nLookup,
 		const Options &options,
 		Prompt::Handler onPrint_,
 		Error::Handler onError_
@@ -33315,7 +33323,7 @@ private:
 			Text::toLowerCase(name);
 			const Variant &data_ = kv.second;
 			switch (data_.type()) {
-			case Variant::NIL: // Fall through.
+			case Variant::NOTHING: // Fall through.
 			case Variant::BOOLEAN: // Fall through.
 			case Variant::INTEGER: // Fall through.
 			case Variant::LONG: // Fall through.
@@ -34981,6 +34989,66 @@ private:
 
 			return true;
 		};
+		auto LStr = [&] (State &q, Node::Array &children, std::string &txt) -> bool { // I18n dictionary lookup.
+			(void)children;
+
+			State q1 = begin();
+			q1.index = q.index;
+			Token::Ptr id0 = nullptr;
+			Token::Ptr id1 = nullptr;
+
+			if (!must(Token::Types::KEYWORD, "lstr")(q1)) return false;
+			if (!must(Token::Types::OPERATOR, "(")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+			if (forwardN(2, Token::Types::OPERATOR, ",")(q1.index)) {
+				// `=LSTR(#pg|"{name}", key|ln)`.
+				Variant arg0 = nullptr;
+				Variant arg1 = nullptr;
+				if ((id0 = must(Token::Types::STRING)(q1))) {
+					arg0 = id0->data();
+				} else if ((id0 = must(Token::Types::PAGE)(q1))) {
+					std::string pg = (std::string)id0->text();
+					if (pg.empty() || pg.front() != '#') {
+						GBBASIC_ASSERT(false && "Impossible.");
+
+						return false;
+					}
+					pg.erase(pg.begin());
+					int pgn = -1;
+					if (!Text::fromString(pg, pgn))
+						return false;
+
+					arg0 = Variant(pgn);
+				}
+				if (!must(Token::Types::OPERATOR, ",")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+				if ((id1 = must(Token::Types::STRING)(q1))) {
+					arg1 = id1->data();
+				} else if ((id1 = must(Token::Types::INTEGER)(q1))) {
+					arg1 = id1->data();
+				}
+				if (!i18nLookup(txt, arg0, arg1, id0->begin(), id1->begin())) {
+					txt.clear();
+
+					return false;
+				}
+			} else {
+				// `=LSTR(key)`.
+				if ((id0 = must(Token::Types::STRING)(q1))) {
+					const Variant arg0 = id0->data();
+					if (!i18nLookup(txt, nullptr, arg0, id0->begin(), id0->begin())) {
+						txt.clear();
+
+						return false;
+					}
+				}
+			}
+			if (!must(Token::Types::OPERATOR, ")")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+
+			q1.success = true;
+			end(q1);
+			q.index = q1.index;
+
+			return true;
+		};
 		auto StackN = [&] (State &q, Node::Array &children, int index) -> bool { // `STACKN` statement.
 			const std::string key = "stack" + Text::toString(index);
 
@@ -36021,6 +36089,28 @@ private:
 							q1.success = true;
 							end(q1);
 							q.index = q1.index;
+
+							refresh();
+
+							continue;
+						}
+					}
+				}
+				if ((id = forward(Token::Types::SYMBOL)(q.index))) {
+					name = (std::string)id->data();
+					if (name == "lstr") { // I18n dictionary lookup.
+						std::string txt;
+						const int qi = q.index;
+						if (LStr(q, children, txt)) {
+							Token::Ptr node(new Token());
+							node
+								->type(Token::Types::STRING)
+								->data(txt)
+								->begin(id->begin())
+								->end(id->end());
+							q.tokens.push_back(node);
+
+							n += q.index - qi;
 
 							refresh();
 
@@ -42142,7 +42232,7 @@ private:
 
 		const TextLocation &location = tk->begin();
 		switch (tk->data().type()) {
-		case Variant::NIL: {
+		case Variant::NOTHING: {
 				const Error err("Invalid number", false);
 				onError(err, err.format(), location);
 			}
@@ -43814,6 +43904,7 @@ bool load(Program &program, Options &options) {
 bool compile(Program &program, const Options &options) {
 	// Prepare.
 	const std::string &macros                                                  = options.macros;
+	const std::string &language                                                = options.language;
 	const std::string &ast                                                     = options.ast;
 	const Options::Passes passes                                               = options.passes;
 	const Bytes::Ptr &icon                                                     = options.icon;
@@ -43887,7 +43978,7 @@ bool compile(Program &program, const Options &options) {
 		onPrint("Succeeded to parse the symbols.");
 	} while (false);
 
-	// Prepare the processors.
+	// Prepare the output processors.
 	Prompt::Handler onPrint_ = [onPrint] (const Prompt &prompt, const std::string &msg, const TextLocation* loc /* nullable */) -> void {
 		(void)prompt;
 
@@ -43915,6 +44006,161 @@ bool compile(Program &program, const Options &options) {
 		onError_(msg, err.isWarning, loc.page, loc.row, loc.column);
 	};
 
+	// Prepare the asset processors.
+	Parser::I18nLookupHandler i18nLookup = [&] (std::string &out, const Variant &arg0, const Variant &arg1, const TextLocation &loc0, const TextLocation &loc1) -> bool {
+		// Prepare.
+		struct Localized {
+			typedef std::vector<Localized> Array;
+
+			int page = -1;
+			int row = -1;
+			std::string content;
+
+			Localized() {
+			}
+			Localized(int pg, int r, const std::string &c) : page(pg), row(r), content(c) {
+			}
+		};
+
+		const I18nAssets &i18ns = program.assets->i18ns;
+
+		out.clear();
+
+		// Try getting localized content from the i18n dictionary.
+		if (arg0.type() == Variant::NOTHING) {
+			// `=LSTR(key)`.
+			if (arg1.type() == Variant::STRING) {
+				Localized::Array localized;
+				const std::string key = (std::string)arg1;
+				for (int i = 0; i < i18ns.count(); ++i) {
+					const I18nAssets::Entry* entry = i18ns.get(i);
+					const I18n::Ptr &i18n = entry->data;
+					if (!i18n)
+						continue;
+
+					int lang = -1;
+					int item = -1;
+					const char* txt = i18n->getContent(language, (std::string)arg1, &lang, &item);
+					if (!txt)
+						continue;
+
+					localized.push_back(Localized(i, item + 1, txt));
+				}
+				if (localized.empty()) {
+					const std::string msg = Text::format("Cannot find localized content with key \"{0}\", language \"{1}\"", { key, language });
+					onError_(msg, false, loc1.page, loc1.row, loc1.column);
+
+					return false;
+				}
+				if (localized.size() > 1) {
+					std::string msg = Text::format("Too many localized content with key \"{0}\", language \"{1}\"", { key, language });
+					for (int i = 0; i < (int)localized.size(); ++i) {
+						const Localized &l = localized[i];
+						msg += "\n  ";
+						msg += Text::format("page {0}, row {1}", { Text::toString(l.page), Text::toString(l.row) });
+					}
+					onError_(msg, false, loc1.page, loc1.row, loc1.column);
+
+					return false;
+				}
+				out = localized.front().content;
+			} else {
+				const std::string msg = "String expected";
+				onError_(msg, false, loc1.page, loc1.row, loc1.column);
+
+				return false;
+			}
+		} else {
+			// `=LSTR(#pg|"{name}", key|ln)`.
+			const I18nAssets::Entry* entry = nullptr;
+			if (arg0.type() == Variant::STRING) {
+				const std::string name = (std::string)arg0;
+				int pg = -1;
+				std::string fuzzyName;
+				entry = i18ns.fuzzy(name, &pg, fuzzyName);
+				if (!entry) {
+					if (name == fuzzyName) {
+						const std::string msg = Text::format("Invalid i18n asset point \"{0}\"", { name });
+						onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+						return false;
+					} else {
+						const std::string msg = Text::format("Invalid asset point, did you mean \"{0}\"", { fuzzyName });
+						onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+						return false;
+					}
+				}
+			} else if (arg0.type() == Variant::INTEGER) {
+				const int pg = (int)(Int)arg0;
+				if (pg < 0 || pg >= i18ns.count()) {
+					const std::string msg = "Asset page out of bounds";
+					onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+					return false;
+				}
+				entry = i18ns.get(pg);
+			} else {
+				const std::string msg = "Asset page or name expected";
+				onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+				return false;
+			}
+			if (!entry || !entry->data) {
+				const std::string msg = "Invalid i18n asset";
+				onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+				return false;
+			}
+			const I18n::Ptr &i18n = entry->data;
+			if (arg1.type() == Variant::STRING) {
+				const std::string key = (std::string)arg1;
+				int lang = -1;
+				int item = -1;
+				const char* txt = i18n->getContent(language, key, &lang, &item);
+				if (!txt) {
+					const std::string msg = Text::format("Cannot find localized content with key \"{0}\", language \"{1}\"", { key, language });
+					onError_(msg, false, loc1.page, loc1.row, loc1.column);
+
+					return false;
+				}
+				out = txt;
+			} else if (arg1.type() == Variant::INTEGER) {
+				const int idx = (int)(Int)arg1 - 1;
+				const int lang = i18n->getLanguageIndex(language);
+				if (lang == -1) {
+					const std::string msg = Text::format("Cannot find language \"{0}\"", { language });
+					onError_(msg, false, loc1.page, loc1.row, loc1.column);
+
+					return false;
+				}
+				if (idx < 0 || idx >= i18n->itemCount()) {
+					const std::string msg = "Item index out of bounds";
+					onError_(msg, false, loc1.page, loc1.row, loc1.column);
+
+					return false;
+				}
+				const char* txt = i18n->getContent(lang, idx);
+				if (!txt) {
+					const std::string msg = Text::format("Cannot find localized content with index {0}, language \"{1}\"", { Text::toString(idx), language });
+					onError_(msg, false, loc1.page, loc1.row, loc1.column);
+
+					return false;
+				}
+				out = txt;
+			} else {
+				const std::string msg = "Integer or string expected";
+				onError_(msg, false, loc1.page, loc1.row, loc1.column);
+
+				return false;
+			}
+		}
+
+		// Finish.
+		return true;
+	};
+
+	// Prepare the pass processors.
 	Parser parser;
 	parser.option("compatibility", (Variant::Long)compatibility);
 	parser.option("case_insensitive", caseInsensitive);
@@ -44087,6 +44333,7 @@ bool compile(Program &program, const Options &options) {
 				compiler.macroStrings(),
 				macros_,
 				preDefinedMacros,
+				i18nLookup,
 				onPrint_,
 				onError
 			);

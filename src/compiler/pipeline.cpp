@@ -2388,6 +2388,7 @@ public:
 	virtual void prompt(AssetsBundle::ConstPtr assets) override {
 		// Calculate hash for each asset for further duplication detection.
 		HashArray hashedFonts;
+		HashArray hashedI18ns;
 		HashArray hashedCode;
 		HashArray hashedTiles;
 		HashArray hashedMaps;
@@ -2397,6 +2398,7 @@ public:
 		HashArray hashedScenes;
 
 		calculateHash <FontAssets>(hashedFonts,  assets->fonts );
+		calculateHash <I18nAssets>(hashedI18ns,  assets->i18ns );
 		calculateHash <CodeAssets>(hashedCode,   assets->code  );
 		calculateHash<TilesAssets>(hashedTiles,  assets->tiles );
 		calculateHash  <MapAssets>(hashedMaps,   assets->maps  );
@@ -2407,6 +2409,7 @@ public:
 
 		// Output the duplicate assets.
 		checkDuplication <FontAssets>(hashedFonts,  AssetsBundle::Categories::FONT,  "Font",  assets->fonts );
+		checkDuplication <I18nAssets>(hashedI18ns,  AssetsBundle::Categories::I18N,  "I18n",  assets->i18ns );
 		checkDuplication <CodeAssets>(hashedCode,   AssetsBundle::Categories::CODE,  "Code",  assets->code  );
 		checkDuplication<TilesAssets>(hashedTiles,  AssetsBundle::Categories::TILES, "Tiles", assets->tiles );
 		checkDuplication  <MapAssets>(hashedMaps,   AssetsBundle::Categories::MAP,   "Map",   assets->maps  );
@@ -2421,6 +2424,10 @@ public:
 			const Destination &dst = it->second;
 			switch (src.category) {
 			case AssetsBundle::Categories::FONT:
+				// Do nothing.
+
+				break;
+			case AssetsBundle::Categories::I18N:
 				// Do nothing.
 
 				break;
@@ -2801,6 +2808,7 @@ private:
 		auto canAllocate = [] (const Source &src) -> bool {
 			switch (src.category) {
 			case AssetsBundle::Categories::FONT:       // Fall through.
+			case AssetsBundle::Categories::I18N:       // Fall through.
 			case AssetsBundle::Categories::TILES:      // Fall through.
 			case AssetsBundle::Categories::MAP:        // Fall through.
 			case AssetsBundle::Categories::MUSIC:      // Fall through.

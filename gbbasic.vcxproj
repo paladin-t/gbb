@@ -653,6 +653,7 @@
     <ClCompile Include="src\app\command.cpp" />
     <ClCompile Include="src\app\commands_actor.cpp" />
     <ClCompile Include="src\app\commands_grouped.cpp" />
+    <ClCompile Include="src\app\commands_i18n.cpp" />
     <ClCompile Include="src\app\commands_music.cpp" />
     <ClCompile Include="src\app\commands_layered.cpp" />
     <ClCompile Include="src\app\commands_map.cpp" />
@@ -672,6 +673,7 @@
     <ClCompile Include="src\app\editor_console.cpp" />
     <ClCompile Include="src\app\editor_code_binding.cpp" />
     <ClCompile Include="src\app\editor_code_language_definition.cpp" />
+    <ClCompile Include="src\app\editor_i18n.cpp" />
     <ClCompile Include="src\app\editor_music.cpp" />
     <ClCompile Include="src\app\editor_code.cpp" />
     <ClCompile Include="src\app\editor_font.cpp" />
@@ -727,6 +729,7 @@
     <ClCompile Include="src\utils\archive_zip.cpp" />
     <ClCompile Include="src\utils\assets.cpp" />
     <ClCompile Include="src\utils\file_sandbox.cpp" />
+    <ClCompile Include="src\utils\i18n.cpp" />
     <ClCompile Include="src\utils\localization.cpp" />
     <ClCompile Include="src\utils\marker.cpp" />
     <ClCompile Include="src\utils\music.cpp" />
@@ -1009,6 +1012,7 @@
     <ClInclude Include="src\app\command.h" />
     <ClInclude Include="src\app\commands_actor.h" />
     <ClInclude Include="src\app\commands_grouped.h" />
+    <ClInclude Include="src\app\commands_i18n.h" />
     <ClInclude Include="src\app\commands_music.h" />
     <ClInclude Include="src\app\commands_layered.h" />
     <ClInclude Include="src\app\commands_map.h" />
@@ -1028,6 +1032,7 @@
     <ClInclude Include="src\app\editor_console.h" />
     <ClInclude Include="src\app\editor_code_binding.h" />
     <ClInclude Include="src\app\editor_code_language_definition.h" />
+    <ClInclude Include="src\app\editor_i18n.h" />
     <ClInclude Include="src\app\editor_music.h" />
     <ClInclude Include="src\app\editor_code.h" />
     <ClInclude Include="src\app\editor_font.h" />
@@ -1076,6 +1081,7 @@
     <ClInclude Include="src\utils\archive_zip.h" />
     <ClInclude Include="src\utils\assets.h" />
     <ClInclude Include="src\utils\file_sandbox.h" />
+    <ClInclude Include="src\utils\i18n.h" />
     <ClInclude Include="src\utils\localization.h" />
     <ClInclude Include="src\utils\marker.h" />
     <ClInclude Include="src\utils\music.h" />

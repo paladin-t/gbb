@@ -387,6 +387,7 @@ public:
 
 	struct AssetPageNames {
 		Text::Array font;
+		Text::Array i18n;
 		Text::Array code;
 		Text::Array tiles;
 		Text::Array map;
@@ -415,6 +416,7 @@ public:
 	enum class Categories : unsigned {
 		PALETTE   = (unsigned)AssetsBundle::Categories::PALETTE,
 		FONT      = (unsigned)AssetsBundle::Categories::FONT,
+		I18N      = (unsigned)AssetsBundle::Categories::I18N,
 		CODE      = (unsigned)AssetsBundle::Categories::CODE,
 		TILES     = (unsigned)AssetsBundle::Categories::TILES,
 		MAP       = (unsigned)AssetsBundle::Categories::MAP,
@@ -499,6 +501,7 @@ public:
 	GBBASIC_PROPERTY(Activities, activities)
 	GBBASIC_PROPERTY(bool, showRecentProjects)
 	GBBASIC_FIELD_READONLY(Categories, category)
+	GBBASIC_PROPERTY_READONLY(Categories, categoryOfFont)
 	GBBASIC_PROPERTY_READONLY(Categories, categoryOfAudio)
 	GBBASIC_PROPERTY_READONLY(Categories, categoryBeforeCompiling)
 	GBBASIC_PROPERTY_READONLY(bool, interactable)
@@ -702,6 +705,12 @@ public:
 	int parseKernelBehaviour(const std::string &id) const;
 	void reloadKernels(void);
 
+	Text::Array getAllI18nLanguages(const Project* prj, bool includeKey) const;
+	/**
+	 * @param[out] lang
+	 */
+	bool getDefaultI18nLanguage(const Project* prj, std::string &lang) const;
+
 	void addMapPageFrom(Window* wnd, Renderer* rnd, int index);
 	void addScenePageFrom(Window* wnd, Renderer* rnd, int index);
 	void duplicateFontFrom(Window* wnd, Renderer* rnd, int index);
@@ -757,6 +766,7 @@ public:
 	void sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes type, void* event);
 
 	class EditorFont* touchFontEditor(Window* wnd, Renderer* rnd, Project* prj, int idx, FontAssets::Entry* entry /* nullable */);
+	class EditorI18n* touchI18nEditor(Window* wnd, Renderer* rnd, Project* prj, int idx, I18nAssets::Entry* entry /* nullable */);
 	class EditorCode* touchCodeEditor(Window* wnd, Renderer* rnd, Project* prj, int idx, bool isMajor, CodeAssets::Entry* entry /* nullable */);
 	class EditorTiles* touchTilesEditor(Window* wnd, Renderer* rnd, Project* prj, int idx, TilesAssets::Entry* entry /* nullable */);
 	class EditorMap* touchMapEditor(Window* wnd, Renderer* rnd, Project* prj, int idx, unsigned refCategory, int refIndex, MapAssets::Entry* entry /* nullable */);
@@ -1000,6 +1010,8 @@ public:
 	void clearAssetPageNames(void);
 	void clearFontPageNames(void);
 	const Text::Array &getFontPageNames(void);
+	void clearI18nPageNames(void);
+	const Text::Array &getI18nPageNames(void);
 	void clearCodePageNames(void);
 	const Text::Array &getCodePageNames(void);
 	void clearTilesPageNames(void);
@@ -1099,6 +1111,7 @@ private:
 	void recent(Window* wnd, Renderer* rnd, float marginTop, float marginBottom);
 	void notepad(Window* wnd, Renderer* rnd, float marginTop, float marginBottom);
 	void font(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, double delta);
+	void i18n(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, double delta);
 	void code(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, double delta);
 	void tiles(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, double delta);
 	void map(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, double delta);
@@ -1157,6 +1170,7 @@ private:
 	void launchProject(
 		Window* wnd, Renderer* rnd,
 		const char* cartType /* nullable */, const char* sramType /* nullable */, bool* hasRtc /* nullable */, bool* hasRumble /* nullable */,
+		const char* i18nLang /* nullable */,
 		bool toRun_, int toExport_
 	);
 	void runProject(Window* wnd, Renderer* rnd, Bytes::Ptr rom);

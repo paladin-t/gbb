@@ -395,12 +395,15 @@ public:
 
 class RomBuildSettingsPopupBox : public PopupBox {
 public:
-	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, const char*, const char*, bool, bool> {
+	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, const char*, const char*, bool, bool, const char*> {
 		using Handler::Handler;
 	};
 	struct CanceledHandler : public Handler<CanceledHandler, void> {
 		using Handler::Handler;
 	};
+
+private:
+	typedef std::vector<const char*> TextPointers;
 
 private:
 	Renderer* _renderer = nullptr; // Foreign.
@@ -411,6 +414,10 @@ private:
 	std::string _sramType;
 	bool _hasRtc = false;
 	bool _hasRumble = false;
+	std::string _i18nLanguage;
+	int _i18nLanguageIndex = 0;
+	Text::Array _allI18nLanguages;
+	TextPointers _allI18nLanguagePointers;
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;
@@ -424,6 +431,7 @@ public:
 		Renderer* rnd,
 		Theme* theme,
 		const std::string &title,
+		Workspace* ws,
 		Project* project,
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */
@@ -435,12 +443,15 @@ public:
 
 class EmulatorBuildSettingsPopupBox : public PopupBox {
 public:
-	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, const char*, const char*, Bytes::Ptr> {
+	struct ConfirmedHandler : public Handler<ConfirmedHandler, void, const char*, const char*, Bytes::Ptr, const char*> {
 		using Handler::Handler;
 	};
 	struct CanceledHandler : public Handler<CanceledHandler, void> {
 		using Handler::Handler;
 	};
+
+private:
+	typedef std::vector<const char*> TextPointers;
 
 private:
 	Renderer* _renderer = nullptr; // Foreign.
@@ -459,6 +470,10 @@ private:
 	int _activeClassicPaletteIndex = -1;
 	int _activeGamepadIndex = -1;
 	int _activeButtonIndex = -1;
+	std::string _i18nLanguage;
+	int _i18nLanguageIndex = 0;
+	Text::Array _allI18nLanguages;
+	TextPointers _allI18nLanguagePointers;
 
 	ConfirmedHandler _confirmedHandler = nullptr;
 	std::string _confirmText;
@@ -473,6 +488,9 @@ public:
 		Input* input, Theme* theme,
 		const std::string &title,
 		const std::string &settings, const char* args, bool hasIcon,
+		const std::string &i18nLang,
+		Workspace* ws,
+		Project* project,
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */
 	);
@@ -936,11 +954,18 @@ public:
 	};
 
 private:
+	typedef std::vector<const char*> TextPointers;
+
+private:
 	Renderer* _renderer = nullptr; // Foreign.
 	Theme* _theme = nullptr; // Foreign.
 	std::string _title;
 	char _titleBuffer[WIDGETS_TEXT_BUFFER_SIZE]; // Fixed size.
 	char _macrosBuffer[1024]; // Fixed size.
+	std::string _i18nLanguage;
+	int _i18nLanguageIndex = 0;
+	Text::Array _allI18nLanguages;
+	TextPointers _allI18nLanguagePointers;
 	float _superFeaturesBeginX = 0.0f;
 	float _superFeaturesEndX = 0.0f;
 	float _superFeaturesEnabledWidth = 72.0f;
@@ -950,6 +975,7 @@ private:
 	bool _activeSuperPaletteShowColorPicker = false;
 	int _activeSuperPaletteIndex = -1;
 	Text::Array _superPaletteNames;
+	bool _isProjectOpened = false;
 	Project* _project = nullptr; // Foreign.
 	Project* _projectShadow = nullptr;
 
@@ -967,7 +993,8 @@ public:
 		Renderer* rnd,
 		Theme* theme,
 		const std::string &title,
-		Project* project,
+		Workspace* ws,
+		Project* project, bool isOpened,
 		const ConfirmedHandler &confirm, const CanceledHandler &cancel, const AppliedHandler &apply,
 		const char* confirmTxt /* nullable */, const char* cancelTxt /* nullable */, const char* applyTxt /* nullable */
 	);
@@ -1176,6 +1203,18 @@ ImVec2 GetMousePosOnCurrentItem(const ImVec2* ref_pos = nullptr);
 
 void PushID(const std::string &str_id);
 
+struct ItemSizeData {
+	ImVec2 CursorPosPrevLine;
+	ImVec2 CursorPos;
+	ImVec2 CursorMaxPos;
+	float PrevLineSizeY;
+	float CurrLineSizeY;
+	float PrevLineTextBaseOffset;
+	float CurrLineTextBaseOffset;
+};
+ItemSizeData ReserveItemSizeData(void);
+void RestoreItemSizeData(const ItemSizeData &itemSizeData);
+
 Rect LastItemRect(void);
 
 void Dummy(const ImVec2 &size, ImU32 col);
@@ -1200,6 +1239,9 @@ float TitleBarHeight(void);
 bool TitleBarCustomButton(const char* label, ImVec2* pos, ButtonDrawer draw, const char* tooltip = nullptr);
 
 ImVec2 ScrollbarSize(bool horizontal);
+
+bool CompactButton(const char* label, const ImVec2 &pos, const ImVec2 &size, const char* tooltip = nullptr, ImGuiButtonFlags flags = ImGuiButtonFlags_None);
+bool CompactButton(ImTextureID texture_id, const ImVec2 &pos, const ImVec2 &size, const ImVec4 &tint_col, const char* tooltip = nullptr, ImGuiButtonFlags flags = ImGuiButtonFlags_None);
 
 ImVec2 CustomButtonAutoPosition(void);
 

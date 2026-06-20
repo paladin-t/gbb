@@ -9,6 +9,7 @@
 #include "editor_actor.h"
 #include "editor_code.h"
 #include "editor_font.h"
+#include "editor_i18n.h"
 #include "editor_map.h"
 #include "editor_music.h"
 #include "editor_scene.h"
@@ -130,6 +131,7 @@ Project::Project(class Window* wnd, Renderer* rnd, class Workspace* ws) {
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 	activePaletteIndex(-1);
 	activeFontIndex(-1);
+	activeI18nIndex(-1);
 	fontPreviewHeight(0.0f);
 	activeTilesIndex(-1);
 	activeMapIndex(-1);
@@ -167,6 +169,7 @@ Project &Project::operator = (const Project &other) {
 	strictOn(other.strictOn());
 	optimize(other.optimize());
 	preDefinedMacros(other.preDefinedMacros());
+	i18nLanguage(other.i18nLanguage());
 	superFeaturesEnabled(other.superFeaturesEnabled());
 	borderFrameType(other.borderFrameType());
 	borderFrameCode(other.borderFrameCode());
@@ -268,6 +271,7 @@ Project &Project::operator = (const Project &other) {
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 	activePaletteIndex(other.activePaletteIndex());
 	activeFontIndex(other.activeFontIndex());
+	activeI18nIndex(other.activeI18nIndex());
 	fontPreviewHeight(other.fontPreviewHeight());
 	activeTilesIndex(other.activeTilesIndex());
 	activeMapIndex(other.activeMapIndex());
@@ -953,6 +957,106 @@ std::string Project::getUsableFontName(int index) const {
 	while (!canRenameFont(index, name, nullptr)) {
 		++id;
 		name = "Font" + Text::toString(id);
+	}
+
+	return name;
+}
+
+int Project::i18nPageCount(void) const {
+	if (!assets())
+		return 0;
+
+	const I18nAssets &assets_ = assets()->i18ns;
+
+	return assets_.count();
+}
+
+bool Project::addI18nPage(const std::string &val, bool isNew) {
+	if (!assets())
+		return false;
+
+	I18nAssets &assets_ = assets()->i18ns;
+	const bool result = assets_.add(val);
+	if (result && isNew) {
+		const int index = assets_.count() - 1;
+		I18nAssets::Entry* entry = assets_.get(index);
+		if (entry->name.empty())
+			entry->name = getUsableI18nName(index); // Unique name.
+	}
+	for (int i = 0; i < assets_.count(); ++i) {
+		I18nAssets::Entry* entry = assets_.get(i);
+		if (entry->editor)
+			entry->editor->statusInvalidated();
+	}
+
+	return result;
+}
+
+bool Project::removeI18nPage(int index) {
+	I18nAssets &assets_ = assets()->i18ns;
+	if (index < 0 || index >= assets_.count())
+		return false;
+
+	I18nAssets::Entry* entry = assets_.get(index);
+	if (entry->editor) {
+		entry->editor->close(index);
+		EditorI18n::destroy((EditorI18n*)entry->editor);
+		entry->editor = nullptr;
+	}
+	if (!assets_.remove(index))
+		return false;
+
+	return true;
+}
+
+const I18nAssets::Entry* Project::getI18n(int index) const {
+	if (!assets())
+		return nullptr;
+
+	I18nAssets &assets_ = assets()->i18ns;
+
+	return assets_.get(index);
+}
+
+I18nAssets::Entry* Project::getI18n(int index) {
+	if (!assets())
+		return nullptr;
+
+	I18nAssets &assets_ = assets()->i18ns;
+
+	return assets_.get(index);
+}
+
+bool Project::canRenameI18n(int index, const std::string &name, int* another) const {
+	if (another)
+		*another = -1;
+
+	if (name.empty())
+		return false;
+
+	const I18nAssets &assets_ = assets()->i18ns;
+	for (int i = 0; i < assets_.count(); ++i) {
+		if (i == index)
+			continue;
+
+		const I18nAssets::Entry* entry = assets_.get(i);
+		if (entry->name == name) {
+			if (another)
+				*another = i;
+
+			return false;
+		}
+	}
+
+	return true;
+}
+
+std::string Project::getUsableI18nName(int index) const {
+	int id = 0;
+	std::string name = "I18n" + Text::toString(id);
+	while (!canRenameI18n(index, name, nullptr)) {
+		++id;
+		name = "I18n" + Text::toString(id);
 	}
 
 	return name;
@@ -1871,6 +1975,18 @@ bool Project::dirty(void) {
 		if (hasDirtyEditor())
 			break;
 
+		I18nAssets &i18ns = assets()->i18ns;
+		for (int i = 0; i < i18ns.count(); ++i) {
+			I18nAssets::Entry* entry = i18ns.get(i);
+			if (entry->editor && entry->editor->hasUnsavedChanges()) {
+				hasDirtyEditor(true);
+
+				break;
+			}
+		}
+		if (hasDirtyEditor())
+			break;
+
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 		if (minorCodeEditor() && minorCodeEditor()->hasUnsavedChanges()) {
 			hasDirtyEditor(true);
@@ -2069,6 +2185,7 @@ bool Project::open(const char* path_) {
 		strictOn(true);
 		optimize(true);
 		preDefinedMacros("");
+		i18nLanguage("");
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
 		created(now);
@@ -2142,6 +2259,7 @@ bool Project::open(const char* path_) {
 		strictOn(true);
 		optimize(true);
 		preDefinedMacros("");
+		i18nLanguage("");
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
 		created(now);
@@ -2197,6 +2315,12 @@ bool Project::close(bool deep) {
 			case AssetsBundle::Categories::FONT:
 				editor->close(index);
 				EditorFont::destroy((EditorFont*)editor);
+				entry->editor = nullptr;
+
+				break;
+			case AssetsBundle::Categories::I18N:
+				editor->close(index);
+				EditorI18n::destroy((EditorI18n*)editor);
 				entry->editor = nullptr;
 
 				break;
@@ -2403,6 +2527,12 @@ void Project::foreach(AssetHandler handle) {
 	for (int i = 0; i < fonts.count(); ++i) {
 		FontAssets::Entry* entry = fonts.get(i);
 		handle(AssetsBundle::Categories::FONT, i, entry, entry->editor);
+	}
+
+	I18nAssets &i18ns = assets()->i18ns;
+	for (int i = 0; i < i18ns.count(); ++i) {
+		I18nAssets::Entry* entry = i18ns.get(i);
+		handle(AssetsBundle::Categories::I18N, i, entry, entry->editor);
 	}
 
 	CodeAssets &codes = assets()->code;
@@ -2615,6 +2745,7 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		strictOn(true);
 		optimize(true);
 		preDefinedMacros("");
+		i18nLanguage("");
 		superFeaturesEnabled(false);
 		customizedSuperPalettes(false);
 		created(now);
@@ -2669,6 +2800,8 @@ bool Project::loadBasic(const char* fontConfigPath, WarningOrErrorHandler onWarn
 		activePaletteIndex(-1);
 
 		activeFontIndex(-1);
+
+		activeI18nIndex(-1);
 
 		fontPreviewHeight(0.0f);
 
@@ -3018,6 +3151,11 @@ bool Project::loadInformation(const std::string &content, WarningOrErrorHandler 
 		preDefinedMacros("");
 	}
 
+	i18nLanguage("");
+	if (!Jpath::get(doc, i18nLanguage(), "i18n_language")) {
+		i18nLanguage("");
+	}
+
 	superFeaturesEnabled(false);
 	if (!Jpath::get(doc, superFeaturesEnabled(), "super_features", "enabled")) {
 		superFeaturesEnabled(false);
@@ -3283,6 +3421,8 @@ bool Project::saveInformation(std::string &content) {
 
 	Jpath::set(doc, doc, preDefinedMacros(), "pre_defined_macros");
 
+	Jpath::set(doc, doc, i18nLanguage(), "i18n_language");
+
 	Jpath::set(doc, doc, superFeaturesEnabled(), "super_features", "enabled");
 
 	Jpath::set(doc, doc, (unsigned)borderFrameType(), "super_features", "border_frame_type");
@@ -3428,6 +3568,26 @@ bool Project::loadAssets(const char* fontConfigPath, const std::string &content,
 
 	if (fontPageCount() > 0)
 		activeFontIndex(Math::clamp(activeFontIndex(), 0, fontPageCount() - 1));
+
+	// Load i18n.
+	for (int i = 0; ; ++i) {
+		std::string section;
+		if (
+			!retrieve(
+				content,
+				Text::format(COMPILER_I18N_BEGIN, Text::toString(i), 0), COMPILER_I18N_END,
+				section
+			)
+		) {
+			break;
+		}
+		section = Text::trim(section);
+
+		addI18nPage(section, false);
+	}
+
+	if (i18nPageCount() > 0)
+		activeI18nIndex(Math::clamp(activeI18nIndex(), 0, i18nPageCount() - 1));
 
 	// Load code.
 	for (int i = 0; ; ++i) {
@@ -3624,6 +3784,20 @@ bool Project::saveAssets(std::string &content, WarningOrErrorHandler onWarningOr
 			put(content, COMPILER_FONT_BEGIN, COMPILER_FONT_END, txt_);
 		}
 	} while (false);
+
+	// Save i18n.
+	for (int i = 0; i < assets()->i18ns.count(); ++i) {
+		I18nAssets::Entry* entry = assets()->i18ns.get(i);
+		if (entry->editor && entry->editor->hasUnsavedChanges()) {
+			entry->editor->flush();
+			entry->editor->markChangesSaved();
+		}
+		std::string txt_;
+		if (!entry->toString(txt_, onWarningOrError))
+			continue;
+
+		put(content, Text::format(COMPILER_I18N_BEGIN, Text::toString(i), 0), COMPILER_I18N_END, txt_);
+	}
 
 	// Save code.
 	for (int i = 0; i < assets()->code.count(); ++i) {

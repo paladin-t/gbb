@@ -283,6 +283,7 @@ bool Theme::open(class Renderer* rnd) {
 	styleDefault().warningColor                             = ImGui::GetColorU32(ImVec4(0.95f, 0.93f, 0.10f, 1.00f));
 	styleDefault().errorColor                               = ImGui::GetColorU32(ImVec4(0.93f, 0.00f, 0.00f, 1.00f));
 	styleDefault().debugColor                               = ImGui::GetColorU32(ImVec4(0.00f, 0.58f, 1.00f, 1.00f));
+	styleDefault().i18nHeadColor                            = ImGui::GetColorU32(ImVec4(0.17f, 0.57f, 0.69f, 1.00f));
 	styleDefault().musicSideColor                           = ImGui::GetColorU32(ImVec4(0.17f, 0.57f, 0.69f, 1.00f));
 	styleDefault().musicNoteColor                           = ImGui::GetColorU32(ImVec4(0.95f, 0.50f, 0.04f, 1.00f));
 	styleDefault().musicInstrumentColor                     = ImGui::GetColorU32(ImVec4(0.17f, 0.48f, 0.16f, 1.00f));
@@ -326,6 +327,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Activities("Activities...");
 	menu_Actor("Actor");
 	menu_Actors("Actors");
+	menu_Add("Add");
 	menu_Anchor("Anchor");
 	menu_Application("Application");
 	menu_Attributes("Attributes");
@@ -356,6 +358,8 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Copy("Copy");
 	menu_CopyAsImage("Copy as Image");
 	menu_CopyJumpCode("Copy Jump Code");
+	menu_Csv("CSV");
+	menu_CsvFile("CSV File...");
 	menu_Cut("Cut");
 	menu_DataSequence("Data Sequence");
 	menu_Dec("DEC");
@@ -381,6 +385,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Hex("HEX");
 	menu_Hflip("H-flip");
 	menu_Howto("Howto");
+	menu_I18n("I18n dictionary");
 	menu_Image("Image");
 	menu_ImageFile("Image File...");
 	menu_Import("Import...");
@@ -399,7 +404,11 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Map("Map");
 	menu_MoreOfficialKernels("More Official Kernels");
 	menu_MoveBackward("Move Backward");
+	menu_MoveDown("Move Down");
 	menu_MoveForward("Move Forward");
+	menu_MoveLeft("Move Left");
+	menu_MoveRight("Move Right");
+	menu_MoveUp("Move Up");
 	menu_New("New");
 	menu_OnscreenDebug("Onscreen Debug");
 	menu_OnscreenGamepad("Onscreen Gamepad");
@@ -500,9 +509,11 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Byte("Byte");
 	dialogPrompt_CameraDeadZone("Camera dead zone");
 	dialogPrompt_CameraPosition("Camera position");
-	dialogPrompt_CannotAddMoreFrame("Cannot add more frame.");
-	dialogPrompt_CannotAddMorePage("Cannot add more page.");
-	dialogPrompt_CannotAddMoreTilesPage("Cannot add more tiles page.");
+	dialogPrompt_CannotAddMoreFrames("Cannot add more frames.");
+	dialogPrompt_CannotAddMoreItems("Cannot add more items");
+	dialogPrompt_CannotAddMoreLanguages("Cannot add more languages");
+	dialogPrompt_CannotAddMorePages("Cannot add more pages.");
+	dialogPrompt_CannotAddMoreTilesPages("Cannot add more tiles pages.");
 	dialogPrompt_CannotDecodeBorderImage("Cannot decode border image");
 	dialogPrompt_CannotExportProject("Cannot export project.");
 	dialogPrompt_CannotFindAnyKernel("Cannot find any kernel.");
@@ -525,6 +536,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_CannotUseThisImage("Cannot use this image");
 	dialogPrompt_Checking("Checking...");
 	dialogPrompt_ClearedProjects("Cleared projects");
+	dialogPrompt_ClickToEdit("Click to edit");
 	dialogPrompt_ClickToPut("Click to put");
 	dialogPrompt_ClimbVelocity("Climb velocity");
 	dialogPrompt_CollisionGroup("Collision group");
@@ -601,7 +613,10 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_InvalidDataSeeTheConsoleWindowForDetails("Invalid data; see the console window for details.");
 	dialogPrompt_InvalidFile("Invalid file.");
 	dialogPrompt_Inverted("Inverted");
+	dialogPrompt_ItemAlreadyExists("Item already exists");
 	dialogPrompt_JumpGravity("Jump gravity");
+	dialogPrompt_LanguageAlreadyExists("Language already exists");
+	dialogPrompt_Languages("Languages");
 	dialogPrompt_Length("Length");
 	dialogPrompt_LifeTime("Lift time");
 	dialogPrompt_LinuxFileDialogRequirements(
@@ -805,7 +820,11 @@ bool Theme::open(class Renderer* rnd) {
 	windowBuildingSettings("Build Settings");
 	windowBuildingSettings_Cart("Cart");
 	windowBuildingSettings_CartridgeTypeOfOutputRom("Cartridge type of output ROM:");
+	windowBuildingSettings_GameLanguage("Game language:");
+	windowBuildingSettings_I18n("I18n");
+	windowBuildingSettings_I18n_("I18n            ");
 	windowBuildingSettings_Misc("Misc");
+	windowBuildingSettings_NotSpecified("Not specified");
 	windowBuildingSettings_Rtc("RTC");
 	windowBuildingSettings_Rumble("Rumble");
 	windowBuildingSettings_Sram("SRAM");
@@ -834,7 +853,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Main_Tab8SpacesWide("Tab (8 spaces wide)");
 	windowPreferences_Emulator_ApplicationIcon("Application icon");
 	windowPreferences_Emulator_InvalidIconSize_512x512IsRecommended("Invalid icon size, 512x512 is recommended");
-	windowPreferences_Emulator_LaunchOptions("Launch options");
+	windowPreferences_Emulator_LaunchOptions("Launch options  ");
 	windowPreferences_Emulator_ShowPreferenceDialogOnEscPress("Show preference dialog on ESC press");
 	windowPreferences_Emulator_ShowStatusBar("Show status bar");
 	windowPreferences_Emulator_ShowTitleBar("Show title bar");
@@ -892,6 +911,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowProjectProperty_Project_Sram_None("0KB (None)");
 	windowProjectProperty_Project_Running_StartOnOpen("Start on open");
 	windowProjectProperty_Compiling_Compiler("Compiler:");
+	windowProjectProperty_Compiling_Compiler_I18n("  I18n");
 	windowProjectProperty_Compiling_Compiler_Macros("Macros");
 	windowProjectProperty_Compiling_Compiler_Optimize("Optimize");
 	windowProjectProperty_Compiling_Compiler_StrictOn("Strict on");
@@ -1028,6 +1048,8 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_DeleteFrame("Delete frame");
 	tooltip_EjectSourceCodeVm("Eject Source Code (VM)");
 	tooltip_Export("Export");
+	tooltip_FontAndI18n_Font("Font (" GBBASIC_MODIFIER_KEY_NAME "+6)");
+	tooltip_FontAndI18n_I18n("Internationalization\ndictionary (" GBBASIC_MODIFIER_KEY_NAME "+7)");
 	tooltip_ForAlignToTileMovementForControllers(
 		"For align-to-tile movement for controllers\n"
 		"Enable for 16x16px aligned, otherwise 8x8px aligned\n"
@@ -1106,11 +1128,11 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipFile_Save("Save (" GBBASIC_MODIFIER_KEY_NAME "+S)");
 
 	tooltipEdit_Actor("Actor/Projectile (" GBBASIC_MODIFIER_KEY_NAME "+5)");
-	tooltipEdit_Audio("Audio (" GBBASIC_MODIFIER_KEY_NAME "+7/8)");
+	tooltipEdit_Audio("Audio (" GBBASIC_MODIFIER_KEY_NAME "+8/9)");
 	tooltipEdit_Code("Code (" GBBASIC_MODIFIER_KEY_NAME "+1)");
-	tooltipEdit_Console("Console (" GBBASIC_MODIFIER_KEY_NAME "+9)");
+	tooltipEdit_Console("Console (" GBBASIC_MODIFIER_KEY_NAME "+0)");
 	tooltipEdit_Emulator("Emulator (" GBBASIC_MODIFIER_KEY_NAME "+`)");
-	tooltipEdit_Font("Font (" GBBASIC_MODIFIER_KEY_NAME "+6)");
+	tooltipEdit_FontAndI18n("Font/I18n dictionary (" GBBASIC_MODIFIER_KEY_NAME "+6/7)");
 #if GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CTRL
 	tooltipEdit_Magnifiable("(-/+ or Ctrl+Mouse Wheel)");
 #elif GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CMD
@@ -1245,7 +1267,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipAudio_InsertRowOfOrders("Insert row of orders");
 	tooltipAudio_MoveRowOfOrdersDown("Move row of orders down");
 	tooltipAudio_MoveRowOfOrdersUp("Move row of orders up");
-	tooltipAudio_Music("Music (" GBBASIC_MODIFIER_KEY_NAME "+7)");
+	tooltipAudio_Music("Music (" GBBASIC_MODIFIER_KEY_NAME "+8)");
 	tooltipAudio_MusicEffects().push_back("Fx: Arpeggio");
 	tooltipAudio_MusicEffects().push_back("Fx: Portamento up");
 	tooltipAudio_MusicEffects().push_back("Fx: Portamento down");
@@ -1289,7 +1311,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipAudio_PlayMusic("Play music");
 	tooltipAudio_PlaySfx("Play SFX");
 	tooltipAudio_ResetInstrument("Reset instrument");
-	tooltipAudio_Sfx("SFX (" GBBASIC_MODIFIER_KEY_NAME "+8)");
+	tooltipAudio_Sfx("SFX (" GBBASIC_MODIFIER_KEY_NAME "+9)");
 	tooltipAudio_SfxChannelDuty1("Duty 1");
 	tooltipAudio_SfxChannelDuty2("Duty 2");
 	tooltipAudio_SfxChannelNoise("Noise");
@@ -1356,6 +1378,11 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipFont_Trim(
 		"Whether to trim glyph height.\n"
 		"It is recommended to keep this option checked."
+	);
+
+	tooltipI18n_Info(
+		"    Items: {0}\n"
+		"Languages: {1}"
 	);
 
 	tooltipMap_Attributes("Attributes:");
@@ -1551,12 +1578,18 @@ bool Theme::open(class Renderer* rnd) {
 	warning_ActorDuplicateActorNameAtPages("Duplicate actor name \"{0}\" at page {1} and {2}");
 	warning_ActorFrameIndexOutOfBoundsOfAnimationN("Frame index out of bounds of animation \"{0}\"");
 	warning_ActorNameIsAlreadyInUse("Name is already in use");
+	warning_FontDuplicateFontNameAtPages("Duplicate font name \"{0}\" at page {1} and {2}");
+	warning_FontFontNameIsEmptyAtPage("Font name is empty at page {0}");
 	warning_FontMaxSizeOutOfBounds("Max size out of bounds");
 	warning_FontNameIsAlreadyInUse("Name is already in use");
 	warning_FontOutlineOutOfBounds("Outline out of bounds");
 	warning_FontPreviewContentIsTooLong("Preview content is too long");
 	warning_FontShadowOutOfBounds("Shadow out of bounds");
 	warning_FontSizeOutOfBounds("Size out of bounds");
+	warning_I18nDuplicateI18nNameAtPages("Duplicate i18n name \"{0}\" at page {1} and {2}");
+	warning_I18nI18nNameIsEmptyAtPage("I18n name is empty at page {0}");
+	warning_MapDuplicateMapNameAtPages("Duplicate map name \"{0}\" at page {1} and {2}");
+	warning_MapMapNameIsEmptyAtPage("Map name is empty at page {0}");
 	warning_MapNameIsAlreadyInUse("Name is already in use");
 	warning_MapSizeOutOfBounds("Size out of bounds");
 	warning_MusicDuplicateMusicInstrumentNameAt("Duplicate music instrument name \"{0}\" at {1} and {2}");
@@ -1578,9 +1611,11 @@ bool Theme::open(class Renderer* rnd) {
 	warning_SfxSfxNameIsEmptyAtPage("SFX name is empty at page {0}");
 	warning_SfxTimeoutWhenRenderingSoundShapeAtPage("Timeout when rendering sound shape at page {0}");
 	warning_TileSizeOutOfBounds("Size out of bounds");
+	warning_TilesDuplicateTilesNameAtPages("Duplicate tiles name \"{0}\" at page {1} and {2}");
 	warning_TilesNameIsAlreadyInUse("Name is already in use");
 	warning_TilesPitchOutOfBounds("Pitch out of bounds");
 	warning_TilesSizeOutOfBounds("Size out of bounds");
+	warning_TilesTilesNameIsEmptyAtPage("Tiles name is empty at page {0}");
 
 	iconAnchor(createTexture(rnd, RES_ICON_ANCHOR, GBBASIC_COUNTOF(RES_ICON_ANCHOR), nullptr));
 
@@ -1589,10 +1624,12 @@ bool Theme::open(class Renderer* rnd) {
 	iconCursor(createTexture(rnd, RES_ICON_CURSOR, GBBASIC_COUNTOF(RES_ICON_CURSOR), &imageCursor()));
 
 	iconMainMenu(createTexture(rnd, RES_ICON_MAIN_MENU, GBBASIC_COUNTOF(RES_ICON_MAIN_MENU), nullptr));
-	iconFont(createTexture(rnd, RES_ICON_FONT, GBBASIC_COUNTOF(RES_ICON_FONT), nullptr));
 	iconCode(createTexture(rnd, RES_ICON_CODE, GBBASIC_COUNTOF(RES_ICON_CODE), nullptr));
 	iconTiles(createTexture(rnd, RES_ICON_TILES, GBBASIC_COUNTOF(RES_ICON_TILES), nullptr));
 	iconMap(createTexture(rnd, RES_ICON_MAP, GBBASIC_COUNTOF(RES_ICON_MAP), nullptr));
+	iconFont(createTexture(rnd, RES_ICON_FONT, GBBASIC_COUNTOF(RES_ICON_FONT), nullptr));
+	iconFontMore(createTexture(rnd, RES_ICON_FONT_MORE, GBBASIC_COUNTOF(RES_ICON_FONT_MORE), nullptr));
+	iconI18n(createTexture(rnd, RES_ICON_I18N, GBBASIC_COUNTOF(RES_ICON_I18N), nullptr));
 	iconAudio(createTexture(rnd, RES_ICON_AUDIO, GBBASIC_COUNTOF(RES_ICON_AUDIO), nullptr));
 	iconAudioMore(createTexture(rnd, RES_ICON_AUDIO_MORE, GBBASIC_COUNTOF(RES_ICON_AUDIO_MORE), nullptr));
 	iconMusic(createTexture(rnd, RES_ICON_MUSIC, GBBASIC_COUNTOF(RES_ICON_MUSIC), nullptr));
@@ -1670,6 +1707,8 @@ bool Theme::open(class Renderer* rnd) {
 	iconDual(createTexture(rnd, RES_ICON_DUAL, GBBASIC_COUNTOF(RES_ICON_DUAL), nullptr));
 	iconMajor(createTexture(rnd, RES_ICON_MAJOR, GBBASIC_COUNTOF(RES_ICON_MAJOR), nullptr));
 	iconMinor(createTexture(rnd, RES_ICON_MINOR, GBBASIC_COUNTOF(RES_ICON_MINOR), nullptr));
+
+	iconTableDropdown(createTexture(rnd, RES_ICON_DROPDOWN, GBBASIC_COUNTOF(RES_ICON_DROPDOWN), nullptr));
 
 	iconBackground(createTexture(rnd, RES_ICON_BACKGROUND, GBBASIC_COUNTOF(RES_ICON_BACKGROUND), nullptr));
 
@@ -1757,10 +1796,12 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconCursor(), &imageCursor());
 
 	destroyTexture(rnd, iconMainMenu(), nullptr);
-	destroyTexture(rnd, iconFont(), nullptr);
 	destroyTexture(rnd, iconCode(), nullptr);
 	destroyTexture(rnd, iconTiles(), nullptr);
 	destroyTexture(rnd, iconMap(), nullptr);
+	destroyTexture(rnd, iconFont(), nullptr);
+	destroyTexture(rnd, iconFontMore(), nullptr);
+	destroyTexture(rnd, iconI18n(), nullptr);
 	destroyTexture(rnd, iconAudio(), nullptr);
 	destroyTexture(rnd, iconAudioMore(), nullptr);
 	destroyTexture(rnd, iconMusic(), nullptr);
@@ -1838,6 +1879,8 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconDual(), nullptr);
 	destroyTexture(rnd, iconMajor(), nullptr);
 	destroyTexture(rnd, iconMinor(), nullptr);
+
+	destroyTexture(rnd, iconTableDropdown(), nullptr);
 
 	destroyTexture(rnd, iconBackground(), nullptr);
 
@@ -2124,6 +2167,8 @@ void Theme::setColor(const std::string &idx, const ImColor &col) {
 		styleDefault().errorColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "debug")
 		styleDefault().debugColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "i18n_head")
+		styleDefault().i18nHeadColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "music_side")
 		styleDefault().musicSideColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "music_note")

@@ -630,6 +630,7 @@ EMSCRIPTEN_BINDINGS(FileSyncFilters) {
 		.value("JSON",      FileSync::Filters::JSON)
 		.value("IMAGE",     FileSync::Filters::IMAGE)
 		.value("FONT",      FileSync::Filters::FONT)
+		.value("CSV",       FileSync::Filters::CSV)
 		.value("VGM",       FileSync::Filters::VGM)
 		.value("WAV",       FileSync::Filters::WAV)
 		.value("FX_HAMMER", FileSync::Filters::FX_HAMMER)
@@ -722,10 +723,23 @@ EM_JS(
 							'font/ttf': [ '.ttf' ]
 						}
 					},
-						{
+					{
 						description: 'Image files',
 						accept: {
 							'image/*': [ '.png', '.jpg', '.bmp', '.tga' ]
+						}
+					}
+				]
+			};
+
+			break;
+		case Module.FileSyncFilters.CSV.value:
+			options = {
+				types: [
+					{
+						description: 'CSV files',
+						accept: {
+							'text/csv': [ '.csv' ]
 						}
 					}
 				]
@@ -1335,6 +1349,18 @@ private:
 				Text::toLowerCase(ext);
 				if (ext.empty() || ext != "ttf") {
 					path += ".ttf";
+
+					return true;
+				}
+			}
+
+			break;
+		case FileSync::Filters::CSV: {
+				std::string ext;
+				Path::split(path, nullptr, &ext, nullptr);
+				Text::toLowerCase(ext);
+				if (ext.empty() || ext != "csv") {
+					path += ".csv";
 
 					return true;
 				}

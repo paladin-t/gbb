@@ -14,6 +14,7 @@
 #include "editor_code_binding.h"
 #include "editor_console.h"
 #include "editor_font.h"
+#include "editor_i18n.h"
 #include "editor_map.h"
 #include "editor_music.h"
 #include "editor_palette.h"
@@ -89,6 +90,7 @@ EMSCRIPTEN_BINDINGS(Categories) {
 	emscripten::enum_<Workspace::Categories>("Categories")
 		.value("PALETTE",  Workspace::Categories::PALETTE)
 		.value("FONT",     Workspace::Categories::FONT)
+		.value("I18N",     Workspace::Categories::I18N)
 		.value("CODE",     Workspace::Categories::CODE)
 		.value("TILES",    Workspace::Categories::TILES)
 		.value("MAP",      Workspace::Categories::MAP)
@@ -502,6 +504,7 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 
 	showRecentProjects(showRecent);
 	category(Categories::HOME);
+	categoryOfFont(Categories::FONT);
 	categoryOfAudio(Categories::MUSIC);
 	categoryBeforeCompiling(Categories::HOME);
 	interactable(true);
@@ -974,6 +977,64 @@ void Workspace::reloadKernels(void) {
 	loadKernels();
 }
 
+Text::Array Workspace::getAllI18nLanguages(const Project* prj, bool includeKey) const {
+	Text::Array result;
+	if (!prj)
+		return result;
+
+	for (int index = 0; index < prj->i18nPageCount(); ++index) {
+		const I18nAssets::Entry* entry = prj->getI18n(index);
+		const I18n::Ptr &i18n = entry->data;
+		if (!i18n)
+			continue;
+
+		for (int i = 0; i < i18n->languageCount(); ++i) {
+			std::string lang_;
+			if (i18n->getLanguage(i, lang_) && !lang_.empty()) {
+				if (lang_ == I18N_KEY_COLUMN_NAME && !includeKey)
+					continue;
+
+				if (std::find(result.begin(), result.end(), lang_) == result.end())
+					result.push_back(lang_);
+			}
+		}
+	}
+
+	return result;
+}
+
+bool Workspace::getDefaultI18nLanguage(const Project* prj, std::string &lang) const {
+	lang.clear();
+
+	if (!prj)
+		return false;
+
+	const Text::Array languages = getAllI18nLanguages(prj, true);
+	if (languages.empty())
+		return false;
+
+	if (std::find(languages.begin(), languages.end(), I18N_DEFAULT_COLUMN_NAME) != languages.end()) {
+		lang = I18N_DEFAULT_COLUMN_NAME;
+
+		return true;
+	}
+	if (std::find(languages.begin(), languages.end(), I18N_ENGLISH_COLUMN_NAME) != languages.end()) {
+		lang = I18N_ENGLISH_COLUMN_NAME;
+
+		return true;
+	}
+
+	for (const std::string &lang_ : languages) {
+		if (!lang_.empty() && lang_ != I18N_KEY_COLUMN_NAME) {
+			lang = lang_;
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void Workspace::addMapPageFrom(Window* wnd, Renderer* rnd, int index) {
 	Project::Ptr &prj = currentProject();
 	if (!prj)
@@ -1039,6 +1100,11 @@ void Workspace::category(const Categories &category) {
 	);
 
 	switch (_category) {
+	case Categories::FONT: // Fall through.
+	case Categories::I18N:
+		categoryOfFont(_category);
+
+		break;
 	case Categories::MUSIC: // Fall through.
 	case Categories::SFX:
 		categoryOfAudio(_category);
@@ -1085,6 +1151,15 @@ bool Workspace::changePage(Window*, Renderer*, Project* prj, Categories category
 			break;
 
 		prj->activeFontIndex(index);
+
+		result = true;
+
+		break;
+	case Categories::I18N:
+		if (index < 0 || index >= prj->i18nPageCount())
+			break;
+
+		prj->activeI18nIndex(index);
 
 		result = true;
 
@@ -1186,6 +1261,10 @@ void Workspace::pageAdded(Window* wnd, Renderer* rnd, Project* prj, Categories c
 			changePage(wnd, rnd, prj, Categories::FONT, prj->fontPageCount() - 1);
 
 			break;
+		case Categories::I18N:
+			changePage(wnd, rnd, prj, Categories::I18N, prj->i18nPageCount() - 1);
+
+			break;
 		case Categories::CODE:
 			changePage(wnd, rnd, prj, Categories::CODE, prj->codePageCount() - 1);
 
@@ -1245,6 +1324,20 @@ void Workspace::pageRemoved(Window* wnd, Renderer* rnd, Project* prj, Categories
 
 				const int page_ = Math::clamp(index, 0, prj->fontPageCount() - 1);
 				changePage(wnd, rnd, prj, Categories::FONT, page_);
+			}
+
+			break;
+		case Categories::I18N:
+			if (prj->i18nPageCount() > 0) {
+				for (int i = index; i < prj->i18nPageCount(); ++i) {
+					I18nAssets::Entry* entry = prj->getI18n(i);
+					Editable* editor = entry->editor;
+					if (editor)
+						editor->post(Editable::UPDATE_INDEX, (Variant::Int)i);
+				}
+
+				const int page_ = Math::clamp(index, 0, prj->i18nPageCount() - 1);
+				changePage(wnd, rnd, prj, Categories::I18N, page_);
 			}
 
 			break;
@@ -2181,7 +2274,7 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 										validateProject(prj.get());
 
 										if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-											launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 									}
 								)
 								.fail(
@@ -2258,7 +2351,7 @@ void Workspace::dropEnded(Window* wnd, Renderer* rnd) {
 										validateProject(prj.get());
 
 										if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-											launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 									}
 								)
 								.fail(
@@ -2365,7 +2458,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 			return;
 		}
 
-		launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, false, -1);
+		launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, false, -1);
 	};
 	auto toRun = [this] (Window* wnd, Renderer* rnd) -> void {
 		if (!currentProject()) {
@@ -2376,7 +2469,7 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 			return;
 		}
 
-		launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+		launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 	};
 
 	SDL_Event* evt = (SDL_Event*)event;
@@ -2881,6 +2974,23 @@ class EditorFont* Workspace::touchFontEditor(Window* wnd, Renderer* rnd, Project
 	EditorFont* editor = (EditorFont*)entry->editor;
 	if (!editor) {
 		editor = EditorFont::create();
+		editor->open(wnd, rnd, this, prj, idx, (unsigned)(~0), -1);
+		editor->enter(this);
+		entry->editor = editor;
+	}
+
+	return editor;
+}
+
+class EditorI18n* Workspace::touchI18nEditor(Window* wnd, Renderer* rnd, Project* prj, int idx, I18nAssets::Entry* entry) {
+	if (!entry)
+		entry = prj->getI18n(idx);
+	if (!entry)
+		return nullptr;
+
+	EditorI18n* editor = (EditorI18n*)entry->editor;
+	if (!editor) {
+		editor = EditorI18n::create();
 		editor->open(wnd, rnd, this, prj, idx, (unsigned)(~0), -1);
 		editor->enter(this);
 		entry->editor = editor;
@@ -4221,6 +4331,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		prj->strictOn(prj_->strictOn());
 		prj->optimize(prj_->optimize());
 		prj->preDefinedMacros(prj_->preDefinedMacros());
+		prj->i18nLanguage(prj_->i18nLanguage());
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
 		prj->borderFrameCode(prj_->borderFrameCode());
@@ -4254,14 +4365,19 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 	auto set = [this, prj, isOpened, save] (Project* prj_) -> void {
 		// Prepare.
 		const bool needReloadKernel =
-			prj->kernel()           != prj_->kernel();
+			prj->kernel()               != prj_->kernel();
 		const bool needReAnalyze =
-			prj->kernel()           != prj_->kernel()        ||
-			prj->cartridgeType()    != prj_->cartridgeType() ||
-			prj->sramType()         != prj_->sramType()      ||
-			prj->hasRtc()           != prj_->hasRtc()        ||
-			prj->hasRumble()        != prj_->hasRumble()     ||
-			prj->preDefinedMacros() != prj_->preDefinedMacros();
+			prj->kernel()               != prj_->kernel()           ||
+			prj->cartridgeType()        != prj_->cartridgeType()    ||
+			prj->sramType()             != prj_->sramType()         ||
+			prj->hasRtc()               != prj_->hasRtc()           ||
+			prj->hasRumble()            != prj_->hasRumble()        ||
+			prj->caseInsensitive()      != prj_->caseInsensitive()  ||
+			prj->strictOn()             != prj_->strictOn()         ||
+			prj->optimize()             != prj_->optimize()         ||
+			prj->preDefinedMacros()     != prj_->preDefinedMacros() ||
+			prj->i18nLanguage()         != prj_->i18nLanguage()     ||
+			prj->superFeaturesEnabled() != prj_->superFeaturesEnabled();
 
 		if (!prj_->title().empty())
 			prj_->title(Text::sanitizeProperty(prj_->title()));
@@ -4291,6 +4407,7 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 		prj->strictOn(prj_->strictOn());
 		prj->optimize(prj_->optimize());
 		prj->preDefinedMacros(prj_->preDefinedMacros());
+		prj->i18nLanguage(prj_->i18nLanguage());
 		prj->superFeaturesEnabled(prj_->superFeaturesEnabled());
 		prj->borderFrameType(prj_->borderFrameType());
 		prj->borderFrameCode(prj_->borderFrameCode());
@@ -4360,7 +4477,8 @@ void Workspace::showProjectProperty(Window* wnd, Renderer* rnd, Project* prj, bo
 				rnd,
 				theme(),
 				theme()->windowProjectProperty(),
-				prj,
+				this,
+				prj, isOpened,
 				confirm, cancel, apply,
 				theme()->generic_Ok().c_str(), theme()->generic_Cancel().c_str(), theme()->generic_Apply().c_str()
 			)
@@ -4382,7 +4500,7 @@ void Workspace::showRomBuildSettings(
 	btnCancel = theme()->generic_Cancel().c_str();
 	if (confirm_.empty()) {
 		confirm = ImGui::RomBuildSettingsPopupBox::ConfirmedHandler(
-			[&] (const char*, const char*, bool, bool) -> void {
+			[&] (const char*, const char*, bool, bool, const char*) -> void {
 				popupBox(nullptr);
 			},
 			nullptr
@@ -4395,6 +4513,7 @@ void Workspace::showRomBuildSettings(
 				rnd,
 				theme(),
 				theme()->windowBuildingSettings(),
+				this,
 				currentProject().get(),
 				confirm, cancel,
 				btnConfirm, btnCancel
@@ -4409,6 +4528,9 @@ void Workspace::showEmulatorBuildSettings(
 	const ImGui::EmulatorBuildSettingsPopupBox::ConfirmedHandler &confirm_,
 	const ImGui::EmulatorBuildSettingsPopupBox::CanceledHandler &cancel
 ) {
+	Project::Ptr &prj = currentProject();
+	const std::string &i18nLang = prj->i18nLanguage();
+
 	const char* btnConfirm = nullptr;
 	const char* btnCancel = nullptr;
 
@@ -4418,7 +4540,7 @@ void Workspace::showEmulatorBuildSettings(
 	btnCancel = theme()->generic_Cancel().c_str();
 	if (confirm_.empty()) {
 		confirm = ImGui::EmulatorBuildSettingsPopupBox::ConfirmedHandler(
-			[&] (const char*, const char*, Bytes::Ptr) -> void {
+			[&] (const char*, const char*, Bytes::Ptr, const char*) -> void {
 				popupBox(nullptr);
 			},
 			nullptr
@@ -4432,6 +4554,9 @@ void Workspace::showEmulatorBuildSettings(
 				input(), theme(),
 				theme()->windowBuildingSettings(),
 				settings, args, hasIcon,
+				i18nLang,
+				this,
+				prj.get(),
 				confirm, cancel,
 				btnConfirm, btnCancel
 			)
@@ -5214,6 +5339,7 @@ bool Workspace::analyze(bool force) {
 	if (prj->contentType() != Project::ContentTypes::BASIC)
 		return true;
 	const std::string definedMacros = prj->definedMacros();
+	const std::string &i18nLang = prj->i18nLanguage();
 
 	if (!force) {
 		if (popupBox() || menuOpened())
@@ -5258,7 +5384,7 @@ bool Workspace::analyze(bool force) {
 	staticAnalyzer()->analyze(
 		krnl.get(),
 		assets,
-		definedMacros,
+		definedMacros, i18nLang,
 		[this, finish] (void) -> void { // On main thread.
 			const Project::Ptr &prj = currentProject();
 			if (!prj)
@@ -5421,6 +5547,33 @@ const Text::Array &Workspace::getFontPageNames(void) {
 	}
 
 	return assetPageNames().font;
+}
+
+void Workspace::clearI18nPageNames(void) {
+	assetPageNames().i18n.clear();
+}
+
+const Text::Array &Workspace::getI18nPageNames(void) {
+	const Project::Ptr &prj = currentProject();
+
+	const int n = prj->i18nPageCount();
+	if ((int)assetPageNames().i18n.size() < n) {
+		assetPageNames().i18n.resize(n);
+		assetPageNames().i18n.shrink_to_fit();
+
+		for (int i = 0; i < n; ++i) {
+			std::string pg = theme()->menu_Page() + " " + Text::toString(i);
+			const I18nAssets::Entry* entry = prj->getI18n(i);
+			if (entry && !entry->name.empty()) {
+				pg += " (";
+				pg += entry->name;
+				pg += ")";
+			}
+			assetPageNames().i18n[i] = pg;
+		}
+	}
+
+	return assetPageNames().i18n;
 }
 
 void Workspace::clearCodePageNames(void) {
@@ -5853,6 +6006,7 @@ void Workspace::compile(
 		bool strictOn = true;
 		bool optimize = true;
 		std::string definedMacros;
+		std::string i18nLang;
 		if (project) {
 			if (!project->cartridgeType().empty())
 				cartType    = project->cartridgeType();
@@ -5864,6 +6018,7 @@ void Workspace::compile(
 			strictOn        = project->strictOn();
 			optimize        = project->optimize();
 			definedMacros   = project->definedMacros();
+			i18nLang        = project->i18nLanguage();
 		}
 
 #if GBBASIC_MULTITHREAD_ENABLED
@@ -5934,6 +6089,11 @@ void Workspace::compile(
 		Text::Dictionary::const_iterator pdmOpt = arguments.find(COMPILER_MACROS_OPTION_KEY);
 		if (pdmOpt != arguments.end())
 			options.macros = pdmOpt->second;
+		Text::Dictionary::const_iterator langOpt = arguments.find(COMPILER_I18N_LANGUAGE_OPTION_KEY);
+		if (langOpt != arguments.end())
+			options.language = langOpt->second;
+		else
+			options.language = i18nLang;
 		Text::Dictionary::const_iterator astOpt = arguments.find(COMPILER_AST_OPTION_KEY);
 		if (vmOpt != arguments.end())
 			options.ast = astOpt->second;
@@ -7438,6 +7598,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 	const bool k          = ImGui::IsKeyPressed(SDL_SCANCODE_K);
 	const bool n          = ImGui::IsKeyPressed(SDL_SCANCODE_N);
 	const bool o          = ImGui::IsKeyPressed(SDL_SCANCODE_O);
+	const bool p          = ImGui::IsKeyPressed(SDL_SCANCODE_P);
 	const bool r          = ImGui::IsKeyPressed(SDL_SCANCODE_R);
 	const bool s          = ImGui::IsKeyPressed(SDL_SCANCODE_S);
 	const bool u          = ImGui::IsKeyPressed(SDL_SCANCODE_U);
@@ -7792,7 +7953,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 									validateProject(prj.get());
 
 									if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-										launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+										launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 								}
 							)
 							.fail(
@@ -7825,7 +7986,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 									validateProject(prj.get());
 
 									if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-										launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+										launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 								}
 							);
 					}
@@ -7917,6 +8078,10 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 				Operations::fontAddPage(wnd, rnd, this);
 
 				break;
+			case Categories::I18N:
+				Operations::i18nAddPage(wnd, rnd, this);
+
+				break;
 			case Categories::CODE:
 				Operations::codeAddPage(wnd, rnd, this);
 
@@ -7961,6 +8126,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 
 			destroyAudioDevice();
 
+			categoryOfFont(Categories::FONT);
 			categoryOfAudio(Categories::MUSIC);
 
 			Operations::fileClose(wnd, rnd, this);
@@ -7978,14 +8144,14 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 				const bool isEditable = prj->editable();
 
 				if (isEditable)
-					launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, false, -1);
+					launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, false, -1);
 			}
 		} else if ((f5 && !modifier && !io.KeyShift && !io.KeyAlt) || (r && modifier && !io.KeyShift && !io.KeyAlt)) {
 			if (canvasDevice()) {
 				if (canvasDevice()->paused())
 					canvasDevice()->resume();
 			} else {
-				launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+				launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 			}
 		} else if ((f5 && !modifier && io.KeyShift && !io.KeyAlt) || (period && modifier && !io.KeyShift && !io.KeyAlt)) {
 			if (canvasDevice()) {
@@ -8037,12 +8203,14 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 				} else if (num6) {
 					category(Categories::FONT);
 				} else if (num7) {
-					category(Categories::MUSIC);
+					category(Categories::I18N);
 				} else if (num8) {
-					category(Categories::SFX);
+					category(Categories::MUSIC);
 				} else if (num9) {
-					category(Categories::CONSOLE);
+					category(Categories::SFX);
 				} else if (num0) {
+					category(Categories::CONSOLE);
+				} else if (p) {
 					Project::Ptr &prj = currentProject();
 
 					showPaletteEditor(
@@ -8303,7 +8471,7 @@ void Workspace::navigate(Window* wnd, Renderer* rnd, int dx, int dy, int fully, 
 						validateProject(prj.get());
 
 						if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-							launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+							launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				);
 		}
@@ -8370,17 +8538,17 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			launches = [this, wnd, rnd, editing] (void) -> void {
 				if (editing && !canvasDevice()) {
 					if (ImGui::MenuItem(theme()->menu_Compile(), "F4")) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, false, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, false, -1);
 					}
 					if (ImGui::MenuItem(theme()->menu_CompileAndRun(), "F5")) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				} else {
 					if (ImGui::MenuItem(theme()->menu_StopRunning(), "Shift+F5")) {
 						stopProject(wnd, rnd, false);
 					}
 					if (ImGui::MenuItem(theme()->menu_Restart())) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			};
@@ -8388,14 +8556,14 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 			launches = [this, wnd, rnd, editing] (void) -> void {
 				if (editing && !canvasDevice()) {
 					if (ImGui::MenuItem(theme()->menu_Run(), "F5")) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				} else {
 					if (ImGui::MenuItem(theme()->menu_StopRunning(), "Shift+F5")) {
 						stopProject(wnd, rnd, false);
 					}
 					if (ImGui::MenuItem(theme()->menu_Restart())) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			};
@@ -8490,7 +8658,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 											validateProject(prj.get());
 
 											if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-												launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+												launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 										}
 									)
 									.fail(
@@ -8573,7 +8741,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 											validateProject(prj.get());
 
 											if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-												launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+												launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 										}
 									);
 							}
@@ -8598,7 +8766,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 						Operations::projectRemoveSram(wnd, rnd, this, prj, false);
 					}
 					ImGui::Separator();
-					if (ImGui::MenuItem(theme()->menu_Palette(), GBBASIC_MODIFIER_KEY_NAME "+0")) {
+					if (ImGui::MenuItem(theme()->menu_Palette(), GBBASIC_MODIFIER_KEY_NAME "+P")) {
 						showPaletteEditor(
 							rnd,
 							-1,
@@ -8651,7 +8819,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 
 									validateProject(prj.get());
 
-									launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+									launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 								}
 							);
 					}
@@ -8728,6 +8896,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 
 				destroyAudioDevice();
 
+				categoryOfFont(Categories::FONT);
 				categoryOfAudio(Categories::MUSIC);
 
 				Operations::fileClose(wnd, rnd, this);
@@ -8811,7 +8980,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 												validateProject(prj.get());
 
 												if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-													launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+													launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 											}
 										)
 										.fail(
@@ -8855,7 +9024,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 												validateProject(prj.get());
 
 												if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-													launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+													launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 											}
 										)
 										.fail(
@@ -8891,7 +9060,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 												validateProject(prj.get());
 
 												if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-													launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+													launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 											}
 										);
 								}
@@ -9052,6 +9221,48 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 						ImGui::Separator();
 						if (ImGui::MenuItem(theme()->menu_SortAssets(), GBBASIC_MODIFIER_KEY_NAME "+,")) {
 							Operations::editSortAssets(wnd, rnd, this, AssetsBundle::Categories::FONT);
+						}
+
+						ImGui::EndMenu();
+					}
+					if (buildMenu(wnd, rnd, true)) return;
+					ImGui::Separator();
+					if (projectMenu(wnd, rnd, opened, hasUnsavedChanges)) return;
+					ImGui::Separator();
+					if (applicationMenu(wnd, rnd)) return;
+					if (helpMenu(wnd, rnd)) return;
+					if (quitMenu(wnd, rnd)) return;
+				}
+
+				break;
+			case Categories::I18N: {
+					VariableGuard<decltype(style.ChildBorderSize)> guardChildBorderSize(&style.ChildBorderSize, style.ChildBorderSize, 1);
+
+					if (ImGui::BeginMenu(theme()->menu_I18n())) {
+						if (ImGui::MenuItem(theme()->menu_New(), GBBASIC_MODIFIER_KEY_NAME "+N")) {
+							Operations::i18nAddPage(wnd, rnd, this);
+						}
+						if (ImGui::MenuItem(theme()->menu_Remove())) {
+							Operations::i18nRemovePage(wnd, rnd, this);
+						}
+						ImGui::Separator();
+						if (ImGui::MenuItem(theme()->menu_Undo(), GBBASIC_MODIFIER_KEY_NAME "+Z", nullptr, !!undoable)) {
+							withCurrentAsset(
+								[] (Categories /* cat */, BaseAssets::Entry* entry, Editable* editor) -> void {
+									editor->undo(entry);
+								}
+							);
+						}
+						if (ImGui::MenuItem(theme()->menu_Redo(), GBBASIC_MODIFIER_KEY_NAME "+Y", nullptr, !!redoable)) {
+							withCurrentAsset(
+								[] (Categories /* cat */, BaseAssets::Entry* entry, Editable* editor) -> void {
+									editor->redo(entry);
+								}
+							);
+						}
+						ImGui::Separator();
+						if (ImGui::MenuItem(theme()->menu_SortAssets(), GBBASIC_MODIFIER_KEY_NAME "+,")) {
+							Operations::editSortAssets(wnd, rnd, this, AssetsBundle::Categories::I18N);
 						}
 
 						ImGui::EndMenu();
@@ -9573,7 +9784,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 										validateProject(prj.get());
 
 										if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-											launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 									}
 								)
 								.fail(
@@ -9701,7 +9912,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 										validateProject(prj.get());
 
 										if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-											launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 									}
 								);
 						}
@@ -9735,7 +9946,41 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
+					}
+				}
+			}
+			undoRedo();
+			download();
+		}
+
+		break;
+	case Categories::I18N: {
+			bool hasUnsavedChanges = false;
+			getCurrentProjectStates(nullptr, &hasUnsavedChanges, nullptr, nullptr);
+
+			if (ImGui::MenuBarImageButton(theme()->iconPlus()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_New().c_str())) {
+				Operations::i18nAddPage(wnd, rnd, this);
+			}
+			if (ImGui::MenuBarImageButton(theme()->iconMinus()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_Delete().c_str())) {
+				Operations::i18nRemovePage(wnd, rnd, this);
+			}
+			if (hasUnsavedChanges) {
+				if (ImGui::MenuBarImageButton(theme()->iconSave()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipFile_Save().c_str())) {
+					if (showRecentProjects()) {
+						Operations::fileSave(wnd, rnd, this, false);
+					} else {
+						Operations::fileSaveForNotepad(wnd, rnd, this, false);
+					}
+				}
+			} else {
+				if (canvasDevice()) {
+					if (ImGui::MenuBarImageButton(theme()->iconStop()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Stop().c_str())) {
+						stopProject(wnd, rnd, false);
+					}
+				} else {
+					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -9772,7 +10017,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 						ImGui::MenuBarImageButton(theme()->iconWaiting()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 0.75f), theme()->tooltip_Analyzing().c_str());
 					} else {
 						if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-							launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+							launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 						}
 					}
 				}
@@ -9807,7 +10052,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -9841,7 +10086,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -9875,7 +10120,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -9909,7 +10154,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -9943,7 +10188,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -9973,7 +10218,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			}
@@ -9993,7 +10238,7 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_CompileAndRun().c_str())) {
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
 			} else {
@@ -10479,6 +10724,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 
 		break;
 	case Categories::FONT: // Fall through.
+	case Categories::I18N: // Fall through.
 	case Categories::CODE: // Fall through.
 	case Categories::TILES: // Fall through.
 	case Categories::MAP: // Fall through.
@@ -10629,23 +10875,41 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 				ImGui::SameLine();
 				width += ImGui::GetItemRectSize().x;
 
-				if (category() == Categories::FONT) {
+				if (category() == Categories::FONT || category() == Categories::I18N) {
 					if (docOpened) {
-						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
+						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_FontAndI18n().c_str())) {
 							toggleDocument(nullptr);
 						}
 					} else {
 						WIDGETS_SELECTION_GUARD(theme());
 
-						if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str())) {
-							// Do nothing.
+						if (ImGui::MenuBarImageButton(theme()->iconFontMore()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_FontAndI18n().c_str())) {
+							ImGui::OpenPopup("@Fnt");
+
+							bubble(nullptr);
 						}
 					}
+
+					do {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+						VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+						if (ImGui::BeginPopup("@Fnt")) {
+							if (ImGui::MenuItem(theme()->menu_Font(), GBBASIC_MODIFIER_KEY_NAME "+6", category() == Categories::FONT)) {
+								category(Categories::FONT);
+							}
+							if (ImGui::MenuItem(theme()->menu_I18n(), GBBASIC_MODIFIER_KEY_NAME "+7", category() == Categories::I18N)) {
+								category(Categories::I18N);
+							}
+
+							ImGui::EndPopup();
+						}
+					} while (false);
 				} else {
-					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_Font().c_str()) && !busy) {
+					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_FontAndI18n().c_str()) && !busy) {
 						if (docOpened)
 							toggleDocument(nullptr);
-						category(Categories::FONT);
+						category(categoryOfFont());
 					}
 				}
 				ImGui::SameLine();
@@ -10671,10 +10935,10 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 						VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
 
 						if (ImGui::BeginPopup("@Aud")) {
-							if (ImGui::MenuItem(theme()->menu_Music(), GBBASIC_MODIFIER_KEY_NAME "+7", category() == Categories::MUSIC)) {
+							if (ImGui::MenuItem(theme()->menu_Music(), GBBASIC_MODIFIER_KEY_NAME "+8", category() == Categories::MUSIC)) {
 								category(Categories::MUSIC);
 							}
-							if (ImGui::MenuItem(theme()->menu_Sfx(), GBBASIC_MODIFIER_KEY_NAME "+8", category() == Categories::SFX)) {
+							if (ImGui::MenuItem(theme()->menu_Sfx(), GBBASIC_MODIFIER_KEY_NAME "+9", category() == Categories::SFX)) {
 								category(Categories::SFX);
 							}
 
@@ -10880,6 +11144,10 @@ void Workspace::body(Window* wnd, Renderer* rnd, double delta, unsigned fps, boo
 		font(wnd, rnd, menuH, searchResultH, delta);
 
 		break;
+	case Categories::I18N:
+		i18n(wnd, rnd, menuH, searchResultH, delta);
+
+		break;
 	case Categories::CODE:
 		code(wnd, rnd, menuH, searchResultH, delta);
 
@@ -11032,7 +11300,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 										validateProject(prj.get());
 
 										if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-											launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 									}
 								);
 						}
@@ -11084,7 +11352,7 @@ void Workspace::recent(Window* wnd, Renderer* rnd, float marginTop, float margin
 
 									validateProject(prj.get());
 
-									launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+									launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 								}
 							);
 					}
@@ -11395,7 +11663,7 @@ void Workspace::notepad(Window* wnd, Renderer* rnd, float marginTop, float margi
 										validateProject(prj.get());
 
 										if (prj->runOnOpen() || prj->contentType() != Project::ContentTypes::BASIC)
-											launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, true, -1);
+											launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 									}
 								);
 						}
@@ -11491,6 +11759,44 @@ void Workspace::font(Window* wnd, Renderer* rnd, float marginTop, float marginBo
 				);
 		} else {
 			blank(wnd, rnd, marginTop, marginBottom, Categories::FONT);
+		}
+
+		ImGui::End();
+	}
+}
+
+void Workspace::i18n(Window* wnd, Renderer* rnd, float marginTop, float marginBottom, double delta) {
+	Project::Ptr &prj = currentProject();
+	if (!prj)
+		return;
+
+	ImGuiStyle &style = ImGui::GetStyle();
+
+	VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
+	VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2());
+
+	ImGuiWindowFlags flags = WORKSPACE_WND_FLAGS_CONTENT;
+
+	ImGui::SetNextWindowPos(ImVec2(0, marginTop), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(
+		ImVec2((float)rnd->width(), (float)rnd->height() - (marginTop + marginBottom)),
+		ImGuiCond_Always
+	);
+	I18nAssets::Entry* entry = prj->getI18n(prj->activeI18nIndex());
+	if (!entry)
+		flags |= ImGuiWindowFlags_NoScrollWithMouse;
+	if (ImGui::Begin("#In", nullptr, flags)) {
+		if (entry) {
+			touchI18nEditor(wnd, rnd, prj.get(), prj->activeI18nIndex(), entry)
+				->update(
+					wnd, rnd,
+					this,
+					prj->title().c_str(),
+					0, marginTop, (float)rnd->width(), (float)rnd->height() - (marginTop + marginBottom),
+					delta
+				);
+		} else {
+			blank(wnd, rnd, marginTop, marginBottom, Categories::I18N);
 		}
 
 		ImGui::End();
@@ -12189,6 +12495,10 @@ void Workspace::blank(Window* wnd, Renderer* rnd, float marginTop, float marginB
 				Operations::fontAddPage(wnd, rnd, this);
 
 				break;
+			case Categories::I18N:
+				Operations::i18nAddPage(wnd, rnd, this);
+
+				break;
 			case Categories::CODE:
 				// Possibly is working with an invalid/non-editable project.
 				// Do nothing.
@@ -12747,6 +13057,8 @@ int Workspace::currentAssetPage(void) const {
 	switch (category()) {
 	case Categories::FONT:
 		return prj->activeFontIndex();
+	case Categories::I18N:
+		return prj->activeI18nIndex();
 	case Categories::CODE:
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 		if (prj->isMajorCodeEditorActive())
@@ -12784,6 +13096,10 @@ int Workspace::withCurrentAsset(EditorHandler handler) const {
 	switch (category()) {
 	case Categories::FONT:
 		entry = prj->getFont(prj->activeFontIndex());
+
+		break;
+	case Categories::I18N:
+		entry = prj->getI18n(prj->activeI18nIndex());
 
 		break;
 	case Categories::CODE:
@@ -13102,6 +13418,84 @@ void Workspace::sortProjects(void) {
 }
 
 void Workspace::validateProject(const Project* prj) {
+	for (int index = 0; index < prj->tilesPageCount(); ++index) {
+		const TilesAssets::Entry* entry = prj->getTiles(index);
+
+		int another = -1;
+		if (entry->name.empty()) {
+			const std::string msg = Text::format(theme()->warning_TilesTilesNameIsEmptyAtPage(), { Text::toString(index) });
+			warn(msg.c_str());
+		} else if (!prj->canRenameTiles(index, entry->name, &another)) {
+			const std::string msg = Text::format(theme()->warning_TilesDuplicateTilesNameAtPages(), { entry->name, Text::toString(index), Text::toString(another) });
+			warn(msg.c_str());
+		}
+	}
+
+	for (int index = 0; index < prj->mapPageCount(); ++index) {
+		const MapAssets::Entry* entry = prj->getMap(index);
+
+		int another = -1;
+		if (entry->name.empty()) {
+			const std::string msg = Text::format(theme()->warning_MapMapNameIsEmptyAtPage(), { Text::toString(index) });
+			warn(msg.c_str());
+		} else if (!prj->canRenameMap(index, entry->name, &another)) {
+			const std::string msg = Text::format(theme()->warning_MapDuplicateMapNameAtPages(), { entry->name, Text::toString(index), Text::toString(another) });
+			warn(msg.c_str());
+		}
+	}
+
+	for (int index = 0; index < prj->scenePageCount(); ++index) {
+		const SceneAssets::Entry* entry = prj->getScene(index);
+
+		int another = -1;
+		if (entry->name.empty()) {
+			const std::string msg = Text::format(theme()->warning_SceneSceneNameIsEmptyAtPage(), { Text::toString(index) });
+			warn(msg.c_str());
+		} else if (!prj->canRenameScene(index, entry->name, &another)) {
+			const std::string msg = Text::format(theme()->warning_SceneDuplicateSceneNameAtPages(), { entry->name, Text::toString(index), Text::toString(another) });
+			warn(msg.c_str());
+		}
+	}
+
+	for (int index = 0; index < prj->actorPageCount(); ++index) {
+		const ActorAssets::Entry* entry = prj->getActor(index);
+
+		int another = -1;
+		if (entry->name.empty()) {
+			const std::string msg = Text::format(theme()->warning_ActorActorNameIsEmptyAtPage(), { Text::toString(index) });
+			warn(msg.c_str());
+		} else if (!prj->canRenameActor(index, entry->name, &another)) {
+			const std::string msg = Text::format(theme()->warning_ActorDuplicateActorNameAtPages(), { entry->name, Text::toString(index), Text::toString(another) });
+			warn(msg.c_str());
+		}
+	}
+
+	for (int index = 0; index < prj->fontPageCount(); ++index) {
+		const FontAssets::Entry* entry = prj->getFont(index);
+
+		int another = -1;
+		if (entry->name.empty()) {
+			const std::string msg = Text::format(theme()->warning_FontFontNameIsEmptyAtPage(), { Text::toString(index) });
+			warn(msg.c_str());
+		} else if (!prj->canRenameFont(index, entry->name, &another)) {
+			const std::string msg = Text::format(theme()->warning_FontDuplicateFontNameAtPages(), { entry->name, Text::toString(index), Text::toString(another) });
+			warn(msg.c_str());
+		}
+	}
+
+	for (int index = 0; index < prj->i18nPageCount(); ++index) {
+		const I18nAssets::Entry* entry = prj->getI18n(index);
+
+		int another = -1;
+		if (entry->name.empty()) {
+			const std::string msg = Text::format(theme()->warning_I18nI18nNameIsEmptyAtPage(), { Text::toString(index) });
+			warn(msg.c_str());
+		} else if (!prj->canRenameI18n(index, entry->name, &another)) {
+			const std::string msg = Text::format(theme()->warning_I18nDuplicateI18nNameAtPages(), { entry->name, Text::toString(index), Text::toString(another) });
+			warn(msg.c_str());
+		}
+	}
+
 	for (int index = 0; index < prj->musicPageCount(); ++index) {
 		const MusicAssets::Entry* entry = prj->getMusic(index);
 		const Music::Ptr &data = entry->data;
@@ -13142,37 +13536,12 @@ void Workspace::validateProject(const Project* prj) {
 			warn(msg.c_str());
 		}
 	}
-
-	for (int index = 0; index < prj->actorPageCount(); ++index) {
-		const ActorAssets::Entry* entry = prj->getActor(index);
-
-		int another = -1;
-		if (entry->name.empty()) {
-			const std::string msg = Text::format(theme()->warning_ActorActorNameIsEmptyAtPage(), { Text::toString(index) });
-			warn(msg.c_str());
-		} else if (!prj->canRenameActor(index, entry->name, &another)) {
-			const std::string msg = Text::format(theme()->warning_ActorDuplicateActorNameAtPages(), { entry->name, Text::toString(index), Text::toString(another) });
-			warn(msg.c_str());
-		}
-	}
-
-	for (int index = 0; index < prj->scenePageCount(); ++index) {
-		const SceneAssets::Entry* entry = prj->getScene(index);
-
-		int another = -1;
-		if (entry->name.empty()) {
-			const std::string msg = Text::format(theme()->warning_SceneSceneNameIsEmptyAtPage(), { Text::toString(index) });
-			warn(msg.c_str());
-		} else if (!prj->canRenameScene(index, entry->name, &another)) {
-			const std::string msg = Text::format(theme()->warning_SceneDuplicateSceneNameAtPages(), { entry->name, Text::toString(index), Text::toString(another) });
-			warn(msg.c_str());
-		}
-	}
 }
 
 void Workspace::launchProject(
 	Window* wnd, Renderer* rnd,
 	const char* cartType, const char* sramType, bool* hasRtc, bool* hasRumble,
+	const char* i18nLang,
 	bool toRun_, int toExport_
 ) {
 	if (settings().consoleClearOnStart)
@@ -13180,9 +13549,22 @@ void Workspace::launchProject(
 
 	const Project::Ptr &prj = currentProject();
 	if (prj->contentType() == Project::ContentTypes::BASIC) {
+		std::string lang = i18nLang ? i18nLang : "";
+		if (lang.empty()) {
+			std::string lang_;
+			if (getDefaultI18nLanguage(prj.get(), lang_) && !lang_.empty())
+				lang = lang_;
+		}
+
 		toRun(toRun_);
 		toExport(toExport_);
-		Operations::projectCompile(wnd, rnd, this, cartType, sramType, hasRtc, hasRumble, fontConfig().empty() ? nullptr : fontConfig().c_str(), true);
+		Operations::projectCompile(
+			wnd, rnd, this,
+			cartType, sramType, hasRtc, hasRumble,
+			lang.empty() ? nullptr : lang.c_str(),
+			fontConfig().empty() ? nullptr : fontConfig().c_str(),
+			true
+		);
 	} else {
 		GBBASIC_ASSERT(toRun_ && toExport_ == -1 && "Not supported");
 
@@ -13271,18 +13653,18 @@ void Workspace::exportProject(Window* wnd, Renderer* rnd, int toExport_) {
 	if (ex->packageArchived()) {
 		Operations::popupEmulatorBuildSettings(wnd, rnd, this, ex, settings().exporterSettings.c_str(), settings().exporterArgs.c_str(), !ex->packageIcon().empty())
 			.then(
-				[wnd, rnd, this, toExport_] (bool /* ok */) -> void {
-					launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, false, toExport_);
+				[wnd, rnd, this, toExport_] (bool /* ok */, const char* i18nLang) -> void {
+					launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, i18nLang, false, toExport_);
 				}
 			);
 	} else if (ex->buildEnabled()) {
 		Operations::popupRomBuildSettings(wnd, rnd, this, ex)
 			.then(
-				[wnd, rnd, this, toExport_] (bool ok, const char* cartType, const char* sramType, bool hasRtc, bool hasRumble) -> void {
+				[wnd, rnd, this, toExport_] (bool ok, const char* cartType, const char* sramType, bool hasRtc, bool hasRumble, const char* i18nLang) -> void {
 					if (ok)
-						launchProject(wnd, rnd, cartType, sramType, &hasRtc, &hasRumble, false, toExport_);
+						launchProject(wnd, rnd, cartType, sramType, &hasRtc, &hasRumble, i18nLang, false, toExport_);
 					else
-						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, false, toExport_);
+						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, i18nLang, false, toExport_);
 				}
 			);
 	} else {

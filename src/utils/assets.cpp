@@ -2715,18 +2715,510 @@ int FontAssets::getBits(const Colour &col, bool isTwoBitsPerPixel, const int thr
 
 /*
 ** {===========================================================================
+** I18n assets
+*/
+
+Table::Cursor::Cursor() {
+}
+
+Table::Cursor::Cursor(int r, int col) : row(r), column(col) {
+}
+
+Table::Cursor::Cursor(const Cursor &other) {
+	row = other.row;
+	column = other.column;
+}
+
+Table::Cursor &Table::Cursor::operator = (const Cursor &other) {
+	row = other.row;
+	column = other.column;
+
+	return *this;
+}
+
+bool Table::Cursor::operator == (const Cursor &other) const {
+	return equals(other);
+}
+
+bool Table::Cursor::operator != (const Cursor &other) const {
+	return !equals(other);
+}
+
+bool Table::Cursor::operator < (const Cursor &other) const {
+	return compare(other) < 0;
+}
+
+bool Table::Cursor::operator <= (const Cursor &other) const {
+	return compare(other) <= 0;
+}
+
+bool Table::Cursor::operator > (const Cursor &other) const {
+	return compare(other) > 0;
+}
+
+bool Table::Cursor::operator >= (const Cursor &other) const {
+	return compare(other) >= 0;
+}
+
+int Table::Cursor::compare(const Cursor &other) const {
+	if (row < other.row)
+		return -1;
+	else if (row > other.row)
+		return 1;
+
+	if (column < other.column)
+		return -1;
+	else if (column > other.column)
+		return 1;
+
+	return 0;
+}
+
+bool Table::Cursor::equals(const Cursor &other) const {
+	return compare(other) == 0;
+}
+
+bool Table::Cursor::valid(void) const {
+	if (row == -1)
+		return false;
+	if (column == -1)
+		return false;
+
+	return true;
+}
+
+void Table::Cursor::set(int r, int col) {
+	row = r;
+	column = col;
+}
+
+Table::Cursor Table::Cursor::INVALID(void) {
+	return Cursor(-1, -1);
+}
+
+Table::Range::Range() {
+}
+
+void Table::Range::start(int r, int col) {
+	first.set(r, col);
+}
+
+void Table::Range::start(const Cursor &where) {
+	first.set(where.row, where.column);
+}
+
+void Table::Range::end(int r, int col) {
+	second.set(r, col);
+}
+
+void Table::Range::end(const Cursor &where) {
+	second.set(where.row, where.column);
+}
+
+Table::Cursor Table::Range::min(void) const {
+	const Cursor result(Math::min(first.row, second.row), Math::min(first.column, second.column));
+
+	return result;
+}
+
+Table::Cursor Table::Range::max(void) const {
+	const Cursor result(Math::max(first.row, second.row), Math::max(first.column, second.column));
+
+	return result;
+}
+
+Math::Vec2i Table::Range::size(void) const {
+	const Math::Vec2i result(max().row - min().row + 1, max().column - min().column + 1);
+
+	return result;
+}
+
+bool Table::Range::startsWith(int r, int col) const {
+	return
+		first.row == r &&
+		first.column == col;
+}
+
+bool Table::Range::startsWith(const Cursor &where) const {
+	return
+		first.row == where.row &&
+		first.column == where.column;
+}
+
+bool Table::Range::endsWith(int r, int col) const {
+	return
+		second.row == r &&
+		second.column == col;
+}
+
+bool Table::Range::endsWith(const Cursor &where) const {
+	return
+		second.row == where.row &&
+		second.column == where.column;
+}
+
+bool Table::Range::single(void) const {
+	if (first == Cursor::INVALID())
+		return false;
+
+	return first == second;
+}
+
+bool Table::Range::invalid(void) const {
+	return first == Cursor::INVALID() || second == Cursor::INVALID();
+}
+
+void Table::Range::clear(void) {
+	first = Cursor::INVALID();
+	second = Cursor::INVALID();
+}
+
+I18nAssets::Entry::Entry() {
+	data = I18n::Ptr(I18n::create());
+
+	data->fromBlank();
+}
+
+I18nAssets::Entry::Entry(const std::string &val) {
+	data = I18n::Ptr(I18n::create());
+
+	if (!fromString(val, nullptr)) {
+		data->fromBlank();
+	}
+}
+
+size_t I18nAssets::Entry::hash(void) const {
+	size_t result = 0;
+
+	if (data)
+		result = Math::hash(result, data->hash());
+
+	return result;
+}
+
+int I18nAssets::Entry::compare(const Entry &other) const {
+	int ret = 0;
+
+	if (data && other.data)
+		ret = data->compare(other.data.get());
+	if (ret != 0)
+		return ret;
+
+	return 0;
+}
+
+bool I18nAssets::Entry::serializeCsv(std::string &val) const {
+	// Prepare.
+	val.clear();
+
+	// Serialize the dictionary.
+	return data->toCsv(val);
+}
+
+bool I18nAssets::Entry::parseCsv(I18n::Ptr &i18n, const std::string &val, ParsingStatuses &status) const {
+	// Prepare.
+	i18n = nullptr;
+	status = ParsingStatuses::SUCCESS;
+
+	// Fill in an i18n.
+	I18n* ptr = nullptr;
+	if (!data->clone(&ptr))
+		return false;
+	i18n = I18n::Ptr(ptr);
+
+	if (!i18n->fromCsv(val))
+		return false;
+
+	// Finish.
+	return true;
+}
+
+bool I18nAssets::Entry::serializeJson(std::string &val, bool pretty) const {
+	// Prepare.
+	val.clear();
+
+	// Serialize the dictionary.
+	rapidjson::Document doc;
+
+	Jpath::set(doc, doc, Jpath::ANY(), "dictionary");
+	rapidjson::Value* dictionary = nullptr;
+	Jpath::get(doc, dictionary, "dictionary");
+
+	rapidjson::Document doc_;
+	if (!data->toJson(doc_))
+		return false;
+	dictionary->Set(doc_.GetObject());
+
+	// Convert to string.
+	std::string str;
+	if (!Json::toString(doc, str, pretty))
+		return false;
+
+	val = str;
+
+	// Finish.
+	return true;
+}
+
+bool I18nAssets::Entry::parseJson(I18n::Ptr &i18n, const std::string &val, ParsingStatuses &status) const {
+	// Prepare.
+	i18n = nullptr;
+	status = ParsingStatuses::SUCCESS;
+
+	// Convert from string.
+	rapidjson::Document doc;
+	if (!Json::fromString(doc, val.c_str()))
+		return false;
+
+	if (!doc.IsObject())
+		return false;
+
+	// Parse the dictionary.
+	const rapidjson::Value* dictionary = nullptr;
+	if (!Jpath::get(doc, dictionary, "dictionary"))
+		return false;
+	if (!dictionary || !dictionary->IsObject())
+		return false;
+
+	// Fill in an i18n.
+	I18n* ptr = nullptr;
+	if (!data->clone(&ptr))
+		return false;
+	i18n = I18n::Ptr(ptr);
+
+	if (!i18n->fromJson(*dictionary))
+		return false;
+
+	// Finish.
+	return true;
+}
+
+bool I18nAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarningOrError) const {
+	// Prepare.
+	val.clear();
+
+	// Serialize the ref and dictionary.
+	rapidjson::Document doc;
+
+	Jpath::set(doc, doc, name, "name");
+
+	Jpath::set(doc, doc, magnification, "magnification");
+
+	Jpath::set(doc, doc, Jpath::ANY(), "dictionary");
+	rapidjson::Value* dictionary = nullptr;
+	Jpath::get(doc, dictionary, "dictionary");
+
+	rapidjson::Document doc_;
+	if (!data->toJson(doc_)) {
+		assetsRaiseWarningOrError("Cannot serialize i18n to JSON.", false, onWarningOrError);
+
+		return false;
+	}
+	dictionary->Set(doc_.GetObject());
+
+	// Convert to string.
+	Json::Ptr json(Json::create());
+	if (!json->fromJson(doc)) {
+		assetsRaiseWarningOrError("Cannot convert i18n to JSON.", false, onWarningOrError);
+
+		return false;
+	}
+	std::string str;
+	if (!json->toString(str, ASSETS_PRETTY_JSON_ENABLED)) {
+		assetsRaiseWarningOrError("Cannot serialize JSON.", false, onWarningOrError);
+
+		return false;
+	}
+
+	val = str;
+
+	// Finish.
+	return true;
+}
+
+bool I18nAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler onWarningOrError) {
+	// Convert from string.
+	Json::Ptr json(Json::create());
+	if (!json->fromString(val)) {
+		assetsRaiseWarningOrError("Cannot parse JSON.", false, onWarningOrError);
+
+		return false;
+	}
+	rapidjson::Document doc;
+	if (!json->toJson(doc)) {
+		assetsRaiseWarningOrError("Cannot convert i18n from JSON.", false, onWarningOrError);
+
+		return false;
+	}
+
+	if (!doc.IsObject()) {
+		assetsRaiseWarningOrError("Invalid JSON object.", false, onWarningOrError);
+
+		return false;
+	}
+
+	// Parse the ref and dictionary.
+	if (!Jpath::get(doc, name, "name"))
+		name.clear();
+
+	if (!Jpath::get(doc, magnification, "magnification"))
+		magnification = -1;
+
+	const rapidjson::Value* dictionary = nullptr;
+	if (!Jpath::get(doc, dictionary, "dictionary")) {
+		assetsRaiseWarningOrError("Cannot find \"dictionary\" entry in JSON.", false, onWarningOrError);
+
+		return false;
+	}
+	if (!dictionary || !dictionary->IsObject()) {
+		assetsRaiseWarningOrError("Invalid \"dictionary\" entry.", false, onWarningOrError);
+
+		return false;
+	}
+
+	// Fill in with the dictionary.
+	if (!data->fromJson(*dictionary)) {
+		assetsRaiseWarningOrError("Cannot convert i18n from JSON.", false, onWarningOrError);
+
+		return false;
+	}
+
+	// Finish.
+	return true;
+}
+
+bool I18nAssets::Entry::fromString(const char* val, size_t len, WarningOrErrorHandler onWarningOrError) {
+	const std::string val_(val, len);
+
+	return fromString(val_, onWarningOrError);
+}
+
+bool I18nAssets::empty(void) const {
+	return entries.empty();
+}
+
+int I18nAssets::count(void) const {
+	return (int)entries.size();
+}
+
+bool I18nAssets::add(const Entry &entry) {
+	entries.push_back(entry);
+
+	return true;
+}
+
+bool I18nAssets::remove(int index) {
+	if (index < 0 || index >= (int)entries.size())
+		return false;
+
+	entries.erase(entries.begin() + index);
+
+	return true;
+}
+
+const I18nAssets::Entry* I18nAssets::get(int index) const {
+	if (index < 0 || index >= (int)entries.size())
+		return nullptr;
+
+	return &entries[index];
+}
+
+I18nAssets::Entry* I18nAssets::get(int index) {
+	if (index < 0 || index >= (int)entries.size())
+		return nullptr;
+
+	return &entries[index];
+}
+
+const I18nAssets::Entry* I18nAssets::find(const std::string &name, int* index) const {
+	if (index)
+		*index = -1;
+
+	if (entries.empty())
+		return nullptr;
+
+	for (int i = 0; i < (int)entries.size(); ++i) {
+		const Entry &entry = entries[i];
+		if (entry.name == name) {
+			if (index)
+				*index = i;
+
+			return &entry;
+		}
+	}
+
+	return nullptr;
+}
+
+const I18nAssets::Entry* I18nAssets::fuzzy(const std::string &name, int* index, std::string &gotName) const {
+	if (index)
+		*index = -1;
+	gotName.clear();
+
+	if (entries.empty())
+		return nullptr;
+
+	double fuzzyScore = 0.0;
+	int fuzzyIdx = -1;
+	std::string fuzzyName;
+	for (int i = 0; i < (int)entries.size(); ++i) {
+		const Entry &entry = entries[i];
+		if (entry.name == name) {
+			if (index)
+				*index = i;
+
+			gotName = entry.name;
+
+			return &entry;
+		}
+
+		if (entry.name.empty())
+			continue;
+
+		const double score = rapidfuzz::fuzz::ratio(entry.name, name);
+		if (score < ASSET_FUZZY_MATCHING_SCORE_THRESHOLD)
+			continue;
+		if (score > fuzzyScore) {
+			fuzzyScore = score;
+			fuzzyIdx = i;
+			fuzzyName = entry.name;
+		}
+	}
+
+	if (fuzzyIdx >= 0) {
+		if (index)
+			*index = fuzzyIdx;
+
+		gotName = fuzzyName;
+
+		const Entry &entry = entries[fuzzyIdx];
+
+		return &entry;
+	}
+
+	return nullptr;
+}
+
+int I18nAssets::indexOf(const std::string &name) const {
+	for (int i = 0; i < (int)entries.size(); ++i) {
+		const Entry &entry = entries[i];
+		if (entry.name == name)
+			return i;
+	}
+
+	return -1;
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Code assets
 */
 
 CodeAssets::Entry::Entry(const std::string &val) :
 	data(val)
 {
-}
-
-bool CodeAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler) {
-	data = val;
-
-	return true;
 }
 
 size_t CodeAssets::Entry::hash(void) const {
@@ -2751,6 +3243,12 @@ bool CodeAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarni
 
 		return false;
 	}
+
+	return true;
+}
+
+bool CodeAssets::Entry::fromString(const std::string &val, WarningOrErrorHandler) {
+	data = val;
 
 	return true;
 }
@@ -3422,11 +3920,11 @@ bool TilesAssets::Entry::fromString(const std::string &val, WarningOrErrorHandle
 	if (!Jpath::get(doc, ref, "ref"))
 		ref = 0;
 
-	if (!Jpath::get(doc, magnification, "magnification"))
-		magnification = -1;
-
 	if (!Jpath::get(doc, name, "name"))
 		name.clear();
+
+	if (!Jpath::get(doc, magnification, "magnification"))
+		magnification = -1;
 
 	const rapidjson::Value* pixels = nullptr;
 	if (!Jpath::get(doc, pixels, "pixels")) {
@@ -8130,6 +8628,7 @@ void AssetsBundle::clone(AssetsBundle* other, FontGetter getFont, CodeGetter get
 
 	other->palette = palette;
 	other->fonts = fonts;
+	other->i18ns = i18ns;
 	other->code = code;
 	other->tiles = tiles;
 	other->maps = maps;
@@ -8182,6 +8681,8 @@ std::string AssetsBundle::nameOf(Categories category) {
 		return "palette";
 	case Categories::FONT:
 		return "font";
+	case Categories::I18N:
+		return "i18n";
 	case Categories::CODE:
 		return "code";
 	case Categories::TILES:

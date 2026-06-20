@@ -10,6 +10,7 @@
 #include "editor_actor.h"
 #include "editor_code.h"
 #include "editor_font.h"
+#include "editor_i18n.h"
 #include "editor_map.h"
 #include "editor_music.h"
 #include "editor_scene.h"
@@ -468,6 +469,33 @@ promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspac
 
 					do {
 						Changing changing;
+						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)AssetsBundle::Categories::I18N];
+						for (int i = 0; i < (int)order.size(); ++i) {
+							const int idx = order[i];
+							if (idx != i)
+								changing[idx] = i;
+						}
+
+						for (Changing::iterator it = changing.begin(); it != changing.end(); ++it) {
+							const int from = it->first;
+							const int to = it->second;
+							I18nAssets::Entry* entry = prj->getI18n(from);
+							Editable* editor = entry->editor;
+							if (editor)
+								editor->post(Editable::UPDATE_INDEX, (Variant::Int)to);
+						}
+
+						I18nAssets::Array i18ns = prj->assets()->i18ns.entries;
+						prj->assets()->i18ns.entries.clear();
+						for (int i = 0; i < (int)order.size(); ++i) {
+							const int idx = order[i];
+							prj->assets()->i18ns.entries.push_back(i18ns[idx]);
+						}
+						ws->clearI18nPageNames();
+					} while (false);
+
+					do {
+						Changing changing;
 						const ImGui::AssetsSortingPopupBox::Order &order = orders[(unsigned)Workspace::Categories::CODE];
 						for (int i = 0; i < (int)order.size(); ++i) {
 							const int idx = order[i];
@@ -885,10 +913,10 @@ promise::Promise Operations::popupRomBuildSettings(Window*, Renderer* rnd, Works
 			}
 
 			ImGui::RomBuildSettingsPopupBox::ConfirmedHandler confirm(
-				[ws, df] (const char* cartType, const char* sramType, bool hasRtc, bool hasRumble) -> void {
+				[ws, df] (const char* cartType, const char* sramType, bool hasRtc, bool hasRumble, const char* i18nLang) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
-					df.resolve(true, cartType, sramType, hasRtc, hasRumble);
+					df.resolve(true, cartType, sramType, hasRtc, hasRumble, i18nLang);
 				},
 				nullptr
 			);
@@ -919,14 +947,14 @@ promise::Promise Operations::popupEmulatorBuildSettings(Window*, Renderer* rnd, 
 			}
 
 			ImGui::EmulatorBuildSettingsPopupBox::ConfirmedHandler confirm(
-				[ws, df] (const char* settings, const char* args, Bytes::Ptr icon) -> void {
+				[ws, df] (const char* settings, const char* args, Bytes::Ptr icon, const char* i18nLang) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
 
 					ws->settings().exporterSettings = settings;
 					ws->settings().exporterArgs = args;
 					ws->settings().exporterIcon = icon;
 
-					df.resolve(true);
+					df.resolve(true, i18nLang);
 				},
 				nullptr
 			);
@@ -1041,6 +1069,7 @@ promise::Promise Operations::fileNew(Window* wnd, Renderer* rnd, Workspace* ws, 
 			const PaletteAssets &paletteData = prj->touchPalette();
 
 			prj->activeFontIndex(0);
+			prj->activeI18nIndex(0);
 
 			prj->activeMajorCodeIndex(0);
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
@@ -1290,6 +1319,7 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 						ws->activeKernelIndex(0);
 						ws->popupBox(nullptr);
 						ws->category(Workspace::Categories::HOME);
+						ws->categoryOfFont(Workspace::Categories::FONT);
 						ws->categoryOfAudio(Workspace::Categories::MUSIC);
 						ws->categoryBeforeCompiling(Workspace::Categories::HOME);
 						ws->tabsWidth(0.0f);
@@ -2970,7 +3000,7 @@ promise::Promise Operations::fontAddPage(Window* wnd, Renderer* rnd, Workspace* 
 			if (prj->fontPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3044,7 +3074,7 @@ promise::Promise Operations::fontDuplicatePage(Window* wnd, Renderer* rnd, Works
 			if (prj->fontPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3124,6 +3154,82 @@ promise::Promise Operations::fontRemovePage(Window* wnd, Renderer* rnd, Workspac
 	);
 }
 
+promise::Promise Operations::i18nAddPage(Window* wnd, Renderer* rnd, Workspace* ws) {
+	return promise::newPromise(
+		[&] (promise::Defer df) -> void {
+			Project::Ptr &prj = ws->currentProject();
+			if (prj->i18nPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
+				df.reject();
+
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
+
+				return;
+			}
+
+			std::string str;
+			I18nAssets::Entry default_;
+			default_.toString(str, nullptr);
+
+			const bool added = prj->addI18nPage(str, true);
+			prj->hasDirtyAsset(true);
+
+			if (added)
+				ws->pageAdded(wnd, rnd, prj.get(), Workspace::Categories::I18N);
+			else
+				ws->bubble(ws->theme()->dialogPrompt_AssetPageNotAdded(), nullptr);
+
+			df.resolve(true);
+		}
+	);
+}
+
+promise::Promise Operations::i18nRemovePage(Window* wnd, Renderer* rnd, Workspace* ws) {
+	return promise::newPromise(
+		[&] (promise::Defer df) -> void {
+			Project::Ptr &prj = ws->currentProject();
+			const int page = prj->activeI18nIndex();
+
+			if (prj->i18nPageCount() == 0) {
+				df.reject();
+
+				return;
+			}
+
+			popupMessage(wnd, rnd, ws, ws->theme()->dialogAsk_RemoveTheCurrentAssetPage().c_str(), true, false)
+				.then(
+					[wnd, rnd, ws, df, prj, page] (bool ok) -> void {
+						WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+						if (ok) {
+							if (prj->removeI18nPage(page)) {
+								prj->hasDirtyAsset(true);
+
+								ws->pageRemoved(wnd, rnd, prj.get(), Workspace::Categories::I18N, page);
+
+								df.resolve(true);
+
+								return;
+							} else {
+								df.reject();
+
+								return;
+							}
+						} else {
+							df.resolve(false);
+						}
+					}
+				)
+				.fail(
+					[ws, df] (void) -> void {
+						WORKSPACE_AUTO_CLOSE_POPUP(ws)
+
+						df.reject();
+					}
+				);
+		}
+	);
+}
+
 promise::Promise Operations::codeAddPage(Window* wnd, Renderer* rnd, Workspace* ws) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
@@ -3131,7 +3237,7 @@ promise::Promise Operations::codeAddPage(Window* wnd, Renderer* rnd, Workspace* 
 			if (prj->codePageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3236,7 +3342,7 @@ promise::Promise Operations::tilesAddPage(Window* wnd, Renderer* rnd, Workspace*
 			if (prj->tilesPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3312,7 +3418,7 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 			if (prj->mapPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3378,7 +3484,7 @@ promise::Promise Operations::mapAddPage(Window* wnd, Renderer* rnd, Workspace* w
 							if (prj->tilesPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 								df.reject();
 
-								popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMoreTilesPage().c_str());
+								popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMoreTilesPages().c_str());
 
 								return;
 							}
@@ -3576,7 +3682,7 @@ promise::Promise Operations::musicAddPage(Window* wnd, Renderer* rnd, Workspace*
 			if (prj->musicPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3654,7 +3760,7 @@ promise::Promise Operations::sfxAddPage(Window* wnd, Renderer* rnd, Workspace* w
 			if (prj->sfxPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3737,7 +3843,7 @@ promise::Promise Operations::actorAddPage(Window* wnd, Renderer* rnd, Workspace*
 			if (prj->actorPageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -3813,7 +3919,7 @@ promise::Promise Operations::sceneAddPage(Window* wnd, Renderer* rnd, Workspace*
 			if (prj->scenePageCount() >= GBBASIC_ASSET_MAX_PAGE_COUNT) {
 				df.reject();
 
-				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePage().c_str());
+				popupMessage(wnd, rnd, ws, ws->theme()->dialogPrompt_CannotAddMorePages().c_str());
 
 				return;
 			}
@@ -4254,9 +4360,11 @@ promise::Promise Operations::kernelUninstall(Window*, Renderer*, Workspace* ws, 
 	);
 }
 
-promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspace* ws, const char* cartType_, const char* sramType_, bool* hasRtc_, bool* hasRumble_, const char* fontConfigPath, bool useInRam) {
+promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspace* ws, const char* cartType_, const char* sramType_, bool* hasRtc_, bool* hasRumble_, const char* i18nLang_, const char* fontConfigPath, bool useInRam) {
+	const std::string i18nLang = i18nLang_ ? i18nLang_ : "";
+
 	return promise::newPromise(
-		[&] (promise::Defer df) -> void {
+		[&, i18nLang] (promise::Defer df) -> void {
 			// Prepare.
 			const Project::Ptr &prj = ws->currentProject();
 			const std::string path = prj->path();
@@ -4370,6 +4478,7 @@ promise::Promise Operations::projectCompile(Window* wnd, Renderer* rnd, Workspac
 			arguments[COMPILER_ALIASES_OPTION_KEY]                          = aliases;
 			arguments[COMPILER_FONT_OPTION_KEY]                             = WORKSPACE_FONT_DEFAULT_CONFIG_FILE;
 			// Do not: `arguments[COMPILER_MACROS_OPTION_KEY]               = "";`.
+			arguments[COMPILER_I18N_LANGUAGE_OPTION_KEY]                    = i18nLang;
 #if defined GBBASIC_DEBUG
 			arguments[COMPILER_AST_OPTION_KEY]                              = "stdout";
 #else /* GBBASIC_DEBUG */

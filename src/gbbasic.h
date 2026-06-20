@@ -657,6 +657,13 @@
 			"All files (*.*)", "*" \
 		}
 #endif /* GBBASIC_FONT_FILE_FILTER */
+// The CSV file filter.
+#ifndef GBBASIC_CSV_FILE_FILTER
+#	define GBBASIC_CSV_FILE_FILTER { \
+			"CSV files (*.csv)", "*.csv", \
+			"All files (*.*)", "*" \
+		}
+#endif /* GBBASIC_CSV_FILE_FILTER */
 // The VGM file filter.
 #ifndef GBBASIC_VGM_FILE_FILTER
 #	define GBBASIC_VGM_FILE_FILTER { \
