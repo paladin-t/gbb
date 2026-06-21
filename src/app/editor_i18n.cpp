@@ -246,6 +246,22 @@ public:
 				_project->hasDirtyAsset(true);
 			}
 
+			const int keyCol = object()->getLanguageIndex(I18N_KEY_COLUMN_NAME);
+			if (keyCol == -1) {
+				const std::string msg = ws->theme()->warning_I18nMissingKeyColumn();
+				warn(ws, msg, true);
+			}
+
+			if (keyCol != 0) {
+				const std::string msg = ws->theme()->warning_I18nTheKeyColumnWasNotAtTheBeginning();
+				warn(ws, msg, true);
+
+				for (int i = keyCol; i > 0; --i)
+					object()->swapLanguages(i, i - 1);
+
+				_project->hasDirtyAsset(true);
+			}
+
 			if (object()->columnCount() > I18N_MAX_COLUMN_COUNT) {
 				const std::string msg = ws->theme()->warning_I18nColumnCountOutOfBounds();
 				warn(ws, msg, true);
@@ -304,12 +320,6 @@ public:
 					}
 					warn(ws, msg, true);
 				}
-			}
-
-			const int keyCol = object()->getLanguageIndex(I18N_KEY_COLUMN_NAME);
-			if (keyCol == -1) {
-				const std::string msg = ws->theme()->warning_I18nMissingKeyColumn();
-				warn(ws, msg, true);
 			}
 
 			i18nInfo.clear();
@@ -994,9 +1004,7 @@ private:
 	bool commitCell(Workspace* ws) {
 		const int row = _cursor.row;
 		const int col = _cursor.column;
-
 		std::string txt(_cursor.buffer);
-		txt = Text::trim(txt);
 
 		_cursor.activated = false;
 		_cursor.row = -1;
@@ -1007,6 +1015,10 @@ private:
 
 		if (row < 0 || col < 0)
 			return false;
+
+		const int keyCol = object()->getLanguageIndex(I18N_KEY_COLUMN_NAME);
+		if (row == rows || col == cols || row == 0 || col == keyCol)
+			txt = Text::trim(txt);
 
 		if (row == rows) {
 			if (txt.empty())

@@ -1596,6 +1596,7 @@ bool Theme::open(class Renderer* rnd) {
 	warning_I18nI18nNameIsEmptyAtPage("I18n name is empty at page {0}");
 	warning_I18nMissingKeyColumn("Missing \"key\" column");
 	warning_I18nRowCountOutOfBounds("Row count out of bounds");
+	warning_I18nTheKeyColumnWasNotAtTheBeginning("The \"key\" column was not at the beginning");
 	warning_I18nTooFewColumns("Too few columns");
 	warning_MapDuplicateMapNameAtPages("Duplicate map name \"{0}\" at page {1} and {2}");
 	warning_MapMapNameIsEmptyAtPage("Map name is empty at page {0}");

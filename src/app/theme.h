@@ -1072,6 +1072,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, warning_I18nI18nNameIsEmptyAtPage)
 	GBBASIC_PROPERTY_READONLY(std::string, warning_I18nMissingKeyColumn)
 	GBBASIC_PROPERTY_READONLY(std::string, warning_I18nRowCountOutOfBounds)
+	GBBASIC_PROPERTY_READONLY(std::string, warning_I18nTheKeyColumnWasNotAtTheBeginning)
 	GBBASIC_PROPERTY_READONLY(std::string, warning_I18nTooFewColumns)
 	GBBASIC_PROPERTY_READONLY(std::string, warning_MapDuplicateMapNameAtPages)
 	GBBASIC_PROPERTY_READONLY(std::string, warning_MapMapNameIsEmptyAtPage)
