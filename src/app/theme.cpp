@@ -2416,7 +2416,7 @@ void Theme::fromFile(const char* path_) {
 			if (ranges == THEME_FONT_RANGES_DEFAULT_NAME) {
 				glyphRanges = io.Fonts->GetGlyphRangesDefault();
 			} else if (ranges == THEME_FONT_RANGES_CHINESE_NAME) {
-				glyphRanges = io.Fonts->GetGlyphRangesChineseSimplifiedCommon();
+				glyphRanges = io.Fonts->GetGlyphRangesChineseFull();
 			} else if (ranges == THEME_FONT_RANGES_JAPANESE_NAME) {
 				glyphRanges = io.Fonts->GetGlyphRangesJapanese();
 			} else if (ranges == THEME_FONT_RANGES_KOREAN_NAME) {
