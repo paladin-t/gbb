@@ -13551,6 +13551,9 @@ void Workspace::launchProject(
 	if (prj->contentType() == Project::ContentTypes::BASIC) {
 		std::string lang = i18nLang ? i18nLang : "";
 		if (lang.empty()) {
+			lang = prj->i18nLanguage();
+		}
+		if (lang.empty()) {
 			std::string lang_;
 			if (getDefaultI18nLanguage(prj.get(), lang_) && !lang_.empty())
 				lang = lang_;

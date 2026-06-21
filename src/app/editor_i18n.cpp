@@ -545,6 +545,8 @@ private:
 		if (ImGui::BeginTable("@Tbl", finalCols, flags, ImVec2(tblWidth, tblHeight))) {
 			const Editing::Shortcut tab(SDL_SCANCODE_TAB);
 			bool tabbed = false;
+			const Editing::Shortcut enter(SDL_SCANCODE_RETURN);
+			bool entered = false;
 
 			ImGui::TableSetupScrollFreeze(1, 2);
 			const ImU32 col = ws->theme()->style()->i18nHeadColor;
@@ -609,11 +611,11 @@ private:
 					ImGui::PushID(col);
 
 					ImGui::TableSetColumnIndex(col + 1);
+					const float colWidth = ImGui::GetColumnWidth(col);
 					const char* txt = object()->get(col, row);
 					if (_cursor.row == row && _cursor.column == col) {
 						VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, style.CellPadding);
 
-						const float colWidth = ImGui::GetColumnWidth(col);
 						ImGui::SetNextItemWidth(colWidth + style.CellPadding.x * 2);
 						const float x = ImGui::GetCursorScreenPos().x
 							- style.CellPadding.x;
@@ -626,8 +628,17 @@ private:
 						}
 						const ImGui::ItemSizeData data = ImGui::ReserveItemSizeData();
 						{
+							// Content cells.
 							if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue)) {
-								commitCell(ws);
+								if (enter.pressed() && !entered) {
+									entered = true;
+									if (commitCell(ws)) {
+										if (row + 1 <= rows)
+											editCell(row + 1, col);
+									}
+								} else {
+									commitCell(ws);
+								}
 							} else if (_cursor.activated && ImGui::IsItemDeactivated()) {
 								commitCell(ws);
 							} else if (tab.pressed() && !tabbed) {
@@ -650,7 +661,7 @@ private:
 						} else {
 							ImGui::TextUnformatted(txt ? txt : "");
 						}
-						bool dropdownClicked = false;
+						bool dropdownHovered = false;
 						if (row == 0 && col >= 1) {
 							ImGui::SameLine();
 							const float x = ImGui::GetCursorScreenPos().x
@@ -661,12 +672,17 @@ private:
 								_tools.isActingOnTable = true;
 								_tools.isActingLanguages = true;
 								_tools.actingIndex = col;
-								dropdownClicked = true;
+								dropdownHovered = true;
+							}
+							const ImVec2 rectMin(x, y);
+							const ImVec2 rectMax(x + btnSize.x, y + btnSize.y);
+							if (ImGui::IsMouseHoveringRect(rectMin, rectMax)) {
+								dropdownHovered = true;
 							}
 						}
-						if (!dropdownClicked) {
+						if (!dropdownHovered) {
 							const ImVec2 rectMin(cellMin.x - style.CellPadding.x, cellMin.y - style.CellPadding.y);
-							const ImVec2 rectMax(cellMin.x + ImGui::GetColumnWidth() - style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
+							const ImVec2 rectMax(cellMin.x + colWidth + style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
 							if (ImGui::IsMouseHoveringRect(rectMin, rectMax) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
 								if (_cursor.row != -1)
 									commitCell(ws);
@@ -679,10 +695,10 @@ private:
 				}
 
 				ImGui::TableSetColumnIndex(finalCols - 1);
+				const float colWidth = ImGui::GetColumnWidth(_cursor.column);
 				if (_cursor.row == row && _cursor.column == cols) {
 					VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, style.CellPadding);
 
-					const float colWidth = ImGui::GetColumnWidth(_cursor.column);
 					ImGui::SetNextItemWidth(colWidth + style.CellPadding.x * 2);
 					const float x = ImGui::GetCursorScreenPos().x
 						- style.CellPadding.x;
@@ -695,8 +711,17 @@ private:
 					}
 					const ImGui::ItemSizeData data = ImGui::ReserveItemSizeData();
 					{
+						// New language column.
 						if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue)) {
-							commitCell(ws);
+							if (enter.pressed() && !entered) {
+								entered = true;
+								if (commitCell(ws)) {
+									if (row + 1 < rows)
+										editCell(row + 1, col);
+								}
+							} else {
+								commitCell(ws);
+							}
 						} else if (_cursor.activated && ImGui::IsItemDeactivated()) {
 							commitCell(ws);
 						} else if (tab.pressed() && !tabbed) {
@@ -729,7 +754,7 @@ private:
 						ImGui::PopStyleColor();
 					}
 					const ImVec2 rectMin(cellMin.x - style.CellPadding.x, cellMin.y - style.CellPadding.y);
-					const ImVec2 rectMax(cellMin.x + ImGui::GetColumnWidth() - style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
+					const ImVec2 rectMax(cellMin.x + colWidth + style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
 					if (ImGui::IsMouseHoveringRect(rectMin, rectMax) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
 						if (_cursor.row != -1)
 							commitCell(ws);
@@ -755,10 +780,10 @@ private:
 
 				for (int col = 0; col < cols; ++col) {
 					ImGui::TableSetColumnIndex(col + 1);
+					const float colWidth = ImGui::GetColumnWidth(col);
 					if (_cursor.row == rows && _cursor.column == col) {
 						VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, style.CellPadding);
 
-						const float colWidth = ImGui::GetColumnWidth(col);
 						ImGui::SetNextItemWidth(colWidth + style.CellPadding.x * 2);
 						const float x = ImGui::GetCursorScreenPos().x
 							- style.CellPadding.x;
@@ -771,6 +796,7 @@ private:
 						}
 						const ImGui::ItemSizeData data = ImGui::ReserveItemSizeData();
 						{
+							// New item row.
 							if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue))
 								commitCell(ws);
 							else if (_cursor.activated && ImGui::IsItemDeactivated())
@@ -790,7 +816,7 @@ private:
 						}
 						ImGui::PopStyleColor();
 						const ImVec2 rectMin(cellMin.x - style.CellPadding.x, cellMin.y - style.CellPadding.y);
-						const ImVec2 rectMax(cellMin.x + ImGui::GetColumnWidth() - style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
+						const ImVec2 rectMax(cellMin.x + colWidth + style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
 						if (ImGui::IsMouseHoveringRect(rectMin, rectMax) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
 							if (_cursor.row != -1)
 								commitCell(ws);
@@ -803,11 +829,11 @@ private:
 			ImGui::EndTable();
 		}
 	}
-	void editCell(int row, int col) {
+	bool editCell(int row, int col) {
 		if (row != 0 && col == object()->columnCount()) // Clicked the last column, but not the languages row.
-			return;
+			return false;
 		if (col != 0 && row == object()->rowCount()) // Clicked the last row, but not the key column.
-			return;
+			return false;
 
 		_cursor.activated = false;
 		_cursor.row = row;
@@ -824,8 +850,10 @@ private:
 				_cursor.buffer[n] = '\0';
 			}
 		}
+
+		return true;
 	}
-	void commitCell(Workspace* ws) {
+	bool commitCell(Workspace* ws) {
 		const int row = _cursor.row;
 		const int col = _cursor.column;
 		const std::string txt(_cursor.buffer);
@@ -838,21 +866,21 @@ private:
 		const int cols = object()->columnCount();
 
 		if (row < 0 || col < 0)
-			return;
+			return false;
 
 		if (row == rows) {
 			if (txt.empty())
-				return;
+				return false;
 
 			if (rows >= I18N_MAX_ROW_COUNT) {
 				ws->bubble(ws->theme()->dialogPrompt_CannotAddMoreItems(), nullptr);
 
-				return;
+				return false;
 			}
 			if (object()->getItemIndex(txt) != -1) {
 				ws->bubble(ws->theme()->dialogPrompt_ItemAlreadyExists(), nullptr);
 
-				return;
+				return false;
 			}
 
 			Command* cmd = enqueue<Commands::I18n::AddItem>()
@@ -862,17 +890,17 @@ private:
 			_refresh(cmd);
 		} else if (col == cols) {
 			if (txt.empty())
-				return;
+				return false;
 
 			if (cols >= I18N_MAX_COLUMN_COUNT) {
 				ws->bubble(ws->theme()->dialogPrompt_CannotAddMoreLanguages(), nullptr);
 
-				return;
+				return false;
 			}
 			if (object()->getLanguageIndex(txt) != -1) {
 				ws->bubble(ws->theme()->dialogPrompt_LanguageAlreadyExists(), nullptr);
 
-				return;
+				return false;
 			}
 
 			Command* cmd = enqueue<Commands::I18n::AddLanguage>()
@@ -882,11 +910,11 @@ private:
 			_refresh(cmd);
 		} else if (row == 0) {
 			if (txt.empty())
-				return;
+				return false;
 
 			const char* txt_ = object()->get(col, row);
 			if (txt_ && txt == txt_) // Not changed.
-				return;
+				return true; // Ok.
 
 			Command* cmd = enqueue<Commands::I18n::RenameLanguage>()
 				->with(col, txt)
@@ -896,7 +924,7 @@ private:
 		} else {
 			const char* txt_ = object()->get(col, row);
 			if (txt_ && txt == txt_) // Not changed.
-				return;
+				return true; // Ok.
 
 			Command* cmd = enqueue<Commands::I18n::ChangeContent>()
 				->with(col, row - 1, txt)
@@ -904,6 +932,8 @@ private:
 
 			_refresh(cmd);
 		}
+
+		return true; // Ok.
 	}
 
 	bool shortcuts(Window* wnd, Renderer* rnd, Workspace* ws) {
