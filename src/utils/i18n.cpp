@@ -518,11 +518,9 @@ public:
 			_table[i].shrink_to_fit();
 		}
 
-		for (auto it = val.MemberBegin(); it != val.MemberEnd(); ++it) {
+		int langIdx = 0;
+		for (auto it = val.MemberBegin(); it != val.MemberEnd(); ++it, ++langIdx) {
 			const std::string key(it->name.GetString(), it->name.GetStringLength());
-			const int langIdx = getLanguageIndex(key);
-			if (langIdx < 0)
-				continue;
 
 			const rapidjson::Value &jarr = it->value;
 			if (!jarr.IsArray())

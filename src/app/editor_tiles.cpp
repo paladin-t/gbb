@@ -2115,7 +2115,9 @@ private:
 						if (!entry()->serializeBasic(txt, _index, true))
 							break;
 
-						Platform::setClipboardText(txt.c_str());
+						const std::string osstr = Unicode::toOs(txt);
+
+						Platform::setClipboardText(osstr.c_str());
 
 						ws->bubble(ws->theme()->dialogPrompt_ExportedCode(), nullptr);
 					} while (false);
@@ -2126,7 +2128,9 @@ private:
 						if (!entry()->serializeBasic(txt, _index, false))
 							break;
 
-						Platform::setClipboardText(txt.c_str());
+						const std::string osstr = Unicode::toOs(txt);
+
+						Platform::setClipboardText(osstr.c_str());
 
 						ws->bubble(ws->theme()->dialogPrompt_ExportedCode(), nullptr);
 					} while (false);
@@ -2146,7 +2150,9 @@ private:
 						if (!entry()->serializeDataSequence(txt, 16))
 							break;
 
-						Platform::setClipboardText(txt.c_str());
+						const std::string osstr = Unicode::toOs(txt);
+
+						Platform::setClipboardText(osstr.c_str());
 
 						ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 					} while (false);
@@ -2157,7 +2163,9 @@ private:
 						if (!entry()->serializeDataSequence(txt, 10))
 							break;
 
-						Platform::setClipboardText(txt.c_str());
+						const std::string osstr = Unicode::toOs(txt);
+
+						Platform::setClipboardText(osstr.c_str());
 
 						ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 					} while (false);
@@ -2168,7 +2176,9 @@ private:
 						if (!entry()->serializeDataSequence(txt, 2))
 							break;
 
-						Platform::setClipboardText(txt.c_str());
+						const std::string osstr = Unicode::toOs(txt);
+
+						Platform::setClipboardText(osstr.c_str());
 
 						ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 					} while (false);
@@ -2187,7 +2197,9 @@ private:
 					if (!entry()->serializeJson(txt, true))
 						break;
 
-					Platform::setClipboardText(txt.c_str());
+					const std::string osstr = Unicode::toOs(txt);
+
+					Platform::setClipboardText(osstr.c_str());
 
 					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 				} while (false);

@@ -4180,7 +4180,9 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 										txt += "  9, 11, 13, 15\n";
 										txt += "};\n";
 
-										Platform::setClipboardText(txt.c_str());
+										const std::string osstr = Unicode::toOs(txt);
+
+										Platform::setClipboardText(osstr.c_str());
 
 										ws->bubble(_theme->dialogPrompt_CopiedToClipboard(), nullptr);
 									} while (false);
@@ -6201,6 +6203,12 @@ void OpenPopup(const std::string &str_id, ImGuiPopupFlags popup_flags) {
 
 bool BeginPopupModal(const std::string &name, bool* p_open, ImGuiWindowFlags flags) {
 	return BeginPopupModal(name.c_str(), p_open, flags);
+}
+
+int HasPopup(void) {
+	ImGuiContext &g = *GImGui;
+
+	return g.OpenPopupStack.Size;
 }
 
 float TitleBarHeight(void) {

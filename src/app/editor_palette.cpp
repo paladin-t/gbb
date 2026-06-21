@@ -9,6 +9,7 @@
 #include "editor_palette.h"
 #include "project.h"
 #include "theme.h"
+#include "../utils/encoding.h"
 #include <SDL.h>
 
 /*
@@ -238,8 +239,11 @@ public:
 			ImGui::SameLine();
 			if (ImGui::ImageButton(_theme->iconCopy()->pointer(_renderer), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, _theme->tooltip_GenerateAndCopyCode().c_str())) {
 				std::string txt;
-				if (_shadow.serializeBasic(txt))
-					Platform::setClipboardText(txt.c_str());
+				if (_shadow.serializeBasic(txt)) {
+					const std::string osstr = Unicode::toOs(txt);
+
+					Platform::setClipboardText(osstr.c_str());
+				}
 			}
 
 			if (!_init.begin() && !_init.end())

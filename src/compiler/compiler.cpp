@@ -44009,16 +44009,16 @@ bool compile(Program &program, const Options &options) {
 	// Prepare the asset processors.
 	Parser::I18nLookupHandler i18nLookup = [&] (std::string &out, const Variant &arg0, const Variant &arg1, const TextLocation &loc0, const TextLocation &loc1) -> bool {
 		// Prepare.
-		struct Localized {
-			typedef std::vector<Localized> Array;
+		struct I18nInfo {
+			typedef std::vector<I18nInfo> Array;
 
 			int page = -1;
 			int row = -1;
 			std::string content;
 
-			Localized() {
+			I18nInfo() {
 			}
-			Localized(int pg, int r, const std::string &c) : page(pg), row(r), content(c) {
+			I18nInfo(int pg, int r, const std::string &c) : page(pg), row(r), content(c) {
 			}
 		};
 
@@ -44030,7 +44030,7 @@ bool compile(Program &program, const Options &options) {
 		if (arg0.type() == Variant::NOTHING) {
 			// `=LSTR(key)`.
 			if (arg1.type() == Variant::STRING) {
-				Localized::Array localized;
+				I18nInfo::Array i18nInfo;
 				const std::string key = (std::string)arg1;
 				for (int i = 0; i < i18ns.count(); ++i) {
 					const I18nAssets::Entry* entry = i18ns.get(i);
@@ -44044,18 +44044,18 @@ bool compile(Program &program, const Options &options) {
 					if (!txt)
 						continue;
 
-					localized.push_back(Localized(i, item + 1, txt));
+					i18nInfo.push_back(I18nInfo(i, item + 1, txt));
 				}
-				if (localized.empty()) {
+				if (i18nInfo.empty()) {
 					const std::string msg = Text::format("Cannot find localized content with key \"{0}\", language \"{1}\"", { key, language });
 					onError_(msg, false, loc1.page, loc1.row, loc1.column);
 
 					return false;
 				}
-				if (localized.size() > 1) {
+				if (i18nInfo.size() > 1) {
 					std::string msg = Text::format("Too many localized content with key \"{0}\", language \"{1}\"", { key, language });
-					for (int i = 0; i < (int)localized.size(); ++i) {
-						const Localized &l = localized[i];
+					for (int i = 0; i < (int)i18nInfo.size(); ++i) {
+						const I18nInfo &l = i18nInfo[i];
 						msg += "\n  ";
 						msg += Text::format("page {0}, row {1}", { Text::toString(l.page), Text::toString(l.row) });
 					}
@@ -44063,7 +44063,7 @@ bool compile(Program &program, const Options &options) {
 
 					return false;
 				}
-				out = localized.front().content;
+				out = i18nInfo.front().content;
 			} else {
 				const std::string msg = "String expected";
 				onError_(msg, false, loc1.page, loc1.row, loc1.column);
