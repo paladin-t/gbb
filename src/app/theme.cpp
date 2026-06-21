@@ -533,6 +533,7 @@ bool Theme::open(class Renderer* rnd) {
 	);
 	dialogPrompt_CannotSaveSramState("Cannot save SRAM state.");
 	dialogPrompt_CannotSaveToReadonlyLocations("Cannot save to readonly locations.");
+	dialogPrompt_CannotSetWithBlank("Cannot set with blank");
 	dialogPrompt_CannotUseThisImage("Cannot use this image");
 	dialogPrompt_Checking("Checking...");
 	dialogPrompt_ClearedProjects("Cleared projects");
@@ -1586,8 +1587,16 @@ bool Theme::open(class Renderer* rnd) {
 	warning_FontPreviewContentIsTooLong("Preview content is too long");
 	warning_FontShadowOutOfBounds("Shadow out of bounds");
 	warning_FontSizeOutOfBounds("Size out of bounds");
+	warning_I18nColumnCountOutOfBounds("Column count out of bounds");
 	warning_I18nDuplicateI18nNameAtPages("Duplicate i18n name \"{0}\" at page {1} and {2}");
+	warning_I18nDuplicateKeyNames("Duplicate key names \"{0}\"");
+	warning_I18nDuplicateKeyNames_Detail("row {0}");
+	warning_I18nDuplicateLanguages("Duplicate languages \"{0}\"");
+	warning_I18nDuplicateLanguages_Detail("column {0}");
 	warning_I18nI18nNameIsEmptyAtPage("I18n name is empty at page {0}");
+	warning_I18nMissingKeyColumn("Missing \"key\" column");
+	warning_I18nRowCountOutOfBounds("Row count out of bounds");
+	warning_I18nTooFewColumns("Too few columns");
 	warning_MapDuplicateMapNameAtPages("Duplicate map name \"{0}\" at page {1} and {2}");
 	warning_MapMapNameIsEmptyAtPage("Map name is empty at page {0}");
 	warning_MapNameIsAlreadyInUse("Name is already in use");

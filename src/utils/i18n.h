@@ -33,10 +33,10 @@
 #	define I18N_MAX_BUFFER_SIZE 1024
 #endif /* I18N_MAX_BUFFER_SIZE */
 #ifndef I18N_MAX_ROW_COUNT
-#	define I18N_MAX_ROW_COUNT 2000
+#	define I18N_MAX_ROW_COUNT 255
 #endif /* I18N_MAX_ROW_COUNT */
 #ifndef I18N_MAX_COLUMN_COUNT
-#	define I18N_MAX_COLUMN_COUNT 256
+#	define I18N_MAX_COLUMN_COUNT 63
 #endif /* I18N_MAX_COLUMN_COUNT */
 
 /* ===========================================================================} */

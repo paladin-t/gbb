@@ -13,6 +13,8 @@
 #include "../utils/encoding.h"
 #include "../utils/file_sandbox.h"
 #include "../utils/filesystem.h"
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "../../lib/imgui/imgui_internal.h"
 #include <SDL.h>
 
 /*
@@ -20,17 +22,17 @@
 ** Macros and constants
 */
 
-const char* EDITOR_I18N_TABLE_HEADER[256] = {
-	/* 1-10    */  "A",  "B",  "C",  "D",  "E",  "F",  "G",  "H",  "I",  "J",
-	/* 11-20   */  "K",  "L",  "M",  "N",  "O",  "P",  "Q",  "R",  "S",  "T",
-	/* 21-30   */  "U",  "V",  "W",  "X",  "Y",  "Z", "AA", "AB", "AC", "AD",
-	/* 31-40   */ "AE", "AF", "AG", "AH", "AI", "AJ", "AK", "AL", "AM", "AN",
-	/* 41-50   */ "AO", "AP", "AQ", "AR", "AS", "AT", "AU", "AV", "AW", "AX",
-	/* 51-60   */ "AY", "AZ", "BA", "BB", "BC", "BD", "BE", "BF", "BG", "BH",
-	/* 61-70   */ "BI", "BJ", "BK", "BL", "BM", "BN", "BO", "BP", "BQ", "BR",
-	/* 71-80   */ "BS", "BT", "BU", "BV", "BW", "BX", "BY", "BZ", "CA", "CB",
-	/* 81-90   */ "CC", "CD", "CE", "CF", "CG", "CH", "CI", "CJ", "CK", "CL",
-	/* 91-100  */ "CM", "CN", "CO", "CP", "CQ", "CR", "CS", "CT", "CU", "CV",
+constexpr const char* EDITOR_I18N_TABLE_HEADER[256] = {
+	/*   1- 10 */  "A",  "B",  "C",  "D",  "E",  "F",  "G",  "H",  "I",  "J",
+	/*  11- 20 */  "K",  "L",  "M",  "N",  "O",  "P",  "Q",  "R",  "S",  "T",
+	/*  21- 30 */  "U",  "V",  "W",  "X",  "Y",  "Z", "AA", "AB", "AC", "AD",
+	/*  31- 40 */ "AE", "AF", "AG", "AH", "AI", "AJ", "AK", "AL", "AM", "AN",
+	/*  41- 50 */ "AO", "AP", "AQ", "AR", "AS", "AT", "AU", "AV", "AW", "AX",
+	/*  51- 60 */ "AY", "AZ", "BA", "BB", "BC", "BD", "BE", "BF", "BG", "BH",
+	/*  61- 70 */ "BI", "BJ", "BK", "BL", "BM", "BN", "BO", "BP", "BQ", "BR",
+	/*  71- 80 */ "BS", "BT", "BU", "BV", "BW", "BX", "BY", "BZ", "CA", "CB",
+	/*  81- 90 */ "CC", "CD", "CE", "CF", "CG", "CH", "CI", "CJ", "CK", "CL",
+	/*  91-100 */ "CM", "CN", "CO", "CP", "CQ", "CR", "CS", "CT", "CU", "CV",
 	/* 101-110 */ "CW", "CX", "CY", "CZ", "DA", "DB", "DC", "DD", "DE", "DF",
 	/* 111-120 */ "DG", "DH", "DI", "DJ", "DK", "DL", "DM", "DN", "DO", "DP",
 	/* 121-130 */ "DQ", "DR", "DS", "DT", "DU", "DV", "DW", "DX", "DY", "DZ",
@@ -48,7 +50,8 @@ const char* EDITOR_I18N_TABLE_HEADER[256] = {
 	/* 241-250 */ "IG", "IH", "II", "IJ", "IK", "IL", "IM", "IN", "IO", "IP",
 	/* 251-256 */ "IQ", "IR", "IS", "IT", "IU", "IV"
 };
-static_assert(GBBASIC_COUNTOF(EDITOR_I18N_TABLE_HEADER) == I18N_MAX_COLUMN_COUNT, "Wrong data.");
+static_assert(GBBASIC_COUNTOF(EDITOR_I18N_TABLE_HEADER) >= I18N_MAX_COLUMN_COUNT, "Wrong data.");
+static_assert(IMGUI_TABLE_MAX_COLUMNS >= I18N_MAX_COLUMN_COUNT + 1, "Wrong data.");
 
 /* ===========================================================================} */
 
@@ -144,6 +147,7 @@ private:
 		}
 	} _warnings;
 	std::function<void(const Command*)> _refresh = nullptr;
+	std::function<void(void)> _checker = nullptr;
 
 	struct Ref : public Editor::Ref {
 		void clear(void) {
@@ -224,6 +228,126 @@ public:
 
 		_refresh = std::bind(&EditorI18nImpl::refresh, this, ws, std::placeholders::_1);
 
+		_checker = [ws, this] (void) -> void {
+			typedef std::set<int> IndexInfo;
+			typedef std::map<std::string, IndexInfo> I18nInfo;
+
+			_warnings.clear();
+
+			if (!object())
+				return;
+
+			if (object()->columnCount() < 1) {
+				const std::string msg = ws->theme()->warning_I18nTooFewColumns();
+				warn(ws, msg, true);
+
+				object()->addLanguage(0, I18N_KEY_COLUMN_NAME);
+
+				_project->hasDirtyAsset(true);
+			}
+
+			if (object()->columnCount() > I18N_MAX_COLUMN_COUNT) {
+				const std::string msg = ws->theme()->warning_I18nColumnCountOutOfBounds();
+				warn(ws, msg, true);
+
+				while (object()->columnCount() > I18N_MAX_COLUMN_COUNT) {
+					if (!object()->deleteLanguage(object()->columnCount() - 1))
+						break;
+				}
+
+				_project->hasDirtyAsset(true);
+			}
+			if (object()->rowCount() > I18N_MAX_ROW_COUNT) {
+				const std::string msg = ws->theme()->warning_I18nRowCountOutOfBounds();
+				warn(ws, msg, true);
+
+				while (object()->rowCount() > I18N_MAX_ROW_COUNT) {
+					if (!object()->deleteItem(object()->rowCount() - 1 - 1))
+						break;
+				}
+
+				_project->hasDirtyAsset(true);
+			}
+
+			I18nInfo i18nInfo;
+			IndexInfo processed;
+			for (int j = 0; j < object()->columnCount() - 1; ++j) {
+				if (processed.find(j) != processed.end())
+					continue;
+
+				const char* txt_ = object()->get(j, 0);
+				if (!txt_)
+					continue;
+				const std::string str_ = txt_;
+
+				for (int i = j; i < object()->columnCount(); ++i) {
+					if (processed.find(i) != processed.end())
+						continue;
+
+					const char* txt = object()->get(i, 0);
+					if (!txt)
+						continue;
+
+					i18nInfo[txt].insert(i);
+				}
+				const IndexInfo &idxInfo = i18nInfo[str_];
+				if (idxInfo.size() > 1) {
+					std::string msg = Text::format(ws->theme()->warning_I18nDuplicateLanguages(), { str_ });
+					for (int idx : idxInfo) {
+						const std::string detail = idx >= 0 && idx < GBBASIC_COUNTOF(EDITOR_I18N_TABLE_HEADER) ?
+							EDITOR_I18N_TABLE_HEADER[idx] :
+							Text::toString(idx);
+						msg += "\n    ";
+						msg += Text::format(ws->theme()->warning_I18nDuplicateLanguages_Detail(), { detail });
+
+						processed.insert(idx);
+					}
+					warn(ws, msg, true);
+				}
+			}
+
+			const int keyCol = object()->getLanguageIndex(I18N_KEY_COLUMN_NAME);
+			if (keyCol == -1) {
+				const std::string msg = ws->theme()->warning_I18nMissingKeyColumn();
+				warn(ws, msg, true);
+			}
+
+			i18nInfo.clear();
+			processed.clear();
+			for (int j = 1; j < object()->rowCount() - 1; ++j) {
+				if (processed.find(j) != processed.end())
+					continue;
+
+				const char* txt_ = object()->get(keyCol, j);
+				if (!txt_)
+					continue;
+				const std::string str_ = txt_;
+
+				for (int i = j; i < object()->rowCount(); ++i) {
+					if (processed.find(i) != processed.end())
+						continue;
+
+					const char* txt = object()->get(keyCol, i);
+					if (!txt)
+						continue;
+
+					i18nInfo[txt].insert(i);
+				}
+				const IndexInfo &idxInfo = i18nInfo[str_];
+				if (idxInfo.size() > 1) {
+					std::string msg = Text::format(ws->theme()->warning_I18nDuplicateKeyNames(), { str_ });
+					for (int idx : idxInfo) {
+						msg += "\n    ";
+						msg += Text::format(ws->theme()->warning_I18nDuplicateKeyNames_Detail(), { Text::toString(idx) });
+
+						processed.insert(idx);
+					}
+					warn(ws, msg, true);
+				}
+			}
+		};
+		_checker();
+
 		_tools.magnification = entry()->magnification;
 		_tools.namableText = entry()->name;
 		_tools.fineZooming = _project->preferencesFineZooming();
@@ -246,6 +370,7 @@ public:
 		_statusWidth = 0.0f;
 		_warnings.clear();
 		_refresh = nullptr;
+		_checker = nullptr;
 
 		_ref.clear();
 		_tools.clear();
@@ -539,8 +664,8 @@ private:
 		else
 			flags |= ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
 		const int cols = Math::min(object()->columnCount(), I18N_MAX_COLUMN_COUNT);
-		const int rows = object()->rowCount();
-		const int finalCols = cols + 1 /* row number */ + 1 /* extra */;
+		const int rows = Math::min(object()->rowCount(), I18N_MAX_ROW_COUNT);
+		const int finalCols = Math::min(cols + 1 /* row number */ + 1 /* extra */, IMGUI_TABLE_MAX_COLUMNS);
 		const ImVec2 btnSize(ImGui::GetTextLineHeight() + style.CellPadding.y * 2, ImGui::GetTextLineHeight() + style.CellPadding.y * 2 - 1);
 		if (ImGui::BeginTable("@Tbl", finalCols, flags, ImVec2(tblWidth, tblHeight))) {
 			const Editing::Shortcut tab(SDL_SCANCODE_TAB);
@@ -581,6 +706,7 @@ private:
 
 				ImGui::TableSetColumnIndex(0);
 				if (row == 0) {
+					// "Languages" for row 0.
 					const ImU32 col = ws->theme()->style()->i18nHeadColor;
 					ImGui::PushStyleColor(ImGuiCol_Text, col);
 					{
@@ -588,6 +714,7 @@ private:
 					}
 					ImGui::PopStyleColor();
 				} else {
+					// Row number.
 					const ImU32 col = ws->theme()->style()->i18nHeadColor;
 					ImGui::PushStyleColor(ImGuiCol_Text, col);
 					{
@@ -628,13 +755,13 @@ private:
 						}
 						const ImGui::ItemSizeData data = ImGui::ReserveItemSizeData();
 						{
-							// Content cells.
+							// Edit content cells.
 							if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue)) {
 								if (enter.pressed() && !entered) {
 									entered = true;
 									if (commitCell(ws)) {
 										if (row + 1 <= rows)
-											editCell(row + 1, col);
+											editCell(ws, row + 1, col);
 									}
 								} else {
 									commitCell(ws);
@@ -645,11 +772,12 @@ private:
 								tabbed = true;
 								commitCell(ws);
 								if (col + 1 < cols)
-									editCell(row, col + 1);
+									editCell(ws, row, col + 1);
 							}
 						}
 						ImGui::RestoreItemSizeData(data);
 					} else {
+						// Cell content.
 						const ImVec2 cellMin = ImGui::GetCursorScreenPos();
 						if (row == 0) {
 							const ImU32 col = ws->theme()->style()->i18nHeadColor;
@@ -686,7 +814,7 @@ private:
 							if (ImGui::IsMouseHoveringRect(rectMin, rectMax) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
 								if (_cursor.row != -1)
 									commitCell(ws);
-								editCell(row, col);
+								editCell(ws, row, col);
 							}
 						}
 					}
@@ -711,13 +839,13 @@ private:
 					}
 					const ImGui::ItemSizeData data = ImGui::ReserveItemSizeData();
 					{
-						// New language column.
+						// Edit new language column.
 						if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue)) {
 							if (enter.pressed() && !entered) {
 								entered = true;
 								if (commitCell(ws)) {
 									if (row + 1 < rows)
-										editCell(row + 1, col);
+										editCell(ws, row + 1, col);
 								}
 							} else {
 								commitCell(ws);
@@ -729,47 +857,51 @@ private:
 							const int col_ = _cursor.column;
 							commitCell(ws);
 							if (col_ + 1 < cols)
-								editCell(row, col_ + 1);
+								editCell(ws, row, col_ + 1);
 						}
 					}
 					ImGui::RestoreItemSizeData(data);
 				} else {
-					const ImVec2 cellMin = ImGui::GetCursorScreenPos();
-					if (row == 0) {
-						const ImU32 col = ws->theme()->style()->i18nHeadColor;
-						ImVec4 col_ = ImGui::ColorConvertU32ToFloat4(col);
-						col_.w *= 0.55f;
-						ImGui::PushStyleColor(ImGuiCol_Text, col_);
-						{
-							ImGui::TextUnformatted(ws->theme()->dialogPrompt_ClickToEdit());
+					if (cols < I18N_MAX_COLUMN_COUNT) {
+						// Placeholder for new language.
+						const ImVec2 cellMin = ImGui::GetCursorScreenPos();
+						if (row == 0) {
+							const ImU32 col = ws->theme()->style()->i18nHeadColor;
+							ImVec4 col_ = ImGui::ColorConvertU32ToFloat4(col);
+							col_.w *= 0.55f;
+							ImGui::PushStyleColor(ImGuiCol_Text, col_);
+							{
+								ImGui::TextUnformatted(ws->theme()->dialogPrompt_ClickToEdit());
+							}
+							ImGui::PopStyleColor();
+						} else {
+							ImVec4 col_ = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+							col_.w *= 0.55f;
+							ImGui::PushStyleColor(ImGuiCol_Text, col_);
+							{
+								ImGui::TextUnformatted("-");
+							}
+							ImGui::PopStyleColor();
 						}
-						ImGui::PopStyleColor();
-					} else {
-						ImVec4 col_ = ImGui::GetStyleColorVec4(ImGuiCol_Text);
-						col_.w *= 0.55f;
-						ImGui::PushStyleColor(ImGuiCol_Text, col_);
-						{
-							ImGui::TextUnformatted("-");
+						const ImVec2 rectMin(cellMin.x - style.CellPadding.x, cellMin.y - style.CellPadding.y);
+						const ImVec2 rectMax(cellMin.x + colWidth + style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
+						if (ImGui::IsMouseHoveringRect(rectMin, rectMax) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+							if (_cursor.row != -1)
+								commitCell(ws);
+							editCell(ws, row, cols);
 						}
-						ImGui::PopStyleColor();
-					}
-					const ImVec2 rectMin(cellMin.x - style.CellPadding.x, cellMin.y - style.CellPadding.y);
-					const ImVec2 rectMax(cellMin.x + colWidth + style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
-					if (ImGui::IsMouseHoveringRect(rectMin, rectMax) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-						if (_cursor.row != -1)
-							commitCell(ws);
-						editCell(row, cols);
 					}
 				}
 
 				ImGui::PopID();
 			}
 
-			{
+			if (rows < I18N_MAX_ROW_COUNT) {
 				ImGui::TableNextRow();
 
 				ImGui::TableSetColumnIndex(0);
 				{
+					// Row number for the last line.
 					const ImU32 col = ws->theme()->style()->i18nHeadColor;
 					ImGui::PushStyleColor(ImGuiCol_Text, col);
 					{
@@ -796,7 +928,7 @@ private:
 						}
 						const ImGui::ItemSizeData data = ImGui::ReserveItemSizeData();
 						{
-							// New item row.
+							// Edit new item row.
 							if (ImGui::InputText("##Ed", _cursor.buffer, sizeof(_cursor.buffer), ImGuiInputTextFlags_EnterReturnsTrue))
 								commitCell(ws);
 							else if (_cursor.activated && ImGui::IsItemDeactivated())
@@ -804,23 +936,26 @@ private:
 						}
 						ImGui::RestoreItemSizeData(data);
 					} else {
-						const ImVec2 cellMin = ImGui::GetCursorScreenPos();
-						ImVec4 col_ = ImGui::GetStyleColorVec4(ImGuiCol_Text);
-						col_.w *= 0.55f;
-						ImGui::PushStyleColor(ImGuiCol_Text, col_);
-						{
-							if (col == 0)
-								ImGui::TextUnformatted(ws->theme()->dialogPrompt_ClickToEdit());
-							else
-								ImGui::TextUnformatted("-");
-						}
-						ImGui::PopStyleColor();
-						const ImVec2 rectMin(cellMin.x - style.CellPadding.x, cellMin.y - style.CellPadding.y);
-						const ImVec2 rectMax(cellMin.x + colWidth + style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
-						if (ImGui::IsMouseHoveringRect(rectMin, rectMax) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-							if (_cursor.row != -1)
-								commitCell(ws);
-							editCell(rows, col);
+						// Placeholder for new item.
+						if (rows < I18N_MAX_ROW_COUNT) {
+							const ImVec2 cellMin = ImGui::GetCursorScreenPos();
+							ImVec4 col_ = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+							col_.w *= 0.55f;
+							ImGui::PushStyleColor(ImGuiCol_Text, col_);
+							{
+								if (col == 0)
+									ImGui::TextUnformatted(ws->theme()->dialogPrompt_ClickToEdit());
+								else
+									ImGui::TextUnformatted("-");
+							}
+							ImGui::PopStyleColor();
+							const ImVec2 rectMin(cellMin.x - style.CellPadding.x, cellMin.y - style.CellPadding.y);
+							const ImVec2 rectMax(cellMin.x + colWidth + style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
+							if (ImGui::IsMouseHoveringRect(rectMin, rectMax) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+								if (_cursor.row != -1)
+									commitCell(ws);
+								editCell(ws, rows, col);
+							}
 						}
 					}
 				}
@@ -829,7 +964,10 @@ private:
 			ImGui::EndTable();
 		}
 	}
-	bool editCell(int row, int col) {
+	bool editCell(Workspace* ws, int row, int col) {
+		if (ws->popupBox() || ImGui::HasPopup())
+			return false;
+
 		if (row != 0 && col == object()->columnCount()) // Clicked the last column, but not the languages row.
 			return false;
 		if (col != 0 && row == object()->rowCount()) // Clicked the last row, but not the key column.
@@ -856,7 +994,9 @@ private:
 	bool commitCell(Workspace* ws) {
 		const int row = _cursor.row;
 		const int col = _cursor.column;
-		const std::string txt(_cursor.buffer);
+
+		std::string txt(_cursor.buffer);
+		txt = Text::trim(txt);
 
 		_cursor.activated = false;
 		_cursor.row = -1;
@@ -909,8 +1049,11 @@ private:
 
 			_refresh(cmd);
 		} else if (row == 0) {
-			if (txt.empty())
+			if (txt.empty()) {
+				ws->bubble(ws->theme()->dialogPrompt_CannotSetWithBlank(), nullptr);
+
 				return false;
+			}
 
 			const char* txt_ = object()->get(col, row);
 			if (txt_ && txt == txt_) // Not changed.
@@ -922,6 +1065,12 @@ private:
 
 			_refresh(cmd);
 		} else {
+			if (txt.empty()) {
+				ws->bubble(ws->theme()->dialogPrompt_CannotSetWithBlank(), nullptr);
+
+				return false;
+			}
+
 			const char* txt_ = object()->get(col, row);
 			if (txt_ && txt == txt_) // Not changed.
 				return true; // Ok.
@@ -1486,7 +1635,9 @@ private:
 					if (!entry()->serializeJson(txt, true))
 						break;
 
-					Platform::setClipboardText(txt.c_str());
+					const std::string osstr = Unicode::toOs(txt);
+
+					Platform::setClipboardText(osstr.c_str());
 
 					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 				} while (false);
@@ -1539,7 +1690,9 @@ private:
 					if (!entry()->serializeCsv(txt))
 						break;
 
-					Platform::setClipboardText(txt.c_str());
+					const std::string osstr = Unicode::toOs(txt);
+
+					Platform::setClipboardText(osstr.c_str());
 
 					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 				} while (false);
@@ -1570,10 +1723,11 @@ private:
 					if (!entry()->serializeCsv(txt))
 						break;
 
+					const std::string osstr = Unicode::toOs(txt);
 					File::Ptr file(File::create());
 					if (!file->open(path.c_str(), Stream::WRITE))
 						break;
-					file->writeString(txt);
+					file->writeString(osstr);
 					file->close();
 
 #if !defined GBBASIC_OS_HTML
@@ -1632,10 +1786,19 @@ private:
 	void refresh(Workspace* ws, const Command* cmd) {
 		const bool refillName =
 			Command::is<Commands::I18n::SetName>(cmd);
+		const bool toCheck =
+			Command::is<Commands::I18n::AddItem>(cmd) ||
+			Command::is<Commands::I18n::AddLanguage>(cmd) ||
+			Command::is<Commands::I18n::RenameLanguage>(cmd) ||
+			Command::is<Commands::I18n::ChangeContent>(cmd) ||
+			Command::is<Commands::I18n::Import>(cmd);
 
 		if (refillName) {
 			_tools.namableText = entry()->name;
 			ws->clearTilesPageNames();
+		}
+		if (toCheck) {
+			_checker();
 		}
 	}
 

@@ -1231,6 +1231,7 @@ void EnsureWindowVisible(void);
 
 void OpenPopup(const std::string &str_id, ImGuiPopupFlags popup_flags = ImGuiPopupFlags_None);
 bool BeginPopupModal(const std::string &name, bool* p_open = nullptr, ImGuiWindowFlags flags = ImGuiWindowFlags_None);
+int HasPopup(void);
 
 float TitleBarHeight(void);
 /**

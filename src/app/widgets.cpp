@@ -6205,6 +6205,12 @@ bool BeginPopupModal(const std::string &name, bool* p_open, ImGuiWindowFlags fla
 	return BeginPopupModal(name.c_str(), p_open, flags);
 }
 
+int HasPopup(void) {
+	ImGuiContext &g = *GImGui;
+
+	return g.OpenPopupStack.Size;
+}
+
 float TitleBarHeight(void) {
 	ImGuiStyle &style = GetStyle();
 
