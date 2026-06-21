@@ -3323,7 +3323,9 @@ private:
 					if (!entry()->serializeBasic(txt, _index))
 						return;
 
-					Platform::setClipboardText(txt.c_str());
+					const std::string osstr = Unicode::toOs(txt);
+
+					Platform::setClipboardText(osstr.c_str());
 
 					ws->bubble(ws->theme()->dialogPrompt_ExportedCode(), nullptr);
 				};
@@ -3370,7 +3372,9 @@ private:
 						if (!entry()->serializeDataSequence(txt, 16, _tools.layer))
 							break;
 
-						Platform::setClipboardText(txt.c_str());
+						const std::string osstr = Unicode::toOs(txt);
+
+						Platform::setClipboardText(osstr.c_str());
 
 						ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 					} while (false);
@@ -3381,7 +3385,9 @@ private:
 						if (!entry()->serializeDataSequence(txt, 10, _tools.layer))
 							break;
 
-						Platform::setClipboardText(txt.c_str());
+						const std::string osstr = Unicode::toOs(txt);
+
+						Platform::setClipboardText(osstr.c_str());
 
 						ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 					} while (false);
@@ -3392,7 +3398,9 @@ private:
 						if (!entry()->serializeDataSequence(txt, 2, _tools.layer))
 							break;
 
-						Platform::setClipboardText(txt.c_str());
+						const std::string osstr = Unicode::toOs(txt);
+
+						Platform::setClipboardText(osstr.c_str());
 
 						ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 					} while (false);
@@ -3411,7 +3419,9 @@ private:
 					if (!entry()->serializeJson(txt, true))
 						break;
 
-					Platform::setClipboardText(txt.c_str());
+					const std::string osstr = Unicode::toOs(txt);
+
+					Platform::setClipboardText(osstr.c_str());
 
 					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 				} while (false);

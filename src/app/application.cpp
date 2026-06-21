@@ -769,13 +769,17 @@ private:
 			(void)data;
 
 			const std::string osstr = Unicode::toOs(text);
+
 			Platform::setClipboardText(osstr.c_str());
 		};
 		io.GetClipboardTextFn = [] (void* userdata) -> const char* {
 			Context* data = (Context*)userdata;
+
 			if (!data->clipboardTextData.empty())
 				data->clipboardTextData.clear();
+
 			const std::string osstr = Platform::getClipboardText();
+
 			data->clipboardTextData = Unicode::fromOs(osstr);
 
 			return data->clipboardTextData.c_str();

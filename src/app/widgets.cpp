@@ -4180,7 +4180,9 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 										txt += "  9, 11, 13, 15\n";
 										txt += "};\n";
 
-										Platform::setClipboardText(txt.c_str());
+										const std::string osstr = Unicode::toOs(txt);
+
+										Platform::setClipboardText(osstr.c_str());
 
 										ws->bubble(_theme->dialogPrompt_CopiedToClipboard(), nullptr);
 									} while (false);

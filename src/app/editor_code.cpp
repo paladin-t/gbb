@@ -1539,7 +1539,9 @@ private:
 				do {
 					const std::string &txt = toString();
 
-					Platform::setClipboardText(txt.c_str());
+					const std::string osstr = Unicode::toOs(txt);
+
+					Platform::setClipboardText(osstr.c_str());
 
 					ws->bubble(ws->theme()->dialogPrompt_ExportedCode(), nullptr);
 				} while (false);

@@ -1774,6 +1774,7 @@ public:
 									break;
 
 								const std::string osstr = Unicode::toOs(str);
+
 								Platform::setClipboardText(osstr.c_str());
 							} while (false);
 
@@ -2636,7 +2637,9 @@ private:
 					if (!entry()->serializeBasic(txt, index, entry()->asActor))
 						return;
 
-					Platform::setClipboardText(txt.c_str());
+					const std::string osstr = Unicode::toOs(txt);
+
+					Platform::setClipboardText(osstr.c_str());
 
 					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 				};
@@ -2678,7 +2681,9 @@ private:
 					if (!entry()->serializeC(txt))
 						break;
 
-					Platform::setClipboardText(txt.c_str());
+					const std::string osstr = Unicode::toOs(txt);
+
+					Platform::setClipboardText(osstr.c_str());
 
 					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 				} while (false);
@@ -2732,7 +2737,9 @@ private:
 						if (!entry()->serializeDataSequence(_frame.cursor, txt, 16))
 							break;
 
-						Platform::setClipboardText(txt.c_str());
+						const std::string osstr = Unicode::toOs(txt);
+
+						Platform::setClipboardText(osstr.c_str());
 
 						ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 					} while (false);
@@ -2743,7 +2750,9 @@ private:
 						if (!entry()->serializeDataSequence(_frame.cursor, txt, 10))
 							break;
 
-						Platform::setClipboardText(txt.c_str());
+						const std::string osstr = Unicode::toOs(txt);
+
+						Platform::setClipboardText(osstr.c_str());
 
 						ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 					} while (false);
@@ -2754,7 +2763,9 @@ private:
 						if (!entry()->serializeDataSequence(_frame.cursor, txt, 2))
 							break;
 
-						Platform::setClipboardText(txt.c_str());
+						const std::string osstr = Unicode::toOs(txt);
+
+						Platform::setClipboardText(osstr.c_str());
 
 						ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 					} while (false);
@@ -2773,7 +2784,9 @@ private:
 					if (!entry()->serializeJson(txt, true))
 						break;
 
-					Platform::setClipboardText(txt.c_str());
+					const std::string osstr = Unicode::toOs(txt);
+
+					Platform::setClipboardText(osstr.c_str());
 
 					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
 				} while (false);
