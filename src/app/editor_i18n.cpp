@@ -85,7 +85,15 @@ private:
 			activated = false;
 		}
 	} _cursor;
-	Table::Range _selection;
+	struct {
+		bool selecting = false;
+		Table::Range brush;
+
+		void clear(void) {
+			selecting = false;
+			brush = Table::Range();
+		}
+	} _selection;
 	struct {
 		std::string text;
 		bool filled = false;
@@ -420,20 +428,141 @@ public:
 
 	virtual void copy(void) override {
 		// TODO: i18n.
+		if (_selection.brush.invalid())
+			return;
+
+		const Table::Cursor minC = _selection.brush.min();
+		const Table::Cursor maxC = _selection.brush.max();
+		const int cols = object()->columnCount();
+		const int rows = object()->rowCount();
+
+		std::string buf;
+		for (int r = minC.row; r <= maxC.row; ++r) {
+			if (r < 0 || r >= rows)
+				continue;
+			for (int c = minC.column; c <= maxC.column; ++c) {
+				if (c < 0 || c >= cols)
+					continue;
+				if (c > minC.column)
+					buf += '\t';
+				const char* txt = object()->get(c, r);
+				buf += txt ? txt : "";
+			}
+			buf += '\n';
+		}
+
+		const std::string osstr = Unicode::toOs(buf);
+		Platform::setClipboardText(osstr.c_str());
 	}
 	virtual void cut(void) override {
 		// TODO: i18n.
+		copy();
+		del(true);
 	}
 	virtual bool pastable(void) const override {
-		// TODO: i18n.
-
 		return Platform::hasClipboardText();
 	}
 	virtual void paste(void) override {
 		// TODO: i18n.
+		if (!Platform::hasClipboardText())
+			return;
+
+		const std::string osstr = Platform::getClipboardText();
+		const std::string txt = Unicode::fromOs(osstr);
+		if (txt.empty())
+			return;
+
+		int startRow = 1;
+		int startCol = 1;
+		if (!_selection.brush.invalid()) {
+			const Table::Cursor minC = _selection.brush.min();
+			startRow = minC.row;
+			startCol = minC.column;
+		}
+
+		const int cols = object()->columnCount();
+		const int rows = object()->rowCount();
+
+		int r = startRow;
+		size_t pos = 0;
+		while (pos < txt.size() && r < rows) {
+			int c = startCol;
+			while (pos < txt.size() && txt[pos] != '\n') {
+				if (c >= cols)
+					break;
+				size_t end = pos;
+				while (end < txt.size() && txt[end] != '\t' && txt[end] != '\n')
+					++end;
+				std::string cell(txt.substr(pos, end - pos));
+				if (r >= 1 && c >= 1 && r < rows && c < cols) {
+					const char* old = object()->get(c, r);
+					if (!old || cell != old) {
+						Command* cmd = enqueue<Commands::I18n::ChangeContent>()
+							->with(c, r - 1, cell)
+							->exec(object());
+						_refresh(cmd);
+					}
+				}
+				++c;
+				pos = end;
+				if (pos < txt.size() && txt[pos] == '\t')
+					++pos;
+			}
+			while (pos < txt.size() && txt[pos] != '\n')
+				++pos;
+			if (pos < txt.size() && txt[pos] == '\n')
+				++pos;
+			++r;
+		}
+		_selection.brush.clear();
 	}
 	virtual void del(bool) override {
 		// TODO: i18n.
+		if (_selection.brush.invalid())
+			return;
+
+		const Table::Cursor minC = _selection.brush.min();
+		const Table::Cursor maxC = _selection.brush.max();
+		const int cols = object()->columnCount();
+		const int rows = object()->rowCount();
+
+		bool any = false;
+		for (int r = minC.row; r <= maxC.row; ++r) {
+			if (r < 1 || r >= rows)
+				continue;
+			for (int c = minC.column; c <= maxC.column; ++c) {
+				if (c < 1 || c >= cols)
+					continue;
+				const char* txt = object()->get(c, r);
+				if (txt && *txt) {
+					any = true;
+					break;
+				}
+			}
+			if (any)
+				break;
+		}
+		if (!any) {
+			_selection.brush.clear();
+			return;
+		}
+
+		for (int r = minC.row; r <= maxC.row; ++r) {
+			if (r < 1 || r >= rows)
+				continue;
+			for (int c = minC.column; c <= maxC.column; ++c) {
+				if (c < 1 || c >= cols)
+					continue;
+				const char* txt = object()->get(c, r);
+				if (txt && *txt) {
+					Command* cmd = enqueue<Commands::I18n::ChangeContent>()
+						->with(c, r - 1, "")
+						->exec(object());
+					_refresh(cmd);
+				}
+			}
+		}
+		_selection.brush.clear();
 	}
 	virtual bool selectable(void) const override {
 		return true;
@@ -479,8 +608,14 @@ public:
 
 	virtual Variant post(unsigned msg, int argc, const Variant* argv) override {
 		switch (msg) {
-		case SELECT_ALL:
-			// TODO: i18n.
+		case SELECT_ALL: {
+				const int cols = object()->columnCount();
+				const int rows = object()->rowCount();
+				if (cols > 0 && rows > 0) {
+					_selection.brush.start(1, 0);
+					_selection.brush.end(rows - 1, cols - 1);
+				}
+			}
 
 			return Variant(true);
 		case UPDATE_INDEX: {
@@ -821,10 +956,45 @@ private:
 						if (!dropdownHovered) {
 							const ImVec2 rectMin(cellMin.x - style.CellPadding.x, cellMin.y - style.CellPadding.y);
 							const ImVec2 rectMax(cellMin.x + colWidth + style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
-							if (ImGui::IsMouseHoveringRect(rectMin, rectMax) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+							const bool hovered = ImGui::IsMouseHoveringRect(rectMin, rectMax - ImVec2(4, 0));
+							if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
 								if (_cursor.row != -1)
 									commitCell(ws);
-								editCell(ws, row, col);
+
+								if (row == 0)
+									editCell(ws, row, col);
+
+								// Begin selecting.
+								if (row != 0) {
+									_selection.selecting = true;
+									_selection.brush.start(row, col);
+									_selection.brush.end(row, col);
+								}
+							}
+							if (_selection.selecting && hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+								// Drag selection.
+								if (row != 0 && (row != _selection.brush.second.row || col != _selection.brush.second.column)) {
+									_selection.brush.end(row, col);
+								}
+							}
+							if (_selection.selecting && hovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+								// End selecting.
+								_selection.selecting = false;
+								if (_selection.brush.single()) {
+									_selection.brush.clear();
+
+									editCell(ws, row, col);
+								}
+							}
+							if (!_selection.brush.invalid()) {
+								const Table::Cursor minic = _selection.brush.min();
+								const Table::Cursor maxc = _selection.brush.max();
+								if (row >= minic.row && row <= maxc.row && col >= minic.column && col <= maxc.column) {
+									ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+									drawList->AddRectFilled(rectMin + ImVec2(0, 1), rectMax, 0x40808080);
+									drawList->AddRect(rectMin + ImVec2(0, 1), rectMax, ImGui::GetColorU32(ImGuiCol_NavHighlight));
+								}
 							}
 						}
 					}
