@@ -15,6 +15,7 @@
 #include "../utils/filesystem.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "../../lib/imgui/imgui_internal.h"
+#include "../../lib/jpath/jpath.hpp"
 #include <SDL.h>
 
 /*
@@ -74,6 +75,11 @@ private:
 		int column = -1;
 		char buffer[I18N_MAX_BUFFER_SIZE];
 
+		int wasEditing = 0;
+		int lastActiveRow = -1;
+		int lastActiveColumn = -1;
+		bool inputFieldFocused = false;
+
 		Cursor() {
 			memset(buffer, 0, sizeof(buffer));
 		}
@@ -83,9 +89,32 @@ private:
 			column = -1;
 			memset(buffer, 0, sizeof(buffer));
 			activated = false;
+
+			wasEditing = 0;
+			lastActiveRow = -1;
+			lastActiveColumn = -1;
+			inputFieldFocused = false;
 		}
 	} _cursor;
-	Table::Range _selection;
+	struct {
+		bool selecting = false;
+		Table::Range brush;
+		ImVec2 min = ImVec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+		ImVec2 max = ImVec2(std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
+
+		void clear(void) {
+			selecting = false;
+			brush = Table::Range();
+			min = ImVec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+			max = ImVec2(std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
+		}
+		void fill(const ImVec2 &rectMin, const ImVec2 &rectMax) {
+			min.x = Math::min(min.x, rectMin.x);
+			min.y = Math::min(min.y, rectMin.y);
+			max.x = Math::max(max.x, rectMax.x);
+			max.y = Math::max(max.y, rectMax.y);
+		}
+	} _selection;
 	struct {
 		std::string text;
 		bool filled = false;
@@ -191,6 +220,9 @@ public:
 			->reg<Commands::I18n::SwapLanguages>()
 			->reg<Commands::I18n::RenameLanguage>()
 			->reg<Commands::I18n::ChangeContent>()
+			->reg<Commands::I18n::Cut>()
+			->reg<Commands::I18n::Paste>()
+			->reg<Commands::I18n::Delete>()
 			->reg<Commands::I18n::SetName>()
 			->reg<Commands::I18n::Import>();
 	}
@@ -374,6 +406,7 @@ public:
 		_project = nullptr;
 		_index = -1;
 
+		_cursor.clear();
 		_selection.clear();
 		_page.clear();
 		_status.clear();
@@ -419,21 +452,157 @@ public:
 	}
 
 	virtual void copy(void) override {
-		// TODO: i18n.
+		if (_tools.focused || _tools.inputFieldFocused || _cursor.inputFieldFocused)
+			return;
+
+		if (_selection.brush.invalid())
+			return;
+
+		auto toString = [] (const I18n::Ptr &i18n, const Table::Range &range) -> std::string {
+			const Table::Cursor minc = range.min();
+			const Table::Cursor maxc = range.max();
+
+			rapidjson::Document doc;
+			Jpath::set(doc, doc, maxc.column - minc.column + 1, "width");
+			Jpath::set(doc, doc, maxc.row - minc.row + 1, "height");
+			int k = 0;
+			for (int r = minc.row; r <= maxc.row; ++r) {
+				for (int c = minc.column; c <= maxc.column; ++c) {
+					const char* txt = i18n->get(c, r);
+					const std::string str = txt ? txt : "";
+					Jpath::set(doc, doc, str, "data", k);
+
+					++k;
+				}
+			}
+
+			std::string buf;
+			Json::toString(doc, buf);
+
+			return buf;
+		};
+
+		const std::string buf = toString(object(), _selection.brush);
+		const std::string osstr = Unicode::toOs(buf);
+
+		Platform::setClipboardText(osstr.c_str());
 	}
 	virtual void cut(void) override {
-		// TODO: i18n.
+		if (_tools.focused || _tools.inputFieldFocused || _cursor.inputFieldFocused)
+			return;
+
+		if (_selection.brush.invalid())
+			return;
+
+		copy();
+
+		Command* cmd = enqueue<Commands::I18n::Cut>()
+			->with(
+				[this] (int col, int row) -> const char* {
+					return object()->get(col, row);
+				},
+				[this] (int col, int row, const std::string &val) -> bool {
+					return object()->set(col, row, val);
+				}
+			)
+			->with(_selection.brush)
+			->exec(object());
+
+		_refresh(cmd);
+
+		_selection.clear();
 	}
 	virtual bool pastable(void) const override {
-		// TODO: i18n.
-
 		return Platform::hasClipboardText();
 	}
 	virtual void paste(void) override {
-		// TODO: i18n.
+		if (_tools.focused || _tools.inputFieldFocused || _cursor.inputFieldFocused)
+			return;
+
+		auto fromString = [] (const I18n::Ptr &i18n, const std::string &buf, int &width_, int &height_, Text::Array &content) -> bool {
+			rapidjson::Document doc;
+			if (!Json::fromString(doc, buf.c_str()))
+				return false;
+
+			int width = -1, height = -1;
+			if (!Jpath::get(doc, width, "width"))
+				return false;
+			if (!Jpath::get(doc, height, "height"))
+				return false;
+
+			width_ = width;
+			height_ = height;
+
+			int k = 0;
+			for (int c = 0; c < width; ++c) {
+				for (int r = 0; r < height; ++r) {
+					std::string str;
+					if (!Jpath::get(doc, str, "data", k))
+						str = "";
+					content.push_back(str);
+
+					++k;
+				}
+			}
+
+			return true;
+		};
+
+		const std::string osstr = Platform::getClipboardText();
+		const std::string buf = Unicode::fromOs(osstr);
+		int width = 0;
+		int height = 0;
+		Text::Array content;
+		if (!fromString(object(), buf, width, height, content) || width == 0 || height == 0)
+			return;
+
+		int startRow = _cursor.lastActiveRow;
+		int startCol = _cursor.lastActiveColumn;
+		if (startRow < 0)
+			startRow = 0;
+		if (startCol < 0)
+			startCol = 0;
+		Table::Range brush;
+		brush.start(startRow, startCol);
+		brush.end(startRow + height - 1, startCol + width - 1);
+
+		Command* cmd = enqueue<Commands::I18n::Paste>()
+			->with(
+				[this] (int col, int row) -> const char* {
+					return object()->get(col, row);
+				},
+				[this] (int col, int row, const std::string &val) -> bool {
+					return object()->set(col, row, val);
+				}
+			)
+			->with(content)
+			->with(brush)
+			->exec(object());
+
+		_refresh(cmd);
 	}
 	virtual void del(bool) override {
-		// TODO: i18n.
+		if (_tools.focused || _tools.inputFieldFocused || _cursor.inputFieldFocused)
+			return;
+
+		if (_selection.brush.invalid())
+			return;
+
+		Command* cmd = enqueue<Commands::I18n::Delete>()
+			->with(
+				[this] (int col, int row) -> const char* {
+					return object()->get(col, row);
+				},
+				[this] (int col, int row, const std::string &val) -> bool {
+					return object()->set(col, row, val);
+				}
+			)
+			->with(_selection.brush)
+			->exec(object());
+
+		_refresh(cmd);
+
+		_selection.clear();
 	}
 	virtual bool selectable(void) const override {
 		return true;
@@ -479,8 +648,17 @@ public:
 
 	virtual Variant post(unsigned msg, int argc, const Variant* argv) override {
 		switch (msg) {
-		case SELECT_ALL:
-			// TODO: i18n.
+		case SELECT_ALL: {
+				const int cols = object()->columnCount();
+				const int rows = object()->rowCount();
+				if (rows == 1)
+					return Variant(true);
+
+				if (cols > 0 && rows > 0) {
+					_selection.brush.start(1, 0);
+					_selection.brush.end(rows - 1, cols - 1);
+				}
+			}
 
 			return Variant(true);
 		case UPDATE_INDEX: {
@@ -574,7 +752,7 @@ public:
 			bool inputFieldFocused = false;
 			bool inputFieldFocused_ = false;
 			auto canUseShortcuts = [ws, this] (void) -> bool {
-				return !_tools.inputFieldFocused && ws->canUseShortcuts() && !ImGui::IsMouseDown(ImGuiMouseButton_Left);
+				return !_tools.inputFieldFocused && !_cursor.inputFieldFocused && ws->canUseShortcuts() && !ImGui::IsMouseDown(ImGuiMouseButton_Left);
 			};
 
 			const float spwidth = _ref.windowWidth(splitter.second);
@@ -596,6 +774,7 @@ public:
 				if (Editing::Tools::magnifiable(rnd, ws, &_tools.magnification, spwidth, canUseShortcuts()))
 					_tools.magnificationChanged = true;
 			}
+			inputFieldFocused |= inputFieldFocused_;
 
 			Editing::Tools::separate(rnd, ws, spwidth);
 			if (
@@ -677,6 +856,7 @@ private:
 		const int rows = Math::min(object()->rowCount(), I18N_MAX_ROW_COUNT);
 		const int finalCols = Math::min(cols + 1 /* row number */ + 1 /* extra */, IMGUI_TABLE_MAX_COLUMNS);
 		const ImVec2 btnSize(ImGui::GetTextLineHeight() + style.CellPadding.y * 2, ImGui::GetTextLineHeight() + style.CellPadding.y * 2 - 1);
+		bool inputFieldFocused = false;
 		if (ImGui::BeginTable("@Tbl", finalCols, flags, ImVec2(tblWidth, tblHeight))) {
 			const Editing::Shortcut tab(SDL_SCANCODE_TAB);
 			bool tabbed = false;
@@ -784,6 +964,9 @@ private:
 								if (col + 1 < cols)
 									editCell(ws, row, col + 1);
 							}
+
+							if (ImGui::GetActiveID() == ImGui::GetID("##Ed"))
+								inputFieldFocused |= true;
 						}
 						ImGui::RestoreItemSizeData(data);
 					} else {
@@ -821,10 +1004,52 @@ private:
 						if (!dropdownHovered) {
 							const ImVec2 rectMin(cellMin.x - style.CellPadding.x, cellMin.y - style.CellPadding.y);
 							const ImVec2 rectMax(cellMin.x + colWidth + style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
-							if (ImGui::IsMouseHoveringRect(rectMin, rectMax) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+							const bool hovered = ImGui::IsMouseHoveringRect(rectMin, rectMax - ImVec2(4, 0));
+							if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
 								if (_cursor.row != -1)
 									commitCell(ws);
-								editCell(ws, row, col);
+
+								if (row == 0)
+									editCell(ws, row, col);
+
+								// Begin selecting.
+								if (row != 0) {
+									_selection.selecting = true;
+									_selection.brush.start(row, col);
+									_selection.brush.end(row, col);
+									_selection.fill(rectMin, rectMax);
+								}
+							}
+							if (_selection.selecting && hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+								// Drag selection.
+								if (row != 0 && (row != _selection.brush.second.row || col != _selection.brush.second.column)) {
+									_selection.brush.end(row, col);
+									_selection.fill(rectMin, rectMax);
+								}
+							}
+							if (_selection.selecting && hovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+								// End selecting.
+								_selection.selecting = false;
+								if (_selection.brush.single()) {
+									//_selection.clear();
+
+									if (_cursor.row != -1 || _cursor.wasEditing || (_cursor.lastActiveRow == row && _cursor.lastActiveColumn == col)) {
+										editCell(ws, row, col);
+									} else {
+										_cursor.lastActiveRow = row;
+										_cursor.lastActiveColumn = col;
+									}
+								}
+							}
+							if (!_selection.brush.invalid()) {
+								const Table::Cursor minic = _selection.brush.min();
+								const Table::Cursor maxc = _selection.brush.max();
+								if (row >= minic.row && row <= maxc.row && col >= minic.column && col <= maxc.column) {
+									ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+									drawList->AddRectFilled(rectMin + ImVec2(0, 1), rectMax, 0x40808080);
+									drawList->AddRect(rectMin + ImVec2(0, 1), rectMax, ImGui::GetColorU32(ImGuiCol_NavHighlight));
+								}
 							}
 						}
 					}
@@ -869,6 +1094,9 @@ private:
 							if (col_ + 1 < cols)
 								editCell(ws, row, col_ + 1);
 						}
+
+						if (ImGui::GetActiveID() == ImGui::GetID("##Ed"))
+							inputFieldFocused |= true;
 					}
 					ImGui::RestoreItemSizeData(data);
 				} else {
@@ -904,6 +1132,15 @@ private:
 				}
 
 				ImGui::PopID();
+			}
+			if (_selection.selecting && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+				_selection.selecting = false;
+			}
+			if (!_selection.selecting && !ImGui::IsMouseHoveringRect(_selection.min, _selection.max) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+				_selection.clear();
+			}
+			if (!_selection.selecting && _selection.brush.invalid() && ImGui::IsKeyPressed(SDL_SCANCODE_ESCAPE, false)) {
+				_selection.clear();
 			}
 
 			if (rows < I18N_MAX_ROW_COUNT) {
@@ -943,6 +1180,9 @@ private:
 								commitCell(ws);
 							else if (_cursor.activated && ImGui::IsItemDeactivated())
 								commitCell(ws);
+
+							if (ImGui::GetActiveID() == ImGui::GetID("##Ed"))
+								inputFieldFocused |= true;
 						}
 						ImGui::RestoreItemSizeData(data);
 					} else {
@@ -971,8 +1211,14 @@ private:
 				}
 			}
 
+			if (inputFieldFocused)
+				_cursor.wasEditing = 5;
+			else if (_cursor.wasEditing > 0)
+				--_cursor.wasEditing;
+
 			ImGui::EndTable();
 		}
+		_cursor.inputFieldFocused = inputFieldFocused;
 	}
 	bool editCell(Workspace* ws, int row, int col) {
 		if (ws->popupBox() || ImGui::HasPopup())
@@ -1061,11 +1307,8 @@ private:
 
 			_refresh(cmd);
 		} else if (row == 0) {
-			if (txt.empty()) {
-				ws->bubble(ws->theme()->dialogPrompt_CannotSetWithBlank(), nullptr);
-
+			if (txt.empty())
 				return false;
-			}
 
 			const char* txt_ = object()->get(col, row);
 			if (txt_ && txt == txt_) // Not changed.
@@ -1077,11 +1320,8 @@ private:
 
 			_refresh(cmd);
 		} else {
-			if (txt.empty()) {
-				ws->bubble(ws->theme()->dialogPrompt_CannotSetWithBlank(), nullptr);
-
+			if (txt.empty())
 				return false;
-			}
 
 			const char* txt_ = object()->get(col, row);
 			if (txt_ && txt == txt_) // Not changed.
@@ -1098,7 +1338,7 @@ private:
 	}
 
 	bool shortcuts(Window* wnd, Renderer* rnd, Workspace* ws) {
-		if (_tools.inputFieldFocused || !ws->canUseShortcuts()) {
+		if (_tools.inputFieldFocused || _cursor.inputFieldFocused || !ws->canUseShortcuts()) {
 			return true;
 		}
 
@@ -1803,6 +2043,9 @@ private:
 			Command::is<Commands::I18n::AddLanguage>(cmd) ||
 			Command::is<Commands::I18n::RenameLanguage>(cmd) ||
 			Command::is<Commands::I18n::ChangeContent>(cmd) ||
+			Command::is<Commands::I18n::Cut>(cmd) ||
+			Command::is<Commands::I18n::Paste>(cmd) ||
+			Command::is<Commands::I18n::Delete>(cmd) ||
 			Command::is<Commands::I18n::Import>(cmd);
 
 		if (refillName) {

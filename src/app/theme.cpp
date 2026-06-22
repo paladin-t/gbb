@@ -533,7 +533,6 @@ bool Theme::open(class Renderer* rnd) {
 	);
 	dialogPrompt_CannotSaveSramState("Cannot save SRAM state.");
 	dialogPrompt_CannotSaveToReadonlyLocations("Cannot save to readonly locations.");
-	dialogPrompt_CannotSetWithBlank("Cannot set with blank");
 	dialogPrompt_CannotUseThisImage("Cannot use this image");
 	dialogPrompt_Checking("Checking...");
 	dialogPrompt_ClearedProjects("Cleared projects");
@@ -2416,7 +2415,7 @@ void Theme::fromFile(const char* path_) {
 			if (ranges == THEME_FONT_RANGES_DEFAULT_NAME) {
 				glyphRanges = io.Fonts->GetGlyphRangesDefault();
 			} else if (ranges == THEME_FONT_RANGES_CHINESE_NAME) {
-				glyphRanges = io.Fonts->GetGlyphRangesChineseSimplifiedCommon();
+				glyphRanges = io.Fonts->GetGlyphRangesChineseFull();
 			} else if (ranges == THEME_FONT_RANGES_JAPANESE_NAME) {
 				glyphRanges = io.Fonts->GetGlyphRangesJapanese();
 			} else if (ranges == THEME_FONT_RANGES_KOREAN_NAME) {

@@ -33,9 +33,7 @@ const char* AddItem::toString(void) const {
 	return "Add item";
 }
 
-Command* AddItem::redo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::redo(obj, argc, argv);
-
+Command* AddItem::redo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	ptr->addItem(index(), item().empty() ? nullptr : item().c_str());
@@ -43,9 +41,7 @@ Command* AddItem::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	return this;
 }
 
-Command* AddItem::undo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::undo(obj, argc, argv);
-
+Command* AddItem::undo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	ptr->deleteItem(index());
@@ -98,9 +94,7 @@ const char* DeleteItem::toString(void) const {
 	return "Delete item";
 }
 
-Command* DeleteItem::redo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::redo(obj, argc, argv);
-
+Command* DeleteItem::redo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	if (!filled()) {
@@ -116,9 +110,7 @@ Command* DeleteItem::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	return this;
 }
 
-Command* DeleteItem::undo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::undo(obj, argc, argv);
-
+Command* DeleteItem::undo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	ptr->addItem(index(), nullptr);
@@ -165,9 +157,7 @@ const char* SwapItems::toString(void) const {
 	return "Swap items";
 }
 
-Command* SwapItems::redo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::redo(obj, argc, argv);
-
+Command* SwapItems::redo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	ptr->swapItems(index0(), index1());
@@ -175,9 +165,7 @@ Command* SwapItems::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	return this;
 }
 
-Command* SwapItems::undo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::undo(obj, argc, argv);
-
+Command* SwapItems::undo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	ptr->swapItems(index0(), index1());
@@ -222,9 +210,7 @@ const char* AddLanguage::toString(void) const {
 	return "Add language";
 }
 
-Command* AddLanguage::redo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::redo(obj, argc, argv);
-
+Command* AddLanguage::redo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	ptr->addLanguage(index(), language());
@@ -232,9 +218,7 @@ Command* AddLanguage::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	return this;
 }
 
-Command* AddLanguage::undo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::undo(obj, argc, argv);
-
+Command* AddLanguage::undo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	ptr->deleteLanguage(index());
@@ -281,9 +265,7 @@ const char* DeleteLanguage::toString(void) const {
 	return "Delete language";
 }
 
-Command* DeleteLanguage::redo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::redo(obj, argc, argv);
-
+Command* DeleteLanguage::redo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	if (!filled()) {
@@ -305,9 +287,7 @@ Command* DeleteLanguage::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	return this;
 }
 
-Command* DeleteLanguage::undo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::undo(obj, argc, argv);
-
+Command* DeleteLanguage::undo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	ptr->addLanguage(index(), oldLanguage());
@@ -354,9 +334,7 @@ const char* SwapLanguages::toString(void) const {
 	return "Swap languages";
 }
 
-Command* SwapLanguages::redo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::redo(obj, argc, argv);
-
+Command* SwapLanguages::redo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	ptr->swapLanguages(index0(), index1());
@@ -364,9 +342,7 @@ Command* SwapLanguages::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	return this;
 }
 
-Command* SwapLanguages::undo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::undo(obj, argc, argv);
-
+Command* SwapLanguages::undo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	ptr->swapLanguages(index0(), index1());
@@ -413,9 +389,7 @@ const char* RenameLanguage::toString(void) const {
 	return "Rename language";
 }
 
-Command* RenameLanguage::redo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::redo(obj, argc, argv);
-
+Command* RenameLanguage::redo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	if (!filled()) {
@@ -429,9 +403,7 @@ Command* RenameLanguage::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	return this;
 }
 
-Command* RenameLanguage::undo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::undo(obj, argc, argv);
-
+Command* RenameLanguage::undo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	ptr->setLanguage(index(), old());
@@ -479,9 +451,7 @@ const char* ChangeContent::toString(void) const {
 	return "Change content";
 }
 
-Command* ChangeContent::redo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::redo(obj, argc, argv);
-
+Command* ChangeContent::redo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	if (!filled()) {
@@ -494,9 +464,7 @@ Command* ChangeContent::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	return this;
 }
 
-Command* ChangeContent::undo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::undo(obj, argc, argv);
-
+Command* ChangeContent::undo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	ptr->setContent(language(), index(), old());
@@ -527,6 +495,159 @@ void ChangeContent::destroy(Command* ptr) {
 	delete impl;
 }
 
+Blit::Blit() {
+}
+
+Blit::~Blit() {
+}
+
+Command* Blit::redo(Object::Ptr obj, int, const Variant*) {
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+	(void)ptr;
+
+	const Table::Cursor minc = area().min();
+	const Table::Cursor maxc = area().max();
+	int k = 0;
+	for (int r = minc.row; r <= maxc.row; ++r) {
+		for (int c = minc.column; c <= maxc.column; ++c) {
+			const std::string str = k >= 0 && k < (int)content().size() ? content()[k] : "";
+			set()(c, r, str);
+
+			++k;
+		}
+	}
+
+	return this;
+}
+
+Command* Blit::undo(Object::Ptr obj, int, const Variant*) {
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
+	(void)ptr;
+
+	const Table::Cursor minc = area().min();
+	const Table::Cursor maxc = area().max();
+	int k = 0;
+	for (int r = minc.row; r <= maxc.row; ++r) {
+		for (int c = minc.column; c <= maxc.column; ++c) {
+			const std::string str = k >= 0 && k < (int)old().size() ? old()[k] : "";
+			set()(c, r, str);
+
+			++k;
+		}
+	}
+
+	return this;
+}
+
+Blit* Blit::with(Getter get_, Setter set_) {
+	get(get_);
+	set(set_);
+
+	return this;
+}
+
+
+Blit* Blit::with(const Text::Array &content_) {
+	content(content_);
+
+	return this;
+}
+
+Blit* Blit::with(const Table::Range &area_) {
+	area(area_);
+
+	const Table::Cursor minc = area().min();
+	const Table::Cursor maxc = area().max();
+	for (int r = minc.row; r <= maxc.row; ++r) {
+		for (int c = minc.column; c <= maxc.column; ++c) {
+			const char* txt = get()(c, r);
+			const std::string str = txt ? txt : "";
+			old().push_back(str);
+		}
+	}
+
+	return this;
+}
+
+Command* Blit::exec(Object::Ptr obj, int argc, const Variant* argv) {
+	return redo(obj, argc, argv);
+}
+
+Cut::Cut() {
+}
+
+Cut::~Cut() {
+}
+
+unsigned Cut::type(void) const {
+	return TYPE();
+}
+
+const char* Cut::toString(void) const {
+	return "Cut";
+}
+
+Command* Cut::create(void) {
+	Cut* result = new Cut();
+
+	return result;
+}
+
+void Cut::destroy(Command* ptr) {
+	Cut* impl = static_cast<Cut*>(ptr);
+	delete impl;
+}
+
+Paste::Paste() {
+}
+
+Paste::~Paste() {
+}
+
+unsigned Paste::type(void) const {
+	return TYPE();
+}
+
+const char* Paste::toString(void) const {
+	return "Paste";
+}
+
+Command* Paste::create(void) {
+	Paste* result = new Paste();
+
+	return result;
+}
+
+void Paste::destroy(Command* ptr) {
+	Paste* impl = static_cast<Paste*>(ptr);
+	delete impl;
+}
+
+Delete::Delete() {
+}
+
+Delete::~Delete() {
+}
+
+unsigned Delete::type(void) const {
+	return TYPE();
+}
+
+const char* Delete::toString(void) const {
+	return "Delete";
+}
+
+Command* Delete::create(void) {
+	Delete* result = new Delete();
+
+	return result;
+}
+
+void Delete::destroy(Command* ptr) {
+	Delete* impl = static_cast<Delete*>(ptr);
+	delete impl;
+}
+
 SetName::SetName() {
 }
 
@@ -542,7 +663,7 @@ const char* SetName::toString(void) const {
 }
 
 Command* SetName::redo(Object::Ptr obj, int argc, const Variant* argv) {
-	::Image::Ptr ptr = Object::as<::Image::Ptr>(obj);
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 	(void)ptr;
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	TilesAssets::Entry* entry = (TilesAssets::Entry*)(arg0);
@@ -554,7 +675,7 @@ Command* SetName::redo(Object::Ptr obj, int argc, const Variant* argv) {
 }
 
 Command* SetName::undo(Object::Ptr obj, int argc, const Variant* argv) {
-	::Image::Ptr ptr = Object::as<::Image::Ptr>(obj);
+	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 	(void)ptr;
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	TilesAssets::Entry* entry = (TilesAssets::Entry*)(arg0);
@@ -600,9 +721,7 @@ const char* Import::toString(void) const {
 	return "Import";
 }
 
-Command* Import::redo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::redo(obj, argc, argv);
-
+Command* Import::redo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	if (!old()) {
@@ -637,9 +756,7 @@ Command* Import::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	return this;
 }
 
-Command* Import::undo(Object::Ptr obj, int argc, const Variant* argv) {
-	Layered::Layered::undo(obj, argc, argv);
-
+Command* Import::undo(Object::Ptr obj, int, const Variant*) {
 	::I18n::Ptr ptr = Object::as<::I18n::Ptr>(obj);
 
 	if (bytes()) {
