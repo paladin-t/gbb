@@ -599,6 +599,7 @@ namespace GBBASIC {
 #	define SERIAL_ERROR                                             -1
 #	define SERIAL_BUSY                                              -2
 #	define SERIAL_IDLE                                              -3
+#	define SERIAL_TIMEOUT                                           -4
 #endif /* SERIAL_STATUSES */
 
 // Scene.
@@ -32238,6 +32239,7 @@ public:
 			ADD_BUILTIN("SERIAL_ERROR",                              BuiltinTable::Entry(SERIAL_ERROR)                                ); // For serial port and device query...
 			ADD_BUILTIN("SERIAL_BUSY",                               BuiltinTable::Entry(SERIAL_BUSY)                                 );
 			ADD_BUILTIN("SERIAL_IDLE",                               BuiltinTable::Entry(SERIAL_IDLE)                                 );
+			ADD_BUILTIN("SERIAL_TIMEOUT",                            BuiltinTable::Entry(SERIAL_TIMEOUT)                              );
 
 			// Scene.
 			ADD_BUILTIN("SCENE_MAP_LAYER",                           BuiltinTable::Entry(SCENE_LAYER_MAP)                             );
