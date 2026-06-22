@@ -519,15 +519,67 @@ public:
 		if (_tools.focused || _tools.inputFieldFocused || _cursor.inputFieldFocused)
 			return;
 
-		auto fromString = [] (const I18n::Ptr &i18n, const std::string &buf, const Table::Range &range) -> bool {
-			// TODO
+		auto fromString = [] (const I18n::Ptr &i18n, const std::string &buf, int &width_, int &height_, Text::Array &content) -> bool {
+			rapidjson::Document doc;
+			if (!Json::fromString(doc, buf.c_str()))
+				return false;
+
+			int width = -1, height = -1;
+			if (!Jpath::get(doc, width, "width"))
+				return false;
+			if (!Jpath::get(doc, height, "height"))
+				return false;
+
+			width_ = width;
+			height_ = height;
+
+			int k = 0;
+			for (int c = 0; c < width; ++c) {
+				for (int r = 0; r < height; ++r) {
+					std::string str;
+					if (!Jpath::get(doc, str, "data", k))
+						str = "";
+					content.push_back(str);
+
+					++k;
+				}
+			}
 
 			return true;
 		};
 
 		const std::string osstr = Platform::getClipboardText();
 		const std::string buf = Unicode::fromOs(osstr);
-		fromString(object(), buf, _selection.brush);
+		int width = 0;
+		int height = 0;
+		Text::Array content;
+		if (!fromString(object(), buf, width, height, content) || width == 0 || height == 0)
+			return;
+
+		int startRow = _cursor.lastActiveRow;
+		int startCol = _cursor.lastActiveColumn;
+		if (startRow < 0)
+			startRow = 0;
+		if (startCol < 0)
+			startCol = 0;
+		Table::Range brush;
+		brush.start(startRow, startCol);
+		brush.end(startRow + height - 1, startCol + width - 1);
+
+		Command* cmd = enqueue<Commands::I18n::Paste>()
+			->with(
+				[this] (int col, int row) -> const char* {
+					return object()->get(col, row);
+				},
+				[this] (int col, int row, const std::string &val) -> bool {
+					return object()->set(col, row, val);
+				}
+			)
+			->with(content)
+			->with(brush)
+			->exec(object());
+
+		_refresh(cmd);
 	}
 	virtual void del(bool) override {
 		if (_tools.focused || _tools.inputFieldFocused || _cursor.inputFieldFocused)
