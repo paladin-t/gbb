@@ -556,15 +556,26 @@ public:
 		if (!fromString(object(), buf, width, height, content) || width == 0 || height == 0)
 			return;
 
-		int startRow = _cursor.lastActiveRow;
-		int startCol = _cursor.lastActiveColumn;
-		if (startRow < 0)
-			startRow = 0;
-		if (startCol < 0)
-			startCol = 0;
 		Table::Range brush;
-		brush.start(startRow, startCol);
-		brush.end(startRow + height - 1, startCol + width - 1);
+		if (_cursor.lastActiveRow == -1 && _cursor.lastActiveColumn == -1 && !_selection.brush.invalid()) {
+			int startRow = _selection.brush.first.row;
+			int startCol = _selection.brush.first.column;
+			if (startRow < 0)
+				startRow = 0;
+			if (startCol < 0)
+				startCol = 0;
+			brush.start(_selection.brush.first);
+			brush.end(startRow + height - 1, startCol + width - 1);
+		} else {
+			int startRow = _cursor.lastActiveRow;
+			int startCol = _cursor.lastActiveColumn;
+			if (startRow < 0)
+				startRow = 0;
+			if (startCol < 0)
+				startCol = 0;
+			brush.start(startRow, startCol);
+			brush.end(startRow + height - 1, startCol + width - 1);
+		}
 
 		Command* cmd = enqueue<Commands::I18n::Paste>()
 			->with(
@@ -1005,7 +1016,13 @@ private:
 							const ImVec2 rectMin(cellMin.x - style.CellPadding.x, cellMin.y - style.CellPadding.y);
 							const ImVec2 rectMax(cellMin.x + colWidth + style.CellPadding.x, cellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
 							const bool hovered = ImGui::IsMouseHoveringRect(rectMin, rectMax - ImVec2(4, 0));
-							if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+							if (
+								hovered && (
+									(ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::HasPopup()) ||
+									(ImGui::IsMouseClicked(ImGuiMouseButton_Right) &&
+										(_selection.brush.invalid() || _selection.brush.first == _selection.brush.second))
+								)
+							) {
 								if (_cursor.row != -1)
 									commitCell(ws);
 
@@ -1136,10 +1153,10 @@ private:
 			if (_selection.selecting && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
 				_selection.selecting = false;
 			}
-			if (!_selection.selecting && !ImGui::IsMouseHoveringRect(_selection.min, _selection.max) && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+			if (!_selection.selecting && !ImGui::IsMouseHoveringRect(_selection.min, _selection.max) && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::HasPopup()) {
 				_selection.clear();
 			}
-			if (!_selection.selecting && _selection.brush.invalid() && ImGui::IsKeyPressed(SDL_SCANCODE_ESCAPE, false)) {
+			if (!_selection.selecting && _selection.brush.invalid() && ImGui::IsKeyPressed(SDL_SCANCODE_ESCAPE, false) && !ImGui::HasPopup()) {
 				_selection.clear();
 			}
 
@@ -1371,7 +1388,7 @@ private:
 	bool context(Window*, Renderer*, Workspace* ws) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
-		if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+		if (!(_tools.inputFieldFocused || _cursor.inputFieldFocused) && ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
 			ImGui::OpenPopup("@Ctx");
 
 			ws->bubble(nullptr);
