@@ -519,7 +519,7 @@ public:
 		if (_tools.focused || _tools.inputFieldFocused || _cursor.inputFieldFocused)
 			return;
 
-		auto fromString = [] (const I18n::Ptr &i18n, const std::string &buf, int &width_, int &height_, Text::Array &content) -> bool {
+		auto fromString = [] (const I18n::Ptr &/* i18n */, const std::string &buf, int &width_, int &height_, Text::Array &content) -> bool {
 			rapidjson::Document doc;
 			if (!Json::fromString(doc, buf.c_str()))
 				return false;
