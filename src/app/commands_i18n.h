@@ -22,7 +22,7 @@ namespace Commands {
 
 namespace I18n {
 
-class AddItem : public Layered::Layered {
+class AddItem : public Command {
 public:
 	GBBASIC_PROPERTY(int, index)
 	GBBASIC_PROPERTY(std::string, item)
@@ -44,7 +44,6 @@ public:
 
 	virtual AddItem* with(int index_);
 	virtual AddItem* with(int index_, const std::string &item_);
-	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;
@@ -53,7 +52,7 @@ public:
 	static void destroy(Command* ptr);
 };
 
-class DeleteItem : public Layered::Layered {
+class DeleteItem : public Command {
 public:
 	GBBASIC_PROPERTY(int, index)
 
@@ -76,7 +75,6 @@ public:
 	using Command::undo;
 
 	virtual DeleteItem* with(int index_);
-	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;
@@ -85,7 +83,7 @@ public:
 	static void destroy(Command* ptr);
 };
 
-class SwapItems : public Layered::Layered {
+class SwapItems : public Command {
 public:
 	GBBASIC_PROPERTY(int, index0)
 	GBBASIC_PROPERTY(int, index1)
@@ -106,7 +104,6 @@ public:
 	using Command::undo;
 
 	virtual SwapItems* with(int index0_, int index1_);
-	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;
@@ -115,7 +112,7 @@ public:
 	static void destroy(Command* ptr);
 };
 
-class AddLanguage : public Layered::Layered {
+class AddLanguage : public Command {
 public:
 	GBBASIC_PROPERTY(int, index)
 	GBBASIC_PROPERTY(std::string, language)
@@ -136,7 +133,6 @@ public:
 	using Command::undo;
 
 	virtual AddLanguage* with(int index_, const std::string &lang);
-	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;
@@ -145,7 +141,7 @@ public:
 	static void destroy(Command* ptr);
 };
 
-class DeleteLanguage : public Layered::Layered {
+class DeleteLanguage : public Command {
 public:
 	GBBASIC_PROPERTY(int, index)
 
@@ -169,7 +165,6 @@ public:
 	using Command::undo;
 
 	virtual DeleteLanguage* with(int index_);
-	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;
@@ -178,7 +173,7 @@ public:
 	static void destroy(Command* ptr);
 };
 
-class SwapLanguages : public Layered::Layered {
+class SwapLanguages : public Command {
 public:
 	GBBASIC_PROPERTY(int, index0)
 	GBBASIC_PROPERTY(int, index1)
@@ -199,7 +194,6 @@ public:
 	using Command::undo;
 
 	virtual SwapLanguages* with(int index0_, int index1_);
-	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;
@@ -208,7 +202,7 @@ public:
 	static void destroy(Command* ptr);
 };
 
-class RenameLanguage : public Layered::Layered {
+class RenameLanguage : public Command {
 public:
 	GBBASIC_PROPERTY(int, index)
 	GBBASIC_PROPERTY(std::string, language)
@@ -232,7 +226,6 @@ public:
 	using Command::undo;
 
 	virtual RenameLanguage* with(int index_, const std::string &lang);
-	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;
@@ -241,7 +234,7 @@ public:
 	static void destroy(Command* ptr);
 };
 
-class ChangeContent : public Layered::Layered {
+class ChangeContent : public Command {
 public:
 	GBBASIC_PROPERTY(int, index)
 	GBBASIC_PROPERTY(int, language)
@@ -266,10 +259,84 @@ public:
 	using Command::undo;
 
 	virtual ChangeContent* with(int lang, int index_, const std::string &newVal_);
-	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Blit : public Command {
+public:
+	typedef std::function<const char* (int, int)> Getter;
+	typedef std::function<bool(int, int, const std::string &)> Setter;
+
+public:
+	GBBASIC_PROPERTY_READONLY(Getter, get)
+	GBBASIC_PROPERTY_READONLY(Setter, set)
+	GBBASIC_PROPERTY_READONLY(Table::Range, area)
+	GBBASIC_PROPERTY(Text::Array, content)
+
+	GBBASIC_PROPERTY(Text::Array, old)
+
+public:
+	Blit();
+	virtual ~Blit() override;
+
+	virtual Command* redo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::redo;
+	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::undo;
+
+	virtual Blit* with(Getter get, Setter set);
+	virtual Blit* with(const Text::Array &content);
+	virtual Blit* with(const Table::Range &area);
+
+	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::exec;
+};
+
+class Cut : public Blit {
+public:
+	Cut();
+	virtual ~Cut() override;
+
+	GBBASIC_CLASS_TYPE('C', 'U', 'T', 'I')
+
+	virtual unsigned type(void) const override;
+
+	virtual const char* toString(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Paste : public Blit {
+public:
+	Paste();
+	virtual ~Paste() override;
+
+	GBBASIC_CLASS_TYPE('P', 'S', 'T', 'I')
+
+	virtual unsigned type(void) const override;
+
+	virtual const char* toString(void) const override;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class Delete : public Blit {
+public:
+	Delete();
+	virtual ~Delete() override;
+
+	GBBASIC_CLASS_TYPE('D', 'E', 'L', 'I')
+
+	virtual unsigned type(void) const override;
+
+	virtual const char* toString(void) const override;
 
 	static Command* create(void);
 	static void destroy(Command* ptr);
@@ -305,7 +372,7 @@ public:
 	static void destroy(Command* ptr);
 };
 
-class Import : public Layered::Layered {
+class Import : public Command {
 public:
 	GBBASIC_PROPERTY(::I18n::Ptr, i18n)
 
@@ -328,7 +395,6 @@ public:
 	using Command::undo;
 
 	virtual Import* with(const ::I18n::Ptr &i18n_);
-	using Layered::Layered::with;
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;
