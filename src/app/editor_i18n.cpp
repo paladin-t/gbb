@@ -879,6 +879,8 @@ private:
 			bool tabbed = false;
 			const Editing::Shortcut enter(SDL_SCANCODE_RETURN);
 			bool entered = false;
+			ImGuiTable* tbl = GImGui->CurrentTable;
+			const ImRect &tblRect = tbl->InnerClipRect;
 
 			ImGui::TableSetupScrollFreeze(1, 2);
 			const ImU32 col = ws->theme()->style()->i18nHeadColor;
@@ -908,7 +910,6 @@ private:
 
 			// Column selection via header row.
 			if (rows >= 2) {
-				ImGuiTable* tbl = GImGui->CurrentTable;
 				const float headerTop = tbl->RowPosY1;
 				const float headerBottom = tbl->RowPosY2;
 				const ImVec2 mousePos = ImGui::GetMousePos();
@@ -1242,7 +1243,7 @@ private:
 			if (_selection.selecting && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
 				_selection.selecting = false;
 			}
-			if (!_selection.selecting && !ImGui::IsMouseHoveringRect(_selection.min, _selection.max) && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::HasPopup()) {
+			if (!_selection.selecting && ImGui::IsMouseHoveringRect(tblRect.Min, tblRect.Max, false) && !ImGui::IsMouseHoveringRect(_selection.min, _selection.max) && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::HasPopup()) {
 				_selection.clear();
 			}
 			if (!_selection.selecting && _selection.brush.invalid() && ImGui::IsKeyPressed(SDL_SCANCODE_ESCAPE, false) && !ImGui::HasPopup()) {
