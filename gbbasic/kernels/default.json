@@ -501,19 +501,27 @@
       "value": "1"
     },
     {
-      "syntax": "USE_KEYBOARD_FUNCTIONS",
+      "syntax": "HAS_KEYBOARD_FUNCTIONS",
       "value": "1"
     },
     {
-      "syntax": "USE_RUMBLE_FUNCTIONS",
+      "syntax": "HAS_RUMBLE_FUNCTIONS",
       "value": "1"
     },
     {
-      "syntax": "USE_SGB_FUNCTIONS",
+      "syntax": "HAS_SGB_FUNCTIONS",
       "value": "1"
     },
     {
-      "syntax": "USE_SCENE_BLIT_FUNCTIONS",
+      "syntax": "HAS_ERROR_FUNCTIONS",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_SCENE_BLIT_FUNCTIONS",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_CAMERA_FUNCTIONS",
       "value": "1"
     }
   ],

@@ -276,6 +276,7 @@ BOOLEAN scene_blit(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANK
 }
 #endif /* USE_SCENE_BLIT_FUNCTIONS */
 
+#if USE_CAMERA_FUNCTIONS
 // Shakes camera.
 BOOLEAN camera_shake(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     if (start) *((SCRIPT_CTX *)THIS)->stack_ptr = sys_time;
@@ -302,6 +303,7 @@ BOOLEAN camera_shake(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BA
 
     return TRUE;
 }
+#endif /* USE_CAMERA_FUNCTIONS */
 
 void vm_camera(SCRIPT_CTX * THIS) OLDCALL BANKED {
     const INT16 x = (INT16)*(--THIS->stack_ptr);

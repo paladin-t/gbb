@@ -294,6 +294,7 @@ BOOLEAN hush(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED {
 }
 #endif /* USE_SPEECH */
 
+#if USE_ERROR_FUNCTIONS
 // Triggers an error.
 BOOLEAN error(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start; (void)stack_frame;
@@ -308,3 +309,4 @@ __endasm;
 
     return TRUE;
 }
+#endif /* USE_ERROR_FUNCTIONS */
