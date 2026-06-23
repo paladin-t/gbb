@@ -206,20 +206,20 @@
     "offset": 0
   },
 
-  "ENABLE_VBL_ISR": {
-    "ref": "enable_vbl_isr",
+  "INSTALL_VBL_ISR": {
+    "ref": "install_vbl_isr",
     "offset": 0
   },
-  "DISABLE_VBL_ISR": {
-    "ref": "disable_vbl_isr",
+  "UNINSTALL_VBL_ISR": {
+    "ref": "uninstall_vbl_isr",
     "offset": 0
   },
-  "ENABLE_LCD_ISR": {
-    "ref": "enable_lcd_isr",
+  "INSTALL_LCD_ISR": {
+    "ref": "install_lcd_isr",
     "offset": 0
   },
-  "DISABLE_LCD_ISR": {
-    "ref": "disable_lcd_isr",
+  "UNINSTALL_LCD_ISR": {
+    "ref": "uninstall_lcd_isr",
     "offset": 0
   },
   "PEEK_BANKED": {

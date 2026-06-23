@@ -35,8 +35,8 @@ __endasm;
 #endif /* __SDCC && NINTENDO */
 }
 
-// Enables the overridable VBL isr.
-BOOLEAN enable_vbl_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+// Installs an overridable VBL ISR defined in named assembly block.
+BOOLEAN install_vbl_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start; (void)stack_frame;
 
     CRITICAL {
@@ -46,8 +46,8 @@ BOOLEAN enable_vbl_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCAL
     return TRUE;
 }
 
-// Disables the overridable VBL isr.
-BOOLEAN disable_vbl_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+// Installs the overridable VBL ISR defined in named assembly block.
+BOOLEAN uninstall_vbl_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start; (void)stack_frame;
 
     CRITICAL {
@@ -57,8 +57,8 @@ BOOLEAN disable_vbl_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCA
     return TRUE;
 }
 
-// Enables the overridable LCD isr.
-BOOLEAN enable_lcd_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+// Installs an overridable LCD ISR defined in named assembly block.
+BOOLEAN install_lcd_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start; (void)stack_frame;
 
     CRITICAL {
@@ -68,8 +68,8 @@ BOOLEAN enable_lcd_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCAL
     return TRUE;
 }
 
-// Disables the overridable LCD isr.
-BOOLEAN disable_lcd_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+// Installs the overridable LCD ISR defined in named assembly block.
+BOOLEAN uninstall_lcd_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start; (void)stack_frame;
 
     CRITICAL {

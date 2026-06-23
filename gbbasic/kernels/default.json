@@ -508,19 +508,19 @@
   "natives": [
     {
       "type": "generic",
-      "syntax": "enable_vbl_isr"
+      "syntax": "install_vbl_isr"
     },
     {
       "type": "generic",
-      "syntax": "disable_vbl_isr"
+      "syntax": "uninstall_vbl_isr"
     },
     {
       "type": "generic",
-      "syntax": "enable_lcd_isr"
+      "syntax": "install_lcd_isr"
     },
     {
       "type": "generic",
-      "syntax": "disable_lcd_isr"
+      "syntax": "uninstall_lcd_isr"
     },
     {
       "type": "generic",

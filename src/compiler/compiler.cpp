@@ -324,18 +324,18 @@ namespace GBBASIC {
 #endif /* ISR_STUB_ADDRESSING_BYTES */
 
 // Native functions.
-#ifndef ENABLE_VBL_ISR_FUNCTION_NAME
-#	define ENABLE_VBL_ISR_FUNCTION_NAME "enable_vbl_isr" // DOC: ROM SCHEMA.
-#endif /* ENABLE_VBL_ISR_FUNCTION_NAME */
-#ifndef DISABLE_VBL_ISR_FUNCTION_NAME
-#	define DISABLE_VBL_ISR_FUNCTION_NAME "disable_vbl_isr" // DOC: ROM SCHEMA.
-#endif /* DISABLE_VBL_ISR_FUNCTION_NAME */
-#ifndef ENABLE_LCD_ISR_FUNCTION_NAME
-#	define ENABLE_LCD_ISR_FUNCTION_NAME "enable_lcd_isr" // DOC: ROM SCHEMA.
-#endif /* ENABLE_LCD_ISR_FUNCTION_NAME */
-#ifndef DISABLE_LCD_ISR_FUNCTION_NAME
-#	define DISABLE_LCD_ISR_FUNCTION_NAME "disable_lcd_isr" // DOC: ROM SCHEMA.
-#endif /* DISABLE_LCD_ISR_FUNCTION_NAME */
+#ifndef INSTALL_VBL_ISR_FUNCTION_NAME
+#	define INSTALL_VBL_ISR_FUNCTION_NAME "install_vbl_isr" // DOC: ROM SCHEMA.
+#endif /* INSTALL_VBL_ISR_FUNCTION_NAME */
+#ifndef UNINSTALL_VBL_ISR_FUNCTION_NAME
+#	define UNINSTALL_VBL_ISR_FUNCTION_NAME "uninstall_vbl_isr" // DOC: ROM SCHEMA.
+#endif /* UNINSTALL_VBL_ISR_FUNCTION_NAME */
+#ifndef INSTALL_LCD_ISR_FUNCTION_NAME
+#	define INSTALL_LCD_ISR_FUNCTION_NAME "install_lcd_isr" // DOC: ROM SCHEMA.
+#endif /* INSTALL_LCD_ISR_FUNCTION_NAME */
+#ifndef UNINSTALL_LCD_ISR_FUNCTION_NAME
+#	define UNINSTALL_LCD_ISR_FUNCTION_NAME "uninstall_lcd_isr" // DOC: ROM SCHEMA.
+#endif /* UNINSTALL_LCD_ISR_FUNCTION_NAME */
 #ifndef PEEK_BANKED_FUNCTION_NAME
 #	define PEEK_BANKED_FUNCTION_NAME "peek_banked" // DOC: ROM SCHEMA.
 #endif /* PEEK_BANKED_FUNCTION_NAME */
@@ -15604,7 +15604,7 @@ public:
 				if (!romLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
 
 				// Find the installer.
-				const RomLocation* isrInstallerRomLocation = ctx.symbols->find(ENABLE_VBL_ISR_FUNCTION_NAME);
+				const RomLocation* isrInstallerRomLocation = ctx.symbols->find(INSTALL_VBL_ISR_FUNCTION_NAME);
 				if (!isrInstallerRomLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
 				const int isrInstallerBank = isrInstallerRomLocation->bank;
 				const int isrInstallerAddress = isrInstallerRomLocation->address;
@@ -15628,7 +15628,7 @@ public:
 				if (!romLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
 
 				// Find the installer.
-				const RomLocation* isrInstallerRomLocation = ctx.symbols->find(ENABLE_LCD_ISR_FUNCTION_NAME);
+				const RomLocation* isrInstallerRomLocation = ctx.symbols->find(INSTALL_LCD_ISR_FUNCTION_NAME);
 				if (!isrInstallerRomLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
 				const int isrInstallerBank = isrInstallerRomLocation->bank;
 				const int isrInstallerAddress = isrInstallerRomLocation->address;
