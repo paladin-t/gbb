@@ -7,6 +7,10 @@
 
 #include "vm.h"
 
+#ifndef USE_SCENE_BLIT_FUNCTIONS
+#   define USE_SCENE_BLIT_FUNCTIONS 1
+#endif /* USE_SCENE_BLIT_FUNCTIONS */
+
 BANKREF_EXTERN(VM_SCENE)
 
 #define SCENE_PROPERTY_EMPTY_GRID              0x00

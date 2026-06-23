@@ -503,6 +503,18 @@
     {
       "syntax": "USE_KEYBOARD_FUNCTIONS",
       "value": "1"
+    },
+    {
+      "syntax": "USE_RUMBLE_FUNCTIONS",
+      "value": "1"
+    },
+    {
+      "syntax": "USE_SGB_FUNCTIONS",
+      "value": "1"
+    },
+    {
+      "syntax": "USE_SCENE_BLIT_FUNCTIONS",
+      "value": "1"
     }
   ],
   "natives": [

@@ -166,6 +166,7 @@ BOOLEAN wait_for_key_ascii(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OL
 }
 #endif /* USE_KEYBOARD_FUNCTIONS */
 
+#if USE_RUMBLE_FUNCTIONS
 // Rumbles the cartridge.
 BOOLEAN rumble(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     SCRIPT_CTX * THIS_ = (SCRIPT_CTX *)THIS;
@@ -189,7 +190,9 @@ BOOLEAN rumble(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED
 
     return TRUE;
 }
+#endif /* USE_RUMBLE_FUNCTIONS */
 
+#if USE_SGB_FUNCTIONS
 // Sends a packet of bytes to SGB device.
 BOOLEAN send_sgb_packet(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start;
@@ -225,6 +228,7 @@ BOOLEAN set_sgb_border(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCAL
 
     return TRUE;
 }
+#endif /* USE_SGB_FUNCTIONS */
 
 #if USE_SGB_MOUSE
 // Gets whether an SGB mouse has been installed.

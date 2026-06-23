@@ -249,6 +249,7 @@ void scene_get_trigger(
     *cb_address  = get_ptr  (scene.trigger_bank, data  ); data += 2;
 }
 
+#if USE_SCENE_BLIT_FUNCTIONS
 // Transfers a region of scene data to the current scene.
 BOOLEAN scene_blit(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start;
@@ -273,6 +274,7 @@ BOOLEAN scene_blit(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANK
 
     return TRUE;
 }
+#endif /* USE_SCENE_BLIT_FUNCTIONS */
 
 // Shakes camera.
 BOOLEAN camera_shake(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
