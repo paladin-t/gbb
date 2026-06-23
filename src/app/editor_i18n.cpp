@@ -98,12 +98,14 @@ private:
 	} _cursor;
 	struct {
 		bool selecting = false;
+		int mode = 0; // 0 = cell, 1 = row, 2 = column, 3 = all.
 		Table::Range brush;
 		ImVec2 min = ImVec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 		ImVec2 max = ImVec2(std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
 
 		void clear(void) {
 			selecting = false;
+			mode = 0;
 			brush = Table::Range();
 			min = ImVec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 			max = ImVec2(std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
@@ -858,6 +860,10 @@ private:
 
 		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
+		const ImVec4 tblHeaderBg = ImGui::GetStyleColorVec4(ImGuiCol_TableHeaderBg);
+		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, tblHeaderBg);
+		ImGui::PushStyleColor(ImGuiCol_HeaderActive, tblHeaderBg);
+
 		ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
 		if (_tools.magnificationChanged)
 			flags |= ImGuiTableFlags_NoHostExtendX;
@@ -900,12 +906,69 @@ private:
 			ImGui::TableHeadersRow();
 			ImGui::PopStyleColor();
 
+			// Column selection via header row.
+			if (rows >= 2) {
+				ImGuiTable* tbl = GImGui->CurrentTable;
+				const float headerTop = tbl->RowPosY1;
+				const float headerBottom = tbl->RowPosY2;
+				const ImVec2 mousePos = ImGui::GetMousePos();
+				if (mousePos.y >= headerTop && mousePos.y <= headerBottom) {
+					for (int col = 0; col < finalCols; ++col) {
+						const float colMinX = tbl->Columns[col].MinX;
+						const float colMaxX = tbl->Columns[col].MaxX;
+						if (mousePos.x >= colMinX && mousePos.x <= colMaxX) {
+							const ImVec2 rectMin(colMinX, headerTop);
+							const ImVec2 rectMax(colMaxX, headerBottom);
+							if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::HasPopup()) {
+								if (_cursor.row != -1)
+									commitCell(ws);
+								if (col == 0) { // First cell, select all.
+									_selection.selecting = true;
+									_selection.mode = 3; // All.
+									const int cols = object()->columnCount();
+									const int rows = object()->rowCount();
+									if (cols > 0 && rows > 1) {
+										_selection.brush.start(1, 0);
+										_selection.brush.end(rows - 1, cols - 1);
+									}
+									_selection.fill(rectMin, rectMax);
+								} else {
+									_selection.selecting = true;
+									_selection.mode = 2; // Column.
+									const int dataCol = col - 1;
+									_selection.brush.start(1, dataCol);
+									_selection.brush.end(rows - 1, dataCol);
+									_selection.fill(rectMin, rectMax);
+								}
+							}
+							if (_selection.selecting && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+								if (_selection.mode == 2) {
+									const int dataCol = col - 1;
+									if (dataCol != _selection.brush.second.column) {
+										_selection.brush.end(rows - 1, dataCol);
+										_selection.fill(rectMin, rectMax);
+									}
+								} else if (_selection.mode == 3) {
+									// Do nothing.
+								}
+							}
+
+							break;
+						}
+					}
+				}
+				if (_selection.selecting && _selection.mode == 2 && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+					_selection.selecting = false;
+				}
+			}
+
 			for (int row = 0; row < rows; ++row) {
 				ImGui::PushID(row);
 
 				ImGui::TableNextRow();
 
 				ImGui::TableSetColumnIndex(0);
+				const ImVec2 rowCellMin = ImGui::GetCursorScreenPos();
 				if (row == 0) {
 					// "Languages" for row 0.
 					const ImU32 col = ws->theme()->style()->i18nHeadColor;
@@ -932,6 +995,31 @@ private:
 						_tools.isActingOnTable = true;
 						_tools.isActingLanguages = false;
 						_tools.actingIndex = row;
+					}
+
+					// Row selection via row number column.
+					const ImVec2 btnRectMin(x, y);
+					const ImVec2 btnRectMax(x + btnSize.x, y + btnSize.y);
+					if (!ImGui::IsMouseHoveringRect(btnRectMin, btnRectMax)) {
+						const float rowColWidth = ImGui::GetColumnWidth(0);
+						const ImVec2 rowRectMin(rowCellMin.x - style.CellPadding.x, rowCellMin.y - style.CellPadding.y);
+						const ImVec2 rowRectMax(rowCellMin.x + rowColWidth + style.CellPadding.x, rowCellMin.y + ImGui::GetTextLineHeight() + style.CellPadding.y);
+						const bool rowHovered = ImGui::IsMouseHoveringRect(rowRectMin, rowRectMax);
+						if (rowHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::HasPopup()) {
+							if (_cursor.row != -1)
+								commitCell(ws);
+							_selection.selecting = true;
+							_selection.mode = 1; // Row.
+							_selection.brush.start(row, 0);
+							_selection.brush.end(row, cols - 1);
+							_selection.fill(rowRectMin, rowRectMax);
+						}
+						if (_selection.selecting && _selection.mode == 1 && rowHovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+							if (row != _selection.brush.second.row) {
+								_selection.brush.end(row, cols - 1);
+								_selection.fill(rowRectMin, rowRectMax);
+							}
+						}
 					}
 				}
 
@@ -1032,19 +1120,20 @@ private:
 								// Begin selecting.
 								if (row != 0) {
 									_selection.selecting = true;
+									_selection.mode = 0; // Cell.
 									_selection.brush.start(row, col);
 									_selection.brush.end(row, col);
 									_selection.fill(rectMin, rectMax);
 								}
 							}
-							if (_selection.selecting && hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+							if (_selection.selecting && _selection.mode == 0 && hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
 								// Drag selection.
 								if (row != 0 && (row != _selection.brush.second.row || col != _selection.brush.second.column)) {
 									_selection.brush.end(row, col);
 									_selection.fill(rectMin, rectMax);
 								}
 							}
-							if (_selection.selecting && hovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+							if (_selection.selecting && _selection.mode == 0 && hovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
 								// End selecting.
 								_selection.selecting = false;
 								if (_selection.brush.single()) {
@@ -1235,6 +1324,9 @@ private:
 
 			ImGui::EndTable();
 		}
+
+		ImGui::PopStyleColor(2);
+
 		_cursor.inputFieldFocused = inputFieldFocused;
 	}
 	bool editCell(Workspace* ws, int row, int col) {
