@@ -596,10 +596,10 @@ namespace GBBASIC {
 
 #ifndef SERIAL_STATUSES
 #	define SERIAL_STATUSES
-#	define SERIAL_ERROR                                             -1
-#	define SERIAL_BUSY                                              -2
-#	define SERIAL_IDLE                                              -3
-#	define SERIAL_TIMEOUT                                           -4
+#	define SERIAL_ERROR                                             0xffff
+#	define SERIAL_BUSY                                              0xfffe
+#	define SERIAL_IDLE                                              0xfffd
+#	define SERIAL_TIMEOUT                                           0xfffc
 #endif /* SERIAL_STATUSES */
 
 // Scene.

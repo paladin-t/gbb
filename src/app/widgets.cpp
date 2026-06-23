@@ -8781,6 +8781,40 @@ void TableSetupColumn(const std::string &label, ImGuiTableColumnFlags flags, flo
 	TableSetupColumn(label.c_str(), flags, init_width_or_weight, user_id);
 }
 
+Rect GetTableInnerClipRect(void) {
+	ImGuiTable* tbl = GImGui->CurrentTable;
+	const ImRect &tblRect = tbl->InnerClipRect;
+	Rect result;
+	result.first = tblRect.Min;
+	result.second = tblRect.Max;
+
+	return result;
+}
+
+float GetTableRowPosY1(void) {
+	ImGuiTable* tbl = GImGui->CurrentTable;
+
+	return tbl->RowPosY1;
+}
+
+float GetTableRowPosY2(void) {
+	ImGuiTable* tbl = GImGui->CurrentTable;
+
+	return tbl->RowPosY2;
+}
+
+float GetTableColumnMinX(int col) {
+	ImGuiTable* tbl = GImGui->CurrentTable;
+
+	return tbl->Columns[col].MinX;
+}
+
+float GetTableColumnMaxX(int col) {
+	ImGuiTable* tbl = GImGui->CurrentTable;
+
+	return tbl->Columns[col].MaxX;
+}
+
 static bool TreeNodeBehavior(ImGuiID id, ImTextureID texture_id, ImTextureID open_tex_id, bool* checked, ImGuiTreeNodeFlags flags, const char* label, const char* label_end, ImGuiButtonFlags button_flags, ImU32 col) {
 	// See: `TreeNodeBehavior` in "./lib/imgui/imgui_widgets.cpp".
 

@@ -1346,6 +1346,11 @@ void TabBarTabListPopupButton(TabBarDropper dropper);
 
 bool BeginTable(const std::string &str_id, int column, ImGuiTableFlags flags = ImGuiTableFlags_None, const ImVec2 &outer_size = ImVec2(0.0f, 0.0f), float inner_width = 0.0f);
 void TableSetupColumn(const std::string &label, ImGuiTableColumnFlags flags = ImGuiTableFlags_None, float init_width_or_weight = 0.0f, ImU32 user_id = 0);
+Rect GetTableInnerClipRect(void);
+float GetTableRowPosY1(void);
+float GetTableRowPosY2(void);
+float GetTableColumnMinX(int col);
+float GetTableColumnMaxX(int col);
 
 /**
  * @brief Uses specific textures instead of the default arrow or bullet for

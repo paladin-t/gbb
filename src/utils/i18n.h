@@ -12,7 +12,6 @@
 #include "../gbbasic.h"
 #include "cloneable.h"
 #include "json.h"
-#include <map>
 
 /*
 ** {===========================================================================

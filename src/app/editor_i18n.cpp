@@ -879,8 +879,7 @@ private:
 			bool tabbed = false;
 			const Editing::Shortcut enter(SDL_SCANCODE_RETURN);
 			bool entered = false;
-			ImGuiTable* tbl = GImGui->CurrentTable;
-			const ImRect &tblRect = tbl->InnerClipRect;
+			const ImGui::Rect &tblRect = ImGui::GetTableInnerClipRect();
 
 			ImGui::TableSetupScrollFreeze(1, 2);
 			const ImU32 col = ws->theme()->style()->i18nHeadColor;
@@ -910,13 +909,13 @@ private:
 
 			// Column selection via header row.
 			if (rows >= 2) {
-				const float headerTop = tbl->RowPosY1;
-				const float headerBottom = tbl->RowPosY2;
+				const float headerTop = ImGui::GetTableRowPosY1();
+				const float headerBottom = ImGui::GetTableRowPosY2();
 				const ImVec2 mousePos = ImGui::GetMousePos();
 				if (mousePos.y >= headerTop && mousePos.y <= headerBottom) {
 					for (int col = 0; col < finalCols; ++col) {
-						const float colMinX = tbl->Columns[col].MinX;
-						const float colMaxX = tbl->Columns[col].MaxX;
+						const float colMinX = ImGui::GetTableColumnMinX(col);
+						const float colMaxX = ImGui::GetTableColumnMaxX(col);
 						if (mousePos.x >= colMinX && mousePos.x <= colMaxX) {
 							const ImVec2 rectMin(colMinX, headerTop);
 							const ImVec2 rectMax(colMaxX, headerBottom);
@@ -1243,7 +1242,7 @@ private:
 			if (_selection.selecting && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
 				_selection.selecting = false;
 			}
-			if (!_selection.selecting && ImGui::IsMouseHoveringRect(tblRect.Min, tblRect.Max, false) && !ImGui::IsMouseHoveringRect(_selection.min, _selection.max) && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::HasPopup()) {
+			if (!_selection.selecting && ImGui::IsMouseHoveringRect(tblRect.first, tblRect.second, false) && !ImGui::IsMouseHoveringRect(_selection.min, _selection.max) && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::HasPopup()) {
 				_selection.clear();
 			}
 			if (!_selection.selecting && _selection.brush.invalid() && ImGui::IsKeyPressed(SDL_SCANCODE_ESCAPE, false) && !ImGui::HasPopup()) {
