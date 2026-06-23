@@ -262,6 +262,10 @@
     "ref": "error",
     "offset": 0
   },
+  "BLIT_SCENE": {
+    "ref": "blit_scene",
+    "offset": 0
+  },
   "CAMERA_SHAKE": {
     "ref": "camera_shake",
     "offset": 0

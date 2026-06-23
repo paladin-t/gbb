@@ -564,6 +564,10 @@
     },
     {
       "type": "generic",
+      "syntax": "blit_scene"
+    },
+    {
+      "type": "generic",
       "syntax": "camera_shake"
     }
   ]
