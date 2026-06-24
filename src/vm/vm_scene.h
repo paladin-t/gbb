@@ -7,14 +7,19 @@
 
 #include "vm.h"
 
-#ifndef USE_SCENE_BLIT_FUNCTIONS
-#   define USE_SCENE_BLIT_FUNCTIONS 1
-#endif /* USE_SCENE_BLIT_FUNCTIONS */
 #ifndef USE_CAMERA_FUNCTIONS
 #   define USE_CAMERA_FUNCTIONS 1
 #endif /* USE_CAMERA_FUNCTIONS */
 
 BANKREF_EXTERN(VM_SCENE)
+
+#define SCENE_LAYER_MAP                        0x01 // Must have.
+#define SCENE_LAYER_ATTR                       0x02
+#define SCENE_LAYER_PROP                       0x04
+#define SCENE_LAYER_ACTOR                      0x08
+#define SCENE_LAYER_TRIGGER                    0x10
+#define SCENE_LAYER_DEF                        0x20 // Must have.
+#define SCENE_LAYER_ALL                        (SCENE_LAYER_MAP | SCENE_LAYER_ATTR | SCENE_LAYER_PROP | SCENE_LAYER_ACTOR | SCENE_LAYER_TRIGGER | SCENE_LAYER_DEF)
 
 #define SCENE_PROPERTY_EMPTY_GRID              0x00
 #define SCENE_PROPERTY_BLOCKING_ALL            0x0F
@@ -52,26 +57,26 @@ BANKREF_EXTERN(VM_SCENE)
 
 typedef struct scene_t {
     // Flags.
-    bool is_16x16_grid          : 1; // True for 16x16px aligned, otherwise 8x8px aligned. Compile-time determined.
-    bool is_16x16_player        : 1; // True for 16x16px-based auto aligning, otherwise 8x8px-based. Compile-time determined.
-    bool clamp_camera           : 1;
-    bool player_on_ladder       : 1;
-    bool reserved1              : 1;
-    bool reserved2              : 1;
-    bool reserved3              : 1;
-    bool reserved4              : 1;
+    bool is_16x16_grid         : 1; // True for 16x16px aligned, otherwise 8x8px aligned. Compile-time determined.
+    bool is_16x16_player       : 1; // True for 16x16px-based auto aligning, otherwise 8x8px-based. Compile-time determined.
+    bool clamp_camera          : 1;
+    bool player_on_ladder      : 1;
+    bool reserved1             : 1;
+    bool reserved2             : 1;
+    bool reserved3             : 1;
+    bool reserved4             : 1;
     // Player properties.
-    UINT8 gravity;                   // Downward gravity.
-    UINT8 jump_gravity;              // Upward gravity (jump).
-    UINT8 jump_max_count;            // Max count the player can jump.
-    UINT8 jump_max_ticks;            // Max ticks the player can respond to jump input.
-    UINT8 climb_velocity;            // Gravity for climbing.
-    UINT8 player_can_jump;           // The player's jump counter.
-    UINT8 player_jump_ticks;         // The player's jump ticks.
-    INT16 player_velocity_y;         // The player's velocity in the y-axis.
+    UINT8 gravity;                  // Downward gravity.
+    UINT8 jump_gravity;             // Upward gravity (jump).
+    UINT8 jump_max_count;           // Max count the player can jump.
+    UINT8 jump_max_ticks;           // Max ticks the player can respond to jump input.
+    UINT8 climb_velocity;           // Gravity for climbing.
+    UINT8 player_can_jump;          // The player's jump counter.
+    UINT8 player_jump_ticks;        // The player's jump ticks.
+    INT16 player_velocity_y;        // The player's velocity in the y-axis.
     // Resources.
-    UINT8 width;                     // In tiles.
-    UINT8 height;                    // In tiles.
+    UINT8 width;                    // In tiles.
+    UINT8 height;                   // In tiles.
     UINT8 base_tile;
     UINT8 map_bank;
     UINT8 * map_address;
@@ -92,6 +97,8 @@ extern UINT8 scene_camera_deadzone_x;
 extern UINT8 scene_camera_deadzone_y;
 extern UINT8 scene_camera_shake_x;
 extern UINT8 scene_camera_shake_y;
+extern UINT8 scene_map_x;
+extern UINT8 scene_map_y;
 
 void scene_init(void) BANKED;
 
@@ -121,6 +128,10 @@ void scene_get_trigger(
     UINT8 * x, UINT8 * y, UINT8 * width, UINT8 * height,
     UINT8 * cb_type, UINT8 * cb_bank, UINT8 ** cb_address
 ) BANKED;
+
+#if USE_CAMERA_FUNCTIONS
+BOOLEAN camera_shake(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED; // INVOKABLE.
+#endif /* USE_CAMERA_FUNCTIONS */
 
 void vm_camera(SCRIPT_CTX * THIS) OLDCALL BANKED;
 void vm_viewport(SCRIPT_CTX * THIS, INT16 idxX, INT16 idxY) OLDCALL BANKED;

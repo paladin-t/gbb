@@ -517,10 +517,6 @@
       "value": "1"
     },
     {
-      "syntax": "HAS_SCENE_BLIT_FUNCTIONS",
-      "value": "1"
-    },
-    {
       "syntax": "HAS_CAMERA_FUNCTIONS",
       "value": "1"
     }
@@ -581,10 +577,6 @@
     {
       "type": "generic",
       "syntax": "error"
-    },
-    {
-      "type": "generic",
-      "syntax": "blit_scene"
     },
     {
       "type": "generic",

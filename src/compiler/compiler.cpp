@@ -632,11 +632,6 @@ namespace GBBASIC {
 #	define SCENE_CAMERA_SHAKE_Y                                     2
 #endif /* SCENE_CAMERA_SHAKE_DIRECTIONS */
 
-#ifndef SCENE_HANDLERS
-#	define SCENE_HANDLERS
-#	define SCENE_HANDLER_MOVE                                       1
-#endif /* SCENE_HANDLERS */
-
 // Actor.
 
 #ifndef ACTOR_RESOURCES

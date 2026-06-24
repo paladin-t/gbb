@@ -20,20 +20,8 @@
 
 BANKREF(VM_SCENE)
 
-#define SCENE_LAYER_MAP        0x01 // Must have.
-#define SCENE_LAYER_ATTR       0x02
-#define SCENE_LAYER_PROP       0x04
-#define SCENE_LAYER_ACTOR      0x08
-#define SCENE_LAYER_TRIGGER    0x10
-#define SCENE_LAYER_DEF        0x20 // Must have.
-#define SCENE_LAYER_ALL        (SCENE_LAYER_MAP | SCENE_LAYER_ATTR | SCENE_LAYER_PROP | SCENE_LAYER_ACTOR | SCENE_LAYER_TRIGGER | SCENE_LAYER_DEF)
-
 #define SCENE_CAMERA_SHAKE_X   1
 #define SCENE_CAMERA_SHAKE_Y   2
-
-#define SCENE_DEF_SIZE         9
-
-#define SCENE_HANDLER_MOVE     1
 
 scene_t scene;
 INT16 scene_camera_x;
@@ -42,8 +30,8 @@ UINT8 scene_camera_deadzone_x;
 UINT8 scene_camera_deadzone_y;
 UINT8 scene_camera_shake_x;
 UINT8 scene_camera_shake_y;
-static UINT8 scene_map_x;
-static UINT8 scene_map_y;
+UINT8 scene_map_x;
+UINT8 scene_map_y;
 static UINT8 scene_old_map_x;
 static UINT8 scene_old_map_y;
 
@@ -248,33 +236,6 @@ void scene_get_trigger(
     *cb_bank     = get_uint8(scene.trigger_bank, data++);
     *cb_address  = get_ptr  (scene.trigger_bank, data  ); data += 2;
 }
-
-#if USE_SCENE_BLIT_FUNCTIONS
-// Transfers a region of scene data to the current scene.
-BOOLEAN scene_blit(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
-    (void)THIS; (void)start;
-
-    const UINT8 x = (UINT8)stack_frame[3];
-    const UINT8 y = (UINT8)stack_frame[2];
-    const UINT8 w = (UINT8)stack_frame[1];
-    const UINT8 h = (UINT8)stack_frame[0];
-
-    if (scene.map_bank == 0)
-        return TRUE;
-
-    SCENE_LOAD(
-        scene.map_bank, scene.map_address,
-        scene.attr_bank, scene.attr_address,
-        scene_map_x + x, scene_map_y + y,
-        w, h,
-        scene.width,
-        scene.base_tile,
-        set_bkg_submap
-    );
-
-    return TRUE;
-}
-#endif /* USE_SCENE_BLIT_FUNCTIONS */
 
 #if USE_CAMERA_FUNCTIONS
 // Shakes camera.
