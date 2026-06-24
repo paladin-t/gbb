@@ -501,7 +501,27 @@
       "value": "1"
     },
     {
-      "syntax": "USE_KEYBOARD_FUNCTIONS",
+      "syntax": "HAS_KEYBOARD_FUNCTIONS",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_RUMBLE_FUNCTIONS",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_SGB_FUNCTIONS",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_ERROR_FUNCTIONS",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_SCENE_BLIT_FUNCTIONS",
+      "value": "1"
+    },
+    {
+      "syntax": "HAS_CAMERA_FUNCTIONS",
       "value": "1"
     }
   ],
@@ -561,6 +581,10 @@
     {
       "type": "generic",
       "syntax": "error"
+    },
+    {
+      "type": "generic",
+      "syntax": "blit_scene"
     },
     {
       "type": "generic",

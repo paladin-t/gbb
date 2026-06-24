@@ -249,8 +249,36 @@ void scene_get_trigger(
     *cb_address  = get_ptr  (scene.trigger_bank, data  ); data += 2;
 }
 
-// Shake camera.
-UINT8 camera_shake(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+#if USE_SCENE_BLIT_FUNCTIONS
+// Transfers a region of scene data to the current scene.
+BOOLEAN scene_blit(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+    (void)THIS; (void)start;
+
+    const UINT8 x = (UINT8)stack_frame[3];
+    const UINT8 y = (UINT8)stack_frame[2];
+    const UINT8 w = (UINT8)stack_frame[1];
+    const UINT8 h = (UINT8)stack_frame[0];
+
+    if (scene.map_bank == 0)
+        return TRUE;
+
+    SCENE_LOAD(
+        scene.map_bank, scene.map_address,
+        scene.attr_bank, scene.attr_address,
+        scene_map_x + x, scene_map_y + y,
+        w, h,
+        scene.width,
+        scene.base_tile,
+        set_bkg_submap
+    );
+
+    return TRUE;
+}
+#endif /* USE_SCENE_BLIT_FUNCTIONS */
+
+#if USE_CAMERA_FUNCTIONS
+// Shakes camera.
+BOOLEAN camera_shake(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     if (start) *((SCRIPT_CTX *)THIS)->stack_ptr = sys_time;
     if (((UINT16)sys_time - *((SCRIPT_CTX *)THIS)->stack_ptr) < stack_frame[1]) {
         if (stack_frame[0] & SCENE_CAMERA_SHAKE_X) {
@@ -275,6 +303,7 @@ UINT8 camera_shake(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANK
 
     return TRUE;
 }
+#endif /* USE_CAMERA_FUNCTIONS */
 
 void vm_camera(SCRIPT_CTX * THIS) OLDCALL BANKED {
     const INT16 x = (INT16)*(--THIS->stack_ptr);
