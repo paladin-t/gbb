@@ -15,6 +15,8 @@
 
 #if USE_SHOOTING
 
+BOOLEAN def_shooting(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED; // INVOKABLE.
+
 BOOLEAN controller_behave_shooting_player(actor_t * actor) BANKED;
 BOOLEAN controller_behave_shooting_move(actor_t * actor) BANKED;
 #define controller_behave_shooting_idle controller_behave_topdown_idle // Reuse top-down idle.
