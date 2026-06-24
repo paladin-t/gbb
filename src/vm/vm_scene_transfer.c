@@ -7,13 +7,16 @@
 
 #include "vm_device.h"
 #include "vm_scene.h"
-#include "vm_scene_transition.h"
+#include "vm_scene_transfer.h"
 
-BANKREF(VM_SCENE_TRANSITION)
+#if USE_SCENE_TRANSFER
 
-#if USE_SCENE_BLIT_FUNCTIONS
-// Transfers a region of scene data to the current scene.
-BOOLEAN scene_blit(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+#warning "Message: Compiling with scene transfer."
+
+BANKREF(VM_SCENE_TRANSFER)
+
+// Makes blit of a region of scene data to the current scene.
+BOOLEAN blit_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start;
 
     const UINT8 x = (UINT8)stack_frame[3];
@@ -36,15 +39,14 @@ BOOLEAN scene_blit(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANK
 
     return TRUE;
 }
-#endif /* USE_SCENE_BLIT_FUNCTIONS */
 
-#if USE_SCENE_TRANSITION_FUNCTIONS
 // Transitions to another scene with scrolling effect.
-BOOLEAN scene_transition(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
+BOOLEAN transition_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCALL BANKED { // INVOKABLE.
     (void)THIS; (void)start; (void)stack_frame;
 
-    // TODO
+    // TODO: scene transfer.
 
     return TRUE;
 }
-#endif /* USE_SCENE_TRANSITION_FUNCTIONS */
+
+#endif /* USE_SCENE_TRANSFER */

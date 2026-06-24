@@ -141,7 +141,7 @@ set -x
 "$gbdk/lcc" $cflag -c -o "output/vm/vm_physics.o" "src/vm/vm_physics.c"
 "$gbdk/lcc" $cflag -c -o "output/vm/vm_projectile.o" "src/vm/vm_projectile.c"
 "$gbdk/lcc" $cflag -c -o "output/vm/vm_scene.o" "src/vm/vm_scene.c"
-"$gbdk/lcc" $cflag -c -o "output/vm/vm_scene_transition.o" "src/vm/vm_scene_transition.c"
+"$gbdk/lcc" $cflag -c -o "output/vm/vm_scene_transfer.o" "src/vm/vm_scene_transfer.c"
 "$gbdk/lcc" $cflag -c -o "output/vm/vm_scroll.o" "src/vm/vm_scroll.c"
 "$gbdk/lcc" $cflag -c -o "output/vm/vm_serial.o" "src/vm/vm_serial.c"
 "$gbdk/lcc" $cflag -c -o "output/vm/vm_system.o" "src/vm/vm_system.c"
@@ -226,7 +226,7 @@ set -x
   "output/vm/vm_physics.o" \
   "output/vm/vm_projectile.o" \
   "output/vm/vm_scene.o" \
-  "output/vm/vm_scene_transition.o" \
+  "output/vm/vm_scene_transfer.o" \
   "output/vm/vm_scroll.o" \
   "output/vm/vm_serial.o" \
   "output/vm/vm_system.o" \

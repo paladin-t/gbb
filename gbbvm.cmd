@@ -123,7 +123,7 @@ call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_persistence.o" "src\vm\vm_persis
 call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_physics.o" "src\vm\vm_physics.c"
 call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_projectile.o" "src\vm\vm_projectile.c"
 call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_scene.o" "src\vm\vm_scene.c"
-call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_scene_transition.o" "src\vm\vm_scene_transition.c"
+call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_scene_transfer.o" "src\vm\vm_scene_transfer.c"
 call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_scroll.o" "src\vm\vm_scroll.c"
 call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_serial.o" "src\vm\vm_serial.c"
 call %gbdk%\lcc.exe %cflag% -c -o "output\vm\vm_system.o" "src\vm\vm_system.c"
@@ -200,7 +200,7 @@ call %gbdk%\lcc.exe %lflag% -o "output\vm\gbbvm.gb" ^
   "output\vm\vm_physics.o" ^
   "output\vm\vm_projectile.o" ^
   "output\vm\vm_scene.o" ^
-  "output\vm\vm_scene_transition.o" ^
+  "output\vm\vm_scene_transfer.o" ^
   "output\vm\vm_scroll.o" ^
   "output\vm\vm_serial.o" ^
   "output\vm\vm_system.o" ^
