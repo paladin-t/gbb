@@ -56,34 +56,34 @@ STATIC void scene_transfer_blit(
 ) {
     UINT8 buf[DEVICE_SCREEN_WIDTH];
     const UINT8 _save = CURRENT_BANK;
-    UINT8 r;
+    UINT8 i;
 
     SWITCH_ROM_BANK(map_bank);
     if (w == 1) {
-        for (r = 0; r != h; ++r)
-            buf[r] = map[src_x + (UINT16)(src_y + r) * map_w] + base_tile;
+        for (i = 0; i != h; ++i)
+            buf[i] = map[src_x + (UINT16)(src_y + i) * map_w] + base_tile;
         set_bkg_tiles(dst_x, dst_y, 1, h, buf);
         if ((device_type & DEVICE_TYPE_CGB) && attr_bank) {
             VBK_REG = VBK_ATTRIBUTES;
             SWITCH_ROM_BANK(attr_bank);
-            for (r = 0; r != h; ++r)
-                buf[r] = attr[src_x + (UINT16)(src_y + r) * map_w];
+            for (i = 0; i != h; ++i)
+                buf[i] = attr[src_x + (UINT16)(src_y + i) * map_w];
             set_bkg_tiles(dst_x, dst_y, 1, h, buf);
             VBK_REG = VBK_TILES;
         }
     } else {
-        for (r = 0; r != h; ++r) {
-            const UINT8 * src = map + src_x + (UINT16)(src_y + r) * map_w;
+        for (i = 0; i != h; ++i) {
+            const UINT8 * src = map + src_x + (UINT16)(src_y + i) * map_w;
             for (UINT8 c = 0; c != w; ++c) buf[c] = src[c] + base_tile;
-            set_bkg_tiles(dst_x, dst_y + r, w, 1, buf);
+            set_bkg_tiles(dst_x, dst_y + i, w, 1, buf);
         }
         if ((device_type & DEVICE_TYPE_CGB) && attr_bank) {
             VBK_REG = VBK_ATTRIBUTES;
             SWITCH_ROM_BANK(attr_bank);
-            for (r = 0; r != h; ++r) {
-                const UINT8 * src = attr + src_x + (UINT16)(src_y + r) * map_w;
+            for (i = 0; i != h; ++i) {
+                const UINT8 * src = attr + src_x + (UINT16)(src_y + i) * map_w;
                 for (UINT8 c = 0; c != w; ++c) buf[c] = src[c];
-                set_bkg_tiles(dst_x, dst_y + r, w, 1, buf);
+                set_bkg_tiles(dst_x, dst_y + i, w, 1, buf);
             }
             VBK_REG = VBK_TILES;
         }
@@ -99,23 +99,22 @@ STATIC void scene_transfer_blit(
 // until it returns TRUE.
 //
 // Parameters:
-//   [7] dir         DIRECTION_UP / DOWN / LEFT / RIGHT
+//   [5] dir         DIRECTION_UP/DOWN/LEFT/RIGHT
 //                     The direction the old scene scrolls out of the viewport.
 //                     The new scene enters from the opposite side.
-//   [6] map_bank    ROM bank of the new scene tilemap.
-//   [5] map_addr    Pointer to the new scene tilemap data.
-//   [4] attr_bank   ROM bank of the new scene CGB attribute map (0 = none).
-//   [3] attr_addr   Pointer to the new scene attribute map data.
-//   [2] width       Width  of the new scene in tiles (source map stride).
-//   [1] height      Height of the new scene in tiles.
+//   [4] map_bank    ROM bank of the new scene tilemap.
+//   [3] map_addr    Pointer to the new scene tilemap data.
+//   [2] attr_bank   ROM bank of the new scene CGB attribute map (0 = none).
+//   [1] attr_addr   Pointer to the new scene attribute map data.
 //   [0] base_tile   Base tile offset applied to every tile index.
 //
 // Calling rules:
 //   * The old scene must already be loaded and visible (scene.map_bank != 0).
 //   * The new scene should share the same tile set (tile patterns) as the old
 //     scene; only the tilemap changes during the transition.
-//   * The new scene must be at least DEVICE_SCREEN_WIDTH x DEVICE_SCREEN_HEIGHT
-//     (20x18) tiles so that the full viewport can be filled.
+//   * Both the old and new scenes must be at least
+//     DEVICE_SCREEN_WIDTH x DEVICE_SCREEN_HEIGHT (20x18) tiles so that the full
+//     viewport can be just filled.
 //   * The function is non-blocking: it sets ctx->waitable = TRUE and returns
 //     FALSE each frame until the animation completes, then returns TRUE.
 //   * After completion the global `scene` struct is updated with the new
@@ -153,13 +152,13 @@ BOOLEAN transition_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCAL
     // Prepare.
     SCRIPT_CTX * ctx = (SCRIPT_CTX *)THIS;
 
-    const UINT8 dir       = (UINT8)  stack_frame[7];
-    const UINT8 map_bank  = (UINT8)  stack_frame[6];
-    const UINT8 * map     = (UINT8 *)stack_frame[5];
-    const UINT8 attr_bank = (UINT8)  stack_frame[4];
-    const UINT8 * attr    = (UINT8 *)stack_frame[3];
-    const UINT8 map_w     = (UINT8)  stack_frame[2];
-    const UINT8 map_h     = (UINT8)  stack_frame[1];
+    const UINT8 dir       = (UINT8)  stack_frame[5];
+    const UINT8 map_bank  = (UINT8)  stack_frame[4];
+    const UINT8 * map     = (UINT8 *)stack_frame[3];
+    const UINT8 attr_bank = (UINT8)  stack_frame[2];
+    const UINT8 * attr    = (UINT8 *)stack_frame[1];
+    const UINT8 map_w     = DEVICE_SCREEN_WIDTH;
+    const UINT8 map_h     = DEVICE_SCREEN_HEIGHT;
     const UINT8 base_tile = (UINT8)  stack_frame[0];
 
     UINT16 * state = ctx->stack_ptr;
