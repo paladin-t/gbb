@@ -40,7 +40,8 @@ BOOLEAN install_vbl_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCA
     (void)THIS; (void)start; (void)stack_frame;
 
     CRITICAL {
-        add_VBL(isr_vbl);
+        remove_VBL(isr_vbl); // Remove previous installed ISR first.
+        add_VBL(isr_vbl); // Install the ISR.
     }
 
     return TRUE;
@@ -62,7 +63,8 @@ BOOLEAN install_lcd_isr(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCA
     (void)THIS; (void)start; (void)stack_frame;
 
     CRITICAL {
-        add_LCD(isr_lcd);
+        remove_LCD(isr_lcd); // Remove previous installed ISR first.
+        add_LCD(isr_lcd); // Install the ISR.
     }
 
     return TRUE;
