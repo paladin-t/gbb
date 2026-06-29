@@ -17,6 +17,10 @@
 
 BANKREF(VM_GUI)
 
+#if !GUI_BLIT_INVERSE_ENABLED
+#   warning "Message: Compiling without GUI blit inverse."
+#endif /* GUI_BLIT_INVERSE_ENABLED */
+
 #define GUI_BLIT_INTERVAL       10
 #define GUI_BLIT_MAX_INTERVAL   0x1F
 
@@ -172,8 +176,9 @@ void gui_blit_char(UINT8 size, const glyph_t * glyph, const glyph_option_t * opt
         // Consume the byte(s).
         for (
             INT8 remain = 8,                      // The remain bits to consume.
-            take = MIN(w - sx, 8 - bx);           // The bits to take for the current step.
-            remain > 0;
+              take = MIN(w - sx, 8 - bx);         // The bits to take for the current step.
+            (remain > 0)                          // There are remain bit.
+              && (sy != h);                       // Skip padding bits beyond the glyph.
             (remain -= take), (take = MIN(MIN(w - sx, 8 - bx), remain))
         ) {
             // Get the pixels on the VRAM.
@@ -186,8 +191,14 @@ void gui_blit_char(UINT8 size, const glyph_t * glyph, const glyph_option_t * opt
             const UINT8 mask = GUI_BLIT_GLYPH_PICK_MASKS[MIN(take, 8) - 1];
             const UINT8 a0 = byte0 & mask;        // Get the pixels on the glyph.
 
-            const UINT8 p0 = b0 | (a0 >> bx);     // Blit the pixels.
-            set_vram_byte(addr, p0);
+#if GUI_BLIT_INVERSE_ENABLED
+            const UINT8 p0 = inv ?
+                (b0 & ((a0 >> bx) | ~(mask >> bx))) :
+                (b0 | (a0 >> bx));
+#else /* GUI_BLIT_INVERSE_ENABLED */
+            const UINT8 p0 = b0 | (a0 >> bx);
+#endif /* GUI_BLIT_INVERSE_ENABLED */
+            set_vram_byte(addr, p0);              // Blit the pixels.
 
             byte0 <<= take;                       // Shift the byte(s).
 
@@ -195,13 +206,25 @@ void gui_blit_char(UINT8 size, const glyph_t * glyph, const glyph_option_t * opt
             if (_2bpp) {
                 const UINT8 a1 = byte1 & mask;    // Get the pixels on the glyph.
 
-                const UINT8 p1 = b1 | (a1 >> bx); // Blit the pixels.
-                set_vram_byte(addr + 1, p1);
+#if GUI_BLIT_INVERSE_ENABLED
+                const UINT8 p1 = inv ?
+                    (b1 & ((a1 >> bx) | ~(mask >> bx))) :
+                    (b1 | (a1 >> bx));
+#else /* GUI_BLIT_INVERSE_ENABLED */
+                const UINT8 p1 = b1 | (a1 >> bx);
+#endif /* GUI_BLIT_INVERSE_ENABLED */
+                set_vram_byte(addr + 1, p1);      // Blit the pixels.
 
                 byte1 <<= take;                   // Shift the byte(s).
             } else {
-                const UINT8 p1 = b1 | (a0 >> bx); // Blit the pixels.
-                set_vram_byte(addr + 1, p1);
+#if GUI_BLIT_INVERSE_ENABLED
+                const UINT8 p1 = inv ?
+                    (b1 & ((a0 >> bx) | ~(mask >> bx))) :
+                    (b1 | (a0 >> bx));
+#else /* GUI_BLIT_INVERSE_ENABLED */
+                const UINT8 p1 = b1 | (a0 >> bx);
+#endif /* GUI_BLIT_INVERSE_ENABLED */
+                set_vram_byte(addr + 1, p1);      // Blit the pixels.
             }
 
             // Move the consumption window.

@@ -2626,8 +2626,8 @@ bool FontAssets::bake(Entry &font, GlyphTable::Entry &glyph, Bytes* buf, int* by
 	if (bytes_)
 		*bytes_ = q;
 
-	UInt8 byte0 = 0;
-	UInt8 byte1 = 0;
+	UInt8 byte0 = font.inverted ? 0xff : 0;
+	UInt8 byte1 = font.inverted ? 0xff : 0;
 	for (int k = 0; k < p; ++k) {
 		const std::div_t div = std::div(k, pixels->width());
 		const int i = div.rem;
@@ -2637,22 +2637,43 @@ bool FontAssets::bake(Entry &font, GlyphTable::Entry &glyph, Bytes* buf, int* by
 			GBBASIC_ASSERT(false && "Wrong data.");
 		}
 		const int rem = k % 8;
-		const UInt8 b = 1 << (7 - rem);
+		const UInt8 b = font.inverted ?
+			~(1 << (7 - rem)) :
+			(1 << (7 - rem));
 		const int bits = getBits(c, font.isTwoBitsPerPixel, thresholds, font.inverted);
 		switch (bits) {
-		case 0b00: // Do nothing.
+		case 0b00:
+			if (font.inverted) {
+				byte0 &= b;
+				byte1 &= b;
+			} else {
+				// Do nothing.
+			}
+
 			break;
 		case 0b01:
-			byte0 |= b;
+			if (font.inverted) {
+				byte1 &= b;
+			} else {
+				byte0 |= b;
+			}
 
 			break;
 		case 0b10:
-			byte1 |= b;
+			if (font.inverted) {
+				byte0 &= b;
+			} else {
+				byte1 |= b;
+			}
 
 			break;
 		case 0b11:
-			byte0 |= b;
-			byte1 |= b;
+			if (font.inverted) {
+				// Do nothing.
+			} else {
+				byte0 |= b;
+				byte1 |= b;
+			}
 
 			break;
 		default:
@@ -2667,8 +2688,8 @@ bool FontAssets::bake(Entry &font, GlyphTable::Entry &glyph, Bytes* buf, int* by
 				if (buf)
 					buf->writeUInt8(byte1);
 			}
-			byte0 = 0;
-			byte1 = 0;
+			byte0 = font.inverted ? 0xff : 0;
+			byte1 = font.inverted ? 0xff : 0;
 		}
 	}
 
