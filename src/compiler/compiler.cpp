@@ -23888,12 +23888,6 @@ public:
 			FontAssets &fonts = ctx.assets->fonts;
 			FontAssets::Entry* font = fonts.get(page);
 			if (!font) { THROW_INVALID_ASSET_POINT(onError); }
-			const glyph_option_t opt(
-				font->isTwoBitsPerPixel,
-				font->preferFullWord,
-				font->preferFullWordForNonAscii,
-				font->inverted
-			);
 			str = Text::replace(str, "\\r", "\r");
 			str = Text::replace(str, "\\n", "\n");
 			str = Text::replace(str, "\\f", "\f");
@@ -24087,12 +24081,6 @@ public:
 			FontAssets &fonts = ctx.assets->fonts;
 			FontAssets::Entry* font = fonts.get(page);
 			if (!font) { THROW_INVALID_ASSET_POINT(onError); }
-			const glyph_option_t opt(
-				font->isTwoBitsPerPixel,
-				font->preferFullWord,
-				font->preferFullWordForNonAscii,
-				font->inverted
-			);
 			str = Text::replace(str, "\\r", "\r");
 			str = Text::replace(str, "\\n", "\n");
 			str = Text::replace(str, "\\f", "\f");

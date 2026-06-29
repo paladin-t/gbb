@@ -14,8 +14,11 @@ BANKREF(VM_ISR)
 void isr_vbl(void) NONBANKED NAKED {
 #if defined __SDCC && defined NINTENDO
 __asm
-        ld e, #0xFF                 ; Can be overwritten by compiler. E = bank.
-        ld hl, #0xFFFF              ; Can be overwritten by compiler. HL = fn.
+        ;; This function is reserved for the user-defined VBL ISR. The bank and
+        ;; address values are placeholders for later overwriting by the compiler.
+
+        ld e, #0xFF                 ; Can be overwritten by the compiler. E = bank.
+        ld hl, #0xFFFF              ; Can be overwritten by the compiler. HL = fn.
         jp ___sdcc_bcall_ehl        ; Call E:HL.
 __endasm;
 #else /* __SDCC && NINTENDO */
@@ -26,8 +29,11 @@ __endasm;
 void isr_lcd(void) NONBANKED NAKED {
 #if defined __SDCC && defined NINTENDO
 __asm
-        ld e, #0xFF                 ; Can be overwritten by compiler. E = bank.
-        ld hl, #0xFFFF              ; Can be overwritten by compiler. HL = fn.
+        ;; This function is reserved for the user-defined VBL ISR. The bank and
+        ;; address values are placeholders for later overwriting by the compiler.
+
+        ld e, #0xFF                 ; Can be overwritten by the compiler. E = bank.
+        ld hl, #0xFFFF              ; Can be overwritten by the compiler. HL = fn.
         jp ___sdcc_bcall_ehl        ; Call E:HL.
 __endasm;
 #else /* __SDCC && NINTENDO */
