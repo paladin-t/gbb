@@ -504,7 +504,7 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 
 	showRecentProjects(showRecent);
 	category(Categories::HOME);
-	categoryOfFont(Categories::FONT);
+	categoryOfFontAndI18n(Categories::FONT);
 	categoryOfAudio(Categories::MUSIC);
 	categoryBeforeCompiling(Categories::HOME);
 	interactable(true);
@@ -1102,7 +1102,7 @@ void Workspace::category(const Categories &category) {
 	switch (_category) {
 	case Categories::FONT: // Fall through.
 	case Categories::I18N:
-		categoryOfFont(_category);
+		categoryOfFontAndI18n(_category);
 
 		break;
 	case Categories::MUSIC: // Fall through.
@@ -8126,7 +8126,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 
 			destroyAudioDevice();
 
-			categoryOfFont(Categories::FONT);
+			categoryOfFontAndI18n(Categories::FONT);
 			categoryOfAudio(Categories::MUSIC);
 
 			Operations::fileClose(wnd, rnd, this);
@@ -8896,7 +8896,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 
 				destroyAudioDevice();
 
-				categoryOfFont(Categories::FONT);
+				categoryOfFontAndI18n(Categories::FONT);
 				categoryOfAudio(Categories::MUSIC);
 
 				Operations::fileClose(wnd, rnd, this);
@@ -10909,7 +10909,7 @@ void Workspace::tabs(Window* wnd, Renderer* rnd) {
 					if (ImGui::MenuBarImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipEdit_FontAndI18n().c_str()) && !busy) {
 						if (docOpened)
 							toggleDocument(nullptr);
-						category(categoryOfFont());
+						category(categoryOfFontAndI18n());
 					}
 				}
 				ImGui::SameLine();
