@@ -1295,7 +1295,7 @@ public:
 								&_parameters.trim,
 								spwidth,
 								ws->theme()->dialogPrompt_Trim().c_str(),
-								ws->theme()->tooltipFont_Trim().c_str()
+								ws->theme()->tooltipFontAndI18n_FontTrim().c_str()
 							)
 						) {
 							if (entry()->isAsset) {
@@ -1857,7 +1857,7 @@ private:
 				_status.text = " " + ws->theme()->status_Readonly();
 			}
 			_status.info = Text::format(
-				ws->theme()->tooltipFont_Info(),
+				ws->theme()->tooltipFontAndI18n_FontInfo(),
 				{
 					Text::toString(object()->glyphCount())
 				}
@@ -1987,13 +1987,13 @@ private:
 			do {
 				WIDGETS_SELECTION_GUARD(ws->theme());
 
-				if (ImGui::ImageButton(ws->theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_FontAndI18n_Font().c_str())) {
+				if (ImGui::ImageButton(ws->theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipFontAndI18n_Font().c_str())) {
 					// Do nothing.
 				}
 			} while (false);
 			width_ += ImGui::GetItemRectSize().x;
 			ImGui::SameLine();
-			if (ImGui::ImageButton(ws->theme()->iconI18n()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_FontAndI18n_I18n().c_str())) {
+			if (ImGui::ImageButton(ws->theme()->iconI18n()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipFontAndI18n_I18n().c_str())) {
 				ws->category(Workspace::Categories::I18N);
 			}
 			width_ += ImGui::GetItemRectSize().x;

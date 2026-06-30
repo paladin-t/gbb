@@ -1048,8 +1048,6 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_DeleteFrame("Delete frame");
 	tooltip_EjectSourceCodeVm("Eject Source Code (VM)");
 	tooltip_Export("Export");
-	tooltip_FontAndI18n_Font("Font (" GBBASIC_MODIFIER_KEY_NAME "+6)");
-	tooltip_FontAndI18n_I18n("Internationalization\ndictionary (" GBBASIC_MODIFIER_KEY_NAME "+7)");
 	tooltip_ForAlignToTileMovementForControllers(
 		"For align-to-tile movement for controllers\n"
 		"Enable for 16x16px aligned, otherwise 8x8px aligned\n"
@@ -1374,8 +1372,10 @@ bool Theme::open(class Renderer* rnd) {
 		"  Ref count: {5}"
 	);
 
-	tooltipFont_Info("{0} glyphs");
-	tooltipFont_Trim(
+	tooltipFontAndI18n_I18n("Internationalization\ndictionary (" GBBASIC_MODIFIER_KEY_NAME "+7)");
+	tooltipFontAndI18n_Font("Font (" GBBASIC_MODIFIER_KEY_NAME "+6)");
+	tooltipFontAndI18n_FontInfo("{0} glyphs");
+	tooltipFontAndI18n_FontTrim(
 		"Whether to trim glyph height.\n"
 		"It is recommended to keep this option checked."
 	);

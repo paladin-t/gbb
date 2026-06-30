@@ -12586,6 +12586,52 @@ void Workspace::blank(Window* wnd, Renderer* rnd, float marginTop, float marginB
 	ImGui::AlignTextToFramePadding();
 	ImGui::TextUnformatted(theme()->status_EmptyCreateANewPageToContinue());
 	switch (category_) {
+	case Categories::FONT: {
+			ImGui::SameLine();
+			float width_ = 0.0f;
+			const float wndWidth = ImGui::GetWindowWidth();
+			ImGui::SetCursorPosX(wndWidth - statusWidth());
+			do {
+				WIDGETS_SELECTION_GUARD(theme());
+
+				if (ImGui::ImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme()->tooltipFontAndI18n_Font().c_str())) {
+					// Do nothing.
+				}
+			} while (false);
+			width_ += ImGui::GetItemRectSize().x;
+			ImGui::SameLine();
+			if (ImGui::ImageButton(theme()->iconI18n()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme()->tooltipFontAndI18n_I18n().c_str())) {
+				category(Categories::I18N);
+			}
+			width_ += ImGui::GetItemRectSize().x;
+			width_ += style.FramePadding.x;
+			statusWidth(width_);
+		}
+
+		break;
+	case Categories::I18N: {
+			ImGui::SameLine();
+			float width_ = 0.0f;
+			const float wndWidth = ImGui::GetWindowWidth();
+			ImGui::SetCursorPosX(wndWidth - statusWidth());
+			if (ImGui::ImageButton(theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme()->tooltipFontAndI18n_Font().c_str())) {
+				category(Categories::FONT);
+			}
+			width_ += ImGui::GetItemRectSize().x;
+			ImGui::SameLine();
+			do {
+				WIDGETS_SELECTION_GUARD(theme());
+
+				if (ImGui::ImageButton(theme()->iconI18n()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, theme()->tooltipFontAndI18n_I18n().c_str())) {
+					// Do nothing.
+				}
+			} while (false);
+			width_ += ImGui::GetItemRectSize().x;
+			width_ += style.FramePadding.x;
+			statusWidth(width_);
+		}
+
+		break;
 	case Categories::MUSIC: {
 			ImGui::SameLine();
 			float width_ = 0.0f;
