@@ -53,7 +53,7 @@ STATIC void scene_transfer_blit(
     UINT8 dst_x, UINT8 dst_y,
     UINT8 w, UINT8 h,
     UINT8 base_tile
-) {
+) NONBANKED {
     UINT8 buf[DEVICE_SCREEN_WIDTH];
     const UINT8 _save = CURRENT_BANK;
     UINT8 i;
