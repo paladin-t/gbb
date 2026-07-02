@@ -501,7 +501,7 @@ public:
 	GBBASIC_PROPERTY(Activities, activities)
 	GBBASIC_PROPERTY(bool, showRecentProjects)
 	GBBASIC_FIELD_READONLY(Categories, category)
-	GBBASIC_PROPERTY_READONLY(Categories, categoryOfFont)
+	GBBASIC_PROPERTY_READONLY(Categories, categoryOfFontAndI18n)
 	GBBASIC_PROPERTY_READONLY(Categories, categoryOfAudio)
 	GBBASIC_PROPERTY_READONLY(Categories, categoryBeforeCompiling)
 	GBBASIC_PROPERTY_READONLY(bool, interactable)

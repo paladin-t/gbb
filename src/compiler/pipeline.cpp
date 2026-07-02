@@ -2435,7 +2435,8 @@ public:
 				// Do nothing.
 
 				break;
-			case AssetsBundle::Categories::TILES:// Do nothing.
+			case AssetsBundle::Categories::TILES:
+				// Do nothing.
 
 				break;
 			case AssetsBundle::Categories::MAP: {
@@ -3286,6 +3287,7 @@ void Pipeline::Size::addSgbResources(int val) {
 }
 
 int Pipeline::Size::total(void) const {
+	// Palette, and i18n assets don't count here.
 	return
 		_font +
 		_code +

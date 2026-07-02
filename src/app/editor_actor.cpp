@@ -550,8 +550,10 @@ public:
 		_refresh = std::bind(&EditorActorImpl::refresh, this, ws, std::placeholders::_1);
 
 		_checker = [ws, this] (void) -> void {
+			// Prepare.
 			_warnings.clear();
 
+			// Check for actor frame out of bounds of the Nth animation.
 			const active_t &def = entry()->definition;
 			const int n = object()->count();
 			for (int i = 0; i < GBBASIC_COUNTOF(def.animations); ++i) {

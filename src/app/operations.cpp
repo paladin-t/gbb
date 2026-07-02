@@ -1319,7 +1319,7 @@ promise::Promise Operations::fileClose(Window* wnd, Renderer* rnd, Workspace* ws
 						ws->activeKernelIndex(0);
 						ws->popupBox(nullptr);
 						ws->category(Workspace::Categories::HOME);
-						ws->categoryOfFont(Workspace::Categories::FONT);
+						ws->categoryOfFontAndI18n(Workspace::Categories::FONT);
 						ws->categoryOfAudio(Workspace::Categories::MUSIC);
 						ws->categoryBeforeCompiling(Workspace::Categories::HOME);
 						ws->tabsWidth(0.0f);

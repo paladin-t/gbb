@@ -263,6 +263,7 @@ public:
 		_refresh = std::bind(&EditorI18nImpl::refresh, this, ws, std::placeholders::_1);
 
 		_checker = [ws, this] (void) -> void {
+			// Prepare.
 			typedef std::set<int> IndexInfo;
 			typedef std::map<std::string, IndexInfo> I18nInfo;
 
@@ -271,21 +272,24 @@ public:
 			if (!object())
 				return;
 
+			// Check for too few (zero) columns.
 			if (object()->columnCount() < 1) {
 				const std::string msg = ws->theme()->warning_I18nTooFewColumns();
 				warn(ws, msg, true);
 
-				object()->addLanguage(0, I18N_KEY_COLUMN_NAME);
+				object()->addLanguage(0, I18N_KEY_COLUMN_NAME); // Add the "key" column.
 
 				_project->hasDirtyAsset(true);
 			}
 
+			// Check for missing "key" column.
 			const int keyCol = object()->getLanguageIndex(I18N_KEY_COLUMN_NAME);
 			if (keyCol == -1) {
 				const std::string msg = ws->theme()->warning_I18nMissingKeyColumn();
 				warn(ws, msg, true);
 			}
 
+			// Check for whether the "key" column is at the beginning.
 			if (keyCol != 0) {
 				const std::string msg = ws->theme()->warning_I18nTheKeyColumnWasNotAtTheBeginning();
 				warn(ws, msg, true);
@@ -296,6 +300,7 @@ public:
 				_project->hasDirtyAsset(true);
 			}
 
+			// Check for column/row count out of bounds.
 			if (object()->columnCount() > I18N_MAX_COLUMN_COUNT) {
 				const std::string msg = ws->theme()->warning_I18nColumnCountOutOfBounds();
 				warn(ws, msg, true);
@@ -319,6 +324,7 @@ public:
 				_project->hasDirtyAsset(true);
 			}
 
+			// Check for duplicate languages.
 			I18nInfo i18nInfo;
 			IndexInfo processed;
 			for (int j = 0; j < object()->columnCount() - 1; ++j) {
@@ -356,6 +362,7 @@ public:
 				}
 			}
 
+			// Check for duplicate "key" names.
 			i18nInfo.clear();
 			processed.clear();
 			for (int j = 1; j < object()->rowCount() - 1; ++j) {
@@ -1776,7 +1783,7 @@ private:
 			}
 			width_ += ImGui::GetItemRectSize().x;
 			ImGui::SameLine();
-			if (ImGui::ImageButton(ws->theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_FontAndI18n_Font().c_str())) {
+			if (ImGui::ImageButton(ws->theme()->iconFont()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipFontAndI18n_Font().c_str())) {
 				ws->category(Workspace::Categories::FONT);
 			}
 			width_ += ImGui::GetItemRectSize().x;
@@ -1784,7 +1791,7 @@ private:
 			do {
 				WIDGETS_SELECTION_GUARD(ws->theme());
 
-				if (ImGui::ImageButton(ws->theme()->iconI18n()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltip_FontAndI18n_I18n().c_str())) {
+				if (ImGui::ImageButton(ws->theme()->iconI18n()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, ws->theme()->tooltipFontAndI18n_I18n().c_str())) {
 					// Do nothing.
 				}
 			} while (false);
