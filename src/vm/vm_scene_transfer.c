@@ -140,7 +140,7 @@ STATIC void scene_transfer_blit(
 //   3. Normalise (final frame):
 //      Once the full viewport distance (160 px horizontal/144 px vertical) has
 //      been scrolled, the visible area is reloaded from the new scene at VRAM
-//      (0,0) and the scroll is reset to (0, 0). The `scene` struct and camera
+//      (0, 0) and the scroll is reset to (0, 0). The `scene` struct and camera
 //      variables are updated to reflect the new scene.
 //
 //   Direction mapping (old scene exit -> new scene enter):
@@ -175,6 +175,8 @@ BOOLEAN transition_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCAL
     // Pre-load.
     if (start) {
         FEATURE_MAP_MOVEMENT_CLEAR;
+        graphics_map_x = 0;
+        graphics_map_y = 0;
         *state = 0;
 
         switch (dir) {
@@ -225,6 +227,9 @@ BOOLEAN transition_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCAL
         }
 
         move_bkg(0, 0);
+        scene_camera_x = 0;
+        scene_camera_y = 0;
+        FEATURE_MAP_MOVEMENT_SET;
 
         ctx->waitable = TRUE;
 
@@ -232,63 +237,63 @@ BOOLEAN transition_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCAL
     }
 
     // Progressive scroll.
-    const UINT16 offset = *state;
-    const UINT16 new_offset = offset + SCENE_TRANSFER_SPEED;
-    const UINT8 prev_tile = (UINT8)(DIV8(offset));
-    const UINT8 curr_tile = (UINT8)(DIV8(new_offset));
+    if (*state != total) {
+        const UINT16 offset = *state;
+        const UINT16 new_offset = offset + SCENE_TRANSFER_SPEED;
+        const UINT8 prev_tile = (UINT8)(DIV8(offset));
+        const UINT8 curr_tile = (UINT8)(DIV8(new_offset));
 
-    if (curr_tile > prev_tile && curr_tile <= prog) {
-        switch (dir) {
-        case DIRECTION_LEFT:
-            scene_transfer_blit(
-                map_bank, map, map_w, attr_bank, attr,
-                preload + prev_tile, 0,
-                prev_tile, 0,
-                1, DEVICE_SCREEN_HEIGHT, base_tile
-            );
+        if (curr_tile > prev_tile && curr_tile <= prog) {
+            switch (dir) {
+            case DIRECTION_LEFT:
+                scene_transfer_blit(
+                    map_bank, map, map_w, attr_bank, attr,
+                    preload + prev_tile, 0,
+                    prev_tile, 0,
+                    1, DEVICE_SCREEN_HEIGHT, base_tile
+                );
 
-            break;
-        case DIRECTION_RIGHT:
-            scene_transfer_blit(
-                map_bank, map, map_w, attr_bank, attr,
-                prog - 1 - prev_tile, 0,
-                DEVICE_SCREEN_WIDTH - 1 - prev_tile, 0,
-                1, DEVICE_SCREEN_HEIGHT, base_tile
-            );
+                break;
+            case DIRECTION_RIGHT:
+                scene_transfer_blit(
+                    map_bank, map, map_w, attr_bank, attr,
+                    prog - 1 - prev_tile, 0,
+                    DEVICE_SCREEN_WIDTH - 1 - prev_tile, 0,
+                    1, DEVICE_SCREEN_HEIGHT, base_tile
+                );
 
-            break;
-        case DIRECTION_UP:
-            scene_transfer_blit(
-                map_bank, map, map_w, attr_bank, attr,
-                0, preload + prev_tile,
-                0, prev_tile,
-                DEVICE_SCREEN_WIDTH, 1, base_tile
-            );
+                break;
+            case DIRECTION_UP:
+                scene_transfer_blit(
+                    map_bank, map, map_w, attr_bank, attr,
+                    0, preload + prev_tile,
+                    0, prev_tile,
+                    DEVICE_SCREEN_WIDTH, 1, base_tile
+                );
 
-            break;
-        case DIRECTION_DOWN:
-            scene_transfer_blit(
-                map_bank, map, map_w, attr_bank, attr,
-                0, prog - 1 - prev_tile,
-                0, DEVICE_SCREEN_HEIGHT - 1 - prev_tile,
-                DEVICE_SCREEN_WIDTH, 1, base_tile
-            );
+                break;
+            case DIRECTION_DOWN:
+                scene_transfer_blit(
+                    map_bank, map, map_w, attr_bank, attr,
+                    0, prog - 1 - prev_tile,
+                    0, DEVICE_SCREEN_HEIGHT - 1 - prev_tile,
+                    DEVICE_SCREEN_WIDTH, 1, base_tile
+                );
 
-            break;
+                break;
+            }
         }
-    }
 
-    if (horizontal) {
-        if (dir == DIRECTION_LEFT) move_bkg((UINT8)new_offset, 0);
-        else                       move_bkg((UINT8)(-new_offset), 0);
-    } else {
-        if (dir == DIRECTION_UP)   move_bkg(0, (UINT8)new_offset);
-        else                       move_bkg(0, (UINT8)(-new_offset));
-    }
+        if (horizontal) {
+            if (dir == DIRECTION_LEFT) { scene_camera_x =  (INT16)new_offset; scene_camera_y = 0; }
+            else                       { scene_camera_x = -(INT16)new_offset; scene_camera_y = 0; }
+        } else {
+            if (dir == DIRECTION_UP)   { scene_camera_x = 0; scene_camera_y =  (INT16)new_offset; }
+            else                       { scene_camera_x = 0; scene_camera_y = -(INT16)new_offset; }
+        }
+        FEATURE_MAP_MOVEMENT_SET;
+        *state = new_offset;
 
-    *state = new_offset;
-
-    if (new_offset < total) {
         ctx->waitable = TRUE;
 
         return FALSE;
@@ -304,7 +309,13 @@ BOOLEAN transition_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCAL
         base_tile,
         set_bkg_submap
     );
-    move_bkg(0, 0);
+    scene_camera_x     = 0;
+    scene_camera_y     = 0;
+    scene_map_x        = 0;
+    scene_map_y        = 0;
+    graphics_map_x     = 0;
+    graphics_map_y     = 0;
+    FEATURE_MAP_MOVEMENT_SET;
 
     scene.map_bank     = map_bank;
     scene.map_address  = (UINT8 *)map;
@@ -313,13 +324,6 @@ BOOLEAN transition_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCAL
     scene.width        = map_w;
     scene.height       = map_h;
     scene.base_tile    = base_tile;
-
-    scene_camera_x     = 0;
-    scene_camera_y     = 0;
-    scene_map_x        = 0;
-    scene_map_y        = 0;
-    graphics_map_x     = 0;
-    graphics_map_y     = 0;
 
     // Finish.
     return TRUE;
