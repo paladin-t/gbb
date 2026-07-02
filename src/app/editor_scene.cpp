@@ -1826,10 +1826,12 @@ public:
 						);
 						ImGui::SetCursorPos(pos);
 
-						if (hoveringActors.empty()) {
-							autoSwitchToolForHovering(_tools.painting, _tools.paintingToolForActor);
-						} else {
-							autoSwitchToolForNonHovering(_tools.painting, _tools.paintingToolForActor);
+						if (!ws->bubble() && !ws->popupBox()) {
+							if (hoveringActors.empty()) {
+								autoSwitchToolForHovering(_tools.painting, _tools.paintingToolForActor);
+							} else {
+								autoSwitchToolForNonHovering(_tools.painting, _tools.paintingToolForActor);
+							}
 						}
 						if (hoveringActors.empty() || ws->popupBox()) {
 							_selection.hoveringActor.clear();
@@ -1906,10 +1908,12 @@ public:
 						);
 						ImGui::SetCursorPos(pos);
 
-						if (hoveringTriggers.empty()) {
-							autoSwitchToolForHovering(_tools.painting, _tools.paintingToolForTrigger);
-						} else {
-							autoSwitchToolForNonHovering(_tools.painting, _tools.paintingToolForTrigger);
+						if (!ws->bubble() && !ws->popupBox()) {
+							if (hoveringTriggers.empty()) {
+								autoSwitchToolForHovering(_tools.painting, _tools.paintingToolForTrigger);
+							} else {
+								autoSwitchToolForNonHovering(_tools.painting, _tools.paintingToolForTrigger);
+							}
 						}
 						if (hoveringTriggers.empty()) {
 							switch (_tools.painting) {
