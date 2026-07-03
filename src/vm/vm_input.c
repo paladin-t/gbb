@@ -115,9 +115,9 @@ void vm_on_input(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * pc, UINT8 opt) OLDCALL B
     (void)THIS;
 
     if (bank) {
-        // Update the vector.
+        // Update the vector if the callback handler already exists.
         UINT8 i;
-        for (i = 0; i < input_handler_count; ++i) {
+        for (i = 0; i != input_handler_count; ++i) {
             if (EVENT_HANDLER_TYPE(input_handlers[i].options) == EVENT_HANDLER_TYPE(opt)) {
                 input_handlers[i].options = opt;
                 input_handlers[i].bank    = bank;
@@ -127,17 +127,17 @@ void vm_on_input(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * pc, UINT8 opt) OLDCALL B
             }
         }
 
-        // Add a callback handler to the vector.
+        // Add a new callback handler to the vector.
         i = input_handler_count++;
         input_handlers[i].options = opt;
         input_handlers[i].bank    = bank;
         input_handlers[i].address = pc;
     } else {
-        // Removed a callback handler from the vector.
+        // Removed the callback handler from the vector.
         UINT8 i, j;
-        for (i = 0; i < input_handler_count; ++i) {
+        for (i = 0; i != input_handler_count; ++i) {
             if (EVENT_HANDLER_TYPE(input_handlers[i].options) == EVENT_HANDLER_TYPE(opt)) {
-                for (j = i; j < input_handler_count; ++j) {
+                for (j = i; j != input_handler_count - 1; ++j) {
                     input_handlers[j].options = input_handlers[j + 1].options;
                     input_handlers[j].bank    = input_handlers[j + 1].bank;
                     input_handlers[j].address = input_handlers[j + 1].address;

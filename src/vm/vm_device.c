@@ -510,7 +510,7 @@ void vm_query(SCRIPT_CTX * THIS) OLDCALL BANKED {
 
         break;
     case DEVICE_QUERY_CAMERA_Y:
-        *(THIS->stack_ptr++) = scene_camera_x;
+        *(THIS->stack_ptr++) = scene_camera_y;
 
         break;
     case DEVICE_QUERY_MAX_ACTORS:
