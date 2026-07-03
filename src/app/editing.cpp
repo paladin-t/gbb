@@ -10096,7 +10096,9 @@ bool definable(
 
 		ImGui::PushID("@CmP");
 		{
+			const int minX = -GBBASIC_SCREEN_WIDTH;
 			const int maxX = ptr->width() * GBBASIC_TILE_SIZE - GBBASIC_SCREEN_WIDTH;
+			const int minY = -GBBASIC_SCREEN_HEIGHT;
 			const int maxY = ptr->height() * GBBASIC_TILE_SIZE - GBBASIC_SCREEN_HEIGHT;
 
 			ImGui::NewLine(1);
@@ -10111,17 +10113,17 @@ bool definable(
 			{
 				int newVal = (int)newDef->camera_position.x;
 				if (ImGui::ImageButton(theme->iconMinus()->pointer(rnd), ImVec2(13, 13), ImColor(IM_COL32_WHITE))) {
-					newVal = Math::max(newVal - 1, 0);
+					newVal = Math::max(newVal - 1, minX);
 					if ((int)newDef->camera_position.x != newVal) {
-						newDef->camera_position.x = (UInt16)newVal;
+						newDef->camera_position.x = (Int16)newVal;
 						changed = true;
 					}
 				}
 				ImGui::SameLine();
 				ImGui::SetNextItemWidth(dragWidth);
-				if (ImGui::DragInt("", &newVal, 1.0f, 0, maxX, "X: %d")) {
+				if (ImGui::DragInt("", &newVal, 1.0f, minX, maxX, "X: %d")) {
 					if ((int)newDef->camera_position.x != newVal) {
-						newDef->camera_position.x = (UInt16)newVal;
+						newDef->camera_position.x = (Int16)newVal;
 						changed = true;
 					}
 				}
@@ -10133,7 +10135,7 @@ bool definable(
 				if (ImGui::ImageButton(theme->iconPlus()->pointer(rnd), ImVec2(13, 13), ImColor(IM_COL32_WHITE))) {
 					newVal = Math::min(newVal + 1, maxX);
 					if ((int)newDef->camera_position.x != newVal) {
-						newDef->camera_position.x = (UInt16)newVal;
+						newDef->camera_position.x = (Int16)newVal;
 						changed = true;
 					}
 				}
@@ -10146,17 +10148,17 @@ bool definable(
 			{
 				int newVal = (int)newDef->camera_position.y;
 				if (ImGui::ImageButton(theme->iconMinus()->pointer(rnd), ImVec2(13, 13), ImColor(IM_COL32_WHITE))) {
-					newVal = Math::max(newVal - 1, 0);
+					newVal = Math::max(newVal - 1, minY);
 					if ((int)newDef->camera_position.y != newVal) {
-						newDef->camera_position.y = (UInt16)newVal;
+						newDef->camera_position.y = (Int16)newVal;
 						changed = true;
 					}
 				}
 				ImGui::SameLine();
 				ImGui::SetNextItemWidth(dragWidth);
-				if (ImGui::DragInt("", &newVal, 1.0f, 0, maxY, "Y: %d")) {
+				if (ImGui::DragInt("", &newVal, 1.0f, minY, maxY, "Y: %d")) {
 					if ((int)newDef->camera_position.y != newVal) {
-						newDef->camera_position.y = (UInt16)newVal;
+						newDef->camera_position.y = (Int16)newVal;
 						changed = true;
 					}
 				}
@@ -10168,7 +10170,7 @@ bool definable(
 				if (ImGui::ImageButton(theme->iconPlus()->pointer(rnd), ImVec2(13, 13), ImColor(IM_COL32_WHITE))) {
 					newVal = Math::min(newVal + 1, maxY);
 					if ((int)newDef->camera_position.y != newVal) {
-						newDef->camera_position.y = (UInt16)newVal;
+						newDef->camera_position.y = (Int16)newVal;
 						changed = true;
 					}
 				}

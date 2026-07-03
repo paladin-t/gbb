@@ -374,7 +374,7 @@ struct scene_t {
 	UInt8 jump_max_ticks = 0;
 	UInt8 climb_velocity = 0;
 
-	upoint16_t camera_position;
+	point16_t camera_position;
 	upoint8_t camera_deadzone;
 
 	scene_t();

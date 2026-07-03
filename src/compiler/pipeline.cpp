@@ -224,6 +224,18 @@ static void write(Byte* ptr, UInt16 val, Endians endian) {
 	*((Byte*)ptr++) = u.bytes[1];
 }
 
+static void write(Bytes* bytes, Int16 val, Endians endian) {
+	union {
+		Int16 data;
+		UInt8 bytes[2];
+	} u;
+	u.data = val;
+	if (isDifferentEndian(endian))
+		std::swap(u.bytes[0], u.bytes[1]);
+	bytes->writeUInt8(u.bytes[0]);
+	bytes->writeUInt8(u.bytes[1]);
+}
+
 static void write(Bytes* bytes, UInt16 val, Endians endian) {
 	union {
 		UInt16 data;
@@ -1770,8 +1782,8 @@ static bool generate_toBytes(const SceneAssets::Entry* entry, Pipeline* pipeline
 			bytes->writeUInt8((UInt8)def.jump_max_count);
 			bytes->writeUInt8((UInt8)def.jump_max_ticks);
 			bytes->writeUInt8((UInt8)def.climb_velocity);
-			write(bytes.get(), (UInt16)def.camera_position.x, Endians::LITTLE);
-			write(bytes.get(), (UInt16)def.camera_position.y, Endians::LITTLE);
+			write(bytes.get(), (Int16)def.camera_position.x, Endians::LITTLE);
+			write(bytes.get(), (Int16)def.camera_position.y, Endians::LITTLE);
 			bytes->writeUInt8((UInt8)def.camera_deadzone.x);
 			bytes->writeUInt8((UInt8)def.camera_deadzone.y);
 		}

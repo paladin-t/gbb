@@ -738,9 +738,14 @@ public:
 
 			// Check for scene camera.
 			const scene_t &def = entry()->definition;
+			const int minX = -GBBASIC_SCREEN_WIDTH;
 			const int maxX = Math::max(object()->width() * GBBASIC_TILE_SIZE - GBBASIC_SCREEN_WIDTH, 0);
+			const int minY = -GBBASIC_SCREEN_HEIGHT;
 			const int maxY = Math::max(object()->height() * GBBASIC_TILE_SIZE - GBBASIC_SCREEN_HEIGHT, 0);
-			if ((int)def.camera_position.x > maxX || (int)def.camera_position.y > maxY) {
+			if (
+				((int)def.camera_position.x < minX || (int)def.camera_position.x > maxX) ||
+				((int)def.camera_position.y < minY || (int)def.camera_position.y > maxY)
+			) {
 				warn(ws, ws->theme()->warning_SceneCameraPositionOutOfBounds(), true);
 			}
 		};

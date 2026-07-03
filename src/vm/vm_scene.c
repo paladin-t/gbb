@@ -194,21 +194,21 @@ UINT8 scene_get_actor(
     if (scene.actor_bank == 0)
         return 0;
 
-    UINT8 * data  = scene.actor_address +
+    UINT8 * data    = scene.actor_address +
         1 /* actor count */ + 19 /* bytes per ref */ * idx /* which one */;
-    *tiles_count        = get_uint8 (scene.actor_bank, data++);
-    *tiles_bank         = get_uint8 (scene.actor_bank, data++);
-    *tiles_ptr          = get_ptr   (scene.actor_bank, data  ); data += 2;
-    *sprite_count       = get_uint8 (scene.actor_bank, data++);
-    *bank               = get_uint8 (scene.actor_bank, data++);
-    *ptr                = get_ptr   (scene.actor_bank, data  ); data += 2;
-    UINT8 template      = get_uint8 (scene.actor_bank, data++);
-    *x                  = get_uint16(scene.actor_bank, data  ); data += 2;
-    *y                  = get_uint16(scene.actor_bank, data  ); data += 2;
-    *behave_bank        = get_uint8 (scene.actor_bank, data++);
-    *behave_address     = get_ptr   (scene.actor_bank, data  ); data += 2;
-    *hits_bank          = get_uint8 (scene.actor_bank, data++);
-    *hits_address       = get_ptr   (scene.actor_bank, data  ); data += 2;
+    *tiles_count    = get_uint8 (scene.actor_bank, data++);
+    *tiles_bank     = get_uint8 (scene.actor_bank, data++);
+    *tiles_ptr      = get_ptr   (scene.actor_bank, data  ); data += 2;
+    *sprite_count   = get_uint8 (scene.actor_bank, data++);
+    *bank           = get_uint8 (scene.actor_bank, data++);
+    *ptr            = get_ptr   (scene.actor_bank, data  ); data += 2;
+    UINT8 template  = get_uint8 (scene.actor_bank, data++);
+    *x              = get_uint16(scene.actor_bank, data  ); data += 2;
+    *y              = get_uint16(scene.actor_bank, data  ); data += 2;
+    *behave_bank    = get_uint8 (scene.actor_bank, data++);
+    *behave_address = get_ptr   (scene.actor_bank, data  ); data += 2;
+    *hits_bank      = get_uint8 (scene.actor_bank, data++);
+    *hits_address   = get_ptr   (scene.actor_bank, data  ); data += 2;
 
     return template;
 }
@@ -322,17 +322,17 @@ STATIC void scene_def(UINT8 w, UINT8 h, UINT8 base, UINT8 def_bank, UINT8 * def_
     }
 
     if (def_bank) {
-        scene.is_16x16_grid     = get_uint8 (def_bank, def_ptr++);
-        scene.is_16x16_player   = get_uint8 (def_bank, def_ptr++); 
-        scene.gravity           = get_uint8 (def_bank, def_ptr++);
-        scene.jump_gravity      = get_uint8 (def_bank, def_ptr++);
-        scene.jump_max_count    = get_uint8 (def_bank, def_ptr++);
-        scene.jump_max_ticks    = get_uint8 (def_bank, def_ptr++);
-        scene.climb_velocity    = get_uint8 (def_bank, def_ptr++);
-        scene_camera_x          = get_uint16(def_bank, def_ptr  ); def_ptr += 2;
-        scene_camera_y          = get_uint16(def_bank, def_ptr  ); def_ptr += 2;
-        scene_camera_deadzone_x = get_uint8 (def_bank, def_ptr++);
-        scene_camera_deadzone_y = get_uint8 (def_bank, def_ptr++);
+        scene.is_16x16_grid     = get_uint8(def_bank, def_ptr++);
+        scene.is_16x16_player   = get_uint8(def_bank, def_ptr++); 
+        scene.gravity           = get_uint8(def_bank, def_ptr++);
+        scene.jump_gravity      = get_uint8(def_bank, def_ptr++);
+        scene.jump_max_count    = get_uint8(def_bank, def_ptr++);
+        scene.jump_max_ticks    = get_uint8(def_bank, def_ptr++);
+        scene.climb_velocity    = get_uint8(def_bank, def_ptr++);
+        scene_camera_x          = get_int16(def_bank, def_ptr  ); def_ptr += 2;
+        scene_camera_y          = get_int16(def_bank, def_ptr  ); def_ptr += 2;
+        scene_camera_deadzone_x = get_uint8(def_bank, def_ptr++);
+        scene_camera_deadzone_y = get_uint8(def_bank, def_ptr++);
     }
 
     if (x != scene_camera_x || y != scene_camera_y) {
@@ -601,9 +601,6 @@ void vm_load_scene(SCRIPT_CTX * THIS) OLDCALL BANKED {
     gui_tile_filled(GRAPHICS_LAYER_MAP, map_base_tile, tiles_count, tiles_bank, tiles_ptr);
 
     // Setup the scene.
-    scene_camera(0, 0);
-    FEATURE_MAP_MOVEMENT_SET;
-
     scene_def(w, h, map_base_tile, def_bank, def_address);
 
     // Setup the actors.
