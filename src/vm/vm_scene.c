@@ -66,7 +66,7 @@ void scene_camera(INT16 x, INT16 y) BANKED {
                     const UINT8 i = scene_map_x;
                     const UINT8 x = i + DEVICE_SCREEN_WIDTH;
                     if (x < scene.width) {
-                        UINT8 h = MIN(DEVICE_SCREEN_HEIGHT + 1, scene.height - scene_map_y);
+                        const UINT8 h = MIN(DEVICE_SCREEN_HEIGHT + 1, scene.height - scene_map_y);
                         SCENE_LOAD(
                             scene.map_bank, scene.map_address,
                             scene.attr_bank, scene.attr_address,
@@ -119,7 +119,7 @@ void scene_camera(INT16 x, INT16 y) BANKED {
                     const UINT8 j = scene_map_y;
                     const UINT8 y = j + DEVICE_SCREEN_HEIGHT;
                     if (y < scene.height) {
-                        UINT8 w = MIN(DEVICE_SCREEN_WIDTH + 1, scene.width - scene_map_x);
+                        const UINT8 w = MIN(DEVICE_SCREEN_WIDTH + 1, scene.width - scene_map_x);
                         SCENE_LOAD(
                             scene.map_bank, scene.map_address,
                             scene.attr_bank, scene.attr_address,
