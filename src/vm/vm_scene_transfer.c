@@ -107,7 +107,6 @@ INLINE void transition_preload(
     FEATURE_MAP_MOVEMENT_CLEAR;
 
     *state = 0;
-    //scene_y = DIV2(-scene_camera_y);
 
     transfer_scene_data(
         map_bank, map, attr_bank, attr,
@@ -274,9 +273,9 @@ INLINE void transition_normalise(
     scene.map_address  = (UINT8 *)map;
     scene.attr_bank    = attr_bank;
     scene.attr_address = (UINT8 *)attr;
-    // scene.width     = scene_w; // These two lines are not necessary.
-    // scene.height    = scene_h;
-    scene.base_tile    = base_tile;
+    // scene.width     = scene_w;   // The arguments are retrieved automatically,
+    // scene.height    = scene_h;   // so these few lines are not necessary.
+    // scene.base_tile = base_tile;
     scene_camera_x     = 0;
     scene_camera_y     = -MUL8(scene_y);
     scene_map_x        = 0;
@@ -294,15 +293,17 @@ INLINE void transition_normalise(
 // until it returns TRUE.
 //
 // Parameters:
-//       scene_w     Width of the scene in tiles, determined automatically.
-//       scene_h     Height of the scene in tiles,
-//                   (may be < DEVICE_SCREEN_HEIGHT), determined automatically.
-//   [6] scene_y     Y offset of the scene within the viewport (tiles). Rows
-//                   above/below the scene are reserved for the UI window.
-//   [5] dir         DIRECTION_UP/DOWN/LEFT/RIGHT. The direction the old scene
+//   [C] scene_w     Width of the scene in tiles, (C)onstant.
+//   [D] scene_h     Height of the scene in tiles, (may be < DEVICE_SCREEN_HEIGHT),
+//                  (D)etermined automatically.
+//   [S] scene_y     Y offset of the scene within the viewport (tiles). Rows
+//                   above/below the scene are reserved for the UI window,
+//                   determined automatically and cached on (S)tack.
+//   [4] dir         DIRECTION_UP/DOWN/LEFT/RIGHT. The direction the old scene
 //                   scrolls out of the viewport. The new scene enters from the
 //                   opposite side.
-//   [4] base_tile   Base tile offset applied to every tile index.
+//   [D] base_tile   Base tile offset applied to every tile index, (D)etermined
+//                   automatically.
 //   [3] map_bank    ROM bank of the new scene tilemap.
 //   [2] map_addr    Pointer to the new scene tilemap data.
 //   [1] attr_bank   ROM bank of the new scene CGB attribute map (0 = none).
@@ -354,25 +355,29 @@ BOOLEAN transition_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCAL
     // Prepare.
     SCRIPT_CTX * ctx = (SCRIPT_CTX *)THIS;
 
-    const UINT8 scene_w   = DEVICE_SCREEN_WIDTH;
-    const UINT8 scene_h   = scene.height;
-    const UINT8 scene_y   = (UINT8)  stack_frame[6];
-    const UINT8 dir       = (UINT8)  stack_frame[5];
-    const UINT8 base_tile = (UINT8)  stack_frame[4];
-    const UINT8 map_bank  = (UINT8)  stack_frame[3];
-    const UINT8 * map     = (UINT8 *)stack_frame[2];
-    const UINT8 attr_bank = (UINT8)  stack_frame[1];
-    const UINT8 * attr    = (UINT8 *)stack_frame[0];
+    const UINT8 scene_w    = DEVICE_SCREEN_WIDTH;
+    const UINT8 scene_h    = scene.height;
+    // const UINT8 scene_y = (UINT8)*(ctx->stack_ptr + 1); // Calculated and cached below.
+    const UINT8 dir        = (UINT8)  stack_frame[4];
+    const UINT8 base_tile  = scene.base_tile;
+    const UINT8 map_bank   = (UINT8)  stack_frame[3];
+    const UINT8 * map      = (UINT8 *)stack_frame[2];
+    const UINT8 attr_bank  = (UINT8)  stack_frame[1];
+    const UINT8 * attr     = (UINT8 *)stack_frame[0];
 
-    UINT16 * state        = ctx->stack_ptr;
+    UINT16 * state         = ctx->stack_ptr;
 
     if (start) {
+        const UINT8 scene_y = DIV8(-scene_camera_y);
+        *(ctx->stack_ptr + 1) = scene_y;
+
         transition_preload(scene_w, scene_h, scene_y, dir, base_tile, map_bank, map, attr_bank, attr, state);
         ctx->waitable = TRUE;
 
         return FALSE;
     }
 
+    const UINT8 scene_y = (UINT8)*(ctx->stack_ptr + 1);
     if (!transition_scroll(scene_w, scene_h, scene_y, dir, base_tile, map_bank, map, attr_bank, attr, state)) {
         ctx->waitable = TRUE;
 
