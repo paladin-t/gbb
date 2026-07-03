@@ -180,7 +180,7 @@ INLINE BOOLEAN transition_scroll(
     UINT16 * state
 ) {
     const UINT8 horizontal = IS_DIRECTION_HORIZONTAL(dir);
-    const UINT16 total = horizontal ? DEVICE_SCREEN_PX_WIDTH : MUL8(scene_h);
+    const UINT8 total = horizontal ? DEVICE_SCREEN_PX_WIDTH : MUL8(scene_h);
     if (*state >= total) return TRUE;
 
     const UINT8 preload = horizontal ?
@@ -189,8 +189,8 @@ INLINE BOOLEAN transition_scroll(
     const UINT8 prog = horizontal ?
         (DEVICE_SCREEN_WIDTH - preload) :
         (scene_h - preload);
-    const UINT16 offset = *state;
-    const UINT16 new_offset = offset + SCENE_TRANSITION_SPEED;
+    const UINT8 offset = (UINT8)*state;
+    const UINT8 new_offset = offset + SCENE_TRANSITION_SPEED;
     const UINT8 prev_tile = (UINT8)DIV8(offset);
     const UINT8 curr_tile = (UINT8)DIV8(new_offset);
     UINT8 * current_vram = (UINT8 *)((LCDC_REG & LCDCF_BG9C00) ? 0x9C00 : 0x9800);
@@ -319,7 +319,9 @@ INLINE void transition_normalise(
 //   * The function is non-blocking: it sets ctx->waitable = TRUE and returns
 //     FALSE each frame until the animation completes, then returns TRUE.
 //   * After completion the global `scene` struct is updated with the new
-//     scene's data and the camera/scroll registers are reset to (0, 0).
+//     scene's data and the camera/scroll registers are reset to show the
+//     new scene from its origin (scroll offset by -MUL8(scene_y) for the UI
+//     window).
 //   * Actors, triggers and other scene metadata are not loaded by this
 //     function; the caller is responsible for setting those up afterwards.
 //
