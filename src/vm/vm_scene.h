@@ -95,6 +95,7 @@ extern INT16 scene_camera_x;
 extern INT16 scene_camera_y;
 extern UINT8 scene_camera_deadzone_x;
 extern UINT8 scene_camera_deadzone_y;
+extern INT8 scene_camera_offset_y;
 extern UINT8 scene_camera_shake_x;
 extern UINT8 scene_camera_shake_y;
 extern UINT8 scene_map_x;
