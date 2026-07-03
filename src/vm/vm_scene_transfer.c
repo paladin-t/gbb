@@ -90,12 +90,12 @@ STATIC void transfer_scene_data(
 #define SCENE_TRANSITION_SECONDARY_BUFFER_Y   (DEVICE_SCREEN_BUFFER_HEIGHT - DEVICE_SCREEN_HEIGHT) / 2
 
 INLINE void transition_preload(
-    UINT8 dir,
-    UINT8 map_bank, const UINT8 * map,
-    UINT8 attr_bank, const UINT8 * attr,
     UINT8 map_w,
     UINT8 scene_h, UINT8 scene_y,
+    UINT8 dir,
     UINT8 base_tile,
+    UINT8 map_bank, const UINT8 * map,
+    UINT8 attr_bank, const UINT8 * attr,
     UINT16 * state
 ) {
     const UINT8 horizontal = IS_DIRECTION_HORIZONTAL(dir);
@@ -171,12 +171,12 @@ INLINE void transition_preload(
 }
 
 INLINE BOOLEAN transition_scroll(
-    UINT8 dir,
-    UINT8 map_bank, const UINT8 * map,
-    UINT8 attr_bank, const UINT8 * attr,
     UINT8 map_w,
     UINT8 scene_h, UINT8 scene_y,
+    UINT8 dir,
     UINT8 base_tile,
+    UINT8 map_bank, const UINT8 * map,
+    UINT8 attr_bank, const UINT8 * attr,
     UINT16 * state
 ) {
     const UINT8 horizontal = IS_DIRECTION_HORIZONTAL(dir);
@@ -236,11 +236,11 @@ INLINE BOOLEAN transition_scroll(
     }
 
     if (horizontal) {
-        if         (dir == DIRECTION_LEFT)     { scene_camera_x = (UINT8)  new_offset;  scene_camera_y = -MUL8(scene_y); }
-        else /* if (dir == DIRECTION_RIGHT) */ { scene_camera_x = (UINT8)(-new_offset); scene_camera_y = -MUL8(scene_y); }
+        if         (dir == DIRECTION_LEFT)     { scene_camera_x =         new_offset; scene_camera_y = -MUL8(scene_y);    }
+        else /* if (dir == DIRECTION_RIGHT) */ { scene_camera_x = -(INT16)new_offset; scene_camera_y = -MUL8(scene_y);    }
     } else {
-        if         (dir == DIRECTION_UP)       { scene_camera_x = 0; scene_camera_y = (UINT8) (new_offset - MUL8(scene_y)); }
-        else /* if (dir == DIRECTION_DOWN) */  { scene_camera_x = 0; scene_camera_y = (UINT8)(-new_offset - MUL8(scene_y)); }
+        if         (dir == DIRECTION_UP)       { scene_camera_x = 0; scene_camera_y =         new_offset - MUL8(scene_y); }
+        else /* if (dir == DIRECTION_DOWN) */  { scene_camera_x = 0; scene_camera_y = -(INT16)new_offset - MUL8(scene_y); }
     }
     FEATURE_MAP_MOVEMENT_SET;
 
@@ -250,11 +250,11 @@ INLINE BOOLEAN transition_scroll(
 }
 
 INLINE void transition_normalise(
-    UINT8 map_bank, const UINT8 * map,
-    UINT8 attr_bank, const UINT8 * attr,
     UINT8 map_w,
     UINT8 scene_h, UINT8 scene_y,
-    UINT8 base_tile
+    UINT8 base_tile,
+    UINT8 map_bank, const UINT8 * map,
+    UINT8 attr_bank, const UINT8 * attr
 ) {
     UINT8 * original_vram = (UINT8 *)((LCDC_REG & LCDCF_BG9C00) ? 0x9C00 : 0x9800);
 
@@ -296,17 +296,17 @@ INLINE void transition_normalise(
 // until it returns TRUE.
 //
 // Parameters:
-//   [7] dir         DIRECTION_UP/DOWN/LEFT/RIGHT
+//   [7] scene_h     Height of the scene in tiles (may be < DEVICE_SCREEN_HEIGHT).
+//   [6] scene_y     Y offset of the scene within the viewport (tiles).
+//                     Rows above/below the scene are reserved for the UI window.
+//   [5] dir         DIRECTION_UP/DOWN/LEFT/RIGHT
 //                     The direction the old scene scrolls out of the viewport.
 //                     The new scene enters from the opposite side.
-//   [6] map_bank    ROM bank of the new scene tilemap.
-//   [5] map_addr    Pointer to the new scene tilemap data.
-//   [4] attr_bank   ROM bank of the new scene CGB attribute map (0 = none).
-//   [3] attr_addr   Pointer to the new scene attribute map data.
-//   [2] scene_h     Height of the scene in tiles (may be < DEVICE_SCREEN_HEIGHT).
-//   [1] scene_y     Y offset of the scene within the viewport (tiles).
-//                     Rows above/below the scene are reserved for the UI window.
-//   [0] base_tile   Base tile offset applied to every tile index.
+//   [4] base_tile   Base tile offset applied to every tile index.
+//   [3] map_bank    ROM bank of the new scene tilemap.
+//   [2] map_addr    Pointer to the new scene tilemap data.
+//   [1] attr_bank   ROM bank of the new scene CGB attribute map (0 = none).
+//   [0] attr_addr   Pointer to the new scene attribute map data.
 //
 // Calling rules:
 //   * The old scene must already be loaded and visible (scene.map_bank != 0).
@@ -354,32 +354,32 @@ BOOLEAN transition_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCAL
     // Prepare.
     SCRIPT_CTX * ctx = (SCRIPT_CTX *)THIS;
 
-    const UINT8 dir       = (UINT8)  stack_frame[7];
-    const UINT8 map_bank  = (UINT8)  stack_frame[6];
-    const UINT8 * map     = (UINT8 *)stack_frame[5];
-    const UINT8 attr_bank = (UINT8)  stack_frame[4];
-    const UINT8 * attr    = (UINT8 *)stack_frame[3];
-    const UINT8 scene_h   = (UINT8)  stack_frame[2];
-    const UINT8 scene_y   = (UINT8)  stack_frame[1];
-    const UINT8 base_tile = (UINT8)  stack_frame[0];
     const UINT8 map_w     = DEVICE_SCREEN_WIDTH;
+    const UINT8 scene_h   = (UINT8)  stack_frame[7];
+    const UINT8 scene_y   = (UINT8)  stack_frame[6];
+    const UINT8 dir       = (UINT8)  stack_frame[5];
+    const UINT8 base_tile = (UINT8)  stack_frame[4];
+    const UINT8 map_bank  = (UINT8)  stack_frame[3];
+    const UINT8 * map     = (UINT8 *)stack_frame[2];
+    const UINT8 attr_bank = (UINT8)  stack_frame[1];
+    const UINT8 * attr    = (UINT8 *)stack_frame[0];
 
     UINT16 * state        = ctx->stack_ptr;
 
     if (start) {
-        transition_preload(dir, map_bank, map, attr_bank, attr, map_w, scene_h, scene_y, base_tile, state);
+        transition_preload(map_w, scene_h, scene_y, dir, base_tile, map_bank, map, attr_bank, attr, state);
         ctx->waitable = TRUE;
 
         return FALSE;
     }
 
-    if (!transition_scroll(dir, map_bank, map, attr_bank, attr, map_w, scene_h, scene_y, base_tile, state)) {
+    if (!transition_scroll(map_w, scene_h, scene_y, dir, base_tile, map_bank, map, attr_bank, attr, state)) {
         ctx->waitable = TRUE;
 
         return FALSE;
     }
 
-    transition_normalise(map_bank, map, attr_bank, attr, map_w, scene_h, scene_y, base_tile);
+    transition_normalise(map_w, scene_h, scene_y, base_tile, map_bank, map, attr_bank, attr);
 
     return TRUE;
 }
