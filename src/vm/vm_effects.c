@@ -18,7 +18,6 @@ BANKREF(VM_EFFECTS)
 
 extern void LCD_isr(void) NONBANKED;
 
-static UINT8 effects_pulse_ticks;
 static UINT8 effects_pulse_interval;
 UINT8 effects_pulse_bank;
 POINTER effects_pulse_address;
@@ -35,7 +34,6 @@ static const UINT8 * effects_wobble_offset = EFFECTS_WOBBLE_OFFSETS;
 UINT8 effects_wobble;
 
 void effects_init(void) BANKED {
-    effects_pulse_ticks    = 0;
     effects_pulse_interval = 0;
     effects_pulse_bank     = 0;
     effects_pulse_address  = NULL;
@@ -55,10 +53,8 @@ void effects_init(void) BANKED {
 }
 
 void effects_pulse_update(void) BANKED {
-    if (++effects_pulse_ticks < effects_pulse_interval)
+    if (game_time % effects_pulse_interval != 0)
         return;
-
-    effects_pulse_ticks = 0;
 
     UINT8 * ptr = (UINT8 *)effects_pulse_address;
     const UINT8 m = get_uint8(effects_pulse_bank, ptr++);
@@ -175,7 +171,6 @@ void vm_fx(SCRIPT_CTX * THIS) OLDCALL BANKED {
     const UINT8 what = (UINT8)*(--THIS->stack_ptr);
     switch (what) {
     case EFFECTS_PULSE: {
-            effects_pulse_ticks       = 0;
             effects_pulse_interval    = (UINT8)*(--THIS->stack_ptr);
             if (effects_pulse_interval) {
                 effects_pulse_bank    = THIS->bank;
