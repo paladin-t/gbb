@@ -324,13 +324,14 @@ inline void vector_translate_angle(point16_t * vector, UINT8 angle, UINT8 speed)
 #define PROPERTY_CAMERA_DEADZONE                 50
 #   define PROPERTY_CAMERA_DEADZONE_X            51
 #   define PROPERTY_CAMERA_DEADZONE_Y            52
-#define PROPERTY_BLOCKING                        53
-#   define PROPERTY_BLOCKING_X                   54
-#       define PROPERTY_BLOCKING_LEFT            55
-#       define PROPERTY_BLOCKING_RIGHT           56
-#   define PROPERTY_BLOCKING_Y                   57
-#       define PROPERTY_BLOCKING_UP              58
-#       define PROPERTY_BLOCKING_DOWN            59
+#define PROPERTY_CAMERA_OFFSET_Y                 53
+#define PROPERTY_BLOCKING                        54
+#   define PROPERTY_BLOCKING_X                   55
+#       define PROPERTY_BLOCKING_LEFT            56
+#       define PROPERTY_BLOCKING_RIGHT           57
+#   define PROPERTY_BLOCKING_Y                   58
+#       define PROPERTY_BLOCKING_UP              59
+#       define PROPERTY_BLOCKING_DOWN            60
 
 /**< Types. */
 

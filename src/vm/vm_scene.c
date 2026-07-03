@@ -28,6 +28,7 @@ INT16 scene_camera_x;
 INT16 scene_camera_y;
 UINT8 scene_camera_deadzone_x;
 UINT8 scene_camera_deadzone_y;
+INT8 scene_camera_offset_y;
 UINT8 scene_camera_shake_x;
 UINT8 scene_camera_shake_y;
 UINT8 scene_map_x;
@@ -41,6 +42,7 @@ void scene_init(void) BANKED {
     scene_camera_y          = 0;
     scene_camera_deadzone_x = 0;
     scene_camera_deadzone_y = 0;
+    scene_camera_offset_y   = 0;
     scene_camera_shake_x    = 0;
     scene_camera_shake_y    = 0;
     scene_map_x             = 0;
@@ -291,6 +293,7 @@ STATIC void scene_def(UINT8 w, UINT8 h, UINT8 base, UINT8 def_bank, UINT8 * def_
     scene_camera_y              = 0;
     scene_camera_deadzone_x     = 0;
     scene_camera_deadzone_y     = 0;
+    scene_camera_offset_y       = 0;
     scene_camera_shake_x        = 0;
     scene_camera_shake_y        = 0;
     scene_map_x                 = 0;
@@ -665,6 +668,10 @@ void vm_get_scene_prop(SCRIPT_CTX * THIS) OLDCALL BANKED {
         *(THIS->stack_ptr++) = scene_camera_deadzone_y;
 
         break;
+    case PROPERTY_CAMERA_OFFSET_Y:
+        *(THIS->stack_ptr++) = scene_camera_offset_y;
+
+        break;
     case PROPERTY_BLOCKING:
         *(THIS->stack_ptr++) = scene_get_prop(x, y) & SCENE_PROPERTY_BLOCKING_ALL;
 
@@ -761,6 +768,10 @@ void vm_set_scene_prop(SCRIPT_CTX * THIS) OLDCALL BANKED {
         break;
     case PROPERTY_CAMERA_DEADZONE_Y:
         scene_camera_deadzone_y = (UINT8)*(--THIS->stack_ptr);
+
+        break;
+    case PROPERTY_CAMERA_OFFSET_Y:
+        scene_camera_offset_y = (INT8)*(--THIS->stack_ptr);
 
         break;
     default:

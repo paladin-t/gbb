@@ -142,7 +142,7 @@ INLINE BOOLEAN actor_move_camera(actor_t * actor) {
     BOOLEAN camera_moved = FALSE;
 
     INT16 x = TO_SCREEN(actor->position.x) - DIV2(DEVICE_SCREEN_PX_WIDTH);
-    INT16 y = TO_SCREEN(actor->position.y) - DIV2(DEVICE_SCREEN_PX_HEIGHT);
+    INT16 y = TO_SCREEN(actor->position.y) - DIV2(DEVICE_SCREEN_PX_HEIGHT) + scene_camera_offset_y;
     if (x < scene_camera_x - scene_camera_deadzone_x) {
         x = x + scene_camera_deadzone_x;
         camera_moved = TRUE;
