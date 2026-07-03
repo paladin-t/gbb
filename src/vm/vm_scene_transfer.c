@@ -90,8 +90,7 @@ STATIC void transfer_scene_data(
 #define SCENE_TRANSITION_SECONDARY_BUFFER_Y   (DEVICE_SCREEN_BUFFER_HEIGHT - DEVICE_SCREEN_HEIGHT) / 2
 
 INLINE void transition_preload(
-    UINT8 map_w,
-    UINT8 scene_h, UINT8 scene_y,
+    UINT8 scene_w, UINT8 scene_h, UINT8 scene_y,
     UINT8 dir,
     UINT8 base_tile,
     UINT8 map_bank, const UINT8 * map,
@@ -108,10 +107,11 @@ INLINE void transition_preload(
     FEATURE_MAP_MOVEMENT_CLEAR;
 
     *state = 0;
+    //scene_y = DIV2(-scene_camera_y);
 
     transfer_scene_data(
         map_bank, map, attr_bank, attr,
-        map_w,
+        scene_w,
         0, 0, SCENE_TRANSITION_SECONDARY_BUFFER_X, SCENE_TRANSITION_SECONDARY_BUFFER_Y,
         DEVICE_SCREEN_WIDTH, scene_h,
         base_tile, another_vram
@@ -122,7 +122,7 @@ INLINE void transition_preload(
         for (UINT8 k = 0; k < preload; ++k) {
             transfer_scene_data(
                 map_bank, map, attr_bank, attr,
-                map_w,
+                scene_w,
                 k, 0, DEVICE_SCREEN_BUFFER_WIDTH - preload + k, 0,
                 1, scene_h,
                 base_tile, current_vram
@@ -134,7 +134,7 @@ INLINE void transition_preload(
         for (UINT8 k = 0; k < preload; ++k) {
             transfer_scene_data(
                 map_bank, map, attr_bank, attr,
-                map_w,
+                scene_w,
                 (DEVICE_SCREEN_WIDTH - preload) + k, 0, DEVICE_SCREEN_BUFFER_WIDTH - preload + k, 0,
                 1, scene_h,
                 base_tile, current_vram
@@ -146,7 +146,7 @@ INLINE void transition_preload(
         for (UINT8 k = 0; k < preload; ++k) {
             transfer_scene_data(
                 map_bank, map, attr_bank, attr,
-                map_w,
+                scene_w,
                 0, k, 0, scene_h + k,
                 DEVICE_SCREEN_WIDTH, 1,
                 base_tile, current_vram
@@ -158,7 +158,7 @@ INLINE void transition_preload(
         for (UINT8 k = 0; k < preload; ++k) {
             transfer_scene_data(
                 map_bank, map, attr_bank, attr,
-                map_w,
+                scene_w,
                 0, (scene_h - preload) + k, 0, -preload + k,
                 DEVICE_SCREEN_WIDTH, 1,
                 base_tile, current_vram
@@ -171,8 +171,7 @@ INLINE void transition_preload(
 }
 
 INLINE BOOLEAN transition_scroll(
-    UINT8 map_w,
-    UINT8 scene_h, UINT8 scene_y,
+    UINT8 scene_w, UINT8 scene_h, UINT8 scene_y,
     UINT8 dir,
     UINT8 base_tile,
     UINT8 map_bank, const UINT8 * map,
@@ -200,7 +199,7 @@ INLINE BOOLEAN transition_scroll(
             if (dir == DIRECTION_LEFT) {
                 transfer_scene_data(
                     map_bank, map, attr_bank, attr,
-                    map_w,
+                    scene_w,
                     preload + prev_tile, 0, prev_tile, 0,
                     1, scene_h,
                     base_tile, current_vram
@@ -208,7 +207,7 @@ INLINE BOOLEAN transition_scroll(
             } else /* if (dir == DIRECTION_RIGHT) */ {
                 transfer_scene_data(
                     map_bank, map, attr_bank, attr,
-                    map_w,
+                    scene_w,
                     prog - 1 - prev_tile, 0, DEVICE_SCREEN_WIDTH - 1 - prev_tile, 0,
                     1, scene_h,
                     base_tile, current_vram
@@ -218,7 +217,7 @@ INLINE BOOLEAN transition_scroll(
             if (dir == DIRECTION_UP) {
                 transfer_scene_data(
                     map_bank, map, attr_bank, attr,
-                    map_w,
+                    scene_w,
                     0, preload + prev_tile, 0, prev_tile - scene_y,
                     DEVICE_SCREEN_WIDTH, 1,
                     base_tile, current_vram
@@ -226,7 +225,7 @@ INLINE BOOLEAN transition_scroll(
             } else /* if (dir == DIRECTION_DOWN) */ {
                 transfer_scene_data(
                     map_bank, map, attr_bank, attr,
-                    map_w,
+                    scene_w,
                     0, prog - 1 - prev_tile, 0, scene_h - prev_tile,
                     DEVICE_SCREEN_WIDTH, 1,
                     base_tile, current_vram
@@ -250,8 +249,7 @@ INLINE BOOLEAN transition_scroll(
 }
 
 INLINE void transition_normalise(
-    UINT8 map_w,
-    UINT8 scene_h, UINT8 scene_y,
+    UINT8 scene_w, UINT8 scene_h, UINT8 scene_y,
     UINT8 base_tile,
     UINT8 map_bank, const UINT8 * map,
     UINT8 attr_bank, const UINT8 * attr
@@ -263,7 +261,7 @@ INLINE void transition_normalise(
 
     transfer_scene_data(
         map_bank, map, attr_bank, attr,
-        map_w,
+        scene_w,
         0, 0, 0, 0,
         DEVICE_SCREEN_WIDTH, scene_h,
         base_tile, original_vram
@@ -276,8 +274,8 @@ INLINE void transition_normalise(
     scene.map_address  = (UINT8 *)map;
     scene.attr_bank    = attr_bank;
     scene.attr_address = (UINT8 *)attr;
-    scene.width        = map_w;
-    scene.height       = scene_h;
+    // scene.width     = scene_w; // These two lines are not necessary.
+    // scene.height    = scene_h;
     scene.base_tile    = base_tile;
     scene_camera_x     = 0;
     scene_camera_y     = -MUL8(scene_y);
@@ -296,12 +294,14 @@ INLINE void transition_normalise(
 // until it returns TRUE.
 //
 // Parameters:
-//   [7] scene_h     Height of the scene in tiles (may be < DEVICE_SCREEN_HEIGHT).
-//   [6] scene_y     Y offset of the scene within the viewport (tiles).
-//                     Rows above/below the scene are reserved for the UI window.
-//   [5] dir         DIRECTION_UP/DOWN/LEFT/RIGHT
-//                     The direction the old scene scrolls out of the viewport.
-//                     The new scene enters from the opposite side.
+//       scene_w     Width of the scene in tiles, determined automatically.
+//       scene_h     Height of the scene in tiles,
+//                   (may be < DEVICE_SCREEN_HEIGHT), determined automatically.
+//   [6] scene_y     Y offset of the scene within the viewport (tiles). Rows
+//                   above/below the scene are reserved for the UI window.
+//   [5] dir         DIRECTION_UP/DOWN/LEFT/RIGHT. The direction the old scene
+//                   scrolls out of the viewport. The new scene enters from the
+//                   opposite side.
 //   [4] base_tile   Base tile offset applied to every tile index.
 //   [3] map_bank    ROM bank of the new scene tilemap.
 //   [2] map_addr    Pointer to the new scene tilemap data.
@@ -354,8 +354,8 @@ BOOLEAN transition_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCAL
     // Prepare.
     SCRIPT_CTX * ctx = (SCRIPT_CTX *)THIS;
 
-    const UINT8 map_w     = DEVICE_SCREEN_WIDTH;
-    const UINT8 scene_h   = (UINT8)  stack_frame[7];
+    const UINT8 scene_w   = DEVICE_SCREEN_WIDTH;
+    const UINT8 scene_h   = scene.height;
     const UINT8 scene_y   = (UINT8)  stack_frame[6];
     const UINT8 dir       = (UINT8)  stack_frame[5];
     const UINT8 base_tile = (UINT8)  stack_frame[4];
@@ -367,19 +367,19 @@ BOOLEAN transition_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCAL
     UINT16 * state        = ctx->stack_ptr;
 
     if (start) {
-        transition_preload(map_w, scene_h, scene_y, dir, base_tile, map_bank, map, attr_bank, attr, state);
+        transition_preload(scene_w, scene_h, scene_y, dir, base_tile, map_bank, map, attr_bank, attr, state);
         ctx->waitable = TRUE;
 
         return FALSE;
     }
 
-    if (!transition_scroll(map_w, scene_h, scene_y, dir, base_tile, map_bank, map, attr_bank, attr, state)) {
+    if (!transition_scroll(scene_w, scene_h, scene_y, dir, base_tile, map_bank, map, attr_bank, attr, state)) {
         ctx->waitable = TRUE;
 
         return FALSE;
     }
 
-    transition_normalise(map_w, scene_h, scene_y, base_tile, map_bank, map, attr_bank, attr);
+    transition_normalise(scene_w, scene_h, scene_y, base_tile, map_bank, map, attr_bank, attr);
 
     return TRUE;
 }
