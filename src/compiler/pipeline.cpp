@@ -1546,7 +1546,7 @@ static bool generate_toBytes(const SceneAssets::Entry* entry, Pipeline* pipeline
 			const size_t cur = bytes->peek();
 			bytes->writeUInt8((UInt8)0);                              // The count. Filled at a).
 			int n = 0;
-			GBBASIC_ASSERT(page <= (int)orderedActorsInScene.size() && "Impossible.");
+			GBBASIC_ASSERT(page < (int)orderedActorsInScene.size() && "Impossible.");
 			const Ordered<int>::Array &orderedActors = orderedActorsInScene[page];
 			for (const Ordered<int> &orderedActor : orderedActors) {
 				const int i = orderedActor.position.x;
@@ -1928,7 +1928,7 @@ static bool post_toBytes(const SceneAssets::Entry* entry, Pipeline* pipeline, Ta
 			return true;
 
 		int n = 0;
-		GBBASIC_ASSERT(page <= (int)orderedActorsInScene.size() && "Impossible.");
+		GBBASIC_ASSERT(page < (int)orderedActorsInScene.size() && "Impossible.");
 		const Ordered<int>::Array &orderedActors = orderedActorsInScene[page];
 		int currentActorIndex = -1;
 		for (const Ordered<int> &orderedActor : orderedActors) {
@@ -2737,7 +2737,7 @@ private:
 					}
 
 					const ActorAssets::Entry* entry = actors.get(actor);
-					if (_isPlayerBehaviour && _isPlayerBehaviour(entry->definition.behaviour))
+					if (entry && _isPlayerBehaviour && _isPlayerBehaviour(entry->definition.behaviour))
 						++playerCount;
 					if (entry && entry->definition.following)
 						++followingCount;
@@ -2754,17 +2754,14 @@ private:
 				std::string overlappedTriggers;
 				if (entry->data && entry->data->hasTriggers() && entry->data->triggerLayer()) {
 					const Trigger::Array* triggers = entry->data->triggerLayer();
-					for (int i = 0; i < (int)triggers->size(); ++i) {
-						const Trigger &trigger0 = (*triggers)[i];
+					for (int ti = 0; ti < (int)triggers->size() - 1; ++ti) {
+						const Trigger &trigger0 = (*triggers)[ti];
 						const Math::Recti rect0 = trigger0.toRect();
-						for (int j = i + 1; j < (int)triggers->size(); ++j) {
-							if (j == i)
-								continue; // Skip self.
-
+						for (int j = ti + 1; j < (int)triggers->size(); ++j) {
 							const Trigger &trigger1 = (*triggers)[j];
 							const Math::Recti rect1 = trigger1.toRect();
 							if (Math::intersects(rect0, rect1, false))
-								overlappedTriggers += "  " + Text::toString(i) + " and " + Text::toString(j) + "\n";
+								overlappedTriggers += "  " + Text::toString(ti) + " and " + Text::toString(j) + "\n";
 						}
 					}
 				}
@@ -3083,9 +3080,6 @@ private:
 						return false;
 
 					do {
-						if (lv == rv)
-							break;
-
 						if (!_isPlayerBehaviour)
 							break;
 

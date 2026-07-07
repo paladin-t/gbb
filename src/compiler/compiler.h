@@ -875,7 +875,7 @@ struct Program {
 	/**< Output. */
 
 	/**
-	 * @brief Whetier the compiling program is a plain one.
+	 * @brief Whether the compiling program is a plain one.
 	 */
 	bool isPlain = false;
 	/**
@@ -933,7 +933,7 @@ struct Options {
 		 */
 		Image::Ptr border = nullptr;
 		/**
-		 * @brief Extra pelettes.
+		 * @brief Extra palettes.
 		 */
 		Palettes palettes;
 	};

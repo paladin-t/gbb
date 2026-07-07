@@ -80,9 +80,12 @@ bool Codepoint::Collection::ordered(void) const {
 }
 
 bool Codepoint::Collection::has(const Data &val) const {
+	if (array.empty())
+		return false;
+
 	void* ret = std::bsearch(
 		&val,
-		&array.front(), array.size(), sizeof(Data),
+		array.data(), array.size(), sizeof(Data),
 		[] (const void* lptr, const void* rptr) -> int {
 			const Data &l = *(const Data*)lptr;
 			const Data &r = *(const Data*)rptr;

@@ -13408,7 +13408,7 @@ public:
 					(!withStep || // No step, or.
 						(simpleTk2 && (simpleTk2->is(Token::Types::BOOLEAN) || simpleTk2->is(Token::Types::NUMBER)))); // Const step.
 
-				GBBASIC_ASSERT((withStep && !!simpleTk2) || (!withStep && !simpleTk2) && "Wrong data.");
+				GBBASIC_ASSERT(((withStep && !!simpleTk2) || (!withStep && !simpleTk2)) && "Wrong data.");
 			}
 
 			// Determine possible loop step if it's not provided.

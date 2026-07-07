@@ -677,6 +677,9 @@ private:
 		cursor = lnBegin;
 		++cursor; // Ignore the line number.
 
+		if (cursor >= (int)tokens.size())
+			return true; // Empty line with no `END_OF_LINE`.
+
 		const IToken::Ptr &tkcar = tokens[cursor];
 		if (tkcar->is(IToken::Types::COMMENT)) return true; // Ignore this line with comment.
 
@@ -734,7 +737,7 @@ private:
 				}
 
 				const IToken::Ptr tk_ = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[++cursor] : nullptr;
-				if (tk_->is(IToken::Types::OPERATOR)) {
+				if (tk_ && tk_->is(IToken::Types::OPERATOR)) {
 					const std::string data = (std::string)tk_->data();
 					if (data != ",") return throwCommaExpected(cursor);
 					if (cursor == lnEnd - 1) return throwUnexpectedComma(cursor);
@@ -753,7 +756,7 @@ private:
 				}
 
 				const IToken::Ptr tk_ = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[++cursor] : nullptr;
-				if (tk_->is(IToken::Types::OPERATOR)) {
+				if (tk_ && tk_->is(IToken::Types::OPERATOR)) {
 					const std::string data = (std::string)tk_->data();
 					if (data != ",") return throwCommaExpected(cursor);
 					if (cursor == lnEnd - 1) return throwUnexpectedComma(cursor);
