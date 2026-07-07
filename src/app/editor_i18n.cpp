@@ -566,7 +566,7 @@ public:
 			return;
 
 		Table::Range brush;
-		if (_cursor.lastActiveRow == -1 && _cursor.lastActiveColumn == -1 && !_selection.brush.invalid()) {
+		if (!_selection.brush.invalid() || (_cursor.lastActiveRow == -1 && _cursor.lastActiveColumn == -1)) {
 			int startRow = _selection.brush.first.row;
 			int startCol = _selection.brush.first.column;
 			if (startRow < 0)
