@@ -10,7 +10,6 @@
 #include "theme.h"
 #include "workspace.h"
 #include "../../lib/imgui_code_editor/imgui_code_editor.h"
-#include <SDL.h>
 
 /*
 ** {===========================================================================
@@ -59,8 +58,6 @@ public:
 		SetReadOnly(true);
 
 		SetShowLineNumbers(false);
-
-		SetStickyLineNumbers(true);
 
 		SetShowWhiteSpaces(false);
 
@@ -254,6 +251,7 @@ public:
 				Render("@Cnsl", content);
 			} while (false);
 
+			shortcuts(wnd, rnd, ws);
 			context(wnd, rnd, ws);
 
 			ImGui::End();
@@ -294,10 +292,7 @@ private:
 		if (!ws->canUseShortcuts())
 			return;
 
-		const Editing::Shortcut esc(SDL_SCANCODE_ESCAPE);
-		if (esc.pressed()) {
-			_tools.clear();
-		}
+		// Do nothing.
 	}
 
 	void context(Window*, Renderer*, Workspace* ws) {

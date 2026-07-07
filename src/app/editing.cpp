@@ -6799,14 +6799,15 @@ bool orderable(
 				int affected = 0;
 				for (int i = 0; i < (int)newChannels.size(); ++i) {
 					Music::Sequence &seq = newChannels[i];
-					if (seq.empty())
+					if (seq.empty() || *lineIndex >= (int)seq.size())
 						continue;
 
 					seq.erase(seq.begin() + *lineIndex);
 					++affected;
 				}
 				if (affected) {
-					*lineIndex = Math::clamp(*lineIndex, 0, (int)newChannels.front().size() - 1);
+					const int maxIndex = newChannels.empty() ? 0 : (int)newChannels.front().size() - 1;
+					*lineIndex = maxIndex > 0 ? Math::clamp(*lineIndex, 0, maxIndex) : 0;
 					changed = true;
 				}
 			}
@@ -6827,10 +6828,8 @@ bool orderable(
 				int affected = 0;
 				for (int i = 0; i < (int)newChannels.size(); ++i) {
 					Music::Sequence &seq = newChannels[i];
-					if (seq.size() <= 1)
+					if (seq.size() <= 1 || *lineIndex <= 0 || *lineIndex >= (int)seq.size())
 						continue;
-					if (*lineIndex <= 0)
-						break;
 
 					std::swap(seq[*lineIndex], seq[*lineIndex - 1]);
 					++affected;
@@ -6846,10 +6845,8 @@ bool orderable(
 				int affected = 0;
 				for (int i = 0; i < (int)newChannels.size(); ++i) {
 					Music::Sequence &seq = newChannels[i];
-					if (seq.size() <= 1)
+					if (seq.size() <= 1 || *lineIndex < 0 || *lineIndex >= (int)seq.size() - 1)
 						continue;
-					if (*lineIndex >= (int)seq.size() - 1)
-						break;
 
 					std::swap(seq[*lineIndex], seq[*lineIndex + 1]);
 					++affected;

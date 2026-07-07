@@ -585,6 +585,9 @@ public:
 		if (object()->paletted()) {
 			typedef std::vector<int> Data;
 
+			if (size <= 0)
+				return;
+
 			Data vec(size, 0);
 			Editing::Dots dots(&vec.front());
 			_binding.getPixels(selPtr, dots);
@@ -594,6 +597,9 @@ public:
 
 			Platform::setClipboardText(osstr.c_str());
 		} else {
+			if (size <= 0)
+				return;
+
 			Image::Colours vec(size, Colour());
 			Editing::Dots dots(&vec.front());
 			_binding.getPixels(selPtr, dots);

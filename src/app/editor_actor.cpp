@@ -694,6 +694,9 @@ public:
 
 		typedef std::vector<int> Data;
 
+		if (size <= 0)
+			return;
+
 		Data vec(size, 0);
 		Editing::Dots dots(&vec.front());
 		_binding.getPixels(selPtr, dots);

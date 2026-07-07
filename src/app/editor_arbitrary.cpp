@@ -65,12 +65,7 @@ public:
 			std::wstring wstr;
 			wstr.push_back((wchar_t)_shadow->get(i));
 			std::string ch = Unicode::fromWide(wstr);
-			if (ch == "\r")
-				ch = "\\r";
-			else if (ch == "\n")
-				ch = "\\n";
-			else if (ch == "\t")
-				ch = "\\t";
+			ch = translate(ch);
 			const std::string str = Text::toString(i) + "(" + ch + ")";
 			_headers.push_back(str);
 		}
@@ -131,12 +126,7 @@ public:
 								if (n > 0) {
 									ch = ch.substr(0, n);
 									wstr = Unicode::toWide(ch);
-									if (ch == "\r")
-										ch = "\\r";
-									else if (ch == "\n")
-										ch = "\\n";
-									else if (ch == "\t")
-										ch = "\\t";
+									ch = translate(ch);
 									const std::string str = Text::toString(i) + "(" + ch + ")";
 									_headers[i] = str;
 									_shadow->set(i, (Font::Codepoint)wstr.front());
@@ -184,6 +174,13 @@ public:
 					if (toRemove >= 0) {
 						_headers.erase(_headers.begin() + toRemove);
 						_shadow->remove(toRemove);
+						for (int j = 0; j < (int)_headers.size(); ++j) {
+							std::wstring wstr;
+							wstr.push_back((wchar_t)_shadow->get(j));
+							std::string ch = Unicode::fromWide(wstr);
+							ch = translate(ch);
+							_headers[j] = Text::toString(j) + "(" + ch + ")";
+						}
 					}
 				}
 				ImGui::EndChild();
@@ -246,12 +243,7 @@ public:
 					std::wstring wstr;
 					wstr.push_back((wchar_t)i);
 					std::string ch = Unicode::fromWide(wstr);
-					if (ch == "\r")
-						ch = "\\r";
-					else if (ch == "\n")
-						ch = "\\n";
-					else if (ch == "\t")
-						ch = "\\t";
+					ch = translate(ch);
 					const std::string str = Text::toString(i) + "(" + ch + ")";
 					_headers.push_back(str);
 				}
@@ -303,6 +295,19 @@ public:
 				return;
 			}
 		}
+	}
+
+private:
+	std::string translate(const std::string &ch_) const {
+		std::string ch = ch_;
+		if (ch == "\r")
+			ch = "\\r";
+		else if (ch == "\n")
+			ch = "\\n";
+		else if (ch == "\t")
+			ch = "\\t";
+
+		return ch;
 	}
 };
 
