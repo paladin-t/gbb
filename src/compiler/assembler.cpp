@@ -1015,7 +1015,7 @@ private:
 			emitUInt8(bytes, context, (UInt8)ASSEMBLER_OPCODE_CB); // Prefix.
 
 			const int op = cbopit->second;
-			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_OPCODE_MNEMONICS) && "Invalid opcode.");
+			GBBASIC_ASSERT(op >= 0 && op < GBBASIC_COUNTOF(ASSEMBLER_CB_OPCODE_MNEMONICS) && "Invalid opcode.");
 			emitUInt8(bytes, context, (UInt8)op);
 
 			return true;

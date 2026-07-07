@@ -43212,7 +43212,11 @@ private:
 			const int address = romLocation->address;
 			const int offset = (bank * options.bankSize) + (address - options.startAddress);
 			Byte* ptr = bytes->pointer() + offset;
-			memcpy(ptr, &val, sizeof(UInt16));
+			union { UInt16 data; UInt8 bytes[2]; } u;
+			u.data = val;
+			if (!Platform::isLittleEndian())
+				std::swap(u.bytes[0], u.bytes[1]);
+			memcpy(ptr, u.bytes, sizeof(UInt16));
 		};
 
 		if (options.icon) {
