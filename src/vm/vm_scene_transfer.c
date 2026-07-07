@@ -89,19 +89,13 @@ STATIC void transfer_scene_data(
 #define SCENE_TRANSITION_SECONDARY_BUFFER_X   (DEVICE_SCREEN_BUFFER_WIDTH - DEVICE_SCREEN_WIDTH) / 2
 #define SCENE_TRANSITION_SECONDARY_BUFFER_Y   (DEVICE_SCREEN_BUFFER_HEIGHT - DEVICE_SCREEN_HEIGHT) / 2
 
-INLINE void transition_preload(
+INLINE void transition_init(
     UINT8 scene_w, UINT8 scene_h, UINT8 scene_y,
-    UINT8 dir,
     UINT8 base_tile,
     UINT8 map_bank, const UINT8 * map,
     UINT8 attr_bank, const UINT8 * attr,
     UINT16 * state
 ) {
-    const UINT8 horizontal = IS_DIRECTION_HORIZONTAL(dir);
-    const UINT8 preload = horizontal ?
-        (DEVICE_SCREEN_BUFFER_WIDTH - DEVICE_SCREEN_WIDTH) :
-        MIN(DEVICE_SCREEN_BUFFER_HEIGHT - scene_y - scene_h, scene_h);
-    UINT8 * current_vram = (UINT8 *)((LCDC_REG & LCDCF_BG9C00) ? 0x9C00 : 0x9800);
     UINT8 * another_vram = (UINT8 *)((LCDC_REG & LCDCF_BG9C00) ? 0x9800 : 0x9C00);
 
     FEATURE_MAP_MOVEMENT_CLEAR;
@@ -116,56 +110,6 @@ INLINE void transition_preload(
         base_tile, another_vram
     );
 
-    switch (dir) {
-    case DIRECTION_LEFT:
-        for (UINT8 k = 0; k < preload; ++k) {
-            transfer_scene_data(
-                map_bank, map, attr_bank, attr,
-                scene_w,
-                k, 0, DEVICE_SCREEN_BUFFER_WIDTH - preload + k, 0,
-                1, scene_h,
-                base_tile, current_vram
-            );
-        }
-
-        break;
-    case DIRECTION_RIGHT:
-        for (UINT8 k = 0; k < preload; ++k) {
-            transfer_scene_data(
-                map_bank, map, attr_bank, attr,
-                scene_w,
-                (DEVICE_SCREEN_WIDTH - preload) + k, 0, DEVICE_SCREEN_BUFFER_WIDTH - preload + k, 0,
-                1, scene_h,
-                base_tile, current_vram
-            );
-        }
-
-        break;
-    case DIRECTION_UP:
-        for (UINT8 k = 0; k < preload; ++k) {
-            transfer_scene_data(
-                map_bank, map, attr_bank, attr,
-                scene_w,
-                0, k, 0, scene_h + k,
-                DEVICE_SCREEN_WIDTH, 1,
-                base_tile, current_vram
-            );
-        }
-
-        break;
-    case DIRECTION_DOWN:
-        for (UINT8 k = 0; k < preload; ++k) {
-            transfer_scene_data(
-                map_bank, map, attr_bank, attr,
-                scene_w,
-                0, (scene_h - preload) + k, 0, -preload + k,
-                DEVICE_SCREEN_WIDTH, 1,
-                base_tile, current_vram
-            );
-        }
-
-        break;
-    }
     move_bkg(0, -MUL8(scene_y));
 }
 
@@ -181,25 +125,20 @@ INLINE BOOLEAN transition_scroll(
     const UINT8 total = horizontal ? DEVICE_SCREEN_PX_WIDTH : MUL8(scene_h);
     if (*state >= total) return TRUE;
 
-    const UINT8 preload = horizontal ?
-        (DEVICE_SCREEN_BUFFER_WIDTH - DEVICE_SCREEN_WIDTH) :
-        MIN(DEVICE_SCREEN_BUFFER_HEIGHT - scene_y - scene_h, scene_h);
-    const UINT8 prog = horizontal ?
-        (DEVICE_SCREEN_WIDTH - preload) :
-        (scene_h - preload);
+    const UINT8 total_tiles = horizontal ? DEVICE_SCREEN_WIDTH : scene_h;
     const UINT8 offset = (UINT8)*state;
     const UINT8 new_offset = offset + SCENE_TRANSITION_SPEED;
     const UINT8 prev_tile = (UINT8)DIV8(offset);
     const UINT8 curr_tile = (UINT8)DIV8(new_offset);
     UINT8 * current_vram = (UINT8 *)((LCDC_REG & LCDCF_BG9C00) ? 0x9C00 : 0x9800);
 
-    if (curr_tile > prev_tile && curr_tile <= prog) {
+    if ((curr_tile > prev_tile || offset == 0) && curr_tile < total_tiles) {
         if (horizontal) {
             if (dir == DIRECTION_LEFT) {
                 transfer_scene_data(
                     map_bank, map, attr_bank, attr,
                     scene_w,
-                    preload + prev_tile, 0, prev_tile, 0,
+                    curr_tile, 0, (DEVICE_SCREEN_WIDTH + curr_tile) & 31, 0,
                     1, scene_h,
                     base_tile, current_vram
                 );
@@ -207,7 +146,7 @@ INLINE BOOLEAN transition_scroll(
                 transfer_scene_data(
                     map_bank, map, attr_bank, attr,
                     scene_w,
-                    prog - 1 - prev_tile, 0, DEVICE_SCREEN_WIDTH - 1 - prev_tile, 0,
+                    scene_w - 1 - curr_tile, 0, (DEVICE_SCREEN_BUFFER_WIDTH - 1 - curr_tile) & 31, 0,
                     1, scene_h,
                     base_tile, current_vram
                 );
@@ -217,7 +156,7 @@ INLINE BOOLEAN transition_scroll(
                 transfer_scene_data(
                     map_bank, map, attr_bank, attr,
                     scene_w,
-                    0, preload + prev_tile, 0, prev_tile - scene_y,
+                    0, curr_tile, 0, (scene_h + curr_tile) & 31,
                     DEVICE_SCREEN_WIDTH, 1,
                     base_tile, current_vram
                 );
@@ -225,7 +164,7 @@ INLINE BOOLEAN transition_scroll(
                 transfer_scene_data(
                     map_bank, map, attr_bank, attr,
                     scene_w,
-                    0, prog - 1 - prev_tile, 0, scene_h - prev_tile,
+                    0, scene_h - 1 - curr_tile, 0, (DEVICE_SCREEN_BUFFER_HEIGHT - 1 - curr_tile) & 31,
                     DEVICE_SCREEN_WIDTH, 1,
                     base_tile, current_vram
                 );
@@ -314,7 +253,7 @@ INLINE void transition_normalise(
 //   * The new scene should share the same tile set (tile patterns) as the old
 //     scene; only the tilemap changes during the transition.
 //   * Both the old and new scenes must be at least
-//     DEVICE_SCREEN_WIDTH x scene_h tiles. scene_y + scene_h must not exceed
+//     DEVICE_SCREEN_WIDTH*scene_h tiles. scene_y + scene_h must not exceed
 //     DEVICE_SCREEN_HEIGHT; the rows outside [scene_y, scene_y+scene_h) are
 //     reserved for the UI window layer and are not touched by the transition.
 //   * The function is non-blocking: it sets ctx->waitable = TRUE and returns
@@ -329,22 +268,23 @@ INLINE void transition_normalise(
 // Algorithm overview:
 //   The VRAM background tilemap is 32x32 tiles while the visible viewport is
 //   20x18. The extra off-screen VRAM is used as a staging area:
-//   1. Pre-load (start == TRUE):
-//      The first preload columns (or rows) of the new scene are copied into the
-//      off-screen VRAM area. The hardware scroll is left at (0, 0) so the old
-//      scene is still fully visible.
+//   1. Initialise (start == TRUE):
+//      The hardware scroll is set to (0, -MUL8(scene_y)) so the old scene is
+//      fully visible. The new scene is pre-loaded into the other VRAM bank for
+//      stage 3.
 //   2. Progressive scroll (each frame):
 //      The hardware scroll register is advanced by `SCENE_TRANSITION_SPEED`
 //      pixels per frame. Whenever a tile boundary is crossed, the column
-//      (or row) of the old scene that just scrolled off-screen is overwritten
-//      with the corresponding column (or row) of the new scene. Because the
+//      (or row) of the new scene that is about to enter the viewport is loaded
+//      into the off-screen VRAM area just beyond the visible edge. Because the
 //      VRAM tilemap wraps at 32, this circular reuse keeps both scenes visible
 //      simultaneously without needing a second buffer.
 //   3. Normalise (final frame):
 //      Once the full viewport distance (160px horizontal/scene_h*8px vertical)
 //      has been scrolled, the visible area is reloaded from the new scene at
-//      VRAM (0, scene_y) and the scroll is reset to (0, 0). The `scene` struct
-//      and camera variables are updated to reflect the new scene.
+//      VRAM (0, 0) and the scroll is reset to (0, -MUL8(scene_y)). The `scene`
+//      struct and camera variables are updated to reflect the new scene. This
+//      stage uses the other VRAM bank for intermediate view.
 //
 //   Direction mapping (old scene exit -> new scene enter):
 //     DIRECTION_LEFT : old exits left,  new enters right (scroll_x increases)
@@ -371,7 +311,7 @@ BOOLEAN transition_scene(POINTER THIS, UINT8 start, UINT16 * stack_frame) OLDCAL
         const UINT8 scene_y = DIV8(-scene_camera_y);
         *(ctx->stack_ptr + 1) = scene_y;
 
-        transition_preload(scene_w, scene_h, scene_y, dir, base_tile, map_bank, map, attr_bank, attr, state);
+        transition_init(scene_w, scene_h, scene_y, base_tile, map_bank, map, attr_bank, attr, state);
         ctx->waitable = TRUE;
 
         return FALSE;
