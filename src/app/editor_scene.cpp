@@ -3711,7 +3711,8 @@ private:
 					if (ImGui::MenuItem(ws->theme()->menu_New(), nullptr, nullptr, canAdd)) {
 						const Math::Vec2i &cursor = _selection.triggerCursor;
 						const int index = n;
-						Trigger trigger = Trigger::byXYWH(cursor.x, cursor.y, 1, 1);
+						Trigger trigger;
+						trigger.setRect(Trigger::byXYWH(cursor.x, cursor.y, 1, 1));
 						trigger.color = Colour::randomize(255);
 						Commands::Scene::AddTrigger* cmd = (Commands::Scene::AddTrigger*)enqueue<Commands::Scene::AddTrigger>()
 							->with(_binding.addTrigger, _binding.removeTrigger)

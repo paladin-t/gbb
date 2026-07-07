@@ -80,7 +80,7 @@ UINT16 vm_pop(SCRIPT_CTX * THIS, UINT8 n) OLDCALL BANKED {
 
 // Ignores one value and removes `n` values from the VM stack and returns the last one.
 UINT16 vm_pop_1(SCRIPT_CTX * THIS, UINT8 n) OLDCALL BANKED {
-    UINT16 top = (UINT16)*(THIS->stack_ptr - 1);
+    const UINT16 top = (UINT16)*(THIS->stack_ptr - 1);
     if (n) THIS->stack_ptr -= n;
     *(THIS->stack_ptr - 1) = top;
 

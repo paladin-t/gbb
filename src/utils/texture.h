@@ -137,6 +137,8 @@ public:
 	/**
 	 * @brief Locks a portion of the texture for write-only pixel access.
 	 *   Thread unsafe, allowed to call from the graphics thread only.
+	 *
+	 * @param[out] pitch In bytes.
 	 */
 	virtual bool lock(const Math::Recti* rect /* nullable */, void** pixels, int* pitch) = 0;
 	/**
@@ -147,11 +149,15 @@ public:
 	/**
 	 * @brief Sets the color at the specific position of a locked portion.
 	 *   Thread unsafe, allowed to call from the graphics thread only.
+	 *
+	 * @param[out] pitch In bytes.
 	 */
 	virtual void setLocked(const Math::Recti &rect, void* pixels, int pitch, int x, int y, const Colour &col) = 0;
 	/**
 	 * @brief Sets the palette index at the specific position of a locked portion.
 	 *   Thread unsafe, allowed to call from the graphics thread only.
+	 *
+	 * @param[out] pitch In bytes.
 	 */
 	virtual void setLocked(const Math::Recti &rect, void* pixels, int pitch, int x, int y, int index) = 0;
 

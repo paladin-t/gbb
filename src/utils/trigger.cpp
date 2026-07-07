@@ -30,15 +30,6 @@ Trigger::Trigger(const Rect &other) {
 	y1 = other.y1;
 }
 
-Trigger &Trigger::operator = (const Rect &other) {
-	x0 = other.x0;
-	y0 = other.y0;
-	x1 = other.x1;
-	y1 = other.y1;
-
-	return *this;
-}
-
 Trigger Trigger::operator + (const Math::Vec2i &diff) const {
 	Trigger result = *this;
 	result.x0 += diff.x;
@@ -64,6 +55,15 @@ Math::Vec2i Trigger::position(void) const {
 
 Math::Vec2i Trigger::size(void) const {
 	return Math::Vec2i(width(), height());
+}
+
+Trigger &Trigger::setRect(const Rect &rect) {
+	x0 = rect.x0;
+	y0 = rect.y0;
+	x1 = rect.x1;
+	y1 = rect.y1;
+
+	return *this;
 }
 
 Math::Recti Trigger::toRect(void) const {

@@ -315,20 +315,24 @@ public:
 		for (int i = 0; i < (int)_layers.triggers.size(); ++i) {
 			Trigger &trigger = _layers.triggers[i];
 			if (trigger.x1 >= w) {
-				trigger.x0 += -(trigger.x1 - w + 1);
-				trigger.x1 += -(trigger.x1 - w + 1);
+				const int dx = -(trigger.x1 - w + 1);
+				trigger.x0 = trigger.x0 + dx;
+				trigger.x1 = trigger.x1 + dx;
 			}
 			if (trigger.x0 < 0) {
-				trigger.x0 += -trigger.x0;
-				trigger.x1 += -trigger.x0;
+				const int dx = -trigger.x0;
+				trigger.x0 = trigger.x0 + dx;
+				trigger.x1 = trigger.x1 + dx;
 			}
-			if (trigger.y1 >= w) {
-				trigger.y0 += -(trigger.y1 - w + 1);
-				trigger.y1 += -(trigger.y1 - w + 1);
+			if (trigger.y1 >= h) {
+				const int dy = -(trigger.y1 - h + 1);
+				trigger.y0 = trigger.y0 + dy;
+				trigger.y1 = trigger.y1 + dy;
 			}
 			if (trigger.y0 < 0) {
-				trigger.y0 += -trigger.y0;
-				trigger.y1 += -trigger.y0;
+				const int dy = -trigger.y0;
+				trigger.y0 = trigger.y0 + dy;
+				trigger.y1 = trigger.y1 + dy;
 			}
 		}
 
@@ -643,7 +647,7 @@ public:
 					trigger.eventRoutine = jevtroutine->value.GetString();
 				}
 
-				trigger = Trigger::byXYWH(jx->value.GetInt(), jy->value.GetInt(), jwidth->value.GetInt(), jheight->value.GetInt());
+				trigger.setRect(Trigger::byXYWH(jx->value.GetInt(), jy->value.GetInt(), jwidth->value.GetInt(), jheight->value.GetInt()));
 				trigger.color = col;
 
 				triggers.push_back(trigger);

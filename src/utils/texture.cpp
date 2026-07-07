@@ -500,7 +500,7 @@ public:
 		Colour* pixels_ = (Colour*)pixels;
 		const int x_ = x - rect.xMin();
 		const int y_ = y - rect.yMin();
-		pixels_[x_ + y_ * pitch] = col;
+		pixels_[x_ + y_ * (pitch / sizeof(Colour))] = col;
 
 		if (_palettedSurface) {
 			TEXTURE_LOCK_SURFACE(_palettedSurface)

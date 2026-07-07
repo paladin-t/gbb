@@ -50,14 +50,13 @@ struct Trigger : public Math::Recti {
 	Trigger(ValueType x0_, ValueType y0_, ValueType x1_, ValueType y1_);
 	Trigger(const Rect &other);
 
-	Trigger &operator = (const Rect &other);
-
 	Trigger operator + (const Math::Vec2i &diff) const;
 	Trigger &operator += (const Math::Vec2i &diff);
 
 	Math::Vec2i position(void) const;
 	Math::Vec2i size(void) const;
 
+	Trigger &setRect(const Rect &rect);
 	Math::Recti toRect(void) const;
 };
 

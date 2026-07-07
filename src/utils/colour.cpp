@@ -330,7 +330,7 @@ std::string Colour::toString(void) const {
 
 bool Colour::fromString(const std::string &str) {
 	std::string hex = str;
-	if (hex[0] != '#')
+	if (hex.empty() || hex[0] != '#')
 		return false;
 
 	hex = hex.substr(1);
