@@ -600,8 +600,22 @@ bool Evaluator::fold(IToken::Array* ret, const IToken::Array &rpn, const Options
 		case Op::Types::BITWISE_AND:    result =   getInt16(childVals[0]) &  getInt16(childVals[1]);          break;
 		case Op::Types::BITWISE_OR:     result =   getInt16(childVals[0]) |  getInt16(childVals[1]);          break;
 		case Op::Types::BITWISE_XOR:    result =   getInt16(childVals[0]) ^  getInt16(childVals[1]);          break;
-		case Op::Types::BITWISE_LSHIFT: result =   getInt16(childVals[0]) << getInt16(childVals[1]);          break;
-		case Op::Types::BITWISE_RSHIFT: result =   getInt16(childVals[0]) >> getInt16(childVals[1]);          break;
+		case Op::Types::BITWISE_LSHIFT: {
+				const Int16 a = getInt16(childVals[0]);
+				const Int16 b = getInt16(childVals[1]);
+
+				result = (b < 0 || b >= 16) ? 0 : (Int16)(a << b);
+			}
+
+			break;
+		case Op::Types::BITWISE_RSHIFT: {
+				const Int16 a = getInt16(childVals[0]);
+				const Int16 b = getInt16(childVals[1]);
+
+				result = (b < 0 || b >= 16) ? 0 : (Int16)(a >> b);
+			}
+
+			break;
 		case Op::Types::BITWISE_NOT:    result =  ~getInt16(childVals[0]);                                    break;
 		case Op::Types::NEG:            result =  -getInt16(childVals[0]);                                    break;
 		case Op::Types::SGN:            result = (Int16)Math::sign(getInt16(childVals[0]));                   break;
@@ -798,8 +812,22 @@ bool Evaluator::calc(Variant* ret, const IToken::Array &rpn, const OptionsForCal
 			case Op::Types::BITWISE_AND:    result =   getInt16(childVals[0]) &  getInt16(childVals[1]);          break;
 			case Op::Types::BITWISE_OR:     result =   getInt16(childVals[0]) |  getInt16(childVals[1]);          break;
 			case Op::Types::BITWISE_XOR:    result =   getInt16(childVals[0]) ^  getInt16(childVals[1]);          break;
-			case Op::Types::BITWISE_LSHIFT: result =   getInt16(childVals[0]) << getInt16(childVals[1]);          break;
-			case Op::Types::BITWISE_RSHIFT: result =   getInt16(childVals[0]) >> getInt16(childVals[1]);          break;
+			case Op::Types::BITWISE_LSHIFT: {
+					const Int16 a = getInt16(childVals[0]);
+					const Int16 b = getInt16(childVals[1]);
+
+					result = (b < 0 || b >= 16) ? 0 : (Int16)(a << b);
+				}
+
+				break;
+			case Op::Types::BITWISE_RSHIFT: {
+					const Int16 a = getInt16(childVals[0]);
+					const Int16 b = getInt16(childVals[1]);
+
+					result = (b < 0 || b >= 16) ? 0 : (Int16)(a >> b);
+				}
+
+				break;
 			case Op::Types::BITWISE_NOT:    result =  ~getInt16(childVals[0]);                                    break;
 			case Op::Types::NEG:            result =  -getInt16(childVals[0]);                                    break;
 			case Op::Types::SGN:            result = (Int16)Math::sign(getInt16(childVals[0]));                   break;

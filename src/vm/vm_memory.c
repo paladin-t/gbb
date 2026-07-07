@@ -54,7 +54,7 @@ void vm_memcpy(SCRIPT_CTX * THIS, UINT8 src) OLDCALL BANKED {
 
 // Sets the values of a range of space.
 void vm_memset(SCRIPT_CTX * THIS) OLDCALL BANKED {
-    const UINT8 * dst  = (UINT8 *)*(--THIS->stack_ptr);
+    UINT8 * dst        = (UINT8 *)*(--THIS->stack_ptr);
     const UINT8 value  = (UINT8)*(--THIS->stack_ptr);
     const UINT16 count = (UINT16)*(--THIS->stack_ptr);
 

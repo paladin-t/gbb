@@ -134,7 +134,7 @@ void vm_on_input(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * pc, UINT8 opt) OLDCALL B
         input_handlers[i].bank    = bank;
         input_handlers[i].address = pc;
     } else {
-        // Removed the callback handler from the vector.
+        // Removed a callback handler from the vector.
         UINT8 i, j;
         for (i = 0; i != input_handler_count; ++i) {
             if (EVENT_HANDLER_TYPE(input_handlers[i].options) == EVENT_HANDLER_TYPE(opt)) {

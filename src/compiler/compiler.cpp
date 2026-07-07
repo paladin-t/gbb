@@ -1252,7 +1252,7 @@ static Counter operator -- (Counter &val, int) {
 #ifndef CHECK_COUNTER
 #	define CHECK_COUNTER(CTX, ON_ERROR) \
 		do { \
-			if ((CTX).stackFootprint->max > (CTX).stackSize) { \
+			if ((CTX).stackFootprint && (CTX).stackFootprint->max > (CTX).stackSize) { \
 				THROW_STACK_OVERFLOW((ON_ERROR), !(CTX).strictOn); \
 			} \
 		} while (false)
