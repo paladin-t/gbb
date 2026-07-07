@@ -68,9 +68,9 @@ void vm_dbginfo(SCRIPT_CTX * THIS) OLDCALL BANKED {
     *d++ = '>'; // To the shell.
     *d++ = 'S'; *d++ = ':';
     if (full) {
+        SCRIPT_CTX * first = first_ctx;
         for (UINT8 i = 0; i != VM_MAX_CONTEXTS; ++i) {
             SCRIPT_CTX * ctx = &CTXS[i];
-            SCRIPT_CTX * first = first_ctx;
             BOOLEAN alive;
             DL_CONTAINS(first, ctx, alive);
             if (alive) {
@@ -79,7 +79,6 @@ void vm_dbginfo(SCRIPT_CTX * THIS) OLDCALL BANKED {
             } else {
                 *d++ = '-';
             }
-            ctx = ctx->next;
             if (i != VM_MAX_CONTEXTS - 1)
                 *d++ = ',';
         }

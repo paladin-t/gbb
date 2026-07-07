@@ -124,10 +124,9 @@ void projectile_init(void) BANKED {
 
 void projectile_update(void) BANKED {
     // Prepare.
-    projectile_t * next;
-
     projectile_t * projectile = projectile_active_head;
     projectile_t * prev_projectile = NULL;
+    projectile_t * next;
 
     // Update the projectiles.
     while (projectile) {
@@ -182,7 +181,7 @@ void projectile_update(void) BANKED {
         const UINT8 y = TO_SCREEN(projectile->position.y) - scene_camera_y;
 
         if (x > GRAPHICS_WIDTH || y - 8 > GRAPHICS_HEIGHT) { // Out of screen, remove the projectile.
-            projectile_t * next = projectile->next;
+            next = projectile->next;
             LL_REMOVE_ITEM(projectile_active_head, projectile, prev_projectile);
             LL_PUSH_HEAD(projectile_inactive_head, projectile);
             projectile = next;

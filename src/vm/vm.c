@@ -537,14 +537,15 @@ void vm_begin_thread(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * pc, BOOLEAN put, INT
     SCRIPT_CTX * ctx = script_execute(bank, pc, A, 0);
     if (!nargs)
         return;
-    if (!ctx)
-        return;
-
-    for (UINT8 i = nargs; i != 0; --i) { // Initialize thread locals if any.
-        INT16 B = get_int16_be(THIS->bank, (UINT8 *)THIS->PC);
-        THIS->PC += 2;
-        B = *(INT16 *)VM_REF_TO_PTR(B);
-        *(ctx->stack_ptr++) = (UINT16)B;
+    if (ctx) {
+        for (UINT8 i = nargs; i != 0; --i) { // Initialize thread locals if any.
+            INT16 B = get_int16_be(THIS->bank, (UINT8 *)THIS->PC);
+            B = *(INT16 *)VM_REF_TO_PTR(B);
+            *(ctx->stack_ptr++) = (UINT16)B;
+            THIS->PC += 2;
+        }
+    } else {
+        THIS->PC += MUL2(nargs);
     }
 }
 

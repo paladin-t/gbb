@@ -295,7 +295,7 @@ INLINE void transition_normalise(
 // Parameters:
 //   [C] scene_w     Width of the scene in tiles, (C)onstant.
 //   [D] scene_h     Height of the scene in tiles, (may be < DEVICE_SCREEN_HEIGHT),
-//                  (D)etermined automatically.
+//                   (D)etermined automatically.
 //   [S] scene_y     Y offset of the scene within the viewport (tiles). Rows
 //                   above/below the scene are reserved for the UI window,
 //                   determined automatically and cached on (S)tack.

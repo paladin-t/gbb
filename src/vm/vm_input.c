@@ -128,6 +128,7 @@ void vm_on_input(SCRIPT_CTX * THIS, UINT8 bank, UINT8 * pc, UINT8 opt) OLDCALL B
         }
 
         // Add a new callback handler to the vector.
+        // `input_handler_count` won't exceed `INPUT_HANDLER_COUNT`.
         i = input_handler_count++;
         input_handlers[i].options = opt;
         input_handlers[i].bank    = bank;
