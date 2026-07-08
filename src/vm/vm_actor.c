@@ -201,8 +201,10 @@ void actor_update(void) BANKED {
             if (CHK_FLAG(actor->motion, ACTOR_MOTION_RELATIVE)) {
                 UINT16 x = ACTOR_DELTA(actor, actor->relative_movement.x, x);
                 UINT16 y = ACTOR_DELTA(actor, actor->relative_movement.y, y);
+#if !SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
                 if (x & 0x8000) x = 0; // Clamp left movement greater than 0.
                 if (y & 0x8000) y = 0; // Clamp up movement greater than 0.
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
                 if (!actor_move(actor, x, y)) {
                     actor->motion = 0;
                 }

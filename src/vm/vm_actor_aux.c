@@ -140,18 +140,34 @@ BOOLEAN actor_move(actor_t * actor, UINT16 x, UINT16 y) BANKED {
     if (actor->motion == 0) {
         actor->movement_interrupt = FALSE;
         if (x != actor->position.x) {
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+            SET_FLAG(
+                actor->motion,
+                (x < actor->position.x) || (x & 0x8000) ?
+                    ACTOR_MOTION_MOVE_LEFT : ACTOR_MOTION_MOVE_RIGHT
+            );
+#else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
             SET_FLAG(
                 actor->motion,
                 x < actor->position.x ?
                     ACTOR_MOTION_MOVE_LEFT : ACTOR_MOTION_MOVE_RIGHT
             );
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         }
         if (y != actor->position.y) {
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+            SET_FLAG(
+                actor->motion,
+                (y < actor->position.y) || (y & 0x8000) ?
+                    ACTOR_MOTION_MOVE_UP : ACTOR_MOTION_MOVE_DOWN
+            );
+#else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
             SET_FLAG(
                 actor->motion,
                 y < actor->position.y ?
                     ACTOR_MOTION_MOVE_UP : ACTOR_MOTION_MOVE_DOWN
             );
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         }
     }
 
@@ -165,8 +181,13 @@ BOOLEAN actor_move(actor_t * actor, UINT16 x, UINT16 y) BANKED {
     // Move in the x-axis.
     if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_X)) {
         UINT8 dir;
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+        if        ((x < actor->position.x) || (x & 0x8000)) dir = DIRECTION_LEFT;
+        else /* if (x > actor->position.x) */               dir = DIRECTION_RIGHT;
+#else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         if         (x < actor->position.x)    dir = DIRECTION_LEFT;
         else /* if (x > actor->position.x) */ dir = DIRECTION_RIGHT;
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         point_translate_dir(&actor->position, dir, actor->move_speed);
         if (
             (dir == DIRECTION_LEFT && actor->position.x <= x) ||
@@ -183,8 +204,13 @@ BOOLEAN actor_move(actor_t * actor, UINT16 x, UINT16 y) BANKED {
     // Move in the y-axis.
     if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_Y)) {
         UINT8 dir;
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+        if        ((y < actor->position.y) || (y & 0x8000)) dir = DIRECTION_UP;
+        else /* if (y > actor->position.y) */               dir = DIRECTION_DOWN;
+#else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         if         (y < actor->position.y)    dir = DIRECTION_UP;
         else /* if (y > actor->position.y) */ dir = DIRECTION_DOWN;
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         point_translate_dir(&actor->position, dir, actor->move_speed);
         if (
             (dir == DIRECTION_UP && actor->position.y <= y) ||

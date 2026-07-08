@@ -20,6 +20,10 @@
 
 BANKREF(VM_SCENE)
 
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+#   warning "Message: Compiling with move out of bounds."
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
+
 #define SCENE_CAMERA_SHAKE_X   1
 #define SCENE_CAMERA_SHAKE_Y   2
 
@@ -170,7 +174,7 @@ UINT8 scene_get_attr(UINT8 x, UINT8 y) BANKED {
     if (scene.attr_bank == 0)
         return 0;
 
-    UINT16 off = (UINT16)x + (UINT16)y * scene.width;
+    const UINT16 off = (UINT16)x + (UINT16)y * scene.width;
 
     return get_uint8(scene.attr_bank, scene.attr_address + off);
 }

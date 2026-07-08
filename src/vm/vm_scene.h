@@ -13,6 +13,10 @@
 
 BANKREF_EXTERN(VM_SCENE)
 
+#ifndef SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+#   define SCENE_MOVE_OUT_OF_BOUNDS_ENABLED    0
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
+
 #define SCENE_LAYER_MAP                        0x01 // Must have.
 #define SCENE_LAYER_ATTR                       0x02
 #define SCENE_LAYER_PROP                       0x04
@@ -108,8 +112,12 @@ UINT8 scene_get_attr(UINT8 x, UINT8 y) BANKED;
 INLINE UINT8 scene_get_prop(UINT8 x, UINT8 y) {
     if (scene.prop_bank == 0)
         return 0;
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+    if (x >= scene.width || y >= scene.height)
+        return 0;
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
 
-    UINT16 off = (UINT16)x + (UINT16)y * scene.width;
+    const UINT16 off = (UINT16)x + (UINT16)y * scene.width;
 
     return get_uint8(scene.prop_bank, scene.prop_address + off);
 }

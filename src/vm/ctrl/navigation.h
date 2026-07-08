@@ -241,11 +241,13 @@ INLINE UINT8 navigation_get_blocking_up_pos_in_scene(actor_t * actor, INT16 dy, 
     const INT16 new_y = pos_y + dy;
     const INT16 scr_y = new_y + actor->bounds.top;
     const UINT8 y     = DIV8(scr_y);
+#if !SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
     if (scr_y <= 0) {
         *out_y = (-actor->bounds.top);
 
         return SCENE_PROPERTY_BLOCKING_UP;
     }
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
     while (x0 != x1) {
         const UINT8 prop = scene_get_prop(x0, y);
         if (prop & SCENE_PROPERTY_BLOCKING_UP) {
@@ -267,11 +269,13 @@ INLINE UINT8 navigation_get_blocking_down_pos_in_scene(actor_t * actor, INT16 dy
     const UINT8 x1    = DIV8(pos_x + actor->bounds.right) + 1;
     const INT16 new_y = pos_y + dy;
     const UINT8 y     = DIV8(new_y + actor->bounds.bottom);
+#if !SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
     if (y >= scene.height) {
         *out_y = (MUL8(y) - actor->bounds.bottom) - 1;
 
         return SCENE_PROPERTY_BLOCKING_DOWN;
     }
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
     while (x0 != x1) {
         const UINT8 prop = scene_get_prop(x0, y);
         if (prop & SCENE_PROPERTY_BLOCKING_DOWN) {
@@ -294,11 +298,13 @@ INLINE UINT8 navigation_get_blocking_left_pos_in_scene(actor_t * actor, INT16 dx
     const UINT8 x     = DIV8(scr_x);
     UINT8 y0          = DIV8(pos_y + actor->bounds.top);
     const UINT8 y1    = DIV8(pos_y + actor->bounds.bottom) + 1;
+#if !SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
     if (scr_x <= 0) {
         *out_x = (-actor->bounds.left);
 
         return SCENE_PROPERTY_BLOCKING_LEFT;
     }
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
     while (y0 != y1) {
         const UINT8 prop = scene_get_prop(x, y0);
         if (prop & SCENE_PROPERTY_BLOCKING_LEFT) {
@@ -320,11 +326,13 @@ INLINE UINT8 navigation_get_blocking_right_pos_in_scene(actor_t * actor, INT16 d
     const UINT8 x     = DIV8(new_x + actor->bounds.right);
     UINT8 y0          = DIV8(pos_y + actor->bounds.top);
     const UINT8 y1    = DIV8(pos_y + actor->bounds.bottom) + 1;
+#if !SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
     if (x >= scene.width) {
         *out_x = (MUL8(x) - actor->bounds.right) - 1;
 
         return SCENE_PROPERTY_BLOCKING_RIGHT;
     }
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
     while (y0 != y1) {
         const UINT8 prop = scene_get_prop(x, y0);
         if (prop & SCENE_PROPERTY_BLOCKING_RIGHT) {

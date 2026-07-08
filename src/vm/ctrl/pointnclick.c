@@ -151,8 +151,8 @@ BOOLEAN controller_behave_pointnclick_player(actor_t * actor, UINT8 pointing) BA
 
     if (moving) {
         if (scene.width != 0) {
-            UINT16 x = TO_SCREEN(actor->position.x);
-            UINT16 scene_width = MUL8(scene.width);
+            const UINT16 x = TO_SCREEN(actor->position.x);
+            const UINT16 scene_width = MUL8(scene.width);
             if (x + actor->bounds.left > scene_width) {
                 actor->position.x = -FROM_SCREEN(actor->bounds.left);
             } else if (x + actor->bounds.right >= scene_width) {
@@ -160,8 +160,8 @@ BOOLEAN controller_behave_pointnclick_player(actor_t * actor, UINT8 pointing) BA
             }
         }
         if (scene.height != 0) {
-            UINT16 y = TO_SCREEN(actor->position.y);
-            UINT16 scene_height = MUL8(scene.height);
+            const UINT16 y = TO_SCREEN(actor->position.y);
+            const UINT16 scene_height = MUL8(scene.height);
             if (y + actor->bounds.top > scene_height) {
                 actor->position.y = -FROM_SCREEN(actor->bounds.top);
             } else if (y + actor->bounds.bottom >= scene_height) {
