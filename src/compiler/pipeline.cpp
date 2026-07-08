@@ -2355,13 +2355,15 @@ public:
 				const SceneAssets &scenes = assets->scenes;
 				const SceneAssets::Entry* entry = scenes.get(src.page);
 
-				touch(assets, AssetsBundle::Categories::MAP, entry->refMap, incRef);
+				if (entry) {
+					touch(assets, AssetsBundle::Categories::MAP, entry->refMap, incRef);
 
-				SceneAssets::Entry::UniqueRef uref;
-				const SceneAssets::Entry::Ref refActors = entry->getRefActors(&uref);
-				(void)refActors;
-				for (int refActor : uref)
-					touch(assets, AssetsBundle::Categories::ACTOR, refActor, incRef);
+					SceneAssets::Entry::UniqueRef uref;
+					const SceneAssets::Entry::Ref refActors = entry->getRefActors(&uref);
+					(void)refActors;
+					for (int refActor : uref)
+						touch(assets, AssetsBundle::Categories::ACTOR, refActor, incRef);
+				}
 			}
 		}
 
