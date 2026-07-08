@@ -302,7 +302,7 @@ INLINE void gui_def_label(SCRIPT_CTX * THIS) {
     gui_cursor_x             = margin_x;
     gui_cursor_y             = margin_y;
     gui_text_ptr             = NULL;
-    gui_ticks                = gui_interval; if (gui_interval > GUI_BLIT_MAX_INTERVAL) gui_interval = 0;
+    gui_ticks                = gui_interval; if (gui_interval > GUI_BLIT_MAX_INTERVAL /* is a special control value */) gui_interval = 0;
     gui_button_previous      = 0x00;
     gui_label_touch_states   = 0;
     gui_label_start_position = GUI_LABEL_POSITION(x, y);
