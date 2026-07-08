@@ -10480,12 +10480,45 @@ public:
 
 			break;
 		case OperationTypes::SCENE: {
+				bool useMapAttr = false;
+				int mapIndex = -1;
+				do {
+					if (_scheduled.target.sub != 0) // Attribute layer must be at 0.
+						break;
+
+					const SceneAssets &scenes = ctx.assets->scenes;
+					const int sceneIndex = _scheduled.target.page;
+					const SceneAssets::Entry* sceneEntry = scenes.get(sceneIndex);
+					if (!sceneEntry)
+						break;
+
+					if (!sceneEntry->data || !sceneEntry->data->hasAttributes()) // The attribute layer must be enabled in the scene asset to continue.
+						break;
+
+					const MapAssets &maps = ctx.assets->maps;
+					mapIndex = sceneEntry->refMap;
+					const MapAssets::Entry* mapEntry = maps.get(mapIndex);
+					if (!mapEntry)
+						break;
+
+					if (mapEntry->hasAttributes) // The attribute layer is enabled in the referenced map asset.
+						useMapAttr = true;
+				} while (false);
+
 				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 				Pipeline::Resource::Array locations;
-				if (!ctx.pipeline->lookup(AssetsBundle::Categories::SCENE, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
-				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
-				const Pipeline::Resource &loc = locations[_scheduled.target.sub];
-				const int bank = loc.bank;
+				int bank = 0;
+				if (useMapAttr) {
+					if (!ctx.pipeline->lookup(AssetsBundle::Categories::MAP, mapIndex, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+					if (locations.size() < 2) { THROW_INVALID_ASSET_POINT(onError); }
+					const Pipeline::Resource &loc = locations[1];
+					bank = loc.bank;
+				} else {
+					if (!ctx.pipeline->lookup(AssetsBundle::Categories::SCENE, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+					if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
+					const Pipeline::Resource &loc = locations[_scheduled.target.sub];
+					bank = loc.bank;
+				}
 
 				Byte* args = _scheduled.args(bytes->pointer());
 				args = fill(args, (Int16)bank);
@@ -11383,12 +11416,45 @@ public:
 
 			break;
 		case OperationTypes::SCENE: {
+				bool useMapAttr = false;
+				int mapIndex = -1;
+				do {
+					if (_scheduled.target.sub != 0) // Attribute layer must be at 0.
+						break;
+
+					const SceneAssets &scenes = ctx.assets->scenes;
+					const int sceneIndex = _scheduled.target.page;
+					const SceneAssets::Entry* sceneEntry = scenes.get(sceneIndex);
+					if (!sceneEntry)
+						break;
+
+					if (!sceneEntry->data || !sceneEntry->data->hasAttributes()) // The attribute layer must be enabled in the scene asset to continue.
+						break;
+
+					const MapAssets &maps = ctx.assets->maps;
+					mapIndex = sceneEntry->refMap;
+					const MapAssets::Entry* mapEntry = maps.get(mapIndex);
+					if (!mapEntry)
+						break;
+
+					if (mapEntry->hasAttributes) // The attribute layer is enabled in the referenced map asset.
+						useMapAttr = true;
+				} while (false);
+
 				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 				Pipeline::Resource::Array locations;
-				if (!ctx.pipeline->lookup(AssetsBundle::Categories::SCENE, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
-				if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
-				const Pipeline::Resource &loc = locations[_scheduled.target.sub];
-				const int address = loc.address;
+				int address = 0;
+				if (useMapAttr) {
+					if (!ctx.pipeline->lookup(AssetsBundle::Categories::MAP, mapIndex, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+					if (locations.size() < 2) { THROW_INVALID_ASSET_POINT(onError); }
+					const Pipeline::Resource &loc = locations[1];
+					address = loc.address;
+				} else {
+					if (!ctx.pipeline->lookup(AssetsBundle::Categories::SCENE, _scheduled.target.page, locations)) { THROW_INVALID_ASSET_POINT(onError); }
+					if (_scheduled.target.sub < 0 || _scheduled.target.sub >= (int)locations.size()) { THROW_INVALID_ASSET_POINT(onError); }
+					const Pipeline::Resource &loc = locations[_scheduled.target.sub];
+					address = loc.address;
+				}
 
 				Byte* args = _scheduled.args(bytes->pointer());
 				args = fill(args, (UInt16)address);

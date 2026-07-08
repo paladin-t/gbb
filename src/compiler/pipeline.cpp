@@ -1874,9 +1874,9 @@ static bool generate_toBytes(const SceneAssets::Entry* entry, Pipeline* pipeline
 		return true;
 	};
 
-	const MapAssets::Entry* mapEntry = entry->getMap(entry->refMap);
-	if (mapEntry && !mapEntry->hasAttributes) {
-		if (entry->data->hasAttributes()) {
+	if (entry->data->hasAttributes()) {
+		const MapAssets::Entry* mapEntry = entry->getMap(entry->refMap);
+		if (mapEntry && !mapEntry->hasAttributes) { // Serialize the scene's attribute layer only if the map's layer has not been enabled.
 			if (!serializePlaneLayer(entry->data->attributeLayer(), pipeline, table, page, includeUnused, ASSETS_SCENE_ATTRIBUTES_LAYER))
 				return false;
 		}
