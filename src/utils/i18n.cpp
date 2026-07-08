@@ -350,7 +350,7 @@ public:
 		if (lang >= (int)_table[item].size()) {
 			GBBASIC_ASSERT(false && "Wrong data.");
 
-			return nullptr;
+			return false;
 		}
 
 		_table[item][lang] = val;
@@ -378,7 +378,7 @@ public:
 
 		const Row &row_ = _table[row];
 		if (col < 0 || col >= (int)row_.size())
-			return false;
+			return nullptr;
 
 		return _table[row][col].c_str();
 	}
