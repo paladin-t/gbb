@@ -182,16 +182,21 @@ BOOLEAN actor_move(actor_t * actor, UINT16 x, UINT16 y) BANKED {
     if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_X)) {
         UINT8 dir;
 #if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
-        if        ((x < actor->position.x) || (x & 0x8000)) dir = DIRECTION_LEFT;
-        else /* if (x > actor->position.x) */               dir = DIRECTION_RIGHT;
+        if         ((INT16)x < (INT16)actor->position.x)    dir = DIRECTION_LEFT;
+        else /* if ((INT16)x > (INT16)actor->position.x) */ dir = DIRECTION_RIGHT;
 #else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         if         (x < actor->position.x)    dir = DIRECTION_LEFT;
         else /* if (x > actor->position.x) */ dir = DIRECTION_RIGHT;
 #endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         point_translate_dir(&actor->position, dir, actor->move_speed);
         if (
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+            (dir == DIRECTION_LEFT && (INT16)actor->position.x <= (INT16)x) ||
+            (dir == DIRECTION_RIGHT && (INT16)actor->position.x >= (INT16)x)
+#else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
             (dir == DIRECTION_LEFT && actor->position.x <= x) ||
             (dir == DIRECTION_RIGHT && actor->position.x >= x)
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         ) {
             actor->position.x = x;
             CLR_FLAG(
@@ -205,16 +210,21 @@ BOOLEAN actor_move(actor_t * actor, UINT16 x, UINT16 y) BANKED {
     if (CHK_FLAG(actor->motion, ACTOR_MOTION_MOVE_Y)) {
         UINT8 dir;
 #if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
-        if        ((y < actor->position.y) || (y & 0x8000)) dir = DIRECTION_UP;
-        else /* if (y > actor->position.y) */               dir = DIRECTION_DOWN;
+        if         ((INT16)y < (INT16)actor->position.y)    dir = DIRECTION_UP;
+        else /* if ((INT16)y > (INT16)actor->position.y) */ dir = DIRECTION_DOWN;
 #else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         if         (y < actor->position.y)    dir = DIRECTION_UP;
         else /* if (y > actor->position.y) */ dir = DIRECTION_DOWN;
 #endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         point_translate_dir(&actor->position, dir, actor->move_speed);
         if (
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+            (dir == DIRECTION_UP && (INT16)actor->position.y <= (INT16)y) ||
+            (dir == DIRECTION_DOWN && (INT16)actor->position.y >= (INT16)y)
+#else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
             (dir == DIRECTION_UP && actor->position.y <= y) ||
             (dir == DIRECTION_DOWN && actor->position.y >= y)
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         ) {
             actor->position.y = y;
             CLR_FLAG(
@@ -307,10 +317,17 @@ actor_t * actor_in_front_of_actor(actor_t * actor, UINT8 forward, UINT8 inc_no_c
 }
 
 actor_t * actor_hits(const boundingbox_t * bb, const upoint16_t * offset, actor_t * ignore, BOOLEAN inc_no_collision) BANKED {
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+    const upoint16_t off = {
+        .x = (UINT16)TO_SCREEN((INT16)offset->x),
+        .y = (UINT16)TO_SCREEN((INT16)offset->y)
+    };
+#else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
     const upoint16_t off = {
         .x = (UINT16)TO_SCREEN(offset->x),
         .y = (UINT16)TO_SCREEN(offset->y)
     };
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
 
     actor_t * actor = actor_active_tail;
     while (actor) {
@@ -320,10 +337,17 @@ actor_t * actor_hits(const boundingbox_t * bb, const upoint16_t * offset, actor_
             continue;
         }
 
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+        const upoint16_t pos = {
+            .x = (UINT16)TO_SCREEN((INT16)actor->position.x),
+            .y = (UINT16)TO_SCREEN((INT16)actor->position.y)
+        };
+#else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         const upoint16_t pos = {
             .x = (UINT16)TO_SCREEN(actor->position.x),
             .y = (UINT16)TO_SCREEN(actor->position.y)
         };
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         if (boundingbox_intersects(bb, &off, &actor->bounds, &pos)) {
             return actor;
         }
@@ -335,10 +359,17 @@ actor_t * actor_hits(const boundingbox_t * bb, const upoint16_t * offset, actor_
 }
 
 actor_t * actor_hits_in_group(const boundingbox_t * bb, const upoint16_t * offset, UINT8 collision_group) BANKED {
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+    const upoint16_t off = {
+        .x = (UINT16)TO_SCREEN((INT16)offset->x),
+        .y = (UINT16)TO_SCREEN((INT16)offset->y)
+    };
+#else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
     const upoint16_t off = {
         .x = (UINT16)TO_SCREEN(offset->x),
         .y = (UINT16)TO_SCREEN(offset->y)
     };
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
 
     actor_t * actor = actor_active_tail;
     while (actor) {
@@ -348,10 +379,17 @@ actor_t * actor_hits_in_group(const boundingbox_t * bb, const upoint16_t * offse
             continue;
         }
 
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+        const upoint16_t pos = {
+            .x = (UINT16)TO_SCREEN((INT16)actor->position.x),
+            .y = (UINT16)TO_SCREEN((INT16)actor->position.y)
+        };
+#else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         const upoint16_t pos = {
             .x = (UINT16)TO_SCREEN(actor->position.x),
             .y = (UINT16)TO_SCREEN(actor->position.y)
         };
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
         if (boundingbox_intersects(bb, &off, &actor->bounds, &pos)) {
             return actor;
         }

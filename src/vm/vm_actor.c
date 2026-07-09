@@ -129,10 +129,17 @@ INLINE BOOLEAN actor_is_inside_viewport(actor_t * actor) {
         .x      = (UINT16)(DIV8(MAX(scene_camera_x - graphics_map_x, 0))),
         .y      = (UINT16)(DIV8(MAX(scene_camera_y - graphics_map_y, 0)))
     };
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+    const upoint16_t pos = { // In tiles.
+        .x      = (UINT16)(MAX(TO_SCREEN_TILE((INT16)actor->position.x) + ACTOR_DEACTIVE_DISTANCE - 1, 0)),
+        .y      = (UINT16)(MAX(TO_SCREEN_TILE((INT16)actor->position.y) + ACTOR_DEACTIVE_DISTANCE - 1, 0))
+    };
+#else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
     const upoint16_t pos = { // In tiles.
         .x      = (UINT16)(MAX(TO_SCREEN_TILE(actor->position.x) + ACTOR_DEACTIVE_DISTANCE - 1, 0)),
         .y      = (UINT16)(MAX(TO_SCREEN_TILE(actor->position.y) + ACTOR_DEACTIVE_DISTANCE - 1, 0))
     };
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
 
     return boundingbox_contains(&box, &off, &pos);
 }
@@ -141,8 +148,13 @@ INLINE BOOLEAN actor_move_camera(actor_t * actor) {
     // Move the camera.
     BOOLEAN camera_moved = FALSE;
 
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
+    INT16 x = TO_SCREEN((INT16)actor->position.x) - DIV2(DEVICE_SCREEN_PX_WIDTH);
+    INT16 y = TO_SCREEN((INT16)actor->position.y) - DIV2(DEVICE_SCREEN_PX_HEIGHT) + scene_camera_offset_y;
+#else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
     INT16 x = TO_SCREEN(actor->position.x) - DIV2(DEVICE_SCREEN_PX_WIDTH);
     INT16 y = TO_SCREEN(actor->position.y) - DIV2(DEVICE_SCREEN_PX_HEIGHT) + scene_camera_offset_y;
+#endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
     if (x < scene_camera_x - scene_camera_deadzone_x) {
         x = x + scene_camera_deadzone_x;
         camera_moved = TRUE;
