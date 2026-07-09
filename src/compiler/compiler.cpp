@@ -8909,10 +8909,11 @@ private:
 				}
 				if (tk->is(Token::Types::OPERATOR)) {
 					if ((std::string)tk->data() == "/") {
-						newop = Token::Ptr(new Token());
+						// Division doesn't equal to rshift, so do not do the following.
+						/*newop = Token::Ptr(new Token());
 						newop
 							->type(Token::Types::OPERATOR)
-							->data("rshift");
+							->data("rshift");*/
 					} else if ((std::string)tk->data() == "*") {
 						newop = Token::Ptr(new Token());
 						newop
