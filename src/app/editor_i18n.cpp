@@ -1958,14 +1958,14 @@ private:
 					if (path.empty())
 						break;
 
-					std::string txt;
+					std::string osstr;
 					File::Ptr file(File::create());
 					if (!file->open(path.c_str(), Stream::READ)) {
 						ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
 
 						break;
 					}
-					if (!file->readString(txt)) {
+					if (!file->readString(osstr)) {
 						file->close(); FileMonitor::unuse(path);
 
 						ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
@@ -1974,6 +1974,7 @@ private:
 					}
 					file->close(); FileMonitor::unuse(path);
 
+					const std::string txt = Unicode::fromOs(osstr);
 					I18n::Ptr newObj = nullptr;
 					BaseAssets::Entry::ParsingStatuses status = BaseAssets::Entry::ParsingStatuses::SUCCESS;
 					if (!entry()->parseCsv(newObj, txt, status)) {
