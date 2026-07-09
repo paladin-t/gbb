@@ -8892,7 +8892,7 @@ private:
 		};
 		auto add = [&rpn, &ctx, is] (const IToken::Ptr &tk) -> void {
 			// FEAT: OPTIMIZATION.
-			// Replace some multiplication and division with bitwise shifting to optimize the code.
+			// Replace some multiplication ~~and division~~ with bitwise shifting to optimize the code.
 			Token::Ptr newnum = nullptr;
 			Token::Ptr newop = nullptr;
 			if (ctx.expression.optimize) {
