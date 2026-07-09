@@ -129,17 +129,15 @@ INLINE BOOLEAN actor_is_inside_viewport(actor_t * actor) {
         .x      = (UINT16)(DIV8(MAX(scene_camera_x - graphics_map_x, 0))),
         .y      = (UINT16)(DIV8(MAX(scene_camera_y - graphics_map_y, 0)))
     };
-#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
     const upoint16_t pos = { // In tiles.
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
         .x      = (UINT16)(MAX(TO_SCREEN_TILE((INT16)actor->position.x) + ACTOR_DEACTIVE_DISTANCE - 1, 0)),
         .y      = (UINT16)(MAX(TO_SCREEN_TILE((INT16)actor->position.y) + ACTOR_DEACTIVE_DISTANCE - 1, 0))
-    };
 #else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
-    const upoint16_t pos = { // In tiles.
         .x      = (UINT16)(MAX(TO_SCREEN_TILE(actor->position.x) + ACTOR_DEACTIVE_DISTANCE - 1, 0)),
         .y      = (UINT16)(MAX(TO_SCREEN_TILE(actor->position.y) + ACTOR_DEACTIVE_DISTANCE - 1, 0))
-    };
 #endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
+    };
 
     return boundingbox_contains(&box, &off, &pos);
 }

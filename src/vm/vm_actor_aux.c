@@ -317,17 +317,15 @@ actor_t * actor_in_front_of_actor(actor_t * actor, UINT8 forward, UINT8 inc_no_c
 }
 
 actor_t * actor_hits(const boundingbox_t * bb, const upoint16_t * offset, actor_t * ignore, BOOLEAN inc_no_collision) BANKED {
-#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
     const upoint16_t off = {
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
         .x = (UINT16)TO_SCREEN((INT16)offset->x),
         .y = (UINT16)TO_SCREEN((INT16)offset->y)
-    };
 #else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
-    const upoint16_t off = {
         .x = (UINT16)TO_SCREEN(offset->x),
         .y = (UINT16)TO_SCREEN(offset->y)
-    };
 #endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
+    };
 
     actor_t * actor = actor_active_tail;
     while (actor) {
@@ -337,17 +335,15 @@ actor_t * actor_hits(const boundingbox_t * bb, const upoint16_t * offset, actor_
             continue;
         }
 
-#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
         const upoint16_t pos = {
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
             .x = (UINT16)TO_SCREEN((INT16)actor->position.x),
             .y = (UINT16)TO_SCREEN((INT16)actor->position.y)
-        };
 #else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
-        const upoint16_t pos = {
             .x = (UINT16)TO_SCREEN(actor->position.x),
             .y = (UINT16)TO_SCREEN(actor->position.y)
-        };
 #endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
+        };
         if (boundingbox_intersects(bb, &off, &actor->bounds, &pos)) {
             return actor;
         }
@@ -359,17 +355,15 @@ actor_t * actor_hits(const boundingbox_t * bb, const upoint16_t * offset, actor_
 }
 
 actor_t * actor_hits_in_group(const boundingbox_t * bb, const upoint16_t * offset, UINT8 collision_group) BANKED {
-#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
     const upoint16_t off = {
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
         .x = (UINT16)TO_SCREEN((INT16)offset->x),
         .y = (UINT16)TO_SCREEN((INT16)offset->y)
-    };
 #else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
-    const upoint16_t off = {
         .x = (UINT16)TO_SCREEN(offset->x),
         .y = (UINT16)TO_SCREEN(offset->y)
-    };
 #endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
+    };
 
     actor_t * actor = actor_active_tail;
     while (actor) {
@@ -379,17 +373,15 @@ actor_t * actor_hits_in_group(const boundingbox_t * bb, const upoint16_t * offse
             continue;
         }
 
-#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
         const upoint16_t pos = {
+#if SCENE_MOVE_OUT_OF_BOUNDS_ENABLED
             .x = (UINT16)TO_SCREEN((INT16)actor->position.x),
             .y = (UINT16)TO_SCREEN((INT16)actor->position.y)
-        };
 #else /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
-        const upoint16_t pos = {
             .x = (UINT16)TO_SCREEN(actor->position.x),
             .y = (UINT16)TO_SCREEN(actor->position.y)
-        };
 #endif /* SCENE_MOVE_OUT_OF_BOUNDS_ENABLED */
+        };
         if (boundingbox_intersects(bb, &off, &actor->bounds, &pos)) {
             return actor;
         }
