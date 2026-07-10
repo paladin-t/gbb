@@ -188,6 +188,30 @@ list(
   "../lib/promise_cpp/src/promise.cpp"
 )
 list(
+  APPEND GBBASIC_LIB_PSD
+  "../lib/psd/src/psd/Psdminiz.c"
+  "../lib/psd/src/psd/PsdAllocator.cpp"
+  "../lib/psd/src/psd/PsdBlendMode.cpp"
+  "../lib/psd/src/psd/PsdColorMode.cpp"
+  "../lib/psd/src/psd/PsdDecompressRle.cpp"
+  "../lib/psd/src/psd/PsdExport.cpp"
+  "../lib/psd/src/psd/PsdFile.cpp"
+  "../lib/psd/src/psd/PsdFixedSizeString.cpp"
+  "../lib/psd/src/psd/PsdInterleave.cpp"
+  "../lib/psd/src/psd/PsdLayerCanvasCopy.cpp"
+  "../lib/psd/src/psd/PsdMallocAllocator.cpp"
+  "../lib/psd/src/psd/PsdNativeFile_Linux.cpp"
+  "../lib/psd/src/psd/PsdParseColorModeDataSection.cpp"
+  "../lib/psd/src/psd/PsdParseDocument.cpp"
+  "../lib/psd/src/psd/PsdParseImageDataSection.cpp"
+  "../lib/psd/src/psd/PsdParseImageResourcesSection.cpp"
+  "../lib/psd/src/psd/PsdParseLayerMaskSection.cpp"
+  "../lib/psd/src/psd/PsdPch.cpp"
+  "../lib/psd/src/psd/PsdStringUtil.cpp"
+  "../lib/psd/src/psd/PsdSyncFileReader.cpp"
+  "../lib/psd/src/psd/PsdSyncFileWriter.cpp"
+)
+list(
   APPEND GBBASIC_LIB_ZLIB
   "../lib/zlib/contrib/minizip/ioapi.c"
   "../lib/zlib/contrib/minizip/mztools.c"
@@ -337,6 +361,7 @@ add_executable(
   ${GBBASIC_LIB_MPC}
   ${GBBASIC_LIB_PORTABLE_FILE_DIALOGS}
   ${GBBASIC_LIB_PROMISE}
+  ${GBBASIC_LIB_PSD}
   ${GBBASIC_LIB_ZLIB}
   ${GBBASIC_SRC_APP}
   ${GBBASIC_SRC_COMPILER}
@@ -378,6 +403,8 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNDEBUG")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format-security -Wno-unused-result")
+set_source_files_properties("../lib/psd/src/psd/PsdExport.cpp" PROPERTIES COMPILE_FLAGS -Wno-pragmas)
+set_source_files_properties("../lib/psd/src/psd/PsdParseLayerMaskSection.cpp" PROPERTIES COMPILE_FLAGS -Wno-pragmas)
 set_source_files_properties("../src/utils/file_sandbox.cpp" PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
 

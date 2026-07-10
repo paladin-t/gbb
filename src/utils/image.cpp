@@ -7,8 +7,32 @@
 */
 
 #include "bytes.h"
+#include "encoding.h"
 #include "image.h"
 #include "plus.h"
+#if GBBASIC_PSD_ENABLED
+#	include "../../lib/psd/src/psd/Psd.h"
+#	include "../../lib/psd/src/psd/PsdPlatform.h"
+#	include "../../lib/psd/src/psd/PsdMallocAllocator.h"
+#	include "../../lib/psd/src/psd/PsdNativeFile.h"
+#	include "../../lib/psd/src/psd/PsdDocument.h"
+#	include "../../lib/psd/src/psd/PsdColorMode.h"
+#	include "../../lib/psd/src/psd/PsdLayer.h"
+#	include "../../lib/psd/src/psd/PsdChannel.h"
+#	include "../../lib/psd/src/psd/PsdChannelType.h"
+#	include "../../lib/psd/src/psd/PsdLayerMask.h"
+#	include "../../lib/psd/src/psd/PsdVectorMask.h"
+#	include "../../lib/psd/src/psd/PsdLayerMaskSection.h"
+#	include "../../lib/psd/src/psd/PsdImageDataSection.h"
+#	include "../../lib/psd/src/psd/PsdImageResourcesSection.h"
+#	include "../../lib/psd/src/psd/PsdParseDocument.h"
+#	include "../../lib/psd/src/psd/PsdParseLayerMaskSection.h"
+#	include "../../lib/psd/src/psd/PsdParseImageDataSection.h"
+#	include "../../lib/psd/src/psd/PsdParseImageResourcesSection.h"
+#	include "../../lib/psd/src/psd/PsdLayerCanvasCopy.h"
+#	include "../../lib/psd/src/psd/PsdInterleave.h"
+#	include "../../lib/psd/src/psd/PsdPlanarImage.h"
+#endif /* GBBASIC_PSD_ENABLED */
 #define STB_IMAGE_IMPLEMENTATION
 #include "../../lib/stb/stb_image.h"
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
@@ -17,6 +41,10 @@
 #include "../../lib/stb/stb_image_write.h"
 #include <SDL.h>
 #include <set>
+
+#if GBBASIC_PSD_ENABLED
+PSD_USING_NAMESPACE;
+#endif /* GBBASIC_PSD_ENABLED */
 
 /*
 ** {===========================================================================
@@ -47,6 +75,37 @@
 
 static const Byte IMAGE_PALETTED_HEADER_BYTES[] = IMAGE_PALETTED_HEADER;
 static const Byte IMAGE_COLORED_HEADER_BYTES[] = IMAGE_COLORED_HEADER;
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Utilities
+*/
+
+#if GBBASIC_PSD_ENABLED
+template <typename T> static T* imageCreateInterleavedImage(Allocator* allocator, const void* srcR, const void* srcG, const void* srcB, unsigned int width, unsigned int height) {
+	T* image = static_cast<T*>(allocator->Allocate(width * height * 4u * sizeof(T), 16u));
+
+	const T* r = static_cast<const T*>(srcR);
+	const T* g = static_cast<const T*>(srcG);
+	const T* b = static_cast<const T*>(srcB);
+	imageUtil::InterleaveRGB(r, g, b, T(0), image, width, height);
+
+	return image;
+}
+template <typename T> static T* imageCreateInterleavedImage(Allocator* allocator, const void* srcR, const void* srcG, const void* srcB, const void* srcA, unsigned int width, unsigned int height) {
+	T* image = static_cast<T*>(allocator->Allocate(width * height * 4u * sizeof(T), 16u));
+
+	const T* r = static_cast<const T*>(srcR);
+	const T* g = static_cast<const T*>(srcG);
+	const T* b = static_cast<const T*>(srcB);
+	const T* a = static_cast<const T*>(srcA);
+	imageUtil::InterleaveRGBA(r, g, b, a, image, width, height);
+
+	return image;
+}
+#endif /* GBBASIC_PSD_ENABLED */
 
 /* ===========================================================================} */
 
@@ -1504,6 +1563,215 @@ public:
 		_blank = src->blank();
 
 		return true;
+	}
+
+	virtual bool fromPsdFile(const char* path) override {
+		clear();
+
+		if (!path)
+			return false;
+
+#if GBBASIC_PSD_ENABLED
+		bool blank = true;
+		do {
+			// Prepare.
+			const std::wstring wosstr = Unicode::toWide(path);
+
+			MallocAllocator allocator;
+			NativeFile file(&allocator);
+
+			// Try opening the file.
+			if (!file.OpenRead(wosstr.c_str())) {
+				fprintf(stderr, "Cannot open file.\n");
+
+				break;
+			}
+
+			// Read data.
+			Document* document = CreateDocument(&file, &allocator);
+			if (!document) {
+				fprintf(stderr, "Cannot create document.\n");
+				file.Close();
+
+				break;
+			}
+
+			if (document->colorMode != colorMode::RGB) {
+				fprintf(stderr, "Document is not in RGB color mode.\n");
+				DestroyDocument(document, &allocator);
+				file.Close();
+
+				break;
+			}
+
+			// Extract transparency mask.
+			bool hasTransparencyMask = false;
+			LayerMaskSection* layerMaskSection = ParseLayerMaskSection(document, &file, &allocator);
+			if (layerMaskSection) {
+				hasTransparencyMask = layerMaskSection->hasTransparencyMask;
+
+				DestroyLayerMaskSection(layerMaskSection, &allocator);
+			}
+
+			// Extract the image data section if available. The image data section stores the final, merged image, as well as additional
+			// alpha channels. this is only available when saving the document with "Maximize Compatibility" turned on.
+			if (document->imageDataSection.length != 0) {
+				ImageDataSection* imageData = ParseImageDataSection(document, &file, &allocator);
+				if (imageData) {
+					// Interleave the planar image data into one RGB or RGBA image.
+					// Store the rest of the (alpha) channels and the transparency mask separately.
+					const unsigned int imageCount = imageData->imageCount;
+
+					// Note that an image can have more than 3 channels, but still no transparency mask in case all extra channels
+					// are actual alpha channels.
+					bool isRgb = false;
+					if (imageCount == 3) {
+						// ImageData->images[0], imageData->images[1] and imageData->images[2] contain the R, G, and B channels of the merged image.
+						// they are always the size of the canvas/document, so we can interleave them using imageUtil::InterleaveRGB directly.
+						isRgb = true;
+					} else if (imageCount >= 4) {
+						// Check if we really have a transparency mask that belongs to the "main" merged image.
+						if (hasTransparencyMask) {
+							// We have 4 or more images/channels, and a transparency mask.
+							// This means that images 0-3 are RGBA, respectively.
+							isRgb = false;
+						} else {
+							// We have 4 or more images stored in the document, but none of them is the transparency mask.
+							// This means we are dealing with RGB (!) data, and several additional alpha channels.
+							isRgb = true;
+						}
+					}
+
+					uint8_t* image8 = nullptr;
+					uint16_t* image16 = nullptr;
+					float32_t* image32 = nullptr;
+					if (isRgb) { // RGB.
+						if (document->bitsPerChannel == 8) {
+							image8 = imageCreateInterleavedImage<uint8_t>(
+								&allocator,
+								imageData->images[0].data, imageData->images[1].data, imageData->images[2].data,
+								document->width, document->height
+							);
+						} else if (document->bitsPerChannel == 16) {
+							image16 = imageCreateInterleavedImage<uint16_t>(
+								&allocator,
+								imageData->images[0].data, imageData->images[1].data, imageData->images[2].data,
+								document->width, document->height
+							);
+						} else if (document->bitsPerChannel == 32) {
+							image32 = imageCreateInterleavedImage<float32_t>(
+								&allocator,
+								imageData->images[0].data, imageData->images[1].data, imageData->images[2].data,
+								document->width, document->height
+							);
+						}
+					} else { // RGBA.
+						if (document->bitsPerChannel == 8) {
+							image8 = imageCreateInterleavedImage<uint8_t>(
+								&allocator,
+								imageData->images[0].data, imageData->images[1].data, imageData->images[2].data, imageData->images[3].data,
+								document->width, document->height
+							);
+						} else if (document->bitsPerChannel == 16) {
+							image16 = imageCreateInterleavedImage<uint16_t>(
+								&allocator,
+								imageData->images[0].data, imageData->images[1].data, imageData->images[2].data, imageData->images[3].data,
+								document->width, document->height
+							);
+						} else if (document->bitsPerChannel == 32) {
+							image32 = imageCreateInterleavedImage<float32_t>(
+								&allocator,
+								imageData->images[0].data, imageData->images[1].data, imageData->images[2].data, imageData->images[3].data,
+								document->width, document->height
+							);
+						}
+					}
+
+					// Fill in the pixels if available.
+					if (document->bitsPerChannel == 8 && image8) {
+						_width = document->width;
+						_height = document->height;
+
+						_pixels = (Byte*)malloc(_width * _height * sizeof(Colour));
+						memcpy(_pixels, image8, _width * _height * sizeof(Colour));
+						if (isRgb) {
+							for (int i = 0; i < _width * _height; ++i) {
+								Colour &col = ((Colour*)_pixels)[i];
+								col.a = 255;
+							}
+						}
+					} else if (document->bitsPerChannel == 16 && image16) {
+						_width = document->width;
+						_height = document->height;
+
+						_pixels = (Byte*)malloc(_width * _height * sizeof(Colour));
+						for (int i = 0; i < _width * _height; ++i) {
+							Colour &col = ((Colour*)_pixels)[i];
+							const uint16_t srcR = image16[i * 4];
+							const uint16_t srcG = image16[i * 4 + 1];
+							const uint16_t srcB = image16[i * 4 + 2];
+							const uint16_t srcA = image16[i * 4 + 3];
+							uint32_t mappedR = (static_cast<uint32_t>(srcR) * 255 + 16383) / 32767;
+							uint32_t mappedG = (static_cast<uint32_t>(srcG) * 255 + 16383) / 32767;
+							uint32_t mappedB = (static_cast<uint32_t>(srcB) * 255 + 16383) / 32767;
+							uint32_t mappedA = (static_cast<uint32_t>(srcA) * 255 + 16383) / 32767;
+							mappedR = Math::min(mappedR, 255u);
+							mappedG = Math::min(mappedG, 255u);
+							mappedB = Math::min(mappedB, 255u);
+							mappedA = Math::min(mappedA, 255u);
+							col = Colour::byRGBA8888((Byte)mappedR, (Byte)mappedG, (Byte)mappedB, (Byte)mappedA);
+							if (isRgb)
+								col.a = 255;
+						}
+					} else if (document->bitsPerChannel == 32 && image32) {
+						_width = document->width;
+						_height = document->height;
+
+						_pixels = (Byte*)malloc(_width * _height * sizeof(Colour));
+						for (int i = 0; i < _width * _height; ++i) {
+							Colour &col = ((Colour*)_pixels)[i];
+							const float32_t srcR = Math::clamp(image32[i * 4], 0.0f, 1.0f);
+							const float32_t srcG = Math::clamp(image32[i * 4 + 1], 0.0f, 1.0f);
+							const float32_t srcB = Math::clamp(image32[i * 4 + 2], 0.0f, 1.0f);
+							const float32_t srcA = Math::clamp(image32[i * 4 + 3], 0.0f, 1.0f);
+							const float mappedR = srcR * 255.0f;
+							const float mappedG = srcG * 255.0f;
+							const float mappedB = srcB * 255.0f;
+							const float mappedA = srcA * 255.0f;
+							const int roundedR = Math::clamp(static_cast<int>(std::round(mappedR)), 0, 255);
+							const int roundedG = Math::clamp(static_cast<int>(std::round(mappedG)), 0, 255);
+							const int roundedB = Math::clamp(static_cast<int>(std::round(mappedB)), 0, 255);
+							const int roundedA = Math::clamp(static_cast<int>(std::round(mappedA)), 0, 255);
+							col = Colour::byRGBA8888((Byte)roundedR, (Byte)roundedG, (Byte)roundedB, (Byte)roundedA);
+							if (isRgb)
+								col.a = 255;
+						}
+					}
+
+					allocator.Free(image8);
+					allocator.Free(image16);
+					allocator.Free(image32);
+
+					DestroyImageDataSection(imageData, &allocator);
+				}
+			}
+
+			// Destroy the document, and close the file.
+			DestroyDocument(document, &allocator);
+			file.Close();
+		} while (false);
+		if (_pixels) {
+			_channels = 4;
+
+			_blank = blank;
+
+			return !!_pixels;
+		}
+
+		return !!_pixels;
+#else /* GBBASIC_PSD_ENABLED */
+		return false;
+#endif /* GBBASIC_PSD_ENABLED */
 	}
 
 	virtual bool toRaw(class Bytes* val) const override {

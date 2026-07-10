@@ -505,6 +505,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Transferring)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Trim)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_UninstalledKernel)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_UnsupportedData)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_UnsupportedOperation)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_UnsupportedRom)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_UseGravity)

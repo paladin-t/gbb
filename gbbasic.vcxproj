@@ -415,6 +415,38 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="lib\promise_cpp\src\promise.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdAllocator.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdBlendMode.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdColorMode.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdDecompressRle.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdExport.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdFile.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdFixedSizeString.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdInterleave.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdLayerCanvasCopy.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdMallocAllocator.cpp" />
+    <ClCompile Include="lib\psd\src\psd\Psdminiz.c" />
+    <ClCompile Include="lib\psd\src\psd\PsdNativeFile.cpp">
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='release|Win32'">4005;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">4005;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='release|x64'">4005;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='debug|x64'">4005;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdNativeFile_Linux.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdParseColorModeDataSection.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdParseDocument.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdParseImageDataSection.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdParseImageResourcesSection.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdParseLayerMaskSection.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdPch.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdStringUtil.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdSyncFileReader.cpp" />
+    <ClCompile Include="lib\psd\src\psd\PsdSyncFileWriter.cpp" />
     <ClCompile Include="lib\stb\stb_vorbis.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
@@ -677,7 +709,12 @@
     <ClCompile Include="src\app\editor_music.cpp" />
     <ClCompile Include="src\app\editor_code.cpp" />
     <ClCompile Include="src\app\editor_font.cpp" />
-    <ClCompile Include="src\app\editor_map.cpp" />
+    <ClCompile Include="src\app\editor_map.cpp">
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='release|Win32'">/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='release|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='debug|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
     <ClCompile Include="src\app\editor_palette.cpp" />
     <ClCompile Include="src\app\editor_properties.cpp" />
     <ClCompile Include="src\app\editor_ref_resolver.cpp" />
@@ -718,6 +755,10 @@
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">/bigobj %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='release|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='debug|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='release|Win32'">4503;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">4503;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='release|x64'">4503;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='debug|x64'">4503;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <ClCompile Include="src\compiler\evaluator.cpp" />
     <ClCompile Include="src\compiler\kernel.cpp" />
@@ -747,7 +788,12 @@
     <ClCompile Include="src\utils\font.cpp" />
     <ClCompile Include="src\utils\generic.cpp" />
     <ClCompile Include="src\utils\hacks.cpp" />
-    <ClCompile Include="src\utils\image.cpp" />
+    <ClCompile Include="src\utils\image.cpp">
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='release|Win32'">4005;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">4005;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='release|x64'">4005;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='debug|x64'">4005;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
     <ClCompile Include="src\utils\input.cpp" />
     <ClCompile Include="src\utils\json.cpp" />
     <ClCompile Include="src\utils\map.cpp" />
@@ -892,6 +938,79 @@
     <ClInclude Include="lib\promise_cpp\include\promise-cpp\call_traits.hpp" />
     <ClInclude Include="lib\promise_cpp\include\promise-cpp\promise.hpp" />
     <ClInclude Include="lib\promise_cpp\include\promise-cpp\promise_inl.hpp" />
+    <ClInclude Include="lib\psd\src\psd\Psd.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdAllocator.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdAlphaChannel.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdAssert.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdBitUtil.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdBlendMode.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdChannel.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdChannelType.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdColorMode.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdColorModeDataSection.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdCompilerMacros.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdCompressionType.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdDecompressRle.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdDocument.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdDocumentation.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdEndianConversion.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdExport.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdExportChannel.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdExportColorMode.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdExportDocument.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdExportLayer.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdExportMetaDataAttribute.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdFile.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdFixedSizeString.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdImageDataSection.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdImageResourcesSection.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdImageResourceType.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdInterleave.h" />
+    <ClInclude Include="lib\psd\src\psd\Psdinttypes.h" />
+    <ClInclude Include="lib\psd\src\psd\Psdispod.h" />
+    <ClInclude Include="lib\psd\src\psd\Psdisunsigned.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdKey.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdLayer.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdLayerCanvasCopy.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdLayerMask.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdLayerMaskSection.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdLayerType.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdLog.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdMallocAllocator.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdMemoryUtil.h" />
+    <ClInclude Include="lib\psd\src\psd\Psdminiz.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdNamespace.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdNativeFile.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdNativeFile_Linux.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdNativeFile_Mac.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdParseColorModeDataSection.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdParseDocument.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdParseImageDataSection.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdParseImageResourcesSection.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdParseLayerMaskSection.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdPch.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdPlanarImage.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdPlatform.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdSection.h" />
+    <ClInclude Include="lib\psd\src\psd\Psdstdint.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdStringUtil.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdSyncFileReader.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdSyncFileUtil.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdSyncFileWriter.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdThumbnail.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdTypes.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdUnionCast.h" />
+    <ClInclude Include="lib\psd\src\psd\PsdVectorMask.h" />
     <ClInclude Include="lib\rapidfuzz_cpp\rapidfuzz\details\CharSet.hpp" />
     <ClInclude Include="lib\rapidfuzz_cpp\rapidfuzz\details\common.hpp" />
     <ClInclude Include="lib\rapidfuzz_cpp\rapidfuzz\details\common_impl.hpp" />
@@ -1135,6 +1254,17 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
     </None>
+    <None Include="lib\psd\src\psd\PsdBitUtil.inl" />
+    <None Include="lib\psd\src\psd\PsdEndianConversion.inl" />
+    <None Include="lib\psd\src\psd\PsdMemoryUtil.inl" />
+    <None Include="lib\psd\src\psd\PsdNativeFile_Mac.mm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='debug|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="lib\psd\src\psd\PsdSyncFileUtil.inl" />
+    <None Include="lib\psd\src\psd\PsdUnionCast.inl" />
     <None Include="src\app\editor_map.inl" />
     <None Include="src\app\mac\AppDelegate.m">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='release|Win32'">true</ExcludedFromBuild>

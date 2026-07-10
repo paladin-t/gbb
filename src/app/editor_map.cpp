@@ -4561,6 +4561,21 @@ private:
 			if (path_.empty())
 				return false;
 
+#if GBBASIC_PSD_ENABLED
+			std::string ext;
+			Path::split(path_, nullptr, &ext, nullptr);
+			if (Text::endsWith(ext, "psd", true)) {
+				Image::Ptr img(Image::create());
+				if (!img->fromPsdFile(path_.c_str())) {
+					ws->bubble(ws->theme()->dialogPrompt_UnsupportedData(), nullptr);
+
+					return false;
+				}
+
+				return importFromImage(wnd, rnd, ws, img, allowFlip, fillLocalPalette, createNew);
+			}
+#endif /* GBBASIC_PSD_ENABLED */
+
 			Bytes::Ptr bytes(Bytes::create());
 			File::Ptr file(File::create());
 			if (!file->open(path_.c_str(), Stream::READ)) {
@@ -4587,7 +4602,11 @@ private:
 			return importFromImage(wnd, rnd, ws, img, allowFlip, fillLocalPalette, createNew);
 		};
 		auto resolve = [rnd, ws, this, import] (bool createNew) -> void {
+#if GBBASIC_PSD_ENABLED
+			const Text::Array filter = GBBASIC_IMAGE_FILE_WITH_PSD_FILTER;
+#else /* GBBASIC_PSD_ENABLED */
 			const Text::Array filter = GBBASIC_IMAGE_FILE_FILTER;
+#endif /* GBBASIC_PSD_ENABLED */
 			ImGui::MapResolverPopupBox::ConfirmedHandler confirm(
 				[ws, import, createNew] (const int* /* index */, const char* path, bool allowFlip, bool fillLocalPalette) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)

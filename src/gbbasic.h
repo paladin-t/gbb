@@ -201,6 +201,15 @@
 #	define GBBASIC_WEB_ENABLED 1
 #endif /* GBBASIC_WEB_ENABLED */
 
+// Indicates whether the PSD image feature is enabled.
+#ifndef GBBASIC_PSD_ENABLED
+#	if defined GBBASIC_OS_WIN || defined GBBASIC_OS_MAC || defined GBBASIC_OS_LINUX
+#		define GBBASIC_PSD_ENABLED 1
+#	else /* Platform macro. */
+#		define GBBASIC_PSD_ENABLED 0
+#	endif /* Platform macro. */
+#endif /* GBBASIC_PSD_ENABLED */
+
 // Indicates whether the static analyzer is enabled.
 #ifndef GBBASIC_COMPILER_ANALYZER_ENABLED
 #	if defined GBBASIC_OS_HTML
@@ -648,6 +657,13 @@
 			"All files (*.*)", "*" \
 		}
 #endif /* GBBASIC_IMAGE_FILE_FILTER */
+// The image file filter including common types and PSD.
+#ifndef GBBASIC_IMAGE_FILE_WITH_PSD_FILTER
+#	define GBBASIC_IMAGE_FILE_WITH_PSD_FILTER { \
+			"Image files (*.png, *.jpg, *.bmp, *.tga, *.psd)", "*.png *.jpg *.bmp *.tga *.psd", \
+			"All files (*.*)", "*" \
+		}
+#endif /* GBBASIC_IMAGE_FILE_WITH_PSD_FILTER */
 // The font file filter.
 #ifndef GBBASIC_FONT_FILE_FILTER
 #	define GBBASIC_FONT_FILE_FILTER { \

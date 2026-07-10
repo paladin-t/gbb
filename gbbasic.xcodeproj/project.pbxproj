@@ -47,6 +47,32 @@
 		684B78492FDBF16A0029AA17 /* i18n.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 684B78472FDBF16A0029AA17 /* i18n.cpp */; };
 		684B784C2FDBF1810029AA17 /* editor_i18n.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 684B784B2FDBF1810029AA17 /* editor_i18n.cpp */; };
 		684B784F2FDBF18F0029AA17 /* commands_i18n.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 684B784D2FDBF18F0029AA17 /* commands_i18n.cpp */; };
+		68786E003001203D007E9626 /* PsdSyncFileReader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DAF3001201A007E9626 /* PsdSyncFileReader.cpp */; };
+		68786E013001203D007E9626 /* PsdExport.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DB13001201A007E9626 /* PsdExport.cpp */; };
+		68786E023001203D007E9626 /* PsdBlendMode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DB23001201A007E9626 /* PsdBlendMode.cpp */; };
+		68786E033001203D007E9626 /* PsdParseLayerMaskSection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DBA3001201B007E9626 /* PsdParseLayerMaskSection.cpp */; };
+		68786E043001203D007E9626 /* PsdStringUtil.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DBD3001201C007E9626 /* PsdStringUtil.cpp */; };
+		68786E053001203D007E9626 /* PsdDecompressRle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DC03001201C007E9626 /* PsdDecompressRle.cpp */; };
+		68786E063001203D007E9626 /* PsdPch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DC23001201D007E9626 /* PsdPch.cpp */; };
+		68786E073001203D007E9626 /* PsdFixedSizeString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DC33001201D007E9626 /* PsdFixedSizeString.cpp */; };
+		68786E083001203D007E9626 /* PsdNativeFile_Mac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 68786DC83001201E007E9626 /* PsdNativeFile_Mac.mm */; };
+		68786E093001203D007E9626 /* PsdColorMode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DCA3001201F007E9626 /* PsdColorMode.cpp */; };
+		68786E0A3001203D007E9626 /* PsdLayerCanvasCopy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DCD30012031007E9626 /* PsdLayerCanvasCopy.cpp */; };
+		68786E0B3001203D007E9626 /* PsdAllocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DD230012035007E9626 /* PsdAllocator.cpp */; };
+		68786E0C3001203D007E9626 /* PsdUnionCast.inl in Resources */ = {isa = PBXBuildFile; fileRef = 68786DD330012035007E9626 /* PsdUnionCast.inl */; };
+		68786E0D3001203D007E9626 /* PsdSyncFileUtil.inl in Resources */ = {isa = PBXBuildFile; fileRef = 68786DD730012036007E9626 /* PsdSyncFileUtil.inl */; };
+		68786E0E3001203D007E9626 /* PsdSyncFileWriter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DD930012036007E9626 /* PsdSyncFileWriter.cpp */; };
+		68786E0F3001203D007E9626 /* PsdMemoryUtil.inl in Resources */ = {isa = PBXBuildFile; fileRef = 68786DE030012037007E9626 /* PsdMemoryUtil.inl */; };
+		68786E103001203D007E9626 /* PsdInterleave.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DE230012038007E9626 /* PsdInterleave.cpp */; };
+		68786E113001203D007E9626 /* PsdParseDocument.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DE93001203A007E9626 /* PsdParseDocument.cpp */; };
+		68786E123001203D007E9626 /* PsdEndianConversion.inl in Resources */ = {isa = PBXBuildFile; fileRef = 68786DEA3001203A007E9626 /* PsdEndianConversion.inl */; };
+		68786E133001203D007E9626 /* PsdParseImageDataSection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DEC3001203A007E9626 /* PsdParseImageDataSection.cpp */; };
+		68786E143001203D007E9626 /* PsdParseImageResourcesSection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DF43001203B007E9626 /* PsdParseImageResourcesSection.cpp */; };
+		68786E153001203E007E9626 /* PsdMallocAllocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DF53001203B007E9626 /* PsdMallocAllocator.cpp */; };
+		68786E163001203E007E9626 /* PsdBitUtil.inl in Resources */ = {isa = PBXBuildFile; fileRef = 68786DF93001203C007E9626 /* PsdBitUtil.inl */; };
+		68786E173001203E007E9626 /* Psdminiz.c in Sources */ = {isa = PBXBuildFile; fileRef = 68786DFA3001203C007E9626 /* Psdminiz.c */; settings = {COMPILER_FLAGS = "-w"; }; };
+		68786E183001203E007E9626 /* PsdParseColorModeDataSection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DFC3001203D007E9626 /* PsdParseColorModeDataSection.cpp */; };
+		68786E193001203E007E9626 /* PsdFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DFF3001203D007E9626 /* PsdFile.cpp */; };
 		689D9AE02FC1CC8400982109 /* assembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689D9ADF2FC1CC8400982109 /* assembler.cpp */; };
 		689DD3FA2E2F37C5001D2B86 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD3F72E2F37C5001D2B86 /* main.cpp */; };
 		689DD4282E2F3A36001D2B86 /* stb_vorbis.c in Sources */ = {isa = PBXBuildFile; fileRef = 689DD4142E2F3A34001D2B86 /* stb_vorbis.c */; settings = {COMPILER_FLAGS = "-w"; }; };
@@ -314,6 +340,94 @@
 		684B784B2FDBF1810029AA17 /* editor_i18n.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = editor_i18n.cpp; path = src/app/editor_i18n.cpp; sourceTree = "<group>"; };
 		684B784D2FDBF18F0029AA17 /* commands_i18n.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = commands_i18n.cpp; path = src/app/commands_i18n.cpp; sourceTree = "<group>"; };
 		684B784E2FDBF18F0029AA17 /* commands_i18n.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = commands_i18n.h; path = src/app/commands_i18n.h; sourceTree = "<group>"; };
+		68786DA830012019007E9626 /* PsdLog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdLog.h; path = lib/psd/src/psd/PsdLog.h; sourceTree = "<group>"; };
+		68786DA930012019007E9626 /* PsdExportMetaDataAttribute.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdExportMetaDataAttribute.h; path = lib/psd/src/psd/PsdExportMetaDataAttribute.h; sourceTree = "<group>"; };
+		68786DAA30012019007E9626 /* PsdDocumentation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdDocumentation.h; path = lib/psd/src/psd/PsdDocumentation.h; sourceTree = "<group>"; };
+		68786DAB30012019007E9626 /* PsdSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdSection.h; path = lib/psd/src/psd/PsdSection.h; sourceTree = "<group>"; };
+		68786DAC30012019007E9626 /* PsdSyncFileWriter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdSyncFileWriter.h; path = lib/psd/src/psd/PsdSyncFileWriter.h; sourceTree = "<group>"; };
+		68786DAD30012019007E9626 /* PsdExportColorMode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdExportColorMode.h; path = lib/psd/src/psd/PsdExportColorMode.h; sourceTree = "<group>"; };
+		68786DAE30012019007E9626 /* Psd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Psd.h; path = lib/psd/src/psd/Psd.h; sourceTree = "<group>"; };
+		68786DAF3001201A007E9626 /* PsdSyncFileReader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdSyncFileReader.cpp; path = lib/psd/src/psd/PsdSyncFileReader.cpp; sourceTree = "<group>"; };
+		68786DB03001201A007E9626 /* Psdstdint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Psdstdint.h; path = lib/psd/src/psd/Psdstdint.h; sourceTree = "<group>"; };
+		68786DB13001201A007E9626 /* PsdExport.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdExport.cpp; path = lib/psd/src/psd/PsdExport.cpp; sourceTree = "<group>"; };
+		68786DB23001201A007E9626 /* PsdBlendMode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdBlendMode.cpp; path = lib/psd/src/psd/PsdBlendMode.cpp; sourceTree = "<group>"; };
+		68786DB33001201A007E9626 /* PsdMallocAllocator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdMallocAllocator.h; path = lib/psd/src/psd/PsdMallocAllocator.h; sourceTree = "<group>"; };
+		68786DB43001201A007E9626 /* PsdParseColorModeDataSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdParseColorModeDataSection.h; path = lib/psd/src/psd/PsdParseColorModeDataSection.h; sourceTree = "<group>"; };
+		68786DB53001201B007E9626 /* PsdFixedSizeString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdFixedSizeString.h; path = lib/psd/src/psd/PsdFixedSizeString.h; sourceTree = "<group>"; };
+		68786DB63001201B007E9626 /* PsdBlendMode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdBlendMode.h; path = lib/psd/src/psd/PsdBlendMode.h; sourceTree = "<group>"; };
+		68786DB73001201B007E9626 /* PsdChannelType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdChannelType.h; path = lib/psd/src/psd/PsdChannelType.h; sourceTree = "<group>"; };
+		68786DB83001201B007E9626 /* PsdAssert.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdAssert.h; path = lib/psd/src/psd/PsdAssert.h; sourceTree = "<group>"; };
+		68786DB93001201B007E9626 /* PsdColorMode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdColorMode.h; path = lib/psd/src/psd/PsdColorMode.h; sourceTree = "<group>"; };
+		68786DBA3001201B007E9626 /* PsdParseLayerMaskSection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdParseLayerMaskSection.cpp; path = lib/psd/src/psd/PsdParseLayerMaskSection.cpp; sourceTree = "<group>"; };
+		68786DBB3001201C007E9626 /* PsdFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdFile.h; path = lib/psd/src/psd/PsdFile.h; sourceTree = "<group>"; };
+		68786DBC3001201C007E9626 /* PsdImageDataSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdImageDataSection.h; path = lib/psd/src/psd/PsdImageDataSection.h; sourceTree = "<group>"; };
+		68786DBD3001201C007E9626 /* PsdStringUtil.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdStringUtil.cpp; path = lib/psd/src/psd/PsdStringUtil.cpp; sourceTree = "<group>"; };
+		68786DBE3001201C007E9626 /* PsdTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdTypes.h; path = lib/psd/src/psd/PsdTypes.h; sourceTree = "<group>"; };
+		68786DBF3001201C007E9626 /* PsdParseImageDataSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdParseImageDataSection.h; path = lib/psd/src/psd/PsdParseImageDataSection.h; sourceTree = "<group>"; };
+		68786DC03001201C007E9626 /* PsdDecompressRle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdDecompressRle.cpp; path = lib/psd/src/psd/PsdDecompressRle.cpp; sourceTree = "<group>"; };
+		68786DC13001201D007E9626 /* Psdminiz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Psdminiz.h; path = lib/psd/src/psd/Psdminiz.h; sourceTree = "<group>"; };
+		68786DC23001201D007E9626 /* PsdPch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdPch.cpp; path = lib/psd/src/psd/PsdPch.cpp; sourceTree = "<group>"; };
+		68786DC33001201D007E9626 /* PsdFixedSizeString.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdFixedSizeString.cpp; path = lib/psd/src/psd/PsdFixedSizeString.cpp; sourceTree = "<group>"; };
+		68786DC43001201D007E9626 /* PsdColorModeDataSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdColorModeDataSection.h; path = lib/psd/src/psd/PsdColorModeDataSection.h; sourceTree = "<group>"; };
+		68786DC53001201D007E9626 /* PsdExportLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdExportLayer.h; path = lib/psd/src/psd/PsdExportLayer.h; sourceTree = "<group>"; };
+		68786DC63001201D007E9626 /* PsdSyncFileReader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdSyncFileReader.h; path = lib/psd/src/psd/PsdSyncFileReader.h; sourceTree = "<group>"; };
+		68786DC73001201E007E9626 /* PsdThumbnail.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdThumbnail.h; path = lib/psd/src/psd/PsdThumbnail.h; sourceTree = "<group>"; };
+		68786DC83001201E007E9626 /* PsdNativeFile_Mac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = PsdNativeFile_Mac.mm; path = lib/psd/src/psd/PsdNativeFile_Mac.mm; sourceTree = "<group>"; };
+		68786DC93001201E007E9626 /* PsdNamespace.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdNamespace.h; path = lib/psd/src/psd/PsdNamespace.h; sourceTree = "<group>"; };
+		68786DCA3001201F007E9626 /* PsdColorMode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdColorMode.cpp; path = lib/psd/src/psd/PsdColorMode.cpp; sourceTree = "<group>"; };
+		68786DCB3001201F007E9626 /* PsdCompilerMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdCompilerMacros.h; path = lib/psd/src/psd/PsdCompilerMacros.h; sourceTree = "<group>"; };
+		68786DCC30012021007E9626 /* PsdEndianConversion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdEndianConversion.h; path = lib/psd/src/psd/PsdEndianConversion.h; sourceTree = "<group>"; };
+		68786DCD30012031007E9626 /* PsdLayerCanvasCopy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdLayerCanvasCopy.cpp; path = lib/psd/src/psd/PsdLayerCanvasCopy.cpp; sourceTree = "<group>"; };
+		68786DCE30012033007E9626 /* PsdBitUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdBitUtil.h; path = lib/psd/src/psd/PsdBitUtil.h; sourceTree = "<group>"; };
+		68786DCF30012033007E9626 /* PsdExportChannel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdExportChannel.h; path = lib/psd/src/psd/PsdExportChannel.h; sourceTree = "<group>"; };
+		68786DD030012034007E9626 /* PsdNativeFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdNativeFile.h; path = lib/psd/src/psd/PsdNativeFile.h; sourceTree = "<group>"; };
+		68786DD130012035007E9626 /* PsdParseDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdParseDocument.h; path = lib/psd/src/psd/PsdParseDocument.h; sourceTree = "<group>"; };
+		68786DD230012035007E9626 /* PsdAllocator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdAllocator.cpp; path = lib/psd/src/psd/PsdAllocator.cpp; sourceTree = "<group>"; };
+		68786DD330012035007E9626 /* PsdUnionCast.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PsdUnionCast.inl; path = lib/psd/src/psd/PsdUnionCast.inl; sourceTree = "<group>"; };
+		68786DD430012035007E9626 /* PsdKey.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdKey.h; path = lib/psd/src/psd/PsdKey.h; sourceTree = "<group>"; };
+		68786DD530012035007E9626 /* PsdPch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdPch.h; path = lib/psd/src/psd/PsdPch.h; sourceTree = "<group>"; };
+		68786DD630012035007E9626 /* PsdPlanarImage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdPlanarImage.h; path = lib/psd/src/psd/PsdPlanarImage.h; sourceTree = "<group>"; };
+		68786DD730012036007E9626 /* PsdSyncFileUtil.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PsdSyncFileUtil.inl; path = lib/psd/src/psd/PsdSyncFileUtil.inl; sourceTree = "<group>"; };
+		68786DD830012036007E9626 /* PsdUnionCast.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdUnionCast.h; path = lib/psd/src/psd/PsdUnionCast.h; sourceTree = "<group>"; };
+		68786DD930012036007E9626 /* PsdSyncFileWriter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdSyncFileWriter.cpp; path = lib/psd/src/psd/PsdSyncFileWriter.cpp; sourceTree = "<group>"; };
+		68786DDA30012036007E9626 /* PsdCompressionType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdCompressionType.h; path = lib/psd/src/psd/PsdCompressionType.h; sourceTree = "<group>"; };
+		68786DDB30012036007E9626 /* Psdisunsigned.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Psdisunsigned.h; path = lib/psd/src/psd/Psdisunsigned.h; sourceTree = "<group>"; };
+		68786DDC30012036007E9626 /* Psdispod.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Psdispod.h; path = lib/psd/src/psd/Psdispod.h; sourceTree = "<group>"; };
+		68786DDD30012037007E9626 /* PsdExport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdExport.h; path = lib/psd/src/psd/PsdExport.h; sourceTree = "<group>"; };
+		68786DDE30012037007E9626 /* PsdDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdDocument.h; path = lib/psd/src/psd/PsdDocument.h; sourceTree = "<group>"; };
+		68786DDF30012037007E9626 /* PsdImageResourcesSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdImageResourcesSection.h; path = lib/psd/src/psd/PsdImageResourcesSection.h; sourceTree = "<group>"; };
+		68786DE030012037007E9626 /* PsdMemoryUtil.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PsdMemoryUtil.inl; path = lib/psd/src/psd/PsdMemoryUtil.inl; sourceTree = "<group>"; };
+		68786DE130012037007E9626 /* PsdParseLayerMaskSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdParseLayerMaskSection.h; path = lib/psd/src/psd/PsdParseLayerMaskSection.h; sourceTree = "<group>"; };
+		68786DE230012038007E9626 /* PsdInterleave.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdInterleave.cpp; path = lib/psd/src/psd/PsdInterleave.cpp; sourceTree = "<group>"; };
+		68786DE330012038007E9626 /* PsdNativeFile_Mac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdNativeFile_Mac.h; path = lib/psd/src/psd/PsdNativeFile_Mac.h; sourceTree = "<group>"; };
+		68786DE430012039007E9626 /* PsdLayerMaskSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdLayerMaskSection.h; path = lib/psd/src/psd/PsdLayerMaskSection.h; sourceTree = "<group>"; };
+		68786DE530012039007E9626 /* PsdMemoryUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdMemoryUtil.h; path = lib/psd/src/psd/PsdMemoryUtil.h; sourceTree = "<group>"; };
+		68786DE630012039007E9626 /* PsdStringUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdStringUtil.h; path = lib/psd/src/psd/PsdStringUtil.h; sourceTree = "<group>"; };
+		68786DE730012039007E9626 /* PsdInterleave.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdInterleave.h; path = lib/psd/src/psd/PsdInterleave.h; sourceTree = "<group>"; };
+		68786DE830012039007E9626 /* PsdAlphaChannel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdAlphaChannel.h; path = lib/psd/src/psd/PsdAlphaChannel.h; sourceTree = "<group>"; };
+		68786DE93001203A007E9626 /* PsdParseDocument.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdParseDocument.cpp; path = lib/psd/src/psd/PsdParseDocument.cpp; sourceTree = "<group>"; };
+		68786DEA3001203A007E9626 /* PsdEndianConversion.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PsdEndianConversion.inl; path = lib/psd/src/psd/PsdEndianConversion.inl; sourceTree = "<group>"; };
+		68786DEB3001203A007E9626 /* PsdPlatform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdPlatform.h; path = lib/psd/src/psd/PsdPlatform.h; sourceTree = "<group>"; };
+		68786DEC3001203A007E9626 /* PsdParseImageDataSection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdParseImageDataSection.cpp; path = lib/psd/src/psd/PsdParseImageDataSection.cpp; sourceTree = "<group>"; };
+		68786DED3001203A007E9626 /* PsdSyncFileUtil.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdSyncFileUtil.h; path = lib/psd/src/psd/PsdSyncFileUtil.h; sourceTree = "<group>"; };
+		68786DEE3001203A007E9626 /* PsdLayerType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdLayerType.h; path = lib/psd/src/psd/PsdLayerType.h; sourceTree = "<group>"; };
+		68786DEF3001203B007E9626 /* Psdinttypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Psdinttypes.h; path = lib/psd/src/psd/Psdinttypes.h; sourceTree = "<group>"; };
+		68786DF03001203B007E9626 /* PsdChannel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdChannel.h; path = lib/psd/src/psd/PsdChannel.h; sourceTree = "<group>"; };
+		68786DF13001203B007E9626 /* PsdImageResourceType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdImageResourceType.h; path = lib/psd/src/psd/PsdImageResourceType.h; sourceTree = "<group>"; };
+		68786DF23001203B007E9626 /* PsdParseImageResourcesSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdParseImageResourcesSection.h; path = lib/psd/src/psd/PsdParseImageResourcesSection.h; sourceTree = "<group>"; };
+		68786DF33001203B007E9626 /* PsdLayerMask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdLayerMask.h; path = lib/psd/src/psd/PsdLayerMask.h; sourceTree = "<group>"; };
+		68786DF43001203B007E9626 /* PsdParseImageResourcesSection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdParseImageResourcesSection.cpp; path = lib/psd/src/psd/PsdParseImageResourcesSection.cpp; sourceTree = "<group>"; };
+		68786DF53001203B007E9626 /* PsdMallocAllocator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdMallocAllocator.cpp; path = lib/psd/src/psd/PsdMallocAllocator.cpp; sourceTree = "<group>"; };
+		68786DF63001203C007E9626 /* PsdDecompressRle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdDecompressRle.h; path = lib/psd/src/psd/PsdDecompressRle.h; sourceTree = "<group>"; };
+		68786DF73001203C007E9626 /* PsdLayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdLayer.h; path = lib/psd/src/psd/PsdLayer.h; sourceTree = "<group>"; };
+		68786DF83001203C007E9626 /* PsdLayerCanvasCopy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdLayerCanvasCopy.h; path = lib/psd/src/psd/PsdLayerCanvasCopy.h; sourceTree = "<group>"; };
+		68786DF93001203C007E9626 /* PsdBitUtil.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PsdBitUtil.inl; path = lib/psd/src/psd/PsdBitUtil.inl; sourceTree = "<group>"; };
+		68786DFA3001203C007E9626 /* Psdminiz.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Psdminiz.c; path = lib/psd/src/psd/Psdminiz.c; sourceTree = "<group>"; };
+		68786DFB3001203C007E9626 /* PsdAllocator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdAllocator.h; path = lib/psd/src/psd/PsdAllocator.h; sourceTree = "<group>"; };
+		68786DFC3001203D007E9626 /* PsdParseColorModeDataSection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdParseColorModeDataSection.cpp; path = lib/psd/src/psd/PsdParseColorModeDataSection.cpp; sourceTree = "<group>"; };
+		68786DFD3001203D007E9626 /* PsdExportDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdExportDocument.h; path = lib/psd/src/psd/PsdExportDocument.h; sourceTree = "<group>"; };
+		68786DFE3001203D007E9626 /* PsdVectorMask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdVectorMask.h; path = lib/psd/src/psd/PsdVectorMask.h; sourceTree = "<group>"; };
+		68786DFF3001203D007E9626 /* PsdFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdFile.cpp; path = lib/psd/src/psd/PsdFile.cpp; sourceTree = "<group>"; };
 		688D8A2B2E33339700B7C5DA /* Info-Emu.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "Info-Emu.plist"; path = "src/app/mac/Info-Emu.plist"; sourceTree = "<group>"; };
 		688D8A2D2E3333A900B7C5DA /* Info-Steam.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "Info-Steam.plist"; path = "src/app/mac/Info-Steam.plist"; sourceTree = "<group>"; };
 		68913EE52F542A5800B15C51 /* editor_map.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = editor_map.inl; path = src/app/editor_map.inl; sourceTree = "<group>"; };
@@ -750,6 +864,7 @@
 				038E76C82582112400A94374 /* lz4 */,
 				038E746225820EC400A94374 /* md4c */,
 				689DD4112E2F39DE001D2B86 /* mpc */,
+				68786DA530011FDF007E9626 /* psd */,
 				038E746625820ED800A94374 /* portable_file_dialogs */,
 				038E746725820EE000A94374 /* promise_cpp */,
 				689DD4122E2F39E8001D2B86 /* rapidfuzz_cpp */,
@@ -1067,6 +1182,117 @@
 				038E7723258212D600A94374 /* stdint.h */,
 			);
 			name = msinttypes;
+			sourceTree = "<group>";
+		};
+		68786DA530011FDF007E9626 /* psd */ = {
+			isa = PBXGroup;
+			children = (
+				68786DA630011FE6007E9626 /* src */,
+			);
+			name = psd;
+			sourceTree = "<group>";
+		};
+		68786DA630011FE6007E9626 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				68786DA730011FEA007E9626 /* psd */,
+			);
+			name = src;
+			sourceTree = "<group>";
+		};
+		68786DA730011FEA007E9626 /* psd */ = {
+			isa = PBXGroup;
+			children = (
+				68786DAE30012019007E9626 /* Psd.h */,
+				68786DD230012035007E9626 /* PsdAllocator.cpp */,
+				68786DFB3001203C007E9626 /* PsdAllocator.h */,
+				68786DE830012039007E9626 /* PsdAlphaChannel.h */,
+				68786DB83001201B007E9626 /* PsdAssert.h */,
+				68786DCE30012033007E9626 /* PsdBitUtil.h */,
+				68786DF93001203C007E9626 /* PsdBitUtil.inl */,
+				68786DB23001201A007E9626 /* PsdBlendMode.cpp */,
+				68786DB63001201B007E9626 /* PsdBlendMode.h */,
+				68786DF03001203B007E9626 /* PsdChannel.h */,
+				68786DB73001201B007E9626 /* PsdChannelType.h */,
+				68786DCA3001201F007E9626 /* PsdColorMode.cpp */,
+				68786DB93001201B007E9626 /* PsdColorMode.h */,
+				68786DC43001201D007E9626 /* PsdColorModeDataSection.h */,
+				68786DCB3001201F007E9626 /* PsdCompilerMacros.h */,
+				68786DDA30012036007E9626 /* PsdCompressionType.h */,
+				68786DC03001201C007E9626 /* PsdDecompressRle.cpp */,
+				68786DF63001203C007E9626 /* PsdDecompressRle.h */,
+				68786DDE30012037007E9626 /* PsdDocument.h */,
+				68786DAA30012019007E9626 /* PsdDocumentation.h */,
+				68786DCC30012021007E9626 /* PsdEndianConversion.h */,
+				68786DEA3001203A007E9626 /* PsdEndianConversion.inl */,
+				68786DB13001201A007E9626 /* PsdExport.cpp */,
+				68786DDD30012037007E9626 /* PsdExport.h */,
+				68786DCF30012033007E9626 /* PsdExportChannel.h */,
+				68786DAD30012019007E9626 /* PsdExportColorMode.h */,
+				68786DFD3001203D007E9626 /* PsdExportDocument.h */,
+				68786DC53001201D007E9626 /* PsdExportLayer.h */,
+				68786DA930012019007E9626 /* PsdExportMetaDataAttribute.h */,
+				68786DFF3001203D007E9626 /* PsdFile.cpp */,
+				68786DBB3001201C007E9626 /* PsdFile.h */,
+				68786DC33001201D007E9626 /* PsdFixedSizeString.cpp */,
+				68786DB53001201B007E9626 /* PsdFixedSizeString.h */,
+				68786DBC3001201C007E9626 /* PsdImageDataSection.h */,
+				68786DDF30012037007E9626 /* PsdImageResourcesSection.h */,
+				68786DF13001203B007E9626 /* PsdImageResourceType.h */,
+				68786DE230012038007E9626 /* PsdInterleave.cpp */,
+				68786DE730012039007E9626 /* PsdInterleave.h */,
+				68786DEF3001203B007E9626 /* Psdinttypes.h */,
+				68786DDC30012036007E9626 /* Psdispod.h */,
+				68786DDB30012036007E9626 /* Psdisunsigned.h */,
+				68786DD430012035007E9626 /* PsdKey.h */,
+				68786DF73001203C007E9626 /* PsdLayer.h */,
+				68786DCD30012031007E9626 /* PsdLayerCanvasCopy.cpp */,
+				68786DF83001203C007E9626 /* PsdLayerCanvasCopy.h */,
+				68786DF33001203B007E9626 /* PsdLayerMask.h */,
+				68786DE430012039007E9626 /* PsdLayerMaskSection.h */,
+				68786DEE3001203A007E9626 /* PsdLayerType.h */,
+				68786DA830012019007E9626 /* PsdLog.h */,
+				68786DF53001203B007E9626 /* PsdMallocAllocator.cpp */,
+				68786DB33001201A007E9626 /* PsdMallocAllocator.h */,
+				68786DE530012039007E9626 /* PsdMemoryUtil.h */,
+				68786DE030012037007E9626 /* PsdMemoryUtil.inl */,
+				68786DFA3001203C007E9626 /* Psdminiz.c */,
+				68786DC13001201D007E9626 /* Psdminiz.h */,
+				68786DC93001201E007E9626 /* PsdNamespace.h */,
+				68786DE330012038007E9626 /* PsdNativeFile_Mac.h */,
+				68786DC83001201E007E9626 /* PsdNativeFile_Mac.mm */,
+				68786DD030012034007E9626 /* PsdNativeFile.h */,
+				68786DFC3001203D007E9626 /* PsdParseColorModeDataSection.cpp */,
+				68786DB43001201A007E9626 /* PsdParseColorModeDataSection.h */,
+				68786DE93001203A007E9626 /* PsdParseDocument.cpp */,
+				68786DD130012035007E9626 /* PsdParseDocument.h */,
+				68786DEC3001203A007E9626 /* PsdParseImageDataSection.cpp */,
+				68786DBF3001201C007E9626 /* PsdParseImageDataSection.h */,
+				68786DF43001203B007E9626 /* PsdParseImageResourcesSection.cpp */,
+				68786DF23001203B007E9626 /* PsdParseImageResourcesSection.h */,
+				68786DBA3001201B007E9626 /* PsdParseLayerMaskSection.cpp */,
+				68786DE130012037007E9626 /* PsdParseLayerMaskSection.h */,
+				68786DC23001201D007E9626 /* PsdPch.cpp */,
+				68786DD530012035007E9626 /* PsdPch.h */,
+				68786DD630012035007E9626 /* PsdPlanarImage.h */,
+				68786DEB3001203A007E9626 /* PsdPlatform.h */,
+				68786DAB30012019007E9626 /* PsdSection.h */,
+				68786DB03001201A007E9626 /* Psdstdint.h */,
+				68786DBD3001201C007E9626 /* PsdStringUtil.cpp */,
+				68786DE630012039007E9626 /* PsdStringUtil.h */,
+				68786DAF3001201A007E9626 /* PsdSyncFileReader.cpp */,
+				68786DC63001201D007E9626 /* PsdSyncFileReader.h */,
+				68786DED3001203A007E9626 /* PsdSyncFileUtil.h */,
+				68786DD730012036007E9626 /* PsdSyncFileUtil.inl */,
+				68786DD930012036007E9626 /* PsdSyncFileWriter.cpp */,
+				68786DAC30012019007E9626 /* PsdSyncFileWriter.h */,
+				68786DC73001201E007E9626 /* PsdThumbnail.h */,
+				68786DBE3001201C007E9626 /* PsdTypes.h */,
+				68786DD830012036007E9626 /* PsdUnionCast.h */,
+				68786DD330012035007E9626 /* PsdUnionCast.inl */,
+				68786DFE3001203D007E9626 /* PsdVectorMask.h */,
+			);
+			name = psd;
 			sourceTree = "<group>";
 		};
 		689DD3F32E2F36B0001D2B86 /* app */ = {
@@ -1708,7 +1934,12 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				68786E0F3001203D007E9626 /* PsdMemoryUtil.inl in Resources */,
+				68786E0D3001203D007E9626 /* PsdSyncFileUtil.inl in Resources */,
+				68786E123001203D007E9626 /* PsdEndianConversion.inl in Resources */,
+				68786E0C3001203D007E9626 /* PsdUnionCast.inl in Resources */,
 				68F811002E2F70C800A859D1 /* Assets.xcassets in Resources */,
+				68786E163001203E007E9626 /* PsdBitUtil.inl in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1730,11 +1961,14 @@
 				689DD52E2E2F3DE9001D2B86 /* actor.cpp in Sources */,
 				689D9AE02FC1CC8400982109 /* assembler.cpp in Sources */,
 				689DD5272E2F3DE8001D2B86 /* dispatchable.cpp in Sources */,
+				68786E003001203D007E9626 /* PsdSyncFileReader.cpp in Sources */,
 				684B784F2FDBF18F0029AA17 /* commands_i18n.cpp in Sources */,
+				68786E193001203E007E9626 /* PsdFile.cpp in Sources */,
 				038E77692582133D00A94374 /* inffast.c in Sources */,
 				689DD5392E2F3DE9001D2B86 /* localization.cpp in Sources */,
 				689DD52A2E2F3DE8001D2B86 /* hacks.cpp in Sources */,
 				689DD51E2E2F3DE8001D2B86 /* web.cpp in Sources */,
+				68786E133001203D007E9626 /* PsdParseImageDataSection.cpp in Sources */,
 				038E77632582133D00A94374 /* uncompr.c in Sources */,
 				689DD5E42E2F3F18001D2B86 /* device_binjgb.cpp in Sources */,
 				689DD5DF2E2F3F18001D2B86 /* editor_sfx.cpp in Sources */,
@@ -1750,6 +1984,7 @@
 				689DD53C2E2F3DE9001D2B86 /* window.cpp in Sources */,
 				689DD5722E2F3EED001D2B86 /* codepoint.cpp in Sources */,
 				689DD5F22E2F3F18001D2B86 /* commands_sfx.cpp in Sources */,
+				68786E073001203D007E9626 /* PsdFixedSizeString.cpp in Sources */,
 				689DD5342E2F3DE9001D2B86 /* entry.cpp in Sources */,
 				038E76E02582115F00A94374 /* md4c.c in Sources */,
 				038E76552582109700A94374 /* imgui_demo.cpp in Sources */,
@@ -1763,20 +1998,25 @@
 				689DD5422E2F3DE9001D2B86 /* archive.cpp in Sources */,
 				68F4AD552F20DA52008EF32D /* vram_debugger.cpp in Sources */,
 				689DD5552E2F3DE9001D2B86 /* image.cpp in Sources */,
+				68786E033001203D007E9626 /* PsdParseLayerMaskSection.cpp in Sources */,
 				031B4EAC25833CB2002EF476 /* zip.c in Sources */,
 				689DD5312E2F3DE9001D2B86 /* archive_zip.cpp in Sources */,
+				68786E0E3001203D007E9626 /* PsdSyncFileWriter.cpp in Sources */,
 				038E7658258210A700A94374 /* imgui_code_editor.cpp in Sources */,
 				689DD4832E2F3CAF001D2B86 /* clip_osx.mm in Sources */,
 				689DD5FC2E2F3F8E001D2B86 /* AppDelegate.m in Sources */,
 				038E76D32582114100A94374 /* lz4.c in Sources */,
 				689DD5DD2E2F3F18001D2B86 /* editor_tiles.cpp in Sources */,
 				038E776E2582133D00A94374 /* crc32.c in Sources */,
+				68786E043001203D007E9626 /* PsdStringUtil.cpp in Sources */,
 				689DD5F52E2F3F18001D2B86 /* commands_map.cpp in Sources */,
+				68786E023001203D007E9626 /* PsdBlendMode.cpp in Sources */,
 				689DD56F2E2F3EED001D2B86 /* static_analyzer.cpp in Sources */,
 				689DD5242E2F3DE8001D2B86 /* json.cpp in Sources */,
 				689DD5E82E2F3F18001D2B86 /* editor.cpp in Sources */,
 				689DD3FA2E2F37C5001D2B86 /* main.cpp in Sources */,
 				689DD5262E2F3DE8001D2B86 /* sfx.cpp in Sources */,
+				68786E153001203E007E9626 /* PsdMallocAllocator.cpp in Sources */,
 				689DD5412E2F3DE9001D2B86 /* work_queue.cpp in Sources */,
 				689DD5332E2F3DE9001D2B86 /* marker.cpp in Sources */,
 				689DD5D52E2F3F18001D2B86 /* theme.cpp in Sources */,
@@ -1796,6 +2036,7 @@
 				689DD4662E2F3BC5001D2B86 /* common.c in Sources */,
 				038E776C2582133D00A94374 /* trees.c in Sources */,
 				03FEADAF25C94ED3006A5EF0 /* imgui_tables.cpp in Sources */,
+				68786E173001203E007E9626 /* Psdminiz.c in Sources */,
 				689DD5E22E2F3F18001D2B86 /* commands_font.cpp in Sources */,
 				689DD4702E2F3C97001D2B86 /* civetweb.c in Sources */,
 				689DD53A2E2F3DE9001D2B86 /* scene.cpp in Sources */,
@@ -1815,15 +2056,21 @@
 				689DD5512E2F3DE9001D2B86 /* encoding.cpp in Sources */,
 				689DD5ED2E2F3F18001D2B86 /* activities.cpp in Sources */,
 				038E77672582133D00A94374 /* adler32.c in Sources */,
+				68786E103001203D007E9626 /* PsdInterleave.cpp in Sources */,
+				68786E083001203D007E9626 /* PsdNativeFile_Mac.mm in Sources */,
+				68786E093001203D007E9626 /* PsdColorMode.cpp in Sources */,
 				689DD5F42E2F3F18001D2B86 /* exporter.cpp in Sources */,
 				038E76542582109700A94374 /* imgui_draw.cpp in Sources */,
 				689DD5E92E2F3F18001D2B86 /* editor_code.cpp in Sources */,
 				038E77622582133D00A94374 /* deflate.c in Sources */,
+				68786E0A3001203D007E9626 /* PsdLayerCanvasCopy.cpp in Sources */,
 				689DD5292E2F3DE8001D2B86 /* renderer.cpp in Sources */,
 				684B78492FDBF16A0029AA17 /* i18n.cpp in Sources */,
 				689DD54B2E2F3DE9001D2B86 /* recorder.cpp in Sources */,
+				68786E113001203D007E9626 /* PsdParseDocument.cpp in Sources */,
 				038E76DF2582115F00A94374 /* md4c-html.c in Sources */,
 				689DD5E72E2F3F18001D2B86 /* commands_grouped.cpp in Sources */,
+				68786E0B3001203D007E9626 /* PsdAllocator.cpp in Sources */,
 				689DD4322E2F3AB6001D2B86 /* promise.cpp in Sources */,
 				689DD5322E2F3DE9001D2B86 /* stream.cpp in Sources */,
 				689DD53E2E2F3DE9001D2B86 /* parsers.cpp in Sources */,
@@ -1833,15 +2080,18 @@
 				038E76D62582114100A94374 /* lz4hc.c in Sources */,
 				038E77652582133D00A94374 /* zutil.c in Sources */,
 				689DD5D72E2F3F18001D2B86 /* editing.cpp in Sources */,
+				68786E143001203D007E9626 /* PsdParseImageResourcesSection.cpp in Sources */,
 				689DD5E32E2F3F18001D2B86 /* command.cpp in Sources */,
 				038E77662582133D00A94374 /* gzlib.c in Sources */,
 				689DD5CD2E2F3F18001D2B86 /* commands_paintable2d.cpp in Sources */,
 				689DD5F82E2F3F18001D2B86 /* editor_console.cpp in Sources */,
+				68786E013001203D007E9626 /* PsdExport.cpp in Sources */,
 				689DD5EF2E2F3F18001D2B86 /* editor_palette.cpp in Sources */,
 				689DD5452E2F3DE9001D2B86 /* editable.cpp in Sources */,
 				689DD5F62E2F3F18001D2B86 /* editor_ref_resolver.cpp in Sources */,
 				689DD5232E2F3DE8001D2B86 /* rom_inspector.cpp in Sources */,
 				689DD5D32E2F3F18001D2B86 /* commands_scene.cpp in Sources */,
+				68786E183001203E007E9626 /* PsdParseColorModeDataSection.cpp in Sources */,
 				689DD5492E2F3DE9001D2B86 /* mathematics.cpp in Sources */,
 				689DD53F2E2F3DE9001D2B86 /* shapes.cpp in Sources */,
 				0359C57F25824EDE0024E290 /* gzread.c in Sources */,
@@ -1849,9 +2099,11 @@
 				689DD54A2E2F3DE9001D2B86 /* file_handle.cpp in Sources */,
 				038E76D52582114100A94374 /* xxhash.c in Sources */,
 				689DD5442E2F3DE9001D2B86 /* either.cpp in Sources */,
+				68786E063001203D007E9626 /* PsdPch.cpp in Sources */,
 				031B4EAF25833CB2002EF476 /* unzip.c in Sources */,
 				689DD5D42E2F3F18001D2B86 /* operations.cpp in Sources */,
 				038E765B258210B600A94374 /* imgui_sdl.cpp in Sources */,
+				68786E053001203D007E9626 /* PsdDecompressRle.cpp in Sources */,
 				689DD5402E2F3DE9001D2B86 /* assets.cpp in Sources */,
 				689DD5532E2F3DE9001D2B86 /* updatable.cpp in Sources */,
 				689DD5DE2E2F3F18001D2B86 /* editor_music.cpp in Sources */,
