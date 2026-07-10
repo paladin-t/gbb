@@ -109,11 +109,14 @@ UINT8 sqrt_uint16(UINT16 a) NONBANKED {
     return (UINT8)y;
 }
 
-INT16 pow_int16(INT16 a, INT16 b) NONBANKED {
-    for (INT16 i = 0; i < b; ++i)
-        a *= a;
+INT16 pow_int16(INT16 a, UINT8 b) NONBANKED {
+    INT16 result = 1;
+    while (b != 0) {
+        result *= a;
+        --b;
+    }
 
-    return a;
+    return result;
 }
 
 /**< Point and directions. */

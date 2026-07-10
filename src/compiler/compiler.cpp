@@ -916,10 +916,14 @@ static Int16 atan2(Int16 y, Int16 x) {
 		return 192 + ATAN2_TABLE[-x][-y];
 }
 static Int16 powi(Int16 a, Int16 b) {
-	for (Int16 i = 0; i < b; ++i)
-		a *= a;
+	UInt8 exp = (UInt8)b;
+	Int16 result = 1;
+	while (exp != 0) {
+		result *= a;
+		--exp;
+	}
 
-	return a;
+	return result;
 }
 
 /**< Guards. */
