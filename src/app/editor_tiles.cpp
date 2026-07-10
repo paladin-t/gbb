@@ -2052,7 +2052,11 @@ private:
 					pfd::open_file open(
 						GBBASIC_TITLE,
 						"",
+#if GBBASIC_PSD_ENABLED
+						GBBASIC_IMAGE_FILE_WITH_PSD_FILTER,
+#else /* GBBASIC_PSD_ENABLED */
 						GBBASIC_IMAGE_FILE_FILTER,
+#endif /* GBBASIC_PSD_ENABLED */
 						pfd::opt::none
 					);
 					if (open.result().empty())
@@ -2061,6 +2065,50 @@ private:
 					Path::uniform(path);
 					if (path.empty())
 						break;
+
+#if GBBASIC_PSD_ENABLED
+					std::string ext;
+					Path::split(path, nullptr, &ext, nullptr);
+					if (Text::endsWith(ext, "psd", true)) {
+						Image::Ptr img(Image::create());
+						if (!img->fromPsdFile(path.c_str())) {
+							ws->bubble(ws->theme()->dialogPrompt_UnsupportedData(), nullptr);
+
+							break;
+						}
+
+						Image::Ptr newObj = nullptr;
+						BaseAssets::Entry::ParsingStatuses status = BaseAssets::Entry::ParsingStatuses::SUCCESS;
+						if (!entry()->parseImage(newObj, img.get(), status)) {
+							switch (status) {
+							case BaseAssets::Entry::ParsingStatuses::NOT_A_MULTIPLE_OF_8x8:
+								ws->messagePopupBox(ws->theme()->dialogPrompt_ResourceSizeIsNotAMultipleOf8x8(), nullptr, nullptr, nullptr);
+
+								break;
+							case BaseAssets::Entry::ParsingStatuses::OUT_OF_BOUNDS:
+								ws->messagePopupBox(ws->theme()->dialogPrompt_ResourceSizeOutOfBounds(), nullptr, nullptr, nullptr);
+
+								break;
+							default:
+								ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
+
+								break;
+							}
+
+							break;
+						}
+
+						Command* cmd = enqueue<Commands::Tiles::Import>()
+							->with(newObj)
+							->exec(object(), Variant((void*)entry()), &texture());
+
+						_refresh(cmd);
+
+						ws->bubble(ws->theme()->dialogPrompt_ImportedAsset(), nullptr);
+
+						break;
+					}
+#endif /* GBBASIC_PSD_ENABLED */
 
 					Bytes::Ptr bytes(Bytes::create());
 					File::Ptr file(File::create());
