@@ -591,6 +591,8 @@ struct FontAssets {
 		Font::Ptr &touch(void);
 		void cleanup(void);
 
+		bool serializeBasic(std::string &val, int page) const;
+
 		Font::Ptr &touchSubstitution(int* offset_ /* nullable */, int* thresholds_ /* nullable */) const;
 		void cleanupSubstitution(void) const;
 	};
@@ -714,6 +716,8 @@ struct I18nAssets {
 
 		size_t hash(void) const;
 		int compare(const Entry &other) const;
+
+		bool serializeBasic(std::string &val, int page) const;
 
 		bool serializeCsv(std::string &val) const;
 		bool parseCsv(I18n::Ptr &i18n, const std::string &val, ParsingStatuses &status) const;

@@ -35083,7 +35083,7 @@ private:
 				} else if ((id1 = must(Token::Types::INTEGER)(q1))) {
 					arg1 = id1->data();
 				}
-				if (!i18nLookup(txt, arg0, arg1, id0->begin(), id1->begin())) {
+				if (!i18nLookup(txt, arg0, arg1, id0 ? id0->begin() : TextLocation::INVALID(), id1 ? id1->begin() : TextLocation::INVALID())) {
 					txt.clear();
 
 					return false;
@@ -35092,7 +35092,7 @@ private:
 				// `=LSTR(key)`.
 				if ((id0 = must(Token::Types::STRING)(q1))) {
 					const Variant arg0 = id0->data();
-					if (!i18nLookup(txt, nullptr, arg0, id0->begin(), id0->begin())) {
+					if (!i18nLookup(txt, nullptr, arg0, id0 ? id0->begin() : TextLocation::INVALID(), id0 ? id0->begin() : TextLocation::INVALID())) {
 						txt.clear();
 
 						return false;
@@ -44110,9 +44110,11 @@ bool compile(Program &program, const Options &options) {
 				}
 				if (i18nInfo.empty()) {
 					const std::string msg = Text::format("Cannot find localized content with key \"{0}\", language \"{1}\"", { key, language });
-					onError_(msg, false, loc1.page, loc1.row, loc1.column);
+					onError_(msg, true, loc1.page, loc1.row, loc1.column);
 
-					return false;
+					out = key; // Use key instead.
+
+					return true;
 				}
 				if (i18nInfo.size() > 1) {
 					std::string msg = Text::format("Too many localized content with key \"{0}\", language \"{1}\"", { key, language });
@@ -44182,9 +44184,11 @@ bool compile(Program &program, const Options &options) {
 				const char* txt = i18n->getContent(language, key, &lang, &item);
 				if (!txt) {
 					const std::string msg = Text::format("Cannot find localized content with key \"{0}\", language \"{1}\"", { key, language });
-					onError_(msg, false, loc1.page, loc1.row, loc1.column);
+					onError_(msg, true, loc1.page, loc1.row, loc1.column);
 
-					return false;
+					out = key; // Use key instead.
+
+					return true;
 				}
 				out = txt;
 			} else if (arg1.type() == Variant::INTEGER) {

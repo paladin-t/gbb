@@ -2032,6 +2032,23 @@ private:
 
 		// Exporting.
 		if (ImGui::BeginPopup("@Xpt")) {
+			if (ImGui::MenuItem(ws->theme()->menu_Code())) {
+				std::string txt;
+				if (!entry()->serializeBasic(txt, _index))
+					return;
+
+				const std::string osstr = Unicode::toOs(txt);
+
+				Platform::setClipboardText(osstr.c_str());
+
+				ws->bubble(ws->theme()->dialogPrompt_ExportedCode(), nullptr);
+			}
+			if (ImGui::IsItemHovered()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip(ws->theme()->tooltip_ViaClipboard());
+			}
+			ImGui::Separator();
 			if (ImGui::MenuItem(ws->theme()->menu_Duplicate())) {
 				ws->duplicateFontFrom(wnd, rnd, _index);
 			}

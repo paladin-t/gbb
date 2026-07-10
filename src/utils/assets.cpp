@@ -1575,6 +1575,27 @@ void FontAssets::Entry::cleanup(void) {
 	object = nullptr;
 }
 
+bool FontAssets::Entry::serializeBasic(std::string &val, int page) const {
+	// Prepare.
+	val.clear();
+
+	// Serialize the code.
+	std::string asset;
+	if (name.empty())
+		asset = "#" + Text::toString(page);
+	else
+		asset = "\"" + name + "\"";
+
+	val += "label ";
+	val += asset;
+	val += ", ";
+	val += "\"hello...\"";
+	val += "\n";
+
+	// Finish.
+	return true;
+}
+
 Font::Ptr &FontAssets::Entry::touchSubstitution(int* offset_, int* thresholds_) const {
 	if (substitutionObject) {
 		if (offset_)
@@ -2926,6 +2947,28 @@ int I18nAssets::Entry::compare(const Entry &other) const {
 		return ret;
 
 	return 0;
+}
+
+bool I18nAssets::Entry::serializeBasic(std::string &val, int page) const {
+	// Prepare.
+	val.clear();
+
+	// Serialize the code.
+	std::string asset;
+	if (name.empty())
+		asset = "#" + Text::toString(page);
+	else
+		asset = "\"" + name + "\"";
+
+	val += "print lstr(";
+	val += asset;
+	val += ", ";
+	val += "\"key...\"";
+	val += ")";
+	val += "\n";
+
+	// Finish.
+	return true;
 }
 
 bool I18nAssets::Entry::serializeCsv(std::string &val) const {
