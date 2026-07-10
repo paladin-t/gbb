@@ -189,7 +189,7 @@ UINT8 atan2(INT16 y, INT16 x) BANKED;
 
 UINT8 clamp_uint8(INT16 val, UINT8 lo, UINT8 hi) NONBANKED;
 UINT8 sqrt_uint16(UINT16 a) NONBANKED;
-INT16 pow_int16(INT16 a, INT16 b) NONBANKED;
+INT16 pow_int16(INT16 a, UINT8 b) NONBANKED;
 
 /**< Point and directions. */
 
