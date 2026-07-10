@@ -84,7 +84,7 @@ static const Byte IMAGE_COLORED_HEADER_BYTES[] = IMAGE_COLORED_HEADER;
 */
 
 template <typename T> static T* imageCreateInterleavedImage(Allocator* allocator, const void* srcR, const void* srcG, const void* srcB, unsigned int width, unsigned int height) {
-	T* image = static_cast<T*>(allocator->Allocate(width*height * 4u*sizeof(T), 16u));
+	T* image = static_cast<T*>(allocator->Allocate(width * height * 4u * sizeof(T), 16u));
 
 	const T* r = static_cast<const T*>(srcR);
 	const T* g = static_cast<const T*>(srcG);
@@ -94,7 +94,7 @@ template <typename T> static T* imageCreateInterleavedImage(Allocator* allocator
 	return image;
 }
 template <typename T> static T* imageCreateInterleavedImage(Allocator* allocator, const void* srcR, const void* srcG, const void* srcB, const void* srcA, unsigned int width, unsigned int height) {
-	T* image = static_cast<T*>(allocator->Allocate(width*height * 4u*sizeof(T), 16u));
+	T* image = static_cast<T*>(allocator->Allocate(width * height * 4u * sizeof(T), 16u));
 
 	const T* r = static_cast<const T*>(srcR);
 	const T* g = static_cast<const T*>(srcG);
@@ -1573,8 +1573,7 @@ public:
 		bool blank = true;
 		do {
 			// Prepare.
-			const std::string osstr = Unicode::toOs(path);
-			const std::wstring wosstr = Unicode::toWide(osstr.c_str());
+			const std::wstring wosstr = Unicode::toWide(path);
 
 			MallocAllocator allocator;
 			NativeFile file(&allocator);
@@ -1687,7 +1686,7 @@ public:
 					}
 
 					// Fill in the pixels if available.
-					if (document->bitsPerChannel == 8) {
+					if (document->bitsPerChannel == 8 && image8) {
 						_width = document->width;
 						_height = document->height;
 
@@ -1698,6 +1697,52 @@ public:
 								Colour &col = ((Colour*)_pixels)[i];
 								col.a = 255;
 							}
+						}
+					} else if (document->bitsPerChannel == 16 && image16) {
+						_width = document->width;
+						_height = document->height;
+
+						_pixels = (Byte*)malloc(_width * _height * sizeof(Colour));
+						for (int i = 0; i < _width * _height; ++i) {
+							Colour &col = ((Colour*)_pixels)[i];
+							const uint16_t srcR = image16[i * 4];
+							const uint16_t srcG = image16[i * 4 + 1];
+							const uint16_t srcB = image16[i * 4 + 2];
+							const uint16_t srcA = image16[i * 4 + 3];
+							uint32_t mappedR = (static_cast<uint32_t>(srcR) * 255 + 16383) / 32767;
+							uint32_t mappedG = (static_cast<uint32_t>(srcG) * 255 + 16383) / 32767;
+							uint32_t mappedB = (static_cast<uint32_t>(srcB) * 255 + 16383) / 32767;
+							uint32_t mappedA = (static_cast<uint32_t>(srcA) * 255 + 16383) / 32767;
+							mappedR = Math::min(mappedR, 255u);
+							mappedG = Math::min(mappedG, 255u);
+							mappedB = Math::min(mappedB, 255u);
+							mappedA = Math::min(mappedA, 255u);
+							col = Colour::byRGBA8888((Byte)mappedR, (Byte)mappedG, (Byte)mappedB, (Byte)mappedA);
+							if (isRgb)
+								col.a = 255;
+						}
+					} else if (document->bitsPerChannel == 32 && image32) {
+						_width = document->width;
+						_height = document->height;
+
+						_pixels = (Byte*)malloc(_width * _height * sizeof(Colour));
+						for (int i = 0; i < _width * _height; ++i) {
+							Colour &col = ((Colour*)_pixels)[i];
+							const float32_t srcR = Math::clamp(image32[i * 4], 0.0f, 1.0f);
+							const float32_t srcG = Math::clamp(image32[i * 4 + 1], 0.0f, 1.0f);
+							const float32_t srcB = Math::clamp(image32[i * 4 + 2], 0.0f, 1.0f);
+							const float32_t srcA = Math::clamp(image32[i * 4 + 3], 0.0f, 1.0f);
+							const float mappedR = srcR * 255.0f;
+							const float mappedG = srcG * 255.0f;
+							const float mappedB = srcB * 255.0f;
+							const float mappedA = srcA * 255.0f;
+							const int roundedR = Math::clamp(static_cast<int>(std::round(mappedR)), 0, 255);
+							const int roundedG = Math::clamp(static_cast<int>(std::round(mappedG)), 0, 255);
+							const int roundedB = Math::clamp(static_cast<int>(std::round(mappedB)), 0, 255);
+							const int roundedA = Math::clamp(static_cast<int>(std::round(mappedA)), 0, 255);
+							col = Colour::byRGBA8888((Byte)roundedR, (Byte)roundedG, (Byte)roundedB, (Byte)roundedA);
+							if (isRgb)
+								col.a = 255;
 						}
 					}
 
