@@ -83,6 +83,7 @@ static const Byte IMAGE_COLORED_HEADER_BYTES[] = IMAGE_COLORED_HEADER;
 ** Utilities
 */
 
+#if GBBASIC_PSD_ENABLED
 template <typename T> static T* imageCreateInterleavedImage(Allocator* allocator, const void* srcR, const void* srcG, const void* srcB, unsigned int width, unsigned int height) {
 	T* image = static_cast<T*>(allocator->Allocate(width * height * 4u * sizeof(T), 16u));
 
@@ -104,6 +105,7 @@ template <typename T> static T* imageCreateInterleavedImage(Allocator* allocator
 
 	return image;
 }
+#endif /* GBBASIC_PSD_ENABLED */
 
 /* ===========================================================================} */
 
