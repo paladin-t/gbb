@@ -888,7 +888,7 @@ public:
 		Renderer* rnd,
 		const std::string &content,
 		const Text::Array &filter,
-		bool withTiles, bool withPath,
+		bool withTiles, bool withPath, bool fillLocalPalette,
 		const ImGui::MapResolverPopupBox::ConfirmedHandler &confirm /* nullable */,
 		const ImGui::MapResolverPopupBox::CanceledHandler &cancel /* nullable */,
 		const ImGui::MapResolverPopupBox::SelectedHandler &select /* nullable */,

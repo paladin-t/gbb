@@ -4457,6 +4457,7 @@ private:
 		};
 		auto resolve = [rnd, ws, this, import] (Image::Ptr img, bool createNew) -> void {
 			const Text::Array filter = GBBASIC_IMAGE_FILE_FILTER;
+			const bool fillLocalPalette = entry()->localPaletteEnabled;
 			ImGui::MapResolverPopupBox::ConfirmedHandler confirm(
 				[ws, import, img, createNew] (const int* /* index */, const char* /* path */, bool allowFlip, bool fillLocalPalette) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
@@ -4475,7 +4476,7 @@ private:
 				rnd,
 				ws->theme()->generic_Path().c_str(),
 				filter,
-				false, false,
+				false, false, fillLocalPalette,
 				confirm,
 				cancel,
 				nullptr,
@@ -4607,6 +4608,7 @@ private:
 #else /* GBBASIC_PSD_ENABLED */
 			const Text::Array filter = GBBASIC_IMAGE_FILE_FILTER;
 #endif /* GBBASIC_PSD_ENABLED */
+			const bool fillLocalPalette = entry()->localPaletteEnabled;
 			ImGui::MapResolverPopupBox::ConfirmedHandler confirm(
 				[ws, import, createNew] (const int* /* index */, const char* path, bool allowFlip, bool fillLocalPalette) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
@@ -4625,7 +4627,7 @@ private:
 				rnd,
 				ws->theme()->generic_Path().c_str(),
 				filter,
-				false, true,
+				false, true, fillLocalPalette,
 				confirm,
 				cancel,
 				nullptr,
