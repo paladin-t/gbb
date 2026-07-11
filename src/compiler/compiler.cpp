@@ -35097,6 +35097,8 @@ private:
 
 						return false;
 					}
+				} else {
+					THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 				}
 			}
 			if (!must(Token::Types::OPERATOR, ")")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
