@@ -59,17 +59,12 @@
 		68786E093001203D007E9626 /* PsdColorMode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DCA3001201F007E9626 /* PsdColorMode.cpp */; };
 		68786E0A3001203D007E9626 /* PsdLayerCanvasCopy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DCD30012031007E9626 /* PsdLayerCanvasCopy.cpp */; };
 		68786E0B3001203D007E9626 /* PsdAllocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DD230012035007E9626 /* PsdAllocator.cpp */; };
-		68786E0C3001203D007E9626 /* PsdUnionCast.inl in Resources */ = {isa = PBXBuildFile; fileRef = 68786DD330012035007E9626 /* PsdUnionCast.inl */; };
-		68786E0D3001203D007E9626 /* PsdSyncFileUtil.inl in Resources */ = {isa = PBXBuildFile; fileRef = 68786DD730012036007E9626 /* PsdSyncFileUtil.inl */; };
 		68786E0E3001203D007E9626 /* PsdSyncFileWriter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DD930012036007E9626 /* PsdSyncFileWriter.cpp */; };
-		68786E0F3001203D007E9626 /* PsdMemoryUtil.inl in Resources */ = {isa = PBXBuildFile; fileRef = 68786DE030012037007E9626 /* PsdMemoryUtil.inl */; };
 		68786E103001203D007E9626 /* PsdInterleave.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DE230012038007E9626 /* PsdInterleave.cpp */; };
 		68786E113001203D007E9626 /* PsdParseDocument.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DE93001203A007E9626 /* PsdParseDocument.cpp */; };
-		68786E123001203D007E9626 /* PsdEndianConversion.inl in Resources */ = {isa = PBXBuildFile; fileRef = 68786DEA3001203A007E9626 /* PsdEndianConversion.inl */; };
 		68786E133001203D007E9626 /* PsdParseImageDataSection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DEC3001203A007E9626 /* PsdParseImageDataSection.cpp */; };
 		68786E143001203D007E9626 /* PsdParseImageResourcesSection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DF43001203B007E9626 /* PsdParseImageResourcesSection.cpp */; };
 		68786E153001203E007E9626 /* PsdMallocAllocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DF53001203B007E9626 /* PsdMallocAllocator.cpp */; };
-		68786E163001203E007E9626 /* PsdBitUtil.inl in Resources */ = {isa = PBXBuildFile; fileRef = 68786DF93001203C007E9626 /* PsdBitUtil.inl */; };
 		68786E173001203E007E9626 /* Psdminiz.c in Sources */ = {isa = PBXBuildFile; fileRef = 68786DFA3001203C007E9626 /* Psdminiz.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		68786E183001203E007E9626 /* PsdParseColorModeDataSection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DFC3001203D007E9626 /* PsdParseColorModeDataSection.cpp */; };
 		68786E193001203E007E9626 /* PsdFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DFF3001203D007E9626 /* PsdFile.cpp */; };
@@ -1203,94 +1198,94 @@
 		68786DA730011FEA007E9626 /* psd */ = {
 			isa = PBXGroup;
 			children = (
-				68786DAE30012019007E9626 /* Psd.h */,
+				68786DFA3001203C007E9626 /* Psdminiz.c */,
 				68786DD230012035007E9626 /* PsdAllocator.cpp */,
+				68786DB23001201A007E9626 /* PsdBlendMode.cpp */,
+				68786DCA3001201F007E9626 /* PsdColorMode.cpp */,
+				68786DC03001201C007E9626 /* PsdDecompressRle.cpp */,
+				68786DB13001201A007E9626 /* PsdExport.cpp */,
+				68786DFF3001203D007E9626 /* PsdFile.cpp */,
+				68786DC33001201D007E9626 /* PsdFixedSizeString.cpp */,
+				68786DE230012038007E9626 /* PsdInterleave.cpp */,
+				68786DCD30012031007E9626 /* PsdLayerCanvasCopy.cpp */,
+				68786DF53001203B007E9626 /* PsdMallocAllocator.cpp */,
+				68786DFC3001203D007E9626 /* PsdParseColorModeDataSection.cpp */,
+				68786DE93001203A007E9626 /* PsdParseDocument.cpp */,
+				68786DEC3001203A007E9626 /* PsdParseImageDataSection.cpp */,
+				68786DF43001203B007E9626 /* PsdParseImageResourcesSection.cpp */,
+				68786DBA3001201B007E9626 /* PsdParseLayerMaskSection.cpp */,
+				68786DC23001201D007E9626 /* PsdPch.cpp */,
+				68786DBD3001201C007E9626 /* PsdStringUtil.cpp */,
+				68786DAF3001201A007E9626 /* PsdSyncFileReader.cpp */,
+				68786DD930012036007E9626 /* PsdSyncFileWriter.cpp */,
+				68786DAE30012019007E9626 /* Psd.h */,
 				68786DFB3001203C007E9626 /* PsdAllocator.h */,
 				68786DE830012039007E9626 /* PsdAlphaChannel.h */,
 				68786DB83001201B007E9626 /* PsdAssert.h */,
 				68786DCE30012033007E9626 /* PsdBitUtil.h */,
-				68786DF93001203C007E9626 /* PsdBitUtil.inl */,
-				68786DB23001201A007E9626 /* PsdBlendMode.cpp */,
 				68786DB63001201B007E9626 /* PsdBlendMode.h */,
 				68786DF03001203B007E9626 /* PsdChannel.h */,
 				68786DB73001201B007E9626 /* PsdChannelType.h */,
-				68786DCA3001201F007E9626 /* PsdColorMode.cpp */,
 				68786DB93001201B007E9626 /* PsdColorMode.h */,
 				68786DC43001201D007E9626 /* PsdColorModeDataSection.h */,
 				68786DCB3001201F007E9626 /* PsdCompilerMacros.h */,
 				68786DDA30012036007E9626 /* PsdCompressionType.h */,
-				68786DC03001201C007E9626 /* PsdDecompressRle.cpp */,
 				68786DF63001203C007E9626 /* PsdDecompressRle.h */,
 				68786DDE30012037007E9626 /* PsdDocument.h */,
 				68786DAA30012019007E9626 /* PsdDocumentation.h */,
 				68786DCC30012021007E9626 /* PsdEndianConversion.h */,
-				68786DEA3001203A007E9626 /* PsdEndianConversion.inl */,
-				68786DB13001201A007E9626 /* PsdExport.cpp */,
 				68786DDD30012037007E9626 /* PsdExport.h */,
 				68786DCF30012033007E9626 /* PsdExportChannel.h */,
 				68786DAD30012019007E9626 /* PsdExportColorMode.h */,
 				68786DFD3001203D007E9626 /* PsdExportDocument.h */,
 				68786DC53001201D007E9626 /* PsdExportLayer.h */,
 				68786DA930012019007E9626 /* PsdExportMetaDataAttribute.h */,
-				68786DFF3001203D007E9626 /* PsdFile.cpp */,
 				68786DBB3001201C007E9626 /* PsdFile.h */,
-				68786DC33001201D007E9626 /* PsdFixedSizeString.cpp */,
 				68786DB53001201B007E9626 /* PsdFixedSizeString.h */,
 				68786DBC3001201C007E9626 /* PsdImageDataSection.h */,
 				68786DDF30012037007E9626 /* PsdImageResourcesSection.h */,
 				68786DF13001203B007E9626 /* PsdImageResourceType.h */,
-				68786DE230012038007E9626 /* PsdInterleave.cpp */,
 				68786DE730012039007E9626 /* PsdInterleave.h */,
 				68786DEF3001203B007E9626 /* Psdinttypes.h */,
 				68786DDC30012036007E9626 /* Psdispod.h */,
 				68786DDB30012036007E9626 /* Psdisunsigned.h */,
 				68786DD430012035007E9626 /* PsdKey.h */,
 				68786DF73001203C007E9626 /* PsdLayer.h */,
-				68786DCD30012031007E9626 /* PsdLayerCanvasCopy.cpp */,
 				68786DF83001203C007E9626 /* PsdLayerCanvasCopy.h */,
 				68786DF33001203B007E9626 /* PsdLayerMask.h */,
 				68786DE430012039007E9626 /* PsdLayerMaskSection.h */,
 				68786DEE3001203A007E9626 /* PsdLayerType.h */,
 				68786DA830012019007E9626 /* PsdLog.h */,
-				68786DF53001203B007E9626 /* PsdMallocAllocator.cpp */,
 				68786DB33001201A007E9626 /* PsdMallocAllocator.h */,
 				68786DE530012039007E9626 /* PsdMemoryUtil.h */,
-				68786DE030012037007E9626 /* PsdMemoryUtil.inl */,
-				68786DFA3001203C007E9626 /* Psdminiz.c */,
 				68786DC13001201D007E9626 /* Psdminiz.h */,
 				68786DC93001201E007E9626 /* PsdNamespace.h */,
 				68786DE330012038007E9626 /* PsdNativeFile_Mac.h */,
-				68786DC83001201E007E9626 /* PsdNativeFile_Mac.mm */,
 				68786DD030012034007E9626 /* PsdNativeFile.h */,
-				68786DFC3001203D007E9626 /* PsdParseColorModeDataSection.cpp */,
 				68786DB43001201A007E9626 /* PsdParseColorModeDataSection.h */,
-				68786DE93001203A007E9626 /* PsdParseDocument.cpp */,
 				68786DD130012035007E9626 /* PsdParseDocument.h */,
-				68786DEC3001203A007E9626 /* PsdParseImageDataSection.cpp */,
 				68786DBF3001201C007E9626 /* PsdParseImageDataSection.h */,
-				68786DF43001203B007E9626 /* PsdParseImageResourcesSection.cpp */,
 				68786DF23001203B007E9626 /* PsdParseImageResourcesSection.h */,
-				68786DBA3001201B007E9626 /* PsdParseLayerMaskSection.cpp */,
 				68786DE130012037007E9626 /* PsdParseLayerMaskSection.h */,
-				68786DC23001201D007E9626 /* PsdPch.cpp */,
 				68786DD530012035007E9626 /* PsdPch.h */,
 				68786DD630012035007E9626 /* PsdPlanarImage.h */,
 				68786DEB3001203A007E9626 /* PsdPlatform.h */,
 				68786DAB30012019007E9626 /* PsdSection.h */,
 				68786DB03001201A007E9626 /* Psdstdint.h */,
-				68786DBD3001201C007E9626 /* PsdStringUtil.cpp */,
 				68786DE630012039007E9626 /* PsdStringUtil.h */,
-				68786DAF3001201A007E9626 /* PsdSyncFileReader.cpp */,
 				68786DC63001201D007E9626 /* PsdSyncFileReader.h */,
 				68786DED3001203A007E9626 /* PsdSyncFileUtil.h */,
-				68786DD730012036007E9626 /* PsdSyncFileUtil.inl */,
-				68786DD930012036007E9626 /* PsdSyncFileWriter.cpp */,
 				68786DAC30012019007E9626 /* PsdSyncFileWriter.h */,
 				68786DC73001201E007E9626 /* PsdThumbnail.h */,
 				68786DBE3001201C007E9626 /* PsdTypes.h */,
 				68786DD830012036007E9626 /* PsdUnionCast.h */,
-				68786DD330012035007E9626 /* PsdUnionCast.inl */,
 				68786DFE3001203D007E9626 /* PsdVectorMask.h */,
+				68786DF93001203C007E9626 /* PsdBitUtil.inl */,
+				68786DEA3001203A007E9626 /* PsdEndianConversion.inl */,
+				68786DE030012037007E9626 /* PsdMemoryUtil.inl */,
+				68786DD730012036007E9626 /* PsdSyncFileUtil.inl */,
+				68786DD330012035007E9626 /* PsdUnionCast.inl */,
+				68786DC83001201E007E9626 /* PsdNativeFile_Mac.mm */,
 			);
 			name = psd;
 			sourceTree = "<group>";
@@ -1934,12 +1929,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				68786E0F3001203D007E9626 /* PsdMemoryUtil.inl in Resources */,
-				68786E0D3001203D007E9626 /* PsdSyncFileUtil.inl in Resources */,
-				68786E123001203D007E9626 /* PsdEndianConversion.inl in Resources */,
-				68786E0C3001203D007E9626 /* PsdUnionCast.inl in Resources */,
 				68F811002E2F70C800A859D1 /* Assets.xcassets in Resources */,
-				68786E163001203E007E9626 /* PsdBitUtil.inl in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
