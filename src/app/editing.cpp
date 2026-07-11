@@ -4062,7 +4062,6 @@ bool magnifiable(
 
 	const ImVec2 curPos = ImGui::GetCursorPos();
 
-	bool changed = false;
 	int szVal = *val;
 	ImGui::PushID("@Sz");
 	{
@@ -4074,13 +4073,13 @@ bool magnifiable(
 		ImGui::SetCursorPosY(posY);
 		if (ImGui::ImageButton(theme->iconMinus()->pointer(rnd), ImVec2(13, 13), ImColor(IM_COL32_WHITE))) {
 			*val = Math::max(szVal - 1, minVal);
-			changed = true;
+			result = true;
 		}
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(dragWidth);
 		if (ImGui::DragInt("", &szVal, 1.0f, minVal, maxVal, "%d")) {
 			*val = szVal;
-			changed = true;
+			result = true;
 		}
 		if (ImGui::GetActiveID() == ImGui::GetID("")) {
 			if (focused)
@@ -4089,7 +4088,7 @@ bool magnifiable(
 		ImGui::SameLine();
 		if (ImGui::ImageButton(theme->iconPlus()->pointer(rnd), ImVec2(13, 13), ImColor(IM_COL32_WHITE))) {
 			*val = Math::min(szVal + 1, maxVal);
-			changed = true;
+			result = true;
 		}
 		ImGui::SameLine();
 	}

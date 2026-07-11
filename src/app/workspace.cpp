@@ -3929,7 +3929,7 @@ void Workspace::showExternalMapBrowser(
 	Renderer* rnd,
 	const std::string &content,
 	const Text::Array &filter,
-	bool withTiles, bool withPath,
+	bool withTiles, bool withPath, bool fillLocalPalette,
 	const ImGui::MapResolverPopupBox::ConfirmedHandler &confirm_,
 	const ImGui::MapResolverPopupBox::CanceledHandler &cancel,
 	const ImGui::MapResolverPopupBox::SelectedHandler &select,
@@ -3954,10 +3954,8 @@ void Workspace::showExternalMapBrowser(
 	}
 
 	bool allowFlip = true;
-	bool fillLocalPalette = true;
 	if (!prj->cartridgeType().empty()) {
 		allowFlip = false;
-		fillLocalPalette = false;
 
 		const std::string cartType = prj->cartridgeType();
 
@@ -3965,7 +3963,6 @@ void Workspace::showExternalMapBrowser(
 		for (const std::string &part : parts) {
 			if (part == PROJECT_CARTRIDGE_TYPE_COLORED) {
 				allowFlip = true;
-				fillLocalPalette = true;
 
 				break;
 			}

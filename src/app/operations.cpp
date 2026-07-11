@@ -828,7 +828,7 @@ promise::Promise Operations::popupExternalMapResolver(Window*, Renderer* rnd, Wo
 				rnd,
 				content,
 				filter,
-				true, true,
+				true, true, false,
 				confirm,
 				cancel,
 				nullptr,

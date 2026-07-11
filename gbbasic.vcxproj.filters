@@ -560,6 +560,72 @@
     <ClCompile Include="src\app\commands_i18n.cpp">
       <Filter>app\editors\commands</Filter>
     </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\Psdminiz.c">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdAllocator.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdBlendMode.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdColorMode.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdDecompressRle.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdExport.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdFile.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdFixedSizeString.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdInterleave.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdLayerCanvasCopy.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdMallocAllocator.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdNativeFile.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdNativeFile_Linux.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdParseColorModeDataSection.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdParseDocument.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdParseImageDataSection.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdParseImageResourcesSection.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdParseLayerMaskSection.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdPch.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdStringUtil.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdSyncFileReader.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\psd\src\psd\PsdSyncFileWriter.cpp">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="utils">
@@ -753,6 +819,15 @@
     </Filter>
     <Filter Include="lib\bigint\include\third_party">
       <UniqueIdentifier>{f14b7baa-b8fc-4f61-bb3e-0f556c7b1dee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\psd">
+      <UniqueIdentifier>{d2c860bc-baa6-4cc2-87fa-ef888a410c5c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\psd\src">
+      <UniqueIdentifier>{54f4ab32-6c8b-4875-abc8-2045f34978da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib\psd\src\psd">
+      <UniqueIdentifier>{3adc7db4-bcd1-40a8-be0e-e5c37ef396a0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -1630,6 +1705,195 @@
     <ClInclude Include="src\app\commands_i18n.h">
       <Filter>app\editors\commands</Filter>
     </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\Psd.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdAllocator.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdAlphaChannel.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdAssert.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdBitUtil.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdBlendMode.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdChannel.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdChannelType.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdColorMode.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdColorModeDataSection.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdCompilerMacros.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdCompressionType.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdDecompressRle.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdDocument.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdDocumentation.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdEndianConversion.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdExport.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdExportChannel.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdExportColorMode.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdExportDocument.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdExportLayer.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdExportMetaDataAttribute.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdFile.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdFixedSizeString.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdImageDataSection.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdImageResourcesSection.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdImageResourceType.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdInterleave.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\Psdinttypes.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\Psdispod.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\Psdisunsigned.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdKey.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdLayer.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdLayerCanvasCopy.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdLayerMask.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdLayerMaskSection.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdLayerType.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdLog.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdMallocAllocator.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdMemoryUtil.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\Psdminiz.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdNamespace.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdNativeFile.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdNativeFile_Linux.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdNativeFile_Mac.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdParseColorModeDataSection.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdParseDocument.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdParseImageDataSection.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdParseImageResourcesSection.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdParseLayerMaskSection.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdPch.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdPlanarImage.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdPlatform.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdSection.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\Psdstdint.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdStringUtil.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdSyncFileReader.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdSyncFileUtil.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdSyncFileWriter.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdThumbnail.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdTypes.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdUnionCast.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\psd\src\psd\PsdVectorMask.h">
+      <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\utils\platform_ios.mm">
@@ -1649,6 +1913,24 @@
     </None>
     <None Include="src\app\editor_map.inl">
       <Filter>app\editors</Filter>
+    </None>
+    <None Include="lib\psd\src\psd\PsdBitUtil.inl">
+      <Filter>lib\psd\src\psd</Filter>
+    </None>
+    <None Include="lib\psd\src\psd\PsdEndianConversion.inl">
+      <Filter>lib\psd\src\psd</Filter>
+    </None>
+    <None Include="lib\psd\src\psd\PsdMemoryUtil.inl">
+      <Filter>lib\psd\src\psd</Filter>
+    </None>
+    <None Include="lib\psd\src\psd\PsdSyncFileUtil.inl">
+      <Filter>lib\psd\src\psd</Filter>
+    </None>
+    <None Include="lib\psd\src\psd\PsdUnionCast.inl">
+      <Filter>lib\psd\src\psd</Filter>
+    </None>
+    <None Include="lib\psd\src\psd\PsdNativeFile_Mac.mm">
+      <Filter>lib\psd\src\psd</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

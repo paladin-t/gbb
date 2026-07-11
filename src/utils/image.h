@@ -155,6 +155,8 @@ public:
 
 	virtual bool fromImage(const Image* src) = 0;
 
+	virtual bool fromPsdFile(const char* path) = 0;
+
 	/**
 	 * @param[out] val
 	 */
