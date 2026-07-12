@@ -1654,14 +1654,14 @@ private:
 				ImGui::Separator();
 				if (ImGui::MenuItem(ws->theme()->menu_MoveUp(), nullptr, nullptr, idx > 1)) {
 					Command* cmd = enqueue<Commands::I18n::SwapItems>()
-						->with(idx, idx - 1)
+						->with(idx - 1, idx - 1 - 1)
 						->exec(object());
 
 					_refresh(cmd);
 				}
 				if (ImGui::MenuItem(ws->theme()->menu_MoveDown(), nullptr, nullptr, idx < rows - 1)) {
 					Command* cmd = enqueue<Commands::I18n::SwapItems>()
-						->with(idx, idx + 1)
+						->with(idx - 1, idx - 1 + 1)
 						->exec(object());
 
 					_refresh(cmd);
