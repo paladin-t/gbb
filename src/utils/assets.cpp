@@ -2317,9 +2317,32 @@ bool FontAssets::loadBitmap(std::string* bitmapDataPtr, Font::Ptr obj, const std
 		return false;
 
 	const bool fromFile = !bitmapDataPtr || bitmapDataPtr->empty();
-	if (fromFile) { // Load from TTF file.
+	if (fromFile) { // Load from bitmap file.
 		if (!Path::fileExists(path.c_str()))
 			return false;
+
+#if GBBASIC_PSD_ENABLED
+		std::string ext;
+		Path::split(path, nullptr, &ext, nullptr);
+		if (Text::endsWith(ext, "psd", true)) {
+			Image::Ptr img(Image::create());
+			if (!img->fromPsdFile(path.c_str()))
+				return false;
+
+			if (!obj->fromImage(img.get(), (int)size.x, (int)size.y, permeation))
+				return false;
+
+			if (bitmapDataPtr) {
+				Bytes::Ptr bytes(Bytes::create());
+				if (!img->toBytes(bytes.get(), "png"))
+					return false;
+				if (!Base64::fromBytes(*bitmapDataPtr, bytes.get()))
+					return false;
+			}
+
+			return true;
+		}
+#endif /* GBBASIC_PSD_ENABLED */
 
 		File::Ptr file(File::create());
 		if (!file->open(path.c_str(), Stream::READ))
@@ -2344,7 +2367,7 @@ bool FontAssets::loadBitmap(std::string* bitmapDataPtr, Font::Ptr obj, const std
 			if (!Base64::fromBytes(*bitmapDataPtr, bytes.get()))
 				return false;
 		}
-	} else { // Load from encoded TTF data.
+	} else { // Load from encoded bitmap data.
 		Bytes::Ptr bytes(Bytes::create());
 		if (!Base64::toBytes(bytes.get(), *bitmapDataPtr))
 			return false;
@@ -7252,23 +7275,22 @@ bool ActorAssets::Entry::serializeSpriteSheet(Bytes* val, const char* type, int 
 	return true;
 }
 
-bool ActorAssets::Entry::parseSpriteSheet(Actor::Ptr &actor, const Bytes* val, const Math::Vec2i &n, ParsingStatuses &status) const {
+bool ActorAssets::Entry::parseSpriteSheet(Actor::Ptr &actor, const Image* val, const Math::Vec2i &n, ParsingStatuses &status) const {
 	// Prepare.
 	actor = nullptr;
 	status = ParsingStatuses::SUCCESS;
 
-	// Convert from bytes.
-	Image::Ptr tmp(Image::create(palette));
-	if (!tmp->fromBytes(val))
+	// Process the image.
+	if (!val)
 		return false;
 
 	if (n.x <= 0 || n.y <= 0)
 		return false;
 
-	if (tmp->width() == 0 || tmp->height() == 0)
+	if (val->width() == 0 || val->height() == 0)
 		return false;
 
-	if ((tmp->width() % GBBASIC_TILE_SIZE) || (tmp->height() % GBBASIC_TILE_SIZE)) {
+	if ((val->width() % GBBASIC_TILE_SIZE) || (val->height() % GBBASIC_TILE_SIZE)) {
 		status = ParsingStatuses::NOT_A_MULTIPLE_OF_8x8;
 
 		return false;
@@ -7280,8 +7302,8 @@ bool ActorAssets::Entry::parseSpriteSheet(Actor::Ptr &actor, const Bytes* val, c
 		return false;
 	}
 
-	const int tw = tmp->width() / GBBASIC_TILE_SIZE;
-	const int th = tmp->height() / GBBASIC_ACTOR_MAX_HEIGHT;
+	const int tw = val->width() / GBBASIC_TILE_SIZE;
+	const int th = val->height() / GBBASIC_ACTOR_MAX_HEIGHT;
 	if (tw / n.x > GBBASIC_ACTOR_MAX_WIDTH || th / n.y > GBBASIC_ACTOR_MAX_HEIGHT) {
 		status = ParsingStatuses::OUT_OF_BOUNDS;
 
@@ -7291,14 +7313,14 @@ bool ActorAssets::Entry::parseSpriteSheet(Actor::Ptr &actor, const Bytes* val, c
 	// Convert to a paletted image.
 	Image::Ptr img(Image::create(palette));
 	Indexed::Lookup lookup;
-	if (!palette->match(tmp.get(), lookup))
+	if (!palette->match(val, lookup))
 		return false;
 
-	img->fromBlank(tmp->width(), tmp->height(), GBBASIC_PALETTE_DEPTH);
+	img->fromBlank(val->width(), val->height(), GBBASIC_PALETTE_DEPTH);
 	for (int j = 0; j < img->height(); ++j) {
 		for (int i = 0; i < img->width(); ++i) {
 			Colour col;
-			tmp->get(i, j, col);
+			val->get(i, j, col);
 			const int idx = lookup[col];
 			img->set(i, j, idx);
 		}
@@ -7327,6 +7349,14 @@ bool ActorAssets::Entry::parseSpriteSheet(Actor::Ptr &actor, const Bytes* val, c
 
 	// Finish.
 	return true;
+}
+
+bool ActorAssets::Entry::parseSpriteSheet(Actor::Ptr &actor, const Bytes* val, const Math::Vec2i &n, ParsingStatuses &status) const {
+	Image::Ptr tmp(Image::create(palette));
+	if (!tmp->fromBytes(val))
+		return false;
+
+	return parseSpriteSheet(actor, tmp.get(), n, status);
 }
 
 bool ActorAssets::Entry::toString(std::string &val, WarningOrErrorHandler onWarningOrError) const {

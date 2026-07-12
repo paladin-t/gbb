@@ -1131,7 +1131,11 @@ public:
 							ws->showExternalFontBrowser(
 								rnd,
 								ws->theme()->generic_Path(),
+#if GBBASIC_PSD_ENABLED
+								GBBASIC_FONT_FILE_WITH_PSD_FILTER,
+#else /* GBBASIC_PSD_ENABLED */
 								GBBASIC_FONT_FILE_FILTER,
+#endif /* GBBASIC_PSD_ENABLED */
 								confirm,
 								cancel,
 								nullptr,

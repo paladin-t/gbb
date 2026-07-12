@@ -7731,7 +7731,8 @@ private:
 				if (diff > 0) {
 					diff = bankSize - ctx.addressCursor;
 					for (int k = 0; k < diff; ++k) {
-						// The current bank is insufficient, ignore the rest space of it.
+						// The current bank is insufficient, ignore the rest space of it,
+						// and move forward to the next bank.
 						emit(bytes, context, (UInt8)COMPILER_INVALID_INSTRUCTION);
 					}
 				}

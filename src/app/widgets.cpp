@@ -1923,7 +1923,11 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 							pfd::open_file open(
 								_theme->generic_Open(),
 								"",
+#if GBBASIC_PSD_ENABLED
+								GBBASIC_IMAGE_FILE_WITH_PSD_FILTER,
+#else /* GBBASIC_PSD_ENABLED */
 								GBBASIC_IMAGE_FILE_FILTER,
+#endif /* GBBASIC_PSD_ENABLED */
 								pfd::opt::none
 							);
 							do {
@@ -1935,22 +1939,35 @@ void EmulatorBuildSettingsPopupBox::update(Workspace*) {
 								if (!Path::fileExists(path.c_str()))
 									break;
 
-								File::Ptr file(File::create());
-								if (!file->open(path.c_str(), Stream::READ))
-									break;
+								::Image::Ptr img = nullptr;
+#if GBBASIC_PSD_ENABLED
+								std::string ext;
+								Path::split(path, nullptr, &ext, nullptr);
+								if (Text::endsWith(ext, "psd", true)) {
+									img = ::Image::Ptr(::Image::create());
+									if (!img->fromPsdFile(path.c_str()))
+										break;
+								}
+#endif /* GBBASIC_PSD_ENABLED */
 
 								Bytes::Ptr bytes(Bytes::create());
-								if (!file->readBytes(bytes.get())) {
+								if (!img) {
+									File::Ptr file(File::create());
+									if (!file->open(path.c_str(), Stream::READ))
+										break;
+
+									if (!file->readBytes(bytes.get())) {
+										file->close(); FileMonitor::unuse(path);
+
+										break;
+									}
+
 									file->close(); FileMonitor::unuse(path);
 
-									break;
+									img = ::Image::Ptr(::Image::create());
+									if (!img->fromBytes(bytes.get()))
+										break;
 								}
-
-								file->close(); FileMonitor::unuse(path);
-
-								::Image::Ptr img(::Image::create());
-								if (!img->fromBytes(bytes.get()))
-									break;
 								if (
 									img->width() < EXPORTER_ICON_MIN_WIDTH || img->height() < EXPORTER_ICON_MIN_HEIGHT ||
 									img->width() > EXPORTER_ICON_MAX_WIDTH || img->height() > EXPORTER_ICON_MAX_HEIGHT
@@ -2657,7 +2674,11 @@ void FontResolverPopupBox::update(Workspace* ws) {
 					std::string ext;
 					Path::split(_path, nullptr, &ext, nullptr);
 					Text::toLowerCase(ext);
+#if GBBASIC_PSD_ENABLED
+					_withSize = ext == "png" || ext == "jpg" || ext == "bmp" || ext == "tga" || ext == "psd";
+#else /* GBBASIC_PSD_ENABLED */
 					_withSize = ext == "png" || ext == "jpg" || ext == "bmp" || ext == "tga";
+#endif /* GBBASIC_PSD_ENABLED */
 				} else {
 					_withSize = false;
 				}
@@ -4207,7 +4228,11 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 						pfd::open_file open(
 							_theme->generic_Open(),
 							"",
+#if GBBASIC_PSD_ENABLED
+							GBBASIC_IMAGE_FILE_WITH_PSD_FILTER,
+#else /* GBBASIC_PSD_ENABLED */
 							GBBASIC_IMAGE_FILE_FILTER,
+#endif /* GBBASIC_PSD_ENABLED */
 							pfd::opt::none
 						);
 						do {
@@ -4219,22 +4244,35 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 							if (!Path::fileExists(path.c_str()))
 								break;
 
-							File::Ptr file(File::create());
-							if (!file->open(path.c_str(), Stream::READ))
-								break;
+							::Image::Ptr img = nullptr;
+#if GBBASIC_PSD_ENABLED
+							std::string ext;
+							Path::split(path, nullptr, &ext, nullptr);
+							if (Text::endsWith(ext, "psd", true)) {
+								img = ::Image::Ptr(::Image::create());
+								if (!img->fromPsdFile(path.c_str()))
+									break;
+							}
+#endif /* GBBASIC_PSD_ENABLED */
 
 							Bytes::Ptr bytes(Bytes::create());
-							if (!file->readBytes(bytes.get())) {
+							if (!img) {
+								File::Ptr file(File::create());
+								if (!file->open(path.c_str(), Stream::READ))
+									break;
+
+								if (!file->readBytes(bytes.get())) {
+									file->close(); FileMonitor::unuse(path);
+
+									break;
+								}
+
 								file->close(); FileMonitor::unuse(path);
 
-								break;
+								img = ::Image::Ptr (::Image::create());
+								if (!img->fromBytes(bytes.get()))
+									break;
 							}
-
-							file->close(); FileMonitor::unuse(path);
-
-							::Image::Ptr img(::Image::create());
-							if (!img->fromBytes(bytes.get()))
-								break;
 							if (img->width() != GBBASIC_ICON_WIDTH || img->height() != GBBASIC_ICON_HEIGHT) {
 								int w = 0;
 								int h = 0;

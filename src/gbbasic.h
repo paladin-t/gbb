@@ -673,6 +673,15 @@
 			"All files (*.*)", "*" \
 		}
 #endif /* GBBASIC_FONT_FILE_FILTER */
+// The font file filter including common types and PSD.
+#ifndef GBBASIC_FONT_FILE_WITH_PSD_FILTER
+#	define GBBASIC_FONT_FILE_WITH_PSD_FILTER { \
+			"Font/image files (*.ttf, *.png, *.jpg, *.bmp, *.tga, *.psd)", "*.ttf *.png *.jpg *.bmp *.tga *.psd", \
+			"Font files (*.ttf)", "*.ttf", \
+			"Image files (*.png, *.jpg, *.bmp, *.tga, *.psd)", "*.png *.jpg *.bmp *.tga *.psd", \
+			"All files (*.*)", "*" \
+		}
+#endif /* GBBASIC_FONT_FILE_WITH_PSD_FILTER */
 // The CSV file filter.
 #ifndef GBBASIC_CSV_FILE_FILTER
 #	define GBBASIC_CSV_FILE_FILTER { \

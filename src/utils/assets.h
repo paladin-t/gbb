@@ -1179,6 +1179,7 @@ struct ActorAssets {
 		bool parseJson(Actor::Ptr &actor, int &figure, bool &asActor, active_t &def, const std::string &val, ParsingStatuses &status) const;
 
 		bool serializeSpriteSheet(Bytes* val, const char* type, int pitch) const;
+		bool parseSpriteSheet(Actor::Ptr &actor, const Image* val, const Math::Vec2i &n, ParsingStatuses &status) const;
 		bool parseSpriteSheet(Actor::Ptr &actor, const Bytes* val, const Math::Vec2i &n, ParsingStatuses &status) const;
 
 		bool toString(std::string &val, WarningOrErrorHandler onWarningOrError /* nullable */) const;
