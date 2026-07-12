@@ -1375,7 +1375,7 @@ bool Theme::open(class Renderer* rnd) {
 
 	tooltipFontAndI18n_I18n("Internationalization\ndictionary (" GBBASIC_MODIFIER_KEY_NAME "+7)");
 	tooltipFontAndI18n_Font("Font (" GBBASIC_MODIFIER_KEY_NAME "+6)");
-	tooltipFontAndI18n_FontInfo("{0} glyphs");
+	tooltipFontAndI18n_FontInfo("Supports {0} glyphs");
 	tooltipFontAndI18n_FontTrim(
 		"Whether to trim glyph height.\n"
 		"It is recommended to keep this option checked."
