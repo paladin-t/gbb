@@ -774,7 +774,11 @@ promise::Promise Operations::popupAssetsSorting(Window*, Renderer* rnd, Workspac
 promise::Promise Operations::popupExternalFontResolver(Window*, Renderer* rnd, Workspace* ws, const char* content) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
+#if GBBASIC_PSD_ENABLED
+			const Text::Array filter = GBBASIC_FONT_FILE_WITH_PSD_FILTER;
+#else /* GBBASIC_PSD_ENABLED */
 			const Text::Array filter = GBBASIC_FONT_FILE_FILTER;
+#endif /* GBBASIC_PSD_ENABLED */
 			ImGui::FontResolverPopupBox::ConfirmedHandler confirm(
 				[ws, df] (const char* path, const Math::Vec2i* size) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
@@ -807,7 +811,11 @@ promise::Promise Operations::popupExternalFontResolver(Window*, Renderer* rnd, W
 promise::Promise Operations::popupExternalMapResolver(Window*, Renderer* rnd, Workspace* ws, const char* content) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
+#if GBBASIC_PSD_ENABLED
+			const Text::Array filter = GBBASIC_IMAGE_FILE_WITH_PSD_FILTER;
+#else /* GBBASIC_PSD_ENABLED */
 			const Text::Array filter = GBBASIC_IMAGE_FILE_FILTER;
+#endif /* GBBASIC_PSD_ENABLED */
 			ImGui::MapResolverPopupBox::ConfirmedHandler confirm(
 				[ws, df] (const int* index, const char* path, bool allowFlip, bool fillLocalPalette) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)
@@ -841,7 +849,6 @@ promise::Promise Operations::popupExternalMapResolver(Window*, Renderer* rnd, Wo
 promise::Promise Operations::popupExternalSceneResolver(Window*, Renderer* rnd, Workspace* ws) {
 	return promise::newPromise(
 		[&] (promise::Defer df) -> void {
-			const Text::Array filter = GBBASIC_IMAGE_FILE_FILTER;
 			ImGui::SceneResolverPopupBox::ConfirmedHandler confirm(
 				[ws, df] (int index, bool useGravity) -> void {
 					WORKSPACE_AUTO_CLOSE_POPUP(ws)

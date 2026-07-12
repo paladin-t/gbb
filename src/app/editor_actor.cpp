@@ -2528,28 +2528,48 @@ private:
 			if (ImGui::MenuItem(ws->theme()->menu_SpriteSheet())) {
 				ImGui::FileResolverPopupBox::ConfirmedHandler_PathVec2i confirm(
 					[ws, this] (const char* path, const Math::Vec2i &vec) -> void {
-						Bytes::Ptr bytes(Bytes::create());
-						File::Ptr file(File::create());
-						if (!file->open(path, Stream::READ)) {
-							ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
+						Image::Ptr img = nullptr;
+#if GBBASIC_PSD_ENABLED
+						std::string ext;
+						Path::split(path, nullptr, &ext, nullptr);
+						if (Text::endsWith(ext, "psd", true)) {
+							img = Image::Ptr(Image::create());
+							if (!img->fromPsdFile(path)) {
+								ws->bubble(ws->theme()->dialogPrompt_UnsupportedData(), nullptr);
 
-							return;
+								return;
+							}
 						}
-						if (!file->readBytes(bytes.get())) {
+#endif /* GBBASIC_PSD_ENABLED */
+
+						Bytes::Ptr bytes = nullptr;
+						if (!img) {
+							bytes = Bytes::Ptr(Bytes::create());
+							File::Ptr file(File::create());
+							if (!file->open(path, Stream::READ)) {
+								ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
+
+								return;
+							}
+							if (!file->readBytes(bytes.get())) {
+								file->close(); FileMonitor::unuse(path);
+
+								ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
+
+								return;
+							}
 							file->close(); FileMonitor::unuse(path);
-
-							ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
-
-							return;
 						}
-						file->close(); FileMonitor::unuse(path);
 
 						Actor::Ptr newObj = nullptr;
 						int figure = entry()->figure;
 						bool asActor = entry()->asActor;
 						active_t def = entry()->definition;
 						BaseAssets::Entry::ParsingStatuses status = BaseAssets::Entry::ParsingStatuses::SUCCESS;
-						if (!entry()->parseSpriteSheet(newObj, bytes.get(), vec, status)) {
+						const bool ret = img ?
+							entry()->parseSpriteSheet(newObj, img.get(), vec, status) :
+							entry()->parseSpriteSheet(newObj, bytes.get(), vec, status);
+						if (!ret) {
 							switch (status) {
 							case BaseAssets::Entry::ParsingStatuses::NOT_A_MULTIPLE_OF_8x8:
 								ws->messagePopupBox(ws->theme()->dialogPrompt_ResourceSizeIsNotAMultipleOf8x8(), nullptr, nullptr, nullptr);
@@ -2619,7 +2639,11 @@ private:
 					rnd,
 					ws->theme()->windowActor(),
 					ws->theme()->generic__Path(),
+#if GBBASIC_PSD_ENABLED
+					GBBASIC_IMAGE_FILE_WITH_PSD_FILTER,
+#else /* GBBASIC_PSD_ENABLED */
 					GBBASIC_IMAGE_FILE_FILTER,
+#endif /* GBBASIC_PSD_ENABLED */
 					true,
 					Math::Vec2i(3, 4), Math::Vec2i(1, 1), Math::Vec2i(8, 8), ws->theme()->dialogPrompt_Split().c_str(), " x",
 					confirm,
