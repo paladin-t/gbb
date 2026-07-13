@@ -1575,6 +1575,42 @@ void FontAssets::Entry::cleanup(void) {
 	object = nullptr;
 }
 
+FontAssets::Entry::ArbitraryDictionary FontAssets::Entry::getArbitraryMapping(void) const {
+	Font::Codepoints fullArbitrary;
+	for (int j = 0; j < arbitrary.count(); ++j)
+		fullArbitrary.add(arbitrary[j]);
+	for (const FontAssets::Entry::CodepointRange &range : ranges) {
+		for (Font::Codepoint cp = range.first; cp <= range.second; ++cp)
+			fullArbitrary.add(cp);
+	}
+	std::sort(
+		fullArbitrary.begin(), fullArbitrary.end(),
+		[] (Font::Codepoint l, Font::Codepoint r) -> bool {
+			return l < r;
+		}
+	);
+
+	ArbitraryDictionary result;
+	int k = 0;
+	for (Font::Codepoint cp : fullArbitrary) {
+		std::wstring wstr;
+		wstr.push_back(cp);
+		const std::string str = Unicode::fromWide(wstr);
+		result.insert(std::make_pair(str, k++));
+	}
+
+	return result;
+}
+
+int FontAssets::Entry::getArbitraryIndex(const std::string &ch) const {
+	const ArbitraryDictionary dict = getArbitraryMapping();
+	auto it = dict.find(ch);
+	if (it == dict.end())
+		return -1;
+
+	return it->second;
+}
+
 bool FontAssets::Entry::serializeBasic(std::string &val, int page) const {
 	// Prepare.
 	val.clear();

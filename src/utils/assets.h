@@ -545,6 +545,7 @@ struct FontAssets {
 
 		typedef std::pair<Font::Codepoint, Font::Codepoint> CodepointRange;
 		typedef std::vector<CodepointRange> CodepointRanges;
+		typedef std::map<std::string, int> ArbitraryDictionary;
 
 		Copying copying = Copying::REFERENCED; // Non-serialized.
 		std::string directory; // Non-serialized. Calculated from path.
@@ -566,8 +567,8 @@ struct FontAssets {
 		float outlineStrength = 0.3f;
 		int thresholds[4];
 		bool inverted = false;
-		Font::Codepoints arbitrary; // Array of arbitrary characters for runtime formatting, holds up to 256 elements.
-		CodepointRanges ranges; // Inclusive codepoint ranges baked in bulk, appended after `arbitrary` in the glyph index space.
+		Font::Codepoints arbitrary; // Array of arbitrary basic characters, for i.e. runtime ASCII formatting, holds up to 256 elements in individual bytes.
+		CodepointRanges ranges; // Inclusive codepoint ranges of arbitrary extra characters, for i.e. runtime UTF-8 formatting, appended after `arbitrary` in the glyph index space.
 
 		std::string content;
 		std::string name;
@@ -594,6 +595,9 @@ struct FontAssets {
 
 		Font::Ptr &touch(void);
 		void cleanup(void);
+
+		ArbitraryDictionary getArbitraryMapping(void) const;
+		int getArbitraryIndex(const std::string &ch) const;
 
 		bool serializeBasic(std::string &val, int page) const;
 
