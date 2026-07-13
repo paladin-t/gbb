@@ -7671,14 +7671,21 @@ private:
 				refCount = 0;
 
 			// Check whether the font is in use.
-			const int arbCount = refCount > 0 ?
-				Math::min(font->arbitrary.count(), (int)std::numeric_limits<UInt8>::max() + 1) :
-				0;
+			Font::Codepoints fullArbitrary;
+			if (refCount > 0) {
+				for (int j = 0; j < font->arbitrary.count(); ++j)
+					fullArbitrary.add(font->arbitrary[j]);
+				for (const FontAssets::Entry::CodepointRange &range : font->ranges) {
+					for (Font::Codepoint cp = range.first; cp <= range.second; ++cp)
+						fullArbitrary.add(cp);
+				}
+			}
+			const int arbCount = Math::min(fullArbitrary.count(), (int)std::numeric_limits<UInt16>::max() + 1);
 			if (font->glyphs.count() == 0 && arbCount == 0)
 				continue;
 
 			// Determine the start location.
-			int diff = (ctx.addressCursor + ((int)sizeof(UInt8) + (int)sizeof(glyph_t) * arbCount)) - bankSize;
+			int diff = (ctx.addressCursor + ((int)sizeof(UInt16) + (int)sizeof(glyph_t) * arbCount)) - bankSize;
 			if (diff > 0) {
 				diff = bankSize - ctx.addressCursor;
 				for (int k = 0; k < diff; ++k) {
@@ -7701,13 +7708,13 @@ private:
 			emit(bytes, context, (UInt8)font->size.y); // Emit the font size.
 
 			// Emit the arbitrary.
-			emit(bytes, context, (UInt8)arbCount); // Emit the arbitrary count.
+			emit(bytes, context, (UInt16)arbCount); // Emit the arbitrary count.
 			const intptr_t offset = (intptr_t)bytes->peek();
 			for (int j = 0; j < arbCount; ++j) {
 				const glyph_t g;
 				emit<glyph_t>(bytes, context, g); // Prefill an arbitrary.
 
-				const Font::Codepoint cp = font->arbitrary[j];
+				const Font::Codepoint cp = fullArbitrary[j];
 				if (!font->glyphs.find(cp)) {
 					const GlyphTable::Entry glyph(cp);
 					font->glyphs.add(glyph);
@@ -7751,7 +7758,7 @@ private:
 			// Refill the arbitrary.
 			glyph_t* arbitrary = (glyph_t*)(bytes->pointer() + offset);
 			for (int j = 0; j < arbCount; ++j) {
-				const Font::Codepoint cp = font->arbitrary[j];
+				const Font::Codepoint cp = fullArbitrary[j];
 				glyph_t &g = arbitrary[j];
 				const GlyphTable::Entry* entry = font->glyphs.find(cp);
 				GBBASIC_ASSERT(entry && "Impossible.");

@@ -1967,6 +1967,17 @@ bool FontAssets::toString(std::string &val, WarningOrErrorHandler onWarningOrErr
 			Jpath::set(doc, doc, nullptr, "fonts", j, "arbitrary");
 		}
 
+		if (!entry->ranges.empty()) {
+			for (int i = 0; i < (int)entry->ranges.size(); ++i) {
+				if (!Jpath::set(doc, doc, entry->ranges[i].first, "fonts", j, "ranges", i, 0))
+					continue;
+
+				Jpath::set(doc, doc, entry->ranges[i].second, "fonts", j, "ranges", i, 1);
+			}
+		} else {
+			Jpath::set(doc, doc, nullptr, "fonts", j, "ranges");
+		}
+
 		if (!Jpath::set(doc, doc, entry->content, "fonts", j, "content")) {
 			++j;
 
@@ -2204,6 +2215,20 @@ bool FontAssets::fromString(const std::string &val, const std::string &dir, bool
 					continue;
 
 				f.arbitrary.add(arb);
+			}
+		}
+
+		if (Jpath::has(doc, "fonts", i, "ranges") && Jpath::typeOf(doc, "fonts", i, "ranges") == Jpath::ARRAY) {
+			const int m = Jpath::count(doc, "fonts", i, "ranges");
+			for (int j = 0; j < m; ++j) {
+				Font::Codepoint first = 0, last = 0;
+				if (!Jpath::get(doc, first, "fonts", i, "ranges", j, 0) || !Jpath::get(doc, last, "fonts", i, "ranges", j, 1))
+					continue;
+
+				if (last < first)
+					std::swap(first, last);
+
+				f.ranges.push_back(std::make_pair(first, last));
 			}
 		}
 

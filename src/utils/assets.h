@@ -543,6 +543,9 @@ struct FontAssets {
 			EMBEDDED
 		};
 
+		typedef std::pair<Font::Codepoint, Font::Codepoint> CodepointRange;
+		typedef std::vector<CodepointRange> CodepointRanges;
+
 		Copying copying = Copying::REFERENCED; // Non-serialized.
 		std::string directory; // Non-serialized. Calculated from path.
 		std::string path; // External, file path or referenced/embedded file name.
@@ -564,6 +567,7 @@ struct FontAssets {
 		int thresholds[4];
 		bool inverted = false;
 		Font::Codepoints arbitrary; // Array of arbitrary characters for runtime formatting, holds up to 256 elements.
+		CodepointRanges ranges; // Inclusive codepoint ranges baked in bulk, appended after `arbitrary` in the glyph index space.
 
 		std::string content;
 		std::string name;

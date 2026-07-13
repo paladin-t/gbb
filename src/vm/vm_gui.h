@@ -58,7 +58,7 @@ BANKREF_EXTERN(VM_GUI_MENU)
         (F)                    /* base address    */ + \
         sizeof(glyph_option_t) /* options         */ + \
         sizeof(UINT8)          /* font size       */ + \
-        sizeof(UINT8)          /* arbitrary count */   \
+        sizeof(UINT16)         /* arbitrary count */   \
     )
 
 #define GUI_GLYPH_IS_TERMINATION(G)                           (((G).bank == GUI_GLYPH_TERMINATION) && ((G).ptr == 0))
