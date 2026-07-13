@@ -19,8 +19,8 @@ BANKREF(BUILTIN)
 
 #ifndef GBBVM_VERSION
 #   define GBBVM_VER_MAJOR 1
-#   define GBBVM_VER_MINOR 12
-#   define GBBVM_VER_REVISION 1
+#   define GBBVM_VER_MINOR 13
+#   define GBBVM_VER_REVISION 0
 #endif /* GBBVM_VERSION */
 
 const UINT8 VERSION_MAJOR = GBBVM_VER_MAJOR; // Major ahead.
