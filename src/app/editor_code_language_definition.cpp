@@ -309,7 +309,7 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 		"mod", "and", "or", "not", "band", "bor", "bxor", "bnot", "lshift", "rshift",
 		"sgn", "abs", "sqr", "sqrt", "sin", "cos", "atan2", "pow", "min", "max",
 		"deg",
-		"asc", "lstr",
+		"asc", "arb", "lstr",
 		"len",
 		"randomize", "rnd",
 		"bankof", "addressof",

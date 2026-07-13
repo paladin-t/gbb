@@ -31610,6 +31610,8 @@ public:
 
 	typedef std::map<std::string, Variant> Macros;
 
+	typedef std::function<bool(int &, const Variant &, const Variant &, const TextLocation &, const TextLocation &)> ArbitraryCharacterLookupHandler;
+
 	typedef std::function<bool(std::string &, const Variant &, const Variant &, const TextLocation &, const TextLocation &)> I18nLookupHandler;
 
 private:
@@ -31880,6 +31882,9 @@ public:
 
 			// `ASC(...)`.
 			ADD_STATEMENT("asc",               node<NodeAsc>(),                            Token::Types::KEYWORD,         true);
+
+			// `ARB(...)`.
+			ADD_STATEMENT("arb",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 
 			// `LSTR(...)`.
 			ADD_STATEMENT("lstr",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
@@ -32639,6 +32644,7 @@ public:
 		Node::MacroStringTable::Stack &macroStrings,
 		Macro::List &macros,
 		const Macros &preDefinedMacros,
+		ArbitraryCharacterLookupHandler arbLookup,
 		I18nLookupHandler i18nLookup,
 		Prompt::Handler onPrint,
 		Error::Handler onError
@@ -32680,6 +32686,7 @@ public:
 			                             macroStrings,
 			                             macros,
 			                             preDefinedMacros_,
+			                             arbLookup,
 			                             i18nLookup,
 			                             _options,
 			                             onPrint,
@@ -33365,6 +33372,7 @@ private:
 		Node::MacroStringTable::Stack &macroStrings,
 		Macro::List &macros,
 		const Macros &preDefinedMacros,
+		ArbitraryCharacterLookupHandler arbLookup,
 		I18nLookupHandler i18nLookup,
 		const Options &options,
 		Prompt::Handler onPrint_,
@@ -35055,6 +35063,68 @@ private:
 
 			return true;
 		};
+		auto Arb = [&] (State &q, Node::Array &children, int &arb) -> bool { // Arbitrary character lookup.
+			(void)children;
+
+			State q1 = begin();
+			q1.index = q.index;
+			Token::Ptr id0 = nullptr;
+			Token::Ptr id1 = nullptr;
+
+			if (!must(Token::Types::KEYWORD, "arb")(q1)) return false;
+			if (!must(Token::Types::OPERATOR, "(")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+			if (forwardN(2, Token::Types::OPERATOR, ",")(q1.index)) {
+				// `=ARB(#pg|"{name}", ch)`.
+				Variant arg0 = nullptr;
+				Variant arg1 = nullptr;
+				if ((id0 = must(Token::Types::STRING)(q1))) {
+					arg0 = id0->data();
+				} else if ((id0 = must(Token::Types::PAGE)(q1))) {
+					std::string pg = (std::string)id0->text();
+					if (pg.empty() || pg.front() != '#') {
+						GBBASIC_ASSERT(false && "Impossible.");
+
+						return false;
+					}
+					pg.erase(pg.begin());
+					int pgn = -1;
+					if (!Text::fromString(pg, pgn))
+						return false;
+
+					arg0 = Variant(pgn);
+				}
+				if (!must(Token::Types::OPERATOR, ",")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+				if ((id1 = must(Token::Types::STRING)(q1))) {
+					arg1 = id1->data();
+				} else if ((id1 = must(Token::Types::INTEGER)(q1))) {
+					arg1 = id1->data();
+				}
+				if (!arbLookup(arb, arg0, arg1, id0 ? id0->begin() : TextLocation::INVALID(), id1 ? id1->begin() : TextLocation::INVALID())) {
+					arb = -1;
+
+					return false;
+				}
+			} else {
+				// `=ARB(ch)`.
+				if ((id0 = must(Token::Types::STRING)(q1))) {
+					const Variant arg0 = id0->data();
+					if (!arbLookup(arb, nullptr, arg0, id0 ? id0->begin() : TextLocation::INVALID(), id0 ? id0->begin() : TextLocation::INVALID())) {
+						arb = -1;
+
+						return false;
+					}
+				} else {
+					THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+				}
+			}
+			if (!must(Token::Types::OPERATOR, ")")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+
+			q1.success = true;
+			end(q1);
+			q.index = q1.index;
+
+			return true;
+		};
 		auto LStr = [&] (State &q, Node::Array &children, std::string &txt) -> bool { // I18n dictionary lookup.
 			(void)children;
 
@@ -36166,6 +36236,26 @@ private:
 				}
 				if ((id = forward(Token::Types::SYMBOL)(q.index))) {
 					name = (std::string)id->data();
+					if (name == "arb") { // arbitrary character lookup.
+						int arb;
+						const int qi = q.index;
+						if (Arb(q, children, arb)) {
+							Token::Ptr node(new Token());
+							node
+								->type(Token::Types::INTEGER)
+								->text(Text::toString(arb))
+								->data(arb)
+								->begin(id->begin())
+								->end(id->end());
+							q.tokens.push_back(node);
+
+							n += q.index - qi;
+
+							refresh();
+
+							continue;
+						}
+					}
 					if (name == "lstr") { // I18n dictionary lookup.
 						std::string txt;
 						const int qi = q.index;
@@ -44079,6 +44169,11 @@ bool compile(Program &program, const Options &options) {
 	};
 
 	// Prepare the asset processors.
+	Parser::ArbitraryCharacterLookupHandler arbLookup = [&] (int &out, const Variant &arg0, const Variant &arg1, const TextLocation &loc0, const TextLocation &loc1) -> bool {
+		// TODO: arbitrary.
+
+		return false;
+	};
 	Parser::I18nLookupHandler i18nLookup = [&] (std::string &out, const Variant &arg0, const Variant &arg1, const TextLocation &loc0, const TextLocation &loc1) -> bool {
 		// Prepare.
 		struct I18nInfo {
@@ -44409,6 +44504,7 @@ bool compile(Program &program, const Options &options) {
 				compiler.macroStrings(),
 				macros_,
 				preDefinedMacros,
+				arbLookup,
 				i18nLookup,
 				onPrint_,
 				onError
