@@ -11,56 +11,6 @@
 
 /*
 ** {===========================================================================
-** Utilities
-*/
-
-static std::string i18nCsvQuote(const std::string &val) {
-	bool needQuote = false;
-	for (size_t i = 0; i < val.size(); ++i) {
-		char c = val[i];
-		if (c == ',' || c == '"' || c == '\r' || c == '\n') {
-			needQuote = true;
-
-			break;
-		}
-	}
-	if (!needQuote)
-		return val;
-
-	std::string result;
-	result += '"';
-	for (size_t i = 0; i < val.size(); ++i) {
-		const char c = val[i];
-		if (c == '"')
-			result += '"';
-		result += c;
-	}
-	result += '"';
-
-	return result;
-}
-static std::string i18nCsvUnquote(const std::string &val) {
-	if (val.size() < 2 || val.front() != '"' || val.back() != '"')
-		return val;
-
-	std::string result;
-	for (size_t i = 1; i < val.size() - 1; ++i) {
-		char c = val[i];
-		if (c == '"' && i + 1 < val.size() - 1 && val[i + 1] == '"') {
-			result += '"';
-			++i;
-		} else {
-			result += c;
-		}
-	}
-
-	return result;
-}
-
-/* ===========================================================================} */
-
-/*
-** {===========================================================================
 ** I18n
 */
 
@@ -416,7 +366,7 @@ public:
 			for (int j = 0; j < (int)_table[i].size(); ++j) {
 				if (j > 0)
 					val += ',';
-				val += i18nCsvQuote(_table[i][j]);
+				val += Text::quoteCsv(_table[i][j]);
 			}
 			val += "\r\n";
 		}
@@ -438,7 +388,7 @@ public:
 		const Text::Array headers = Text::split(lines[0], ',', '"');
 		Text::Array languages;
 		for (int i = 0; i < (int)headers.size(); ++i) {
-			const std::string name = i18nCsvUnquote(headers[i]);
+			const std::string name = Text::unquoteCsv(headers[i]);
 			languages.push_back(name);
 		}
 		languages.shrink_to_fit();
@@ -450,7 +400,7 @@ public:
 			const Text::Array fields = Text::split(lines[i], ',', '"');
 			Row row(languages.size());
 			for (int j = 0; j < (int)fields.size() && j < (int)languages.size(); ++j)
-				row[j] = i18nCsvUnquote(fields[j]);
+				row[j] = Text::unquoteCsv(fields[j]);
 			row.shrink_to_fit();
 			_table.push_back(row);
 		}

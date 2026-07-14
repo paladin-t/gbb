@@ -1593,9 +1593,19 @@ FontAssets::Entry::ArbitraryDictionary FontAssets::Entry::getArbitraryMapping(vo
 	ArbitraryDictionary result;
 	int k = 0;
 	for (Font::Codepoint cp : fullArbitrary) {
-		std::wstring wstr;
-		wstr.push_back(cp);
-		const std::string str = Unicode::fromWide(wstr);
+		union {
+			Font::Codepoint codepoint;
+			Byte bytes[sizeof(Font::Codepoint)];
+		} u;
+		u.codepoint = cp;
+		std::string str;
+		for (int i = 0; i < sizeof(Font::Codepoint); ++i) {
+			const Byte b = u.bytes[i];
+			if (b == 0x00)
+				break;
+
+			str.push_back(b);
+		}
 		result.insert(std::make_pair(str, k++));
 	}
 
@@ -1629,6 +1639,47 @@ bool FontAssets::Entry::serializeBasic(std::string &val, int page) const {
 	val += "\n";
 
 	// Finish.
+	return true;
+}
+
+bool FontAssets::Entry::serializeArbitraryMappingInCsv(std::string &val) const {
+	// Prepare.
+	val.clear();
+
+	// Serialize the mapping.
+	const ArbitraryDictionary dict = getArbitraryMapping();
+	val += "Char,";
+	val += "UTF-8,";
+	val += "Arbitrary Index\r\n";
+	for (const ArbitraryDictionary::value_type kv : dict) {
+		const std::string &key = kv.first;
+		const int val_ = kv.second;
+		if (key.empty()) {
+			val += "\"\",";
+			val += "0x00";
+		} else {
+			if (key == "\r") {
+				val += "\\r,";
+			} else if (key == "\n") {
+				val += "\\n,";
+			} else {
+				const std::string quoted = Text::quoteCsv(key);
+				const std::string osstr = Unicode::toOs(quoted);
+				val += osstr;
+				val += ",";
+			}
+			for (int i = 0; i < (int)key.length(); ++i) {
+				if (i > 0)
+					val += " ";
+				const char ch = key[i];
+				val += "0x" + Text::toHex((UInt8)ch, 2, '0', false);
+			}
+		}
+		val += ",";
+		val += Text::toString(val_);
+		val += "\r\n";
+	}
+
 	return true;
 }
 

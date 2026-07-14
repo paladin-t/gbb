@@ -2052,6 +2052,67 @@ private:
 
 				ImGui::SetTooltip(ws->theme()->tooltip_ViaClipboard());
 			}
+			if (ImGui::MenuItem(ws->theme()->menu_Mapping())) {
+				do {
+					std::string txt;
+					if (!entry()->serializeArbitraryMappingInCsv(txt))
+						break;
+
+					const std::string osstr = Unicode::toOs(txt);
+
+					Platform::setClipboardText(osstr.c_str());
+
+					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
+				} while (false);
+			}
+			if (ImGui::IsItemHovered()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip(ws->theme()->tooltip_ViaClipboardCsv());
+			}
+			if (ImGui::MenuItem(ws->theme()->menu_MappingFile())) {
+				do {
+					pfd::save_file save(
+						ws->theme()->generic_SaveTo(),
+						entry()->name.empty() ? "gbbasic-i18n.csv" : Text::sanitizeFilename(entry()->name) + ".csv",
+						GBBASIC_CSV_FILE_FILTER
+					);
+					std::string path = save.result();
+					Path::uniform(path);
+					if (path.empty())
+						break;
+					std::string ext;
+					Path::split(path, nullptr, &ext, nullptr);
+					Text::toLowerCase(ext);
+					if (ext.empty() || ext != "csv")
+						path += ".csv";
+
+					std::string txt;
+					if (!entry()->serializeArbitraryMappingInCsv(txt))
+						break;
+
+					const std::string osstr = Unicode::toOs(txt);
+					File::Ptr file(File::create());
+					if (!file->open(path.c_str(), Stream::WRITE))
+						break;
+					file->writeString(osstr);
+					file->close();
+
+#if !defined GBBASIC_OS_HTML
+					FileInfo::Ptr fileInfo = FileInfo::make(path.c_str());
+					std::string path_ = fileInfo->parentPath();
+					path_ = Unicode::toOs(path_);
+					Platform::browse(path_.c_str());
+#endif /* Platform macro. */
+
+					ws->bubble(ws->theme()->dialogPrompt_ExportedAsset(), nullptr);
+				} while (false);
+			}
+			if (ImGui::IsItemHovered()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip(ws->theme()->tooltip_InCsvFormat());
+			}
 			ImGui::Separator();
 			if (ImGui::MenuItem(ws->theme()->menu_Duplicate())) {
 				ws->duplicateFontFrom(wnd, rnd, _index);

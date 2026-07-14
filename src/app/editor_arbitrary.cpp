@@ -9,6 +9,7 @@
 #include "editor_arbitrary.h"
 #include "project.h"
 #include "theme.h"
+#include "workspace.h"
 #include "../utils/encoding.h"
 #include <SDL.h>
 
@@ -80,7 +81,7 @@ public:
 	virtual ~EditorArbitraryImpl() override {
 	}
 
-	virtual void update(Workspace*) override {
+	virtual void update(Workspace* ws) override {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		bool isOpen = true;
@@ -187,6 +188,21 @@ public:
 				ImGui::PopStyleColor();
 			}
 			ImGui::NewLine(1);
+
+			ImGui::Url(
+				_theme->menu_Howto().c_str(),
+				[&] (void) -> const char* {
+					const EntryWithVisibility::Dictionary &dict = ws->links();
+					auto it = dict.find(EntryWithVisibility("tutorial/arbitrary-characters"));
+					if (it != dict.end() && !it->second.empty())
+						return it->second.c_str();
+
+					return "https://paladin-t.github.io/kits/gbb/learn/arbitrary-characters.html";
+				}
+			);
+
+			ImGui::SameLine();
+			ImGui::NewLine(2);
 
 			const char* confirm = _confirmText.c_str();
 			const char* apply = _applyText.empty() ? "Apply" : _applyText.c_str();

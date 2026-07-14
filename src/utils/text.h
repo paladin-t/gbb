@@ -139,6 +139,9 @@ public:
 	static std::string sanitizeProperty(const std::string &str);
 	static std::string concatMacros(const std::string &l, const std::string &r);
 
+	static std::string quoteCsv(const std::string &val);
+	static std::string unquoteCsv(const std::string &val);
+
 	static std::string remove(const std::string &str, const std::string &charsToRemove);
 	static std::string trim(const std::string &str, const std::string &delims = " \f\n\r\t\v");
 	static std::string trimLeft(const std::string &str, const std::string &delims = " \f\n\r\t\v");

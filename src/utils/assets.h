@@ -601,6 +601,8 @@ struct FontAssets {
 
 		bool serializeBasic(std::string &val, int page) const;
 
+		bool serializeArbitraryMappingInCsv(std::string &val) const;
+
 		Font::Ptr &touchSubstitution(int* offset_ /* nullable */, int* thresholds_ /* nullable */) const;
 		void cleanupSubstitution(void) const;
 	};
