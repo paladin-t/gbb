@@ -7296,8 +7296,11 @@ void Workspace::loadLinks(void) {
 		int order = 100;
 		if (!Jpath::get(doc, order, "links", i, "order"))
 			order = 100;
+		bool hidden = false;
+		if (!Jpath::get(doc, hidden, "links", i, "hidden"))
+			hidden = false;
 
-		links()[Entry(name, order)] = content;
+		links()[EntryWithVisibility(name, order, hidden)] = content;
 	}
 }
 

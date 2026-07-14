@@ -741,7 +741,17 @@ void ProjectCreatingPopupBox::update(Workspace* ws) {
 				&ws->kernels(), n
 			);
 
-			Url(_theme->menu_MoreOfficialKernels().c_str(), "https://github.com/paladin-t/gbb/releases/latest");
+			Url(
+				_theme->menu_MoreOfficialKernels().c_str(),
+				[&] (void) -> const char* {
+					const EntryWithVisibility::Dictionary &dict = ws->links();
+					auto it = dict.find(EntryWithVisibility("download/official-kernels"));
+					if (it != dict.end() && !it->second.empty())
+						return it->second.c_str();
+
+					return "https://github.com/paladin-t/gbb/releases/latest";
+				}
+			);
 		}
 		PopID();
 
@@ -5657,15 +5667,45 @@ void InstalledKernelsPopupBox::update(Workspace* ws) {
 
 			NewLine(2);
 
-			Url(_theme->menu_Howto().c_str(), "https://paladin-t.github.io/kits/gbb/learn/creating-a-custom-kernel.html");
+			Url(
+				_theme->menu_Howto().c_str(),
+				[&] (void) -> const char* {
+					const EntryWithVisibility::Dictionary &dict = ws->links();
+					auto it = dict.find(EntryWithVisibility("tutorial/creating-a-custom-kernel"));
+					if (it != dict.end() && !it->second.empty())
+						return it->second.c_str();
+
+					return "https://paladin-t.github.io/kits/gbb/learn/creating-a-custom-kernel.html";
+				}
+			);
 			SameLine();
 			Dummy(ImVec2(14, 0));
 			SameLine();
-			Url(_theme->menu_GitHub().c_str(), "https://github.com/paladin-t/gbb/tree/main/src/vm");
+			Url(
+				_theme->menu_GitHub().c_str(),
+				[&] (void) -> const char* {
+					const EntryWithVisibility::Dictionary &dict = ws->links();
+					auto it = dict.find(EntryWithVisibility("download/vm-source-code"));
+					if (it != dict.end() && !it->second.empty())
+						return it->second.c_str();
+
+					return "https://github.com/paladin-t/gbb/tree/main/src/vm";
+				}
+			);
 			SameLine();
 			Dummy(ImVec2(14, 0));
 			SameLine();
-			Url(_theme->menu_MoreOfficialKernels().c_str(), "https://github.com/paladin-t/gbb/releases/latest");
+			Url(
+				_theme->menu_MoreOfficialKernels().c_str(),
+				[&] (void) -> const char* {
+					const EntryWithVisibility::Dictionary &dict = ws->links();
+					auto it = dict.find(EntryWithVisibility("download/official-kernels"));
+					if (it != dict.end() && !it->second.empty())
+						return it->second.c_str();
+
+					return "https://github.com/paladin-t/gbb/releases/latest";
+				}
+			);
 
 			NewLine(3);
 		}
@@ -6932,6 +6972,36 @@ bool Url(const char* label, const char* link, bool adj) {
 	}
 	if (IsItemHovered() && IsMouseReleased(ImGuiMouseButton_Left)) { // Used `IsItemHovered()` instead of `IsItemClicked()` to avoid a clicking issue.
 		if (link) {
+			const std::string osstr = Unicode::toOs(link);
+
+			Platform::surf(osstr.c_str());
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+bool Url(const char* label, UrlHandler getLink, bool adj) {
+	ImVec2 pos = GetCursorPos();
+	TextColored(ImColor(41, 148, 255, 255), label);
+	if (IsItemHovered()) {
+		std::string ul = label;
+		std::transform(ul.begin(), ul.end(), ul.begin(), [] (char) -> char { return '_'; });
+		SetCursorPos(pos);
+		if (adj)
+			AlignTextToFramePadding();
+		TextColored(ImColor(41, 148, 255, 255), ul.c_str());
+
+		SetMouseCursor(ImGuiMouseCursor_Hand);
+	}
+	if (IsItemHovered() && IsMouseReleased(ImGuiMouseButton_Left)) { // Used `IsItemHovered()` instead of `IsItemClicked()` to avoid a clicking issue.
+		if (getLink) {
+			const char* link = getLink();
+			if (!link)
+				return true;
+
 			const std::string osstr = Unicode::toOs(link);
 
 			Platform::surf(osstr.c_str());
@@ -9394,7 +9464,7 @@ bool DocumentMenu(
 }
 
 bool LinkMenu(
-	const Entry::Dictionary &links,
+	const EntryWithVisibility::Dictionary &links,
 	std::string &url, std::string &message
 ) {
 	bool result = false;
@@ -9412,9 +9482,12 @@ bool LinkMenu(
 	);
 	hierarchy.prepare();
 
-	for (Entry::Dictionary::value_type kv : links) {
-		const Entry &entry = kv.first;
+	for (EntryWithVisibility::Dictionary::value_type kv : links) {
+		const EntryWithVisibility &entry = kv.first;
 		const std::string &content = kv.second;
+		if (entry.hidden())
+			continue;
+
 		Text::Array::const_iterator begin = entry.parts().begin();
 		Text::Array::const_iterator end = entry.parts().end() - 1;
 		if (entry.parts().size() == 1) {

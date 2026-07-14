@@ -89,6 +89,8 @@ typedef std::pair<ImVec2, ImVec2> Rect;
 
 typedef std::function<void(const ImVec2 &, bool, bool, const char*)> ButtonDrawer;
 
+typedef std::function<const char* (void)> UrlHandler;
+
 typedef std::function<void(void)> TabBarDropper;
 
 typedef std::function<void(void)> ExporterMenuHandler;
@@ -1264,6 +1266,7 @@ bool BarGraph(const ImVec2 &size, ImU32 border_col, ImU32 grid_col, ImU32 conten
 void TextUnformatted(const std::string &text);
 
 bool Url(const char* label, const char* link, bool adj = false);
+bool Url(const char* label, UrlHandler getLink, bool adj = false);
 
 void OpenPopupTooltip(const char* id);
 void PopupTooltip(const char* id, const std::string &text);
@@ -1395,7 +1398,7 @@ bool DocumentMenu(
 );
 
 bool LinkMenu(
-	const Entry::Dictionary &links,
+	const EntryWithVisibility::Dictionary &links,
 	std::string &url, std::string &message
 );
 
