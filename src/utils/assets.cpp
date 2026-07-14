@@ -1583,12 +1583,7 @@ FontAssets::Entry::ArbitraryDictionary FontAssets::Entry::getArbitraryMapping(vo
 		for (Font::Codepoint cp = range.first; cp <= range.second; ++cp)
 			fullArbitrary.add(cp);
 	}
-	std::sort(
-		fullArbitrary.begin(), fullArbitrary.end(),
-		[] (Font::Codepoint l, Font::Codepoint r) -> bool {
-			return l < r;
-		}
-	);
+	fullArbitrary.sort();
 
 	ArbitraryDictionary result;
 	int k = 0;

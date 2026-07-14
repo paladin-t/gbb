@@ -877,6 +877,10 @@ void Font::Codepoints::clear(void) {
 	_values.clear();
 }
 
+void Font::Codepoints::sort(void) {
+	std::sort(_values.begin(), _values.end());
+}
+
 Font* Font::create() {
 	FontImpl* result = new FontImpl();
 
