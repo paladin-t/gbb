@@ -44170,9 +44170,108 @@ bool compile(Program &program, const Options &options) {
 
 	// Prepare the asset processors.
 	Parser::ArbitraryCharacterLookupHandler arbLookup = [&] (int &out, const Variant &arg0, const Variant &arg1, const TextLocation &loc0, const TextLocation &loc1) -> bool {
-		// TODO: arbitrary.
+		// Prepare.
+		const FontAssets &fonts = program.assets->fonts;
 
-		return false;
+		out = -1;
+
+		// Try getting arbitrary index from font assets.
+		if (arg0.type() == Variant::NOTHING) {
+			// `=ARB(ch)`.
+			if (arg1.type() == Variant::STRING) {
+				const std::string key = (std::string)arg1;
+				for (int i = 0; i < fonts.count(); ++i) {
+					const FontAssets::Entry* entry = fonts.get(i);
+					const int idx = entry->getArbitraryIndex(key);
+					if (idx != -1) {
+						out = idx;
+
+						return true;
+					}
+				}
+
+				std::string ch;
+				if (key == "\r")
+					ch = "\\r";
+				else if (key == "\n")
+					ch = "\\n";
+				const std::string msg = Text::format("Cannot find arbitrary index with character \"{0}\"", { ch });
+				onError_(msg, true, loc1.page, loc1.row, loc1.column);
+
+				return false;
+			} else {
+				const std::string msg = "Character expected";
+				onError_(msg, false, loc1.page, loc1.row, loc1.column);
+
+				return false;
+			}
+		} else {
+			// `=ARB(#pg|"{name}", ch)`
+			const FontAssets::Entry* entry = nullptr;
+			if (arg0.type() == Variant::STRING) {
+				const std::string name = (std::string)arg0;
+				int pg = -1;
+				std::string fuzzyName;
+				entry = fonts.fuzzy(name, &pg, fuzzyName);
+				if (!entry) {
+					if (name == fuzzyName) {
+						const std::string msg = Text::format("Invalid font asset point \"{0}\"", { name });
+						onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+						return false;
+					} else {
+						const std::string msg = Text::format("Invalid asset point, did you mean \"{0}\"", { fuzzyName });
+						onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+						return false;
+					}
+				}
+			} else if (arg0.type() == Variant::INTEGER) {
+				const int pg = (int)(Int)arg0;
+				if (pg < 0 || pg >= fonts.count()) {
+					const std::string msg = "Asset page out of bounds";
+					onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+					return false;
+				}
+				entry = fonts.get(pg);
+			} else {
+				const std::string msg = "Asset page or name expected";
+				onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+				return false;
+			}
+			if (!entry) {
+				const std::string msg = "Invalid font asset";
+				onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+				return false;
+			}
+			if (arg1.type() == Variant::STRING) {
+				const std::string key = (std::string)arg1;
+				const int idx = entry->getArbitraryIndex(key);
+				if (idx != -1) {
+					out = idx;
+
+					return true;
+				}
+
+				std::string ch;
+				if (key == "\r")
+					ch = "\\r";
+				else if (key == "\n")
+					ch = "\\n";
+				const std::string msg = Text::format("Cannot find arbitrary index with character \"{0}\"", { ch });
+				onError_(msg, true, loc1.page, loc1.row, loc1.column);
+
+				return false;
+			} else {
+				const std::string msg = "Character expected";
+				onError_(msg, false, loc1.page, loc1.row, loc1.column);
+
+				return false;
+			}
+		}
 	};
 	Parser::I18nLookupHandler i18nLookup = [&] (std::string &out, const Variant &arg0, const Variant &arg1, const TextLocation &loc0, const TextLocation &loc1) -> bool {
 		// Prepare.
