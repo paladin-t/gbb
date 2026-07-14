@@ -832,6 +832,50 @@ std::string Text::concatMacros(const std::string &l, const std::string &r) {
 	return result;
 }
 
+std::string Text::quoteCsv(const std::string &val) {
+	bool needQuote = false;
+	for (size_t i = 0; i < val.size(); ++i) {
+		char c = val[i];
+		if (c == ',' || c == '"' || c == '\r' || c == '\n') {
+			needQuote = true;
+
+			break;
+		}
+	}
+	if (!needQuote)
+		return val;
+
+	std::string result;
+	result += '"';
+	for (size_t i = 0; i < val.size(); ++i) {
+		const char c = val[i];
+		if (c == '"')
+			result += '"';
+		result += c;
+	}
+	result += '"';
+
+	return result;
+}
+
+std::string Text::unquoteCsv(const std::string &val) {
+	if (val.size() < 2 || val.front() != '"' || val.back() != '"')
+		return val;
+
+	std::string result;
+	for (size_t i = 1; i < val.size() - 1; ++i) {
+		char c = val[i];
+		if (c == '"' && i + 1 < val.size() - 1 && val[i + 1] == '"') {
+			result += '"';
+			++i;
+		} else {
+			result += c;
+		}
+	}
+
+	return result;
+}
+
 std::string Text::remove(const std::string &str, const std::string &charsToRemove) {
 	std::string result = str;
 	for (char ch : charsToRemove)

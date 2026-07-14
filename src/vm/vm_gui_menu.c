@@ -159,18 +159,21 @@ void vm_menu(SCRIPT_CTX * THIS, UINT8 nlines, UINT8 nargs, UINT8 font_bank, UINT
                 get_chunk((UINT8 *)&glyph, THIS->bank, (UINT8 *)(++gui_text_ptr), sizeof(glyph_t));
                 if (GUI_GLYPH_IS_ESCAPE_INT(glyph)) {
                     // Serialize an integer.
-                    INT16 val = *((INT16 *)VM_REF_TO_PTR(get_int16(THIS->bank, (UINT8 *)args)));
+                    const INT16 ref = get_int16(THIS->bank, (UINT8 *)args);
+                    const INT16 val = *((INT16 *)VM_REF_TO_PTR(ref));
                     gui_blit_arbitrary_int(val, font_bank, size, arb, &opt);
                     ++args;
                 } else if (GUI_GLYPH_IS_ESCAPE_HEX(glyph)) {
                     // Serialize an integer in HEX.
-                    UINT16 val = *((UINT16 *)VM_REF_TO_PTR(get_int16(THIS->bank, (UINT8 *)args)));
+                    const INT16 ref = get_int16(THIS->bank, (UINT8 *)args);
+                    const UINT16 val = *((UINT16 *)VM_REF_TO_PTR(ref));
                     gui_blit_arbitrary_hex(val, font_bank, size, arb, &opt);
                     ++args;
                 } else if (GUI_GLYPH_IS_ESCAPE_CHAR(glyph)) {
                     // Serialize a character.
                     glyph_t glyph_;
-                    INT16 val = *((INT16 *)VM_REF_TO_PTR(get_int16(THIS->bank, (UINT8 *)args)));
+                    const INT16 ref = get_int16(THIS->bank, (UINT8 *)args);
+                    const UINT16 val = *((UINT16 *)VM_REF_TO_PTR(ref));
                     get_chunk((UINT8 *)&glyph_, font_bank, (UINT8 *)(arb + val), sizeof(glyph_t));
                     gui_blit_char(size, &glyph_, &opt);
                     ++args;
@@ -185,7 +188,7 @@ void vm_menu(SCRIPT_CTX * THIS, UINT8 nlines, UINT8 nargs, UINT8 font_bank, UINT
                 get_chunk((UINT8 *)&glyph, THIS->bank, (UINT8 *)(++gui_text_ptr), sizeof(glyph_t));
                 if (GUI_GLYPH_IS_ESCAPE_STACK(glyph)) {
                     // Serialize the current stack pointer of the current thread.
-                    UINT16 val = (UINT16)THIS->stack_ptr;
+                    const UINT16 val = (UINT16)THIS->stack_ptr;
                     gui_blit_arbitrary_hex(val, font_bank, size, arb, &opt);
                 } else if (GUI_GLYPH_IS_ESCAPE_BACKSLASH(glyph)) {
                     // Serialize '\'.

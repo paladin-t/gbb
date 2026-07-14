@@ -1575,6 +1575,47 @@ void FontAssets::Entry::cleanup(void) {
 	object = nullptr;
 }
 
+FontAssets::Entry::ArbitraryDictionary FontAssets::Entry::getArbitraryMapping(void) const {
+	Font::Codepoints fullArbitrary;
+	for (int j = 0; j < arbitrary.count(); ++j)
+		fullArbitrary.add(arbitrary[j]);
+	for (const FontAssets::Entry::CodepointRange &range : ranges) {
+		for (Font::Codepoint cp = range.first; cp <= range.second; ++cp)
+			fullArbitrary.add(cp);
+	}
+	fullArbitrary.sort();
+
+	ArbitraryDictionary result;
+	int k = 0;
+	for (Font::Codepoint cp : fullArbitrary) {
+		union {
+			Font::Codepoint codepoint;
+			Byte bytes[sizeof(Font::Codepoint)];
+		} u;
+		u.codepoint = cp;
+		std::string str;
+		for (int i = 0; i < sizeof(Font::Codepoint); ++i) {
+			const Byte b = u.bytes[i];
+			if (b == 0x00)
+				break;
+
+			str.push_back(b);
+		}
+		result.insert(std::make_pair(str, k++));
+	}
+
+	return result;
+}
+
+int FontAssets::Entry::getArbitraryIndex(const std::string &ch) const {
+	const ArbitraryDictionary dict = getArbitraryMapping();
+	auto it = dict.find(ch);
+	if (it == dict.end())
+		return -1;
+
+	return it->second;
+}
+
 bool FontAssets::Entry::serializeBasic(std::string &val, int page) const {
 	// Prepare.
 	val.clear();
@@ -1593,6 +1634,47 @@ bool FontAssets::Entry::serializeBasic(std::string &val, int page) const {
 	val += "\n";
 
 	// Finish.
+	return true;
+}
+
+bool FontAssets::Entry::serializeArbitraryMappingInCsv(std::string &val) const {
+	// Prepare.
+	val.clear();
+
+	// Serialize the mapping.
+	const ArbitraryDictionary dict = getArbitraryMapping();
+	val += "Char,";
+	val += "UTF-8,";
+	val += "Arbitrary Index\r\n";
+	for (const ArbitraryDictionary::value_type kv : dict) {
+		const std::string &key = kv.first;
+		const int val_ = kv.second;
+		if (key.empty()) {
+			val += "\"\",";
+			val += "0x00";
+		} else {
+			if (key == "\r") {
+				val += "\\r,";
+			} else if (key == "\n") {
+				val += "\\n,";
+			} else {
+				const std::string quoted = Text::quoteCsv(key);
+				const std::string osstr = Unicode::toOs(quoted);
+				val += osstr;
+				val += ",";
+			}
+			for (int i = 0; i < (int)key.length(); ++i) {
+				if (i > 0)
+					val += " ";
+				const char ch = key[i];
+				val += "0x" + Text::toHex((UInt8)ch, 2, '0', false);
+			}
+		}
+		val += ",";
+		val += Text::toString(val_);
+		val += "\r\n";
+	}
+
 	return true;
 }
 
@@ -1967,6 +2049,17 @@ bool FontAssets::toString(std::string &val, WarningOrErrorHandler onWarningOrErr
 			Jpath::set(doc, doc, nullptr, "fonts", j, "arbitrary");
 		}
 
+		if (!entry->ranges.empty()) {
+			for (int i = 0; i < (int)entry->ranges.size(); ++i) {
+				if (!Jpath::set(doc, doc, entry->ranges[i].first, "fonts", j, "ranges", i, 0))
+					continue;
+
+				Jpath::set(doc, doc, entry->ranges[i].second, "fonts", j, "ranges", i, 1);
+			}
+		} else {
+			Jpath::set(doc, doc, nullptr, "fonts", j, "ranges");
+		}
+
 		if (!Jpath::set(doc, doc, entry->content, "fonts", j, "content")) {
 			++j;
 
@@ -2204,6 +2297,20 @@ bool FontAssets::fromString(const std::string &val, const std::string &dir, bool
 					continue;
 
 				f.arbitrary.add(arb);
+			}
+		}
+
+		if (Jpath::has(doc, "fonts", i, "ranges") && Jpath::typeOf(doc, "fonts", i, "ranges") == Jpath::ARRAY) {
+			const int m = Jpath::count(doc, "fonts", i, "ranges");
+			for (int j = 0; j < m; ++j) {
+				Font::Codepoint first = 0, last = 0;
+				if (!Jpath::get(doc, first, "fonts", i, "ranges", j, 0) || !Jpath::get(doc, last, "fonts", i, "ranges", j, 1))
+					continue;
+
+				if (last < first)
+					std::swap(first, last);
+
+				f.ranges.push_back(std::make_pair(first, last));
 			}
 		}
 

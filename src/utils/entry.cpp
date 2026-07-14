@@ -130,4 +130,52 @@ const std::string &EntryWithPath::tooltips(void) const {
 	return _tooltips;
 }
 
+EntryWithVisibility::EntryWithVisibility() {
+}
+
+EntryWithVisibility::EntryWithVisibility(const char* name) :
+	Entry(name)
+{
+}
+
+EntryWithVisibility::EntryWithVisibility(const std::string &name) :
+	Entry(name)
+{
+}
+
+EntryWithVisibility::EntryWithVisibility(const char* name, bool hidden_) :
+	Entry(name),
+	_hidden(hidden_)
+{
+}
+
+EntryWithVisibility::EntryWithVisibility(const std::string &name, bool hidden_) :
+	Entry(name),
+	_hidden(hidden_)
+{
+}
+
+EntryWithVisibility::EntryWithVisibility(const char* name, int order, bool hidden_) :
+	Entry(name, order),
+	_hidden(hidden_)
+{
+}
+
+EntryWithVisibility::EntryWithVisibility(const std::string &name, int order, bool hidden_) :
+	Entry(name, order),
+	_hidden(hidden_)
+{
+}
+
+bool EntryWithVisibility::operator < (const EntryWithVisibility &other) const {
+	if (_order != other._order)
+		return _order < other._order;
+
+	return compare(*this, other, nullptr) < 0;
+}
+
+bool EntryWithVisibility::hidden(void) const {
+	return _hidden;
+}
+
 /* ===========================================================================} */

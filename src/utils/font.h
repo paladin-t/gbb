@@ -99,6 +99,7 @@ public:
 		bool set(int idx, Codepoint val);
 		bool remove(int idx);
 		void clear(void);
+		void sort(void);
 	};
 
 	enum class Effects : int {

@@ -7671,14 +7671,21 @@ private:
 				refCount = 0;
 
 			// Check whether the font is in use.
-			const int arbCount = refCount > 0 ?
-				Math::min(font->arbitrary.count(), (int)std::numeric_limits<UInt8>::max() + 1) :
-				0;
+			Font::Codepoints fullArbitrary;
+			if (refCount > 0) {
+				for (int j = 0; j < font->arbitrary.count(); ++j)
+					fullArbitrary.add(font->arbitrary[j]);
+				for (const FontAssets::Entry::CodepointRange &range : font->ranges) {
+					for (Font::Codepoint cp = range.first; cp <= range.second; ++cp)
+						fullArbitrary.add(cp);
+				}
+			}
+			const int arbCount = Math::min(fullArbitrary.count(), (int)std::numeric_limits<UInt16>::max() + 1);
 			if (font->glyphs.count() == 0 && arbCount == 0)
 				continue;
 
 			// Determine the start location.
-			int diff = (ctx.addressCursor + ((int)sizeof(UInt8) + (int)sizeof(glyph_t) * arbCount)) - bankSize;
+			int diff = (ctx.addressCursor + ((int)sizeof(UInt16) + (int)sizeof(glyph_t) * arbCount)) - bankSize;
 			if (diff > 0) {
 				diff = bankSize - ctx.addressCursor;
 				for (int k = 0; k < diff; ++k) {
@@ -7701,13 +7708,13 @@ private:
 			emit(bytes, context, (UInt8)font->size.y); // Emit the font size.
 
 			// Emit the arbitrary.
-			emit(bytes, context, (UInt8)arbCount); // Emit the arbitrary count.
+			emit(bytes, context, (UInt16)arbCount); // Emit the arbitrary count.
 			const intptr_t offset = (intptr_t)bytes->peek();
 			for (int j = 0; j < arbCount; ++j) {
 				const glyph_t g;
 				emit<glyph_t>(bytes, context, g); // Prefill an arbitrary.
 
-				const Font::Codepoint cp = font->arbitrary[j];
+				const Font::Codepoint cp = fullArbitrary[j];
 				if (!font->glyphs.find(cp)) {
 					const GlyphTable::Entry glyph(cp);
 					font->glyphs.add(glyph);
@@ -7751,7 +7758,7 @@ private:
 			// Refill the arbitrary.
 			glyph_t* arbitrary = (glyph_t*)(bytes->pointer() + offset);
 			for (int j = 0; j < arbCount; ++j) {
-				const Font::Codepoint cp = font->arbitrary[j];
+				const Font::Codepoint cp = fullArbitrary[j];
 				glyph_t &g = arbitrary[j];
 				const GlyphTable::Entry* entry = font->glyphs.find(cp);
 				GBBASIC_ASSERT(entry && "Impossible.");
@@ -31603,6 +31610,8 @@ public:
 
 	typedef std::map<std::string, Variant> Macros;
 
+	typedef std::function<bool(int &, const Variant &, const Variant &, const TextLocation &, const TextLocation &)> ArbitraryCharacterLookupHandler;
+
 	typedef std::function<bool(std::string &, const Variant &, const Variant &, const TextLocation &, const TextLocation &)> I18nLookupHandler;
 
 private:
@@ -31873,6 +31882,9 @@ public:
 
 			// `ASC(...)`.
 			ADD_STATEMENT("asc",               node<NodeAsc>(),                            Token::Types::KEYWORD,         true);
+
+			// `ARB(...)`.
+			ADD_STATEMENT("arb",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 
 			// `LSTR(...)`.
 			ADD_STATEMENT("lstr",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
@@ -32632,6 +32644,7 @@ public:
 		Node::MacroStringTable::Stack &macroStrings,
 		Macro::List &macros,
 		const Macros &preDefinedMacros,
+		ArbitraryCharacterLookupHandler arbLookup,
 		I18nLookupHandler i18nLookup,
 		Prompt::Handler onPrint,
 		Error::Handler onError
@@ -32673,6 +32686,7 @@ public:
 			                             macroStrings,
 			                             macros,
 			                             preDefinedMacros_,
+			                             arbLookup,
 			                             i18nLookup,
 			                             _options,
 			                             onPrint,
@@ -33358,6 +33372,7 @@ private:
 		Node::MacroStringTable::Stack &macroStrings,
 		Macro::List &macros,
 		const Macros &preDefinedMacros,
+		ArbitraryCharacterLookupHandler arbLookup,
 		I18nLookupHandler i18nLookup,
 		const Options &options,
 		Prompt::Handler onPrint_,
@@ -35048,6 +35063,68 @@ private:
 
 			return true;
 		};
+		auto Arb = [&] (State &q, Node::Array &children, int &arb) -> bool { // Arbitrary character lookup.
+			(void)children;
+
+			State q1 = begin();
+			q1.index = q.index;
+			Token::Ptr id0 = nullptr;
+			Token::Ptr id1 = nullptr;
+
+			if (!must(Token::Types::KEYWORD, "arb")(q1)) return false;
+			if (!must(Token::Types::OPERATOR, "(")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+			if (forwardN(2, Token::Types::OPERATOR, ",")(q1.index)) {
+				// `=ARB(#pg|"{name}", ch)`.
+				Variant arg0 = nullptr;
+				Variant arg1 = nullptr;
+				if ((id0 = must(Token::Types::STRING)(q1))) {
+					arg0 = id0->data();
+				} else if ((id0 = must(Token::Types::PAGE)(q1))) {
+					std::string pg = (std::string)id0->text();
+					if (pg.empty() || pg.front() != '#') {
+						GBBASIC_ASSERT(false && "Impossible.");
+
+						return false;
+					}
+					pg.erase(pg.begin());
+					int pgn = -1;
+					if (!Text::fromString(pg, pgn))
+						return false;
+
+					arg0 = Variant(pgn);
+				}
+				if (!must(Token::Types::OPERATOR, ",")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+				if ((id1 = must(Token::Types::STRING)(q1))) {
+					arg1 = id1->data();
+				} else if ((id1 = must(Token::Types::INTEGER)(q1))) {
+					arg1 = id1->data();
+				}
+				if (!arbLookup(arb, arg0, arg1, id0 ? id0->begin() : TextLocation::INVALID(), id1 ? id1->begin() : TextLocation::INVALID())) {
+					arb = -1;
+
+					return false;
+				}
+			} else {
+				// `=ARB(ch)`.
+				if ((id0 = must(Token::Types::STRING)(q1))) {
+					const Variant arg0 = id0->data();
+					if (!arbLookup(arb, nullptr, arg0, id0 ? id0->begin() : TextLocation::INVALID(), id0 ? id0->begin() : TextLocation::INVALID())) {
+						arb = -1;
+
+						return false;
+					}
+				} else {
+					THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+				}
+			}
+			if (!must(Token::Types::OPERATOR, ")")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+
+			q1.success = true;
+			end(q1);
+			q.index = q1.index;
+
+			return true;
+		};
 		auto LStr = [&] (State &q, Node::Array &children, std::string &txt) -> bool { // I18n dictionary lookup.
 			(void)children;
 
@@ -36159,6 +36236,26 @@ private:
 				}
 				if ((id = forward(Token::Types::SYMBOL)(q.index))) {
 					name = (std::string)id->data();
+					if (name == "arb") { // arbitrary character lookup.
+						int arb;
+						const int qi = q.index;
+						if (Arb(q, children, arb)) {
+							Token::Ptr node(new Token());
+							node
+								->type(Token::Types::INTEGER)
+								->text(Text::toString(arb))
+								->data(arb)
+								->begin(id->begin())
+								->end(id->end());
+							q.tokens.push_back(node);
+
+							n += q.index - qi;
+
+							refresh();
+
+							continue;
+						}
+					}
 					if (name == "lstr") { // I18n dictionary lookup.
 						std::string txt;
 						const int qi = q.index;
@@ -44072,6 +44169,110 @@ bool compile(Program &program, const Options &options) {
 	};
 
 	// Prepare the asset processors.
+	Parser::ArbitraryCharacterLookupHandler arbLookup = [&] (int &out, const Variant &arg0, const Variant &arg1, const TextLocation &loc0, const TextLocation &loc1) -> bool {
+		// Prepare.
+		const FontAssets &fonts = program.assets->fonts;
+
+		out = -1;
+
+		// Try getting arbitrary index from font assets.
+		if (arg0.type() == Variant::NOTHING) {
+			// `=ARB(ch)`.
+			if (arg1.type() == Variant::STRING) {
+				const std::string key = (std::string)arg1;
+				for (int i = 0; i < fonts.count(); ++i) {
+					const FontAssets::Entry* entry = fonts.get(i);
+					const int idx = entry->getArbitraryIndex(key);
+					if (idx != -1) {
+						out = idx;
+
+						return true;
+					}
+				}
+
+				std::string ch;
+				if (key == "\r")
+					ch = "\\r";
+				else if (key == "\n")
+					ch = "\\n";
+				const std::string msg = Text::format("Cannot find arbitrary index with character \"{0}\"", { ch });
+				onError_(msg, true, loc1.page, loc1.row, loc1.column);
+
+				return false;
+			} else {
+				const std::string msg = "Character expected";
+				onError_(msg, false, loc1.page, loc1.row, loc1.column);
+
+				return false;
+			}
+		} else {
+			// `=ARB(#pg|"{name}", ch)`
+			const FontAssets::Entry* entry = nullptr;
+			if (arg0.type() == Variant::STRING) {
+				const std::string name = (std::string)arg0;
+				int pg = -1;
+				std::string fuzzyName;
+				entry = fonts.fuzzy(name, &pg, fuzzyName);
+				if (!entry) {
+					if (name == fuzzyName) {
+						const std::string msg = Text::format("Invalid font asset point \"{0}\"", { name });
+						onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+						return false;
+					} else {
+						const std::string msg = Text::format("Invalid asset point, did you mean \"{0}\"", { fuzzyName });
+						onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+						return false;
+					}
+				}
+			} else if (arg0.type() == Variant::INTEGER) {
+				const int pg = (int)(Int)arg0;
+				if (pg < 0 || pg >= fonts.count()) {
+					const std::string msg = "Asset page out of bounds";
+					onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+					return false;
+				}
+				entry = fonts.get(pg);
+			} else {
+				const std::string msg = "Asset page or name expected";
+				onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+				return false;
+			}
+			if (!entry) {
+				const std::string msg = "Invalid font asset";
+				onError_(msg, false, loc0.page, loc0.row, loc0.column);
+
+				return false;
+			}
+			if (arg1.type() == Variant::STRING) {
+				const std::string key = (std::string)arg1;
+				const int idx = entry->getArbitraryIndex(key);
+				if (idx != -1) {
+					out = idx;
+
+					return true;
+				}
+
+				std::string ch;
+				if (key == "\r")
+					ch = "\\r";
+				else if (key == "\n")
+					ch = "\\n";
+				const std::string msg = Text::format("Cannot find arbitrary index with character \"{0}\"", { ch });
+				onError_(msg, true, loc1.page, loc1.row, loc1.column);
+
+				return false;
+			} else {
+				const std::string msg = "Character expected";
+				onError_(msg, false, loc1.page, loc1.row, loc1.column);
+
+				return false;
+			}
+		}
+	};
 	Parser::I18nLookupHandler i18nLookup = [&] (std::string &out, const Variant &arg0, const Variant &arg1, const TextLocation &loc0, const TextLocation &loc1) -> bool {
 		// Prepare.
 		struct I18nInfo {
@@ -44402,6 +44603,7 @@ bool compile(Program &program, const Options &options) {
 				compiler.macroStrings(),
 				macros_,
 				preDefinedMacros,
+				arbLookup,
 				i18nLookup,
 				onPrint_,
 				onError

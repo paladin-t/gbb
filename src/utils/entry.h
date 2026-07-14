@@ -31,7 +31,7 @@ public:
 		Stub(const Entry &data);
 	};
 
-private:
+protected:
 	int _order = 100;
 	std::string _name;
 	Text::Array _parts;
@@ -56,12 +56,15 @@ public:
 	static int compare(const Stub &left, const Stub &right, const std::string* priority = nullptr);
 };
 
+/**
+ * @brief Entry with path.
+ */
 class EntryWithPath : public Entry {
 public:
 	typedef std::vector<EntryWithPath> Array;
 	typedef std::list<EntryWithPath> List;
 
-private:
+protected:
 	std::string _path;
 	std::string _tooltips;
 
@@ -71,6 +74,30 @@ public:
 
 	const std::string &path(void) const;
 	const std::string &tooltips(void) const;
+};
+
+/**
+ * @brief Entry with visibility.
+ */
+class EntryWithVisibility : public Entry {
+public:
+	typedef std::map<EntryWithVisibility, std::string> Dictionary;
+
+protected:
+	bool _hidden = false;
+
+public:
+	EntryWithVisibility();
+	EntryWithVisibility(const char* name);
+	EntryWithVisibility(const std::string &name);
+	EntryWithVisibility(const char* name, bool hidden_);
+	EntryWithVisibility(const std::string &name, bool hidden_);
+	EntryWithVisibility(const char* name, int order, bool hidden_);
+	EntryWithVisibility(const std::string &name, int order, bool hidden_);
+
+	bool operator < (const EntryWithVisibility &other) const;
+
+	bool hidden(void) const;
 };
 
 /* ===========================================================================} */

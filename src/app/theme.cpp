@@ -402,6 +402,8 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Library("Library");
 	menu_Manual("Manual...");
 	menu_Map("Map");
+	menu_Mapping("Mapping");
+	menu_MappingFile("Mapping File...");
 	menu_MoreOfficialKernels("More Official Kernels");
 	menu_MoveBackward("Move Backward");
 	menu_MoveDown("Move Down");
@@ -1067,6 +1069,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_IconView("Icon view");
 	tooltip_Import("Import");
 	tooltip_ImportAsNew("Import as new");
+	tooltip_InCsvFormat("In CSV format");
 	tooltip_InstalledKernels("Installed kernels");
 	tooltip_JumpToRefMap("Jump to ref map");
 	tooltip_JumpToRefTiles("Jump to ref tiles");
@@ -1109,6 +1112,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_Url("URL");
 	tooltip_UseByteMatrixViewOnTheToolbar("Use byte matrix view on the toolbar");
 	tooltip_ViaClipboard("Via clipboard");
+	tooltip_ViaClipboardCsv("Via clipboard (CSV)");
 	tooltip_ViaClipboardForTheCurrentFrameOnly(
 		"Via clipboard\n"
 		"(For the current frame only)"

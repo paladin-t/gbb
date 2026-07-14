@@ -566,7 +566,7 @@ public:
 
 	GBBASIC_PROPERTY(Entry::Dictionary, documents)
 
-	GBBASIC_PROPERTY(Entry::Dictionary, links)
+	GBBASIC_PROPERTY(EntryWithVisibility::Dictionary, links)
 
 	/**< GUI. */
 
