@@ -1030,17 +1030,22 @@ static bool escapeUnicode(const wchar_t* &wptr, unsigned &cp) {
 	return true;
 }
 
-static const wchar_t* escapeUnicode(const wchar_t* &wptr, std::wstring &wstr) {
+static const char32_t* escapeUnicode(const char32_t* &wptr, std::u32string &u32str) {
 	// Prepare.
-	wstr.clear();
+	u32str.clear();
 
 	// Extract the code.
 	std::string buf;
-	for (int i = 0; i < 4; ++i) {
+	for (int i = 0; i < 6; ++i) {
 		if (!*wptr)
 			break;
 
-		buf.push_back((std::string::value_type)*wptr++);
+		char c = (char)*wptr;
+		if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))
+			break;
+
+		buf.push_back(c);
+		++wptr;
 	}
 	if (buf.empty())
 		buf.push_back('0');
@@ -1049,15 +1054,15 @@ static const wchar_t* escapeUnicode(const wchar_t* &wptr, std::wstring &wstr) {
 	// Convert the code to string.
 	unsigned cp = 0;
 	std::string str_;
-	if (Text::fromString(buf, cp)) {
-		wstr.push_back((wchar_t)cp);
-		str_ = Unicode::fromWide(wstr);
+	if (Text::fromString(buf, cp) && cp <= 0x10ffff) {
+		u32str.push_back((char32_t)cp);
+		str_ = Unicode::fromUtf32(u32str);
 	}
 
 	// Validate the string.
 	if (!isPrintable(str_)) {
 		str_ = "\\u????"; // Notify invalid code.
-		wstr = Unicode::toWide(str_);
+		u32str = Unicode::toUtf32(str_);
 	}
 
 	// Finish.
@@ -1074,10 +1079,10 @@ static bool analyzeString(std::string str, Font::Codepoints &codepoints, Font::C
 	str = Text::replace(str, "\\r", "\r");
 	str = Text::replace(str, "\\n", "\n");
 	str = Text::replace(str, "\\f", "\f");
-	const std::wstring wstr = Unicode::toWide(str);
-	const wchar_t* wptr = wstr.c_str();
+	const std::u32string u32str = Unicode::toUtf32(str);
+	const char32_t* wptr = u32str.c_str();
 	while (*wptr) {
-		wchar_t cp = *wptr++;
+		char32_t cp = *wptr++;
 		if (!cp) {
 			if (invalid)
 				*invalid = true;
@@ -1086,7 +1091,7 @@ static bool analyzeString(std::string str, Font::Codepoints &codepoints, Font::C
 			break;
 		}
 		if (cp == GLYPH_ESCAPE_PLACEHOLDER) {
-			const wchar_t cp_ = *wptr++;
+			const char32_t cp_ = *wptr++;
 			if (!cp_) {
 				if (invalid)
 					*invalid = true;
@@ -1113,7 +1118,7 @@ static bool analyzeString(std::string str, Font::Codepoints &codepoints, Font::C
 				break;
 			}
 		} else if (cp == GLYPH_ESCAPE_SPECIAL) {
-			const wchar_t cp_ = *wptr++;
+			const char32_t cp_ = *wptr++;
 			if (!cp_) {
 				if (invalid)
 					*invalid = true;
@@ -1123,10 +1128,10 @@ static bool analyzeString(std::string str, Font::Codepoints &codepoints, Font::C
 			}
 			switch (cp_) {
 			case GLYPH_ESCAPE_UNICODE: {
-					std::wstring wstr;
-					wptr = escapeUnicode(wptr, wstr);
+					std::u32string u32str;
+					wptr = escapeUnicode(wptr, u32str);
 
-					for (wchar_t ecp : wstr) {
+					for (char32_t ecp : u32str) {
 						if (std::find(uniqueCodepoints.begin(), uniqueCodepoints.end(), (Font::Codepoint)ecp) == uniqueCodepoints.end())
 							uniqueCodepoints.add(ecp);
 
@@ -6619,11 +6624,11 @@ public:
 
 		const Asm::Instructions &INSTRUCTIONS = *ctx.instructions;
 
-		auto format = [] (std::wstring &escaped, const wchar_t* fmt) -> int {
+		auto format = [] (std::u32string &escaped, const char32_t* fmt) -> int {
 			int result = 0;
 			escaped.clear();
 
-			const wchar_t* wptr = fmt;
+			const char32_t* wptr = fmt;
 			while (*wptr) {
 				if (*wptr == GLYPH_ESCAPE_PLACEHOLDER) {
 					escaped.push_back(*wptr);
@@ -6645,10 +6650,10 @@ public:
 				} else if (*wptr == GLYPH_ESCAPE_SPECIAL) {
 					switch (*++wptr) {
 					case GLYPH_ESCAPE_UNICODE: {
-							std::wstring wstr;
-							wptr = escapeUnicode(wptr, wstr);
+							std::u32string u32str;
+							wptr = escapeUnicode(wptr, u32str);
 
-							escaped += wstr;
+							escaped += u32str;
 
 							++wptr;
 
@@ -6690,10 +6695,10 @@ public:
 			auto count = [&] (int index) -> int {
 				std::string fmt;
 				if (isString(context, index, &fmt, &tk) && tk) {
-					const std::wstring wfmt = Unicode::toWide(fmt);
-					std::wstring wescaped;
-					const int n = format(wescaped, wfmt.c_str());
-					const std::string escaped = Unicode::fromWide(wescaped);
+					const std::u32string ufmt = Unicode::toUtf32(fmt);
+					std::u32string uescaped;
+					const int n = format(uescaped, ufmt.c_str());
+					const std::string escaped = Unicode::fromUtf32(uescaped);
 					if (tk->data() != escaped) {
 						tk->text("\"" + escaped + "\"");
 						tk->data(escaped);
@@ -23971,14 +23976,14 @@ public:
 			str = Text::replace(str, "\\r", "\r");
 			str = Text::replace(str, "\\n", "\n");
 			str = Text::replace(str, "\\f", "\f");
-			const std::wstring wstr = Unicode::toWide(str);
-			const wchar_t* wptr = wstr.c_str();
+			const std::u32string u32str = Unicode::toUtf32(str);
+			const char32_t* wptr = u32str.c_str();
 			while (*wptr) {
-				wchar_t cp = *wptr++;
+				char32_t cp = *wptr++;
 				if (!cp)
 					break;
 				if (cp == GLYPH_ESCAPE_PLACEHOLDER) {
-					const wchar_t cp_ = *wptr++;
+					const char32_t cp_ = *wptr++;
 					if (!cp_)
 						break;
 					switch (cp_) {
@@ -23999,19 +24004,19 @@ public:
 						break;
 					}
 				} else if (cp == GLYPH_ESCAPE_SPECIAL) {
-					const wchar_t cp_ = *wptr++;
+					const char32_t cp_ = *wptr++;
 					if (!cp_)
 						break;
 					switch (cp_) {
 					case GLYPH_ESCAPE_UNICODE: {
-							std::wstring wstr;
-							wptr = escapeUnicode(wptr, wstr);
+							std::u32string u32str;
+							wptr = escapeUnicode(wptr, u32str);
 
-							if (wstr.length() != 1) {
+							if (u32str.length() != 1) {
 								THROW_INVALID_GLYPH(onError);
 							}
 
-							const GlyphTable::Entry glyph(wstr.front());
+							const GlyphTable::Entry glyph(u32str.front());
 							int width = 0;
 							if (!FontAssets::measure(*font, glyph, &width, nullptr)) {
 								THROW_INVALID_GLYPH(onError);
@@ -24164,14 +24169,14 @@ public:
 			str = Text::replace(str, "\\r", "\r");
 			str = Text::replace(str, "\\n", "\n");
 			str = Text::replace(str, "\\f", "\f");
-			const std::wstring wstr = Unicode::toWide(str);
-			const wchar_t* wptr = wstr.c_str();
+			const std::u32string u32str = Unicode::toUtf32(str);
+			const char32_t* wptr = u32str.c_str();
 			while (*wptr) {
-				wchar_t cp = *wptr++;
+				char32_t cp = *wptr++;
 				if (!cp)
 					break;
 				if (cp == GLYPH_ESCAPE_PLACEHOLDER) {
-					const wchar_t cp_ = *wptr++;
+					const char32_t cp_ = *wptr++;
 					if (!cp_)
 						break;
 					switch (cp_) {
@@ -24192,19 +24197,19 @@ public:
 						break;
 					}
 				} else if (cp == GLYPH_ESCAPE_SPECIAL) {
-					const wchar_t cp_ = *wptr++;
+					const char32_t cp_ = *wptr++;
 					if (!cp_)
 						break;
 					switch (cp_) {
 					case GLYPH_ESCAPE_UNICODE: {
-							std::wstring wstr;
-							wptr = escapeUnicode(wptr, wstr);
+							std::u32string u32str;
+							wptr = escapeUnicode(wptr, u32str);
 
-							if (wstr.length() != 1) {
+							if (u32str.length() != 1) {
 								THROW_INVALID_GLYPH(onError);
 							}
 
-							const GlyphTable::Entry glyph(wstr.front());
+							const GlyphTable::Entry glyph(u32str.front());
 							int height = 0;
 							if (!FontAssets::measure(*font, glyph, nullptr, &height)) {
 								THROW_INVALID_GLYPH(onError);
@@ -28872,9 +28877,9 @@ public:
 						continue;
 
 					const Font::Codepoint cp = glyph.codepoint;
-					std::wstring wstr;
-					wstr.push_back((wchar_t)cp);
-					const std::string str = Unicode::fromWide(wstr);
+					std::u32string u32str;
+					u32str.push_back((char32_t)cp);
+					const std::string str = Unicode::fromUtf32(u32str);
 
 					unknownGlyphs.push_back(str);
 				}
@@ -29706,9 +29711,9 @@ public:
 						continue;
 
 					const Font::Codepoint cp = glyph.codepoint;
-					std::wstring wstr;
-					wstr.push_back((wchar_t)cp);
-					const std::string str = Unicode::fromWide(wstr);
+					std::u32string u32str;
+					u32str.push_back((char32_t)cp);
+					const std::string str = Unicode::fromUtf32(u32str);
 
 					unknownGlyphs.push_back(str);
 				}

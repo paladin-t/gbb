@@ -63,9 +63,9 @@ public:
 		_shadow = Font::Codepoints::Ptr(ptr);
 
 		for (int i = 0; i < std::numeric_limits<Byte>::max() + 1 && i < _shadow->count(); ++i) {
-			std::wstring wstr;
-			wstr.push_back((wchar_t)_shadow->get(i));
-			std::string ch = Unicode::fromWide(wstr);
+			std::u32string u32str;
+			u32str.push_back((char32_t)_shadow->get(i));
+			std::string ch = Unicode::fromUtf32(u32str);
 			ch = translate(ch);
 			const std::string str = Text::toString(i) + "(" + ch + ")";
 			_headers.push_back(str);
@@ -119,18 +119,18 @@ public:
 							snprintf(buf, GBBASIC_COUNTOF(buf), "%d", _shadow->get(i));
 							ImGui::SetNextItemWidth(ITEM_WIDTH - HEADER_WIDTH - MIN_WIDTH);
 							if (ImGui::InputText("", buf, sizeof(buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll) && *buf) {
-								const int num = std::atoi(buf);
-								std::wstring wstr;
-								wstr.push_back((wchar_t)num);
-								std::string ch = Unicode::fromWide(wstr);
+								const long long num = std::atoll(buf);
+								std::u32string u32str;
+								u32str.push_back((char32_t)num);
+								std::string ch = Unicode::fromUtf32(u32str);
 								const int n = Unicode::expectUtf8(ch.c_str());
 								if (n > 0) {
 									ch = ch.substr(0, n);
-									wstr = Unicode::toWide(ch);
+									u32str = Unicode::toUtf32(ch);
 									ch = translate(ch);
 									const std::string str = Text::toString(i) + "(" + ch + ")";
 									_headers[i] = str;
-									_shadow->set(i, (Font::Codepoint)wstr.front());
+									_shadow->set(i, (Font::Codepoint)u32str.front());
 								}
 							}
 							ImGui::SameLine();
@@ -176,9 +176,9 @@ public:
 						_headers.erase(_headers.begin() + toRemove);
 						_shadow->remove(toRemove);
 						for (int j = 0; j < (int)_headers.size(); ++j) {
-							std::wstring wstr;
-							wstr.push_back((wchar_t)_shadow->get(j));
-							std::string ch = Unicode::fromWide(wstr);
+							std::u32string u32str;
+							u32str.push_back((char32_t)_shadow->get(j));
+							std::string ch = Unicode::fromUtf32(u32str);
 							ch = translate(ch);
 							_headers[j] = Text::toString(j) + "(" + ch + ")";
 						}
@@ -256,9 +256,9 @@ public:
 				_headers.clear();
 				for (int i = 0; i < std::numeric_limits<Byte>::max() + 1; ++i) {
 					_shadow->add(i);
-					std::wstring wstr;
-					wstr.push_back((wchar_t)i);
-					std::string ch = Unicode::fromWide(wstr);
+					std::u32string u32str;
+					u32str.push_back((char32_t)i);
+					std::string ch = Unicode::fromUtf32(u32str);
 					ch = translate(ch);
 					const std::string str = Text::toString(i) + "(" + ch + ")";
 					_headers.push_back(str);

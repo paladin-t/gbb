@@ -87,6 +87,23 @@ public:
 	static std::wstring toWide(const std::string &str);
 
 	/**
+	 * @brief Converts wide UTF-32 string to char sequence.
+	 */
+	static std::string fromUtf32(const char32_t* str);
+	/**
+	 * @brief Converts wide UTF-32 string to char sequence.
+	 */
+	static std::string fromUtf32(const std::u32string &str);
+	/**
+	 * @brief Converts char sequence to wide UTF-32 string.
+	 */
+	static std::u32string toUtf32(const char* str);
+	/**
+	 * @brief Converts char sequence to wide UTF-32 string.
+	 */
+	static std::u32string toUtf32(const std::string &str);
+
+	/**
 	 * @brief Checks whether the specific string contains ASCII characters only,
 	 *   this functions stops at '\0'.
 	 */

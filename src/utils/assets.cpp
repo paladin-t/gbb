@@ -2848,9 +2848,9 @@ bool FontAssets::bake(Entry &font, GlyphTable::Entry &glyph, Bytes* buf, int* by
 	if (glyph.codepoint == '\a') {
 		fprintf(stdout, "Baked glyph '%ud', %dx%d.\n", (unsigned)glyph.codepoint, glyph.width, glyph.height);
 	} else {
-		std::wstring wstr;
-		wstr.push_back((wchar_t)glyph.codepoint);
-		const std::string str = Unicode::fromWide(wstr);
+		std::u32string u32str;
+		u32str.push_back((char32_t)glyph.codepoint);
+		const std::string str = Unicode::fromUtf32(u32str);
 		const std::string osstr = Unicode::toOs(str);
 		fprintf(stdout, "Baked glyph '%s', %dx%d.\n", osstr.c_str(), glyph.width, glyph.height);
 	}
