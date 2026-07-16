@@ -7690,7 +7690,6 @@ private:
 		//     ...
 		constexpr const int HEAD_SIZE = sizeof(glyph_option_t) /* option */ + sizeof(UInt8) /* size */ + sizeof(UInt16) /* count */;
 		constexpr const int MAX_COUNT = (BANK_SIZE - HEAD_SIZE) / sizeof(glyph_t);
-		(void)MAX_COUNT;
 		constexpr const int LIMIT_COUNT = 4000;
 		static_assert(LIMIT_COUNT <= MAX_COUNT, "Wrong data.");
 
@@ -7721,7 +7720,7 @@ private:
 						const std::string rangeStr = "[\\u" + Text::toHex(minVal, 4, '0', true) + "-\\u" + Text::toHex(maxVal, 4, '0', true) + "]";
 						THROW_TOO_MANY_ARBITRARIES_FROM_RANGE_AT_FONT_PAGE(onError, rangeStr, "#" + Text::toString(i));
 
-						break;
+						continue;
 					}
 
 					for (Font::Codepoint cp = minVal; cp <= maxVal; ++cp)

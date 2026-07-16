@@ -366,29 +366,27 @@ private:
 		};
 
 		const Preset PRESETS[] = {
-			{ "Basic Latin",            FontAssets::Entry::CodepointRanges{ { 0x0000, 0x007f } } },
-			{ "Latin-1 Supplement",     FontAssets::Entry::CodepointRanges{ { 0x0080, 0x00ff } } },
-			{ "Latin Extended-A",       FontAssets::Entry::CodepointRanges{ { 0x0100, 0x017f } } },
-			{ "Latin Extended-B",       FontAssets::Entry::CodepointRanges{ { 0x0180, 0x024f } } },
-			{ "Greek and Coptic",       FontAssets::Entry::CodepointRanges{ { 0x0370, 0x03ff } } },
-			{ "Cyrillic",               FontAssets::Entry::CodepointRanges{ { 0x0400, 0x04ff } } },
-			{ "Cyrillic Supplement",    FontAssets::Entry::CodepointRanges{ { 0x0500, 0x052f } } },
-			{ "Hiragana",               FontAssets::Entry::CodepointRanges{ { 0x3040, 0x309f } } },
-			{ "Katakana",               FontAssets::Entry::CodepointRanges{ { 0x30a0, 0x30ff } } },
-			{ "CJK Unified Ideographs", FontAssets::Entry::CodepointRanges{ { 0x4e00, 0x9fff } } }
+			{ "Basic Latin",                 FontAssets::Entry::CodepointRanges{ { 0x0000, 0x007f } } },
+			{ "Latin-1 Supplement",          FontAssets::Entry::CodepointRanges{ { 0x0080, 0x00ff } } },
+			{ "Latin Extended-A",            FontAssets::Entry::CodepointRanges{ { 0x0100, 0x017f } } },
+			{ "Latin Extended-B",            FontAssets::Entry::CodepointRanges{ { 0x0180, 0x024f } } },
+			{ "Greek and Coptic",            FontAssets::Entry::CodepointRanges{ { 0x0370, 0x03ff } } },
+			{ "Cyrillic",                    FontAssets::Entry::CodepointRanges{ { 0x0400, 0x04ff } } },
+			{ "Cyrillic Supplement",         FontAssets::Entry::CodepointRanges{ { 0x0500, 0x052f } } },
+			{ "CJK Symbols and Punctuation", FontAssets::Entry::CodepointRanges{ { 0x3000, 0x303f } } },
+			{ "Hiragana",                    FontAssets::Entry::CodepointRanges{ { 0x3040, 0x309f } } },
+			{ "Katakana",                    FontAssets::Entry::CodepointRanges{ { 0x30a0, 0x30ff } } },
+			{ "CJK Ideographs (4E00-5BFF)",  FontAssets::Entry::CodepointRanges{ { 0x4e00, 0x5bff } } },
+			{ "CJK Ideographs (5C00-67FF)",  FontAssets::Entry::CodepointRanges{ { 0x5c00, 0x67ff } } },
+			{ "CJK Ideographs (6800-73FF)",  FontAssets::Entry::CodepointRanges{ { 0x6800, 0x73ff } } },
+			{ "CJK Ideographs (7400-7FFF)",  FontAssets::Entry::CodepointRanges{ { 0x7400, 0x7fff } } },
+			{ "CJK Ideographs (8000-8BFF)",  FontAssets::Entry::CodepointRanges{ { 0x8000, 0x8bff } } },
+			{ "CJK Ideographs (8C00-97FF)",  FontAssets::Entry::CodepointRanges{ { 0x8c00, 0x97ff } } },
+			{ "CJK Ideographs (9800-9FFF)",  FontAssets::Entry::CodepointRanges{ { 0x9800, 0x9fff } } }
 		};
-		const char* items[] = {
-			PRESETS[0].name,
-			PRESETS[1].name,
-			PRESETS[2].name,
-			PRESETS[3].name,
-			PRESETS[4].name,
-			PRESETS[5].name,
-			PRESETS[6].name,
-			PRESETS[7].name,
-			PRESETS[8].name,
-			PRESETS[9].name
-		};
+		const char* items[GBBASIC_COUNTOF(PRESETS)];
+		for (int i = 0; i < GBBASIC_COUNTOF(PRESETS); ++i)
+			items[i] = PRESETS[i].name;
 
 		if (_selectedPresetRangeIndex == -1) {
 			_selectedPresetRangeIndex = 0;
