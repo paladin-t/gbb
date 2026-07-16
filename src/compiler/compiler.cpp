@@ -3878,6 +3878,13 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_INVALID_ASSET_POINT_DID_YOU_MEAN */
+#ifndef THROW_INVALID_ASSET_POINT_FONT_PAGE
+#	define THROW_INVALID_ASSET_POINT_FONT_PAGE(ON_ERROR, PG) \
+		do { \
+			throwInvalidAssetPointFontPage((ON_ERROR), nullptr, (PG)); \
+			return; \
+		} while (false)
+#endif /* THROW_INVALID_ASSET_POINT_FONT_PAGE */
 #ifndef THROW_INVALID_COLOR
 #	define THROW_INVALID_COLOR(ON_ERROR, TK) \
 		do { \
@@ -4013,6 +4020,13 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_TOO_FEW_ARGUMENTS */
+#ifndef THROW_TOO_MANY_ARBITRARIES_FROM_RANGE_AT_FONT_PAGE
+		// As warning.
+#	define THROW_TOO_MANY_ARBITRARIES_FROM_RANGE_AT_FONT_PAGE(ON_ERROR, RANGE, PG) \
+		do { \
+			throwTooManyArbitrariesFromRangeAtFontPage((ON_ERROR), nullptr, (RANGE), (PG)); \
+		} while (false)
+#endif /* THROW_TOO_MANY_ARBITRARIES_FROM_RANGE_AT_FONT_PAGE */
 #ifndef THROW_TOO_MANY_ARGUMENTS
 #	define THROW_TOO_MANY_ARGUMENTS(ON_ERROR) \
 		do { \
@@ -7239,6 +7253,12 @@ public:
 		const Error err("Invalid asset point, did you mean \"{0}\"", false);
 		onError(err, err.format({ fuzzy }), tk->begin());
 	}
+	void throwInvalidAssetPointFontPage(Error::Handler onError, Token::Ptr tk = nullptr, const std::string &pg = "") const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("Invalid asset point, font page {0}", false);
+		onError(err, err.format({ pg }), tk->begin());
+	}
 	void throwInvalidColor(Error::Handler onError, Token::Ptr tk = nullptr) const {
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
@@ -7357,6 +7377,12 @@ public:
 			tk = firstNonNumericTokenInThisOrChildren();
 		const Error err("Too few arguments \"{0}\"", false);
 		onError(err, err.format({ tk->caseSensitiveText() }), tk->begin());
+	}
+	void throwTooManyArbitrariesFromRangeAtFontPage(Error::Handler onError, Token::Ptr tk = nullptr, const std::string &range = "", const std::string &pg = "") const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("Too many arbitraries from range {0}, font page {1}", true); // Warning.
+		onError(err, err.format({ range, pg }), tk->begin());
 	}
 	void throwTooManyArguments(Error::Handler onError, Token::Ptr tk = nullptr) const {
 		if (tk == nullptr)
@@ -7662,15 +7688,21 @@ private:
 		//   the glyphs (can be filled into multiple banks)
 		//     the pixels
 		//     ...
+		constexpr const int HEAD_SIZE = sizeof(glyph_option_t) /* option */ + sizeof(UInt8) /* size */ + sizeof(UInt16) /* count */;
+		constexpr const int MAX_COUNT = (BANK_SIZE - HEAD_SIZE) / sizeof(glyph_t);
+		(void)MAX_COUNT;
+		constexpr const int LIMIT_COUNT = 4000;
+		static_assert(LIMIT_COUNT <= MAX_COUNT, "Wrong data.");
+
 		Bytes::Ptr buf(Bytes::create());
 		const int before = (int)bytes->count();
 		for (int i = 0; i < fonts.count(); ++i) {
 			// Prepare.
 			FontAssets::Entry* font = fonts.get(i);
-			if (!font) { THROW_INVALID_ASSET_POINT(onError); }
+			if (!font) { THROW_INVALID_ASSET_POINT_FONT_PAGE(onError, "#" + Text::toString(i)); }
 			const int bankSize = context.top().bankSize;
 
-			if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+			if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT_FONT_PAGE(onError, "#" + Text::toString(i)); }
 			int refCount = 0;
 			if (!ctx.pipeline->lookup(AssetsBundle::Categories::FONT, i, refCount))
 				refCount = 0;
@@ -7680,17 +7712,29 @@ private:
 			if (refCount > 0) {
 				for (int j = 0; j < font->arbitrary.count(); ++j)
 					fullArbitrary.add(font->arbitrary[j]);
+
 				for (const FontAssets::Entry::CodepointRange &range : font->ranges) {
-					for (Font::Codepoint cp = range.first; cp <= range.second; ++cp)
+					const Font::Codepoint minVal = Math::min(range.first, range.second);
+					const Font::Codepoint maxVal = Math::max(range.first, range.second);
+					const int n = fullArbitrary.count() + (maxVal - minVal + 1);
+					if (n > LIMIT_COUNT) {
+						const std::string rangeStr = "[\\u" + Text::toHex(minVal, 4, '0', true) + "-\\u" + Text::toHex(maxVal, 4, '0', true) + "]";
+						THROW_TOO_MANY_ARBITRARIES_FROM_RANGE_AT_FONT_PAGE(onError, rangeStr, "#" + Text::toString(i));
+
+						break;
+					}
+
+					for (Font::Codepoint cp = minVal; cp <= maxVal; ++cp)
 						fullArbitrary.add(cp);
 				}
 			}
-			const int arbCount = Math::min(fullArbitrary.count(), (int)std::numeric_limits<UInt16>::max() + 1);
+
+			const int arbCount = Math::min(fullArbitrary.count(), MAX_COUNT);
 			if (font->glyphs.count() == 0 && arbCount == 0)
 				continue;
 
 			// Determine the start location.
-			int diff = (ctx.addressCursor + ((int)sizeof(UInt16) + (int)sizeof(glyph_t) * arbCount)) - bankSize;
+			int diff = (ctx.addressCursor + (HEAD_SIZE + (int)sizeof(glyph_t) * arbCount)) - bankSize;
 			if (diff > 0) {
 				diff = bankSize - ctx.addressCursor;
 				for (int k = 0; k < diff; ++k) {
