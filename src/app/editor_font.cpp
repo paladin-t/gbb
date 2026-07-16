@@ -544,7 +544,8 @@ public:
 			->reg<Commands::Font::SetWordWrap>()
 			->reg<Commands::Font::SetThresholds>()
 			->reg<Commands::Font::Invert>()
-			->reg<Commands::Font::SetArbitrary>();
+			->reg<Commands::Font::SetArbitrary>()
+			->reg<Commands::Font::SetRanges>();
 	}
 	virtual ~EditorFontImpl() override {
 		close(_index);
@@ -1719,15 +1720,28 @@ public:
 							rnd,
 							_index,
 							[this] (const std::initializer_list<Variant> &args) -> void {
-								const Variant &arg = *args.begin();
-								Object::Ptr obj = (Object::Ptr)arg;
-								Font::Codepoints::Ptr ptr = Object::as<Font::Codepoints::Ptr>(obj);
+								std::initializer_list<Variant>::const_iterator it = args.begin();
+								const Variant &arg = *it++;
+								const int tag = (int)(Variant::Int)(*it++);
+								if (tag == 0) {
+									Object::Ptr obj = (Object::Ptr)arg;
+									Font::Codepoints::Ptr ptr = Object::as<Font::Codepoints::Ptr>(obj);
 
-								Command* cmd = enqueue<Commands::Font::SetArbitrary>()
-									->with(*ptr)
-									->exec(object(), Variant((void*)entry()));
+									Command* cmd = enqueue<Commands::Font::SetArbitrary>()
+										->with(*ptr)
+										->exec(object(), Variant((void*)entry()));
 
-								_refresh(cmd);
+									_refresh(cmd);
+								} else {
+									void* p = (void*)arg;
+									FontAssets::Entry::CodepointRanges* ranges = (FontAssets::Entry::CodepointRanges*)p;
+
+									Command* cmd = enqueue<Commands::Font::SetRanges>()
+										->with(*ranges)
+										->exec(object(), Variant((void*)entry()));
+
+									_refresh(cmd);
+								}
 							}
 						);
 					}

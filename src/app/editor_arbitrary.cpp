@@ -27,6 +27,10 @@ private:
 	Project* _project = nullptr; // Foreign.
 	int _fontIndex = -1;
 	Font::Codepoints::Ptr _shadow = nullptr;
+	FontAssets::Entry::CodepointRanges _rangesShadow;
+	int _selectedPresetRangeIndex = -1;
+	Font::Codepoint _rangeStart = 0;
+	Font::Codepoint _rangeEnd = 0;
 	Text::Array _headers;
 	ChangedHandler _changed = nullptr; // Foreign.
 
@@ -61,6 +65,7 @@ public:
 		Font::Codepoints* ptr = nullptr;
 		arb.clone(&ptr);
 		_shadow = Font::Codepoints::Ptr(ptr);
+		_rangesShadow = entry->ranges;
 
 		for (int i = 0; i < std::numeric_limits<Byte>::max() + 1 && i < _shadow->count(); ++i) {
 			std::u32string u32str;
@@ -82,8 +87,6 @@ public:
 	}
 
 	virtual void update(Workspace* ws) override {
-		ImGuiStyle &style = ImGui::GetStyle();
-
 		bool isOpen = true;
 		bool toConfirm = false;
 		bool toApply = false;
@@ -93,110 +96,23 @@ public:
 			ImGui::OpenPopup(_title);
 
 		bool arbitrayAppliable = false;
+		bool rangesAppliable = false;
 		if (ImGui::BeginPopupModal(_title, nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav)) {
 			{
-				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
-				VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2());
+				if (ImGui::BeginTabBar("@Tabs")) {
+					if (ImGui::BeginTabItem(ws->theme()->windowArbitrary_Basic())) {
+						updateArbitraryTab(ws);
 
-				constexpr const float width = 280;
-				ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1, 1, 1, 0));
-				ImGui::BeginChild("@Pat", ImVec2(width + 4, 110), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
-				{
-					constexpr const int ITEMS_PER_LINE = 2;
-					const float ITEM_WIDTH = (width - style.ScrollbarSize - (ITEMS_PER_LINE - 1)) / ITEMS_PER_LINE;
-					constexpr const float HEADER_WIDTH = 60;
-					constexpr const float MIN_WIDTH = 19;
-					int toRemove = -1;
-					for (int i = 0; i < std::numeric_limits<Byte>::max() + 1 && i < _shadow->count(); ++i) {
-						const float oldX = ImGui::GetCursorPosX();
-						ImGui::AlignTextToFramePadding();
-						ImGui::TextUnformatted(_headers[i]);
-						ImGui::SameLine();
-						ImGui::SetCursorPosX(oldX + HEADER_WIDTH);
-						ImGui::PushID(i);
-						{
-							char buf[16];
-							snprintf(buf, GBBASIC_COUNTOF(buf), "\\u%04X", (unsigned)_shadow->get(i));
-							ImGui::SetNextItemWidth(ITEM_WIDTH - HEADER_WIDTH - MIN_WIDTH);
-							if (ImGui::InputText("", buf, sizeof(buf), ImGuiInputTextFlags_AutoSelectAll) && *buf) {
-								Font::Codepoint cp = 0;
-								if (buf[0] == '\\' && (buf[1] == 'u' || buf[1] == 'U')) {
-									unsigned hex = 0;
-									if (sscanf(buf + 2, "%x", &hex) == 1 && hex <= 0x10ffff && !(hex >= 0xd800 && hex <= 0xdfff))
-										cp = (Font::Codepoint)hex;
-								} else {
-									const long long num = std::atoll(buf);
-									if (num >= 0 && num <= 0x10ffff && !(num >= 0xd800 && num <= 0xdfff))
-										cp = (Font::Codepoint)num;
-								}
-								if (cp > 0) {
-									std::u32string u32str;
-									u32str.push_back((char32_t)cp);
-									std::string ch = Unicode::fromUtf32(u32str);
-									const int n = Unicode::expectUtf8(ch.c_str());
-									if (n > 0) {
-										ch = ch.substr(0, n);
-										u32str = Unicode::toUtf32(ch);
-										ch = translate(ch);
-										const std::string str = Text::toString(i) + "(" + ch + ")";
-										_headers[i] = str;
-										_shadow->set(i, (Font::Codepoint)u32str.front());
-									}
-								}
-							}
-							ImGui::SameLine();
-							if (ImGui::Button("-", ImVec2(MIN_WIDTH, 0))) {
-								toRemove = i;
-							}
-							ImGui::SameLine();
-							if (i % ITEMS_PER_LINE == 0) {
-								ImGui::Dummy(ImVec2(4, 0));
-								ImGui::SameLine();
-							} else {
-								ImGui::Dummy(ImVec2(0, 2));
-							}
-						}
-						ImGui::PopID();
-						if ((i + 1) % ITEMS_PER_LINE != 0) {
-							ImGui::SameLine();
-							ImGui::Dummy(ImVec2(1, 1));
-							ImGui::SameLine();
-						} else {
-							ImGui::NewLine(1);
-						}
+						ImGui::EndTabItem();
 					}
-					if (_shadow->count() % 2) {
-						ImGui::NewLine();
+					if (ImGui::BeginTabItem(ws->theme()->windowArbitrary_Ranges())) {
+						updateRangesTab(ws);
+
+						ImGui::EndTabItem();
 					}
-					if (_shadow->count() < std::numeric_limits<Byte>::max() + 1) {
-						if (ImGui::Button("+", ImVec2(ITEM_WIDTH, 0))) {
-							const std::string ch = "?";
-							const std::string str = Text::toString(_shadow->count()) + "(" + ch + ")";
-							_headers.push_back(str);
-							_shadow->add('?');
-						}
-						ImGui::SameLine();
-						ImGui::Dummy(ImVec2(5, 0));
-						ImGui::SameLine();
-					}
-					if (ImGui::Button(_theme->generic_Clear(), ImVec2(ITEM_WIDTH, 0))) {
-						_headers.clear();
-						_shadow->clear();
-					}
-					if (toRemove >= 0) {
-						_headers.erase(_headers.begin() + toRemove);
-						_shadow->remove(toRemove);
-						for (int j = 0; j < (int)_headers.size(); ++j) {
-							std::u32string u32str;
-							u32str.push_back((char32_t)_shadow->get(j));
-							std::string ch = Unicode::fromUtf32(u32str);
-							ch = translate(ch);
-							_headers[j] = Text::toString(j) + "(" + ch + ")";
-						}
-					}
+
+					ImGui::EndTabBar();
 				}
-				ImGui::EndChild();
-				ImGui::PopStyleColor();
 			}
 			ImGui::NewLine(1);
 
@@ -222,6 +138,7 @@ public:
 			const FontAssets::Entry* entry = _project->getFont(_fontIndex);
 			const Font::Codepoints &arb = entry->arbitrary;
 			arbitrayAppliable = *_shadow != arb;
+			rangesAppliable = _rangesShadow != entry->ranges;
 
 			if (_confirmText.empty()) {
 				confirm = "Ok";
@@ -251,7 +168,7 @@ public:
 			}
 
 			ImGui::SameLine();
-			if (arbitrayAppliable) {
+			if (arbitrayAppliable || rangesAppliable) {
 				if (ImGui::Button(apply, ImVec2(WIDGETS_BUTTON_WIDTH, 0))) {
 					toApply = true;
 				}
@@ -294,7 +211,10 @@ public:
 			_init.reset();
 
 			if (arbitrayAppliable && _changed != nullptr) {
-				_changed({ Object::Ptr(_shadow) });
+				_changed({ Object::Ptr(_shadow), Variant(0) });
+			}
+			if (rangesAppliable && _changed != nullptr) {
+				_changed({ Variant((void*)&_rangesShadow), Variant(1) });
 			}
 			if (!_confirmedHandler.empty()) {
 				_confirmedHandler();
@@ -307,7 +227,10 @@ public:
 				_appliedHandler();
 			}
 			if (arbitrayAppliable && _changed != nullptr) {
-				_changed({ Object::Ptr(_shadow) });
+				_changed({ Object::Ptr(_shadow), Variant(0) });
+			}
+			if (rangesAppliable && _changed != nullptr) {
+				_changed({ Variant((void*)&_rangesShadow), Variant(1) });
 			}
 			if (!_appliedHandler.empty()) {
 				return;
@@ -325,7 +248,279 @@ public:
 	}
 
 private:
-	std::string translate(const std::string &ch_) const {
+	void updateArbitraryTab(Workspace*) {
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
+		VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2());
+
+		constexpr const float width = 280;
+		ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1, 1, 1, 0));
+		ImGui::BeginChild("@Pat", ImVec2(width + 4, 110), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
+		{
+			constexpr const int ITEMS_PER_LINE = 2;
+			const float ITEM_WIDTH = (width - style.ScrollbarSize - (ITEMS_PER_LINE - 1)) / ITEMS_PER_LINE;
+			constexpr const float HEADER_WIDTH = 60;
+			constexpr const float MIN_WIDTH = 19;
+			int toRemove = -1;
+			for (int i = 0; i < std::numeric_limits<Byte>::max() + 1 && i < _shadow->count(); ++i) {
+				const float oldX = ImGui::GetCursorPosX();
+				ImGui::AlignTextToFramePadding();
+				ImGui::TextUnformatted(_headers[i]);
+				ImGui::SameLine();
+				ImGui::SetCursorPosX(oldX + HEADER_WIDTH);
+				ImGui::PushID(i);
+				{
+					char buf[16];
+					snprintf(buf, GBBASIC_COUNTOF(buf), "\\u%04X", (unsigned)_shadow->get(i));
+					ImGui::SetNextItemWidth(ITEM_WIDTH - HEADER_WIDTH - MIN_WIDTH);
+					if (ImGui::InputText("", buf, sizeof(buf), ImGuiInputTextFlags_AutoSelectAll) && *buf) {
+						Font::Codepoint cp = 0;
+						if (buf[0] == '\\' && (buf[1] == 'u' || buf[1] == 'U')) {
+							unsigned hex = 0;
+							if (sscanf(buf + 2, "%x", &hex) == 1 && hex <= 0x10ffff && !(hex >= 0xd800 && hex <= 0xdfff))
+								cp = (Font::Codepoint)hex;
+						} else {
+							const long long num = std::atoll(buf);
+							if (num >= 0 && num <= 0x10ffff && !(num >= 0xd800 && num <= 0xdfff))
+								cp = (Font::Codepoint)num;
+						}
+						if (cp > 0) {
+							std::u32string u32str;
+							u32str.push_back((char32_t)cp);
+							std::string ch = Unicode::fromUtf32(u32str);
+							const int n = Unicode::expectUtf8(ch.c_str());
+							if (n > 0) {
+								ch = ch.substr(0, n);
+								u32str = Unicode::toUtf32(ch);
+								ch = translate(ch);
+								const std::string str = Text::toString(i) + "(" + ch + ")";
+								_headers[i] = str;
+								_shadow->set(i, (Font::Codepoint)u32str.front());
+							}
+						}
+					}
+					ImGui::SameLine();
+					if (ImGui::Button("-", ImVec2(MIN_WIDTH, 0))) {
+						toRemove = i;
+					}
+					ImGui::SameLine();
+					if (i % ITEMS_PER_LINE == 0) {
+						ImGui::Dummy(ImVec2(4, 0));
+						ImGui::SameLine();
+					} else {
+						ImGui::Dummy(ImVec2(0, 2));
+					}
+				}
+				ImGui::PopID();
+				if ((i + 1) % ITEMS_PER_LINE != 0) {
+					ImGui::SameLine();
+					ImGui::Dummy(ImVec2(1, 1));
+					ImGui::SameLine();
+				} else {
+					ImGui::NewLine(1);
+				}
+			}
+			if (_shadow->count() % 2) {
+				ImGui::NewLine();
+			}
+			if (_shadow->count() < std::numeric_limits<Byte>::max() + 1) {
+				if (ImGui::Button("+", ImVec2(ITEM_WIDTH, 0))) {
+					const std::string ch = "?";
+					const std::string str = Text::toString(_shadow->count()) + "(" + ch + ")";
+					_headers.push_back(str);
+					_shadow->add('?');
+				}
+				ImGui::SameLine();
+				ImGui::Dummy(ImVec2(5, 0));
+				ImGui::SameLine();
+			}
+			if (ImGui::Button(_theme->generic_Clear(), ImVec2(ITEM_WIDTH, 0))) {
+				_headers.clear();
+				_shadow->clear();
+			}
+			if (toRemove >= 0) {
+				_headers.erase(_headers.begin() + toRemove);
+				_shadow->remove(toRemove);
+				for (int j = 0; j < (int)_headers.size(); ++j) {
+					std::u32string u32str;
+					u32str.push_back((char32_t)_shadow->get(j));
+					std::string ch = Unicode::fromUtf32(u32str);
+					ch = translate(ch);
+					_headers[j] = Text::toString(j) + "(" + ch + ")";
+				}
+			}
+		}
+		ImGui::EndChild();
+		ImGui::PopStyleColor();
+	}
+	void updateRangesTab(Workspace* ws) {
+		struct Preset {
+			const char* name = nullptr;
+			FontAssets::Entry::CodepointRanges ranges;
+
+			constexpr Preset(const char* n, const FontAssets::Entry::CodepointRanges &r)
+				: name(n), ranges(r)
+			{
+			}
+		};
+
+		const Preset PRESETS[] = {
+			{ "Basic Latin",            FontAssets::Entry::CodepointRanges{ { 0x0000, 0x007f } } },
+			{ "Latin-1 Supplement",     FontAssets::Entry::CodepointRanges{ { 0x0080, 0x00ff } } },
+			{ "Latin Extended-A",       FontAssets::Entry::CodepointRanges{ { 0x0100, 0x017f } } },
+			{ "Latin Extended-B",       FontAssets::Entry::CodepointRanges{ { 0x0180, 0x024f } } },
+			{ "Greek and Coptic",       FontAssets::Entry::CodepointRanges{ { 0x0370, 0x03ff } } },
+			{ "Cyrillic",               FontAssets::Entry::CodepointRanges{ { 0x0400, 0x04ff } } },
+			{ "Cyrillic Supplement",    FontAssets::Entry::CodepointRanges{ { 0x0500, 0x052f } } },
+			{ "Hiragana",               FontAssets::Entry::CodepointRanges{ { 0x3040, 0x309f } } },
+			{ "Katakana",               FontAssets::Entry::CodepointRanges{ { 0x30a0, 0x30ff } } },
+			{ "CJK Unified Ideographs", FontAssets::Entry::CodepointRanges{ { 0x4e00, 0x9fff } } }
+		};
+		const char* items[] = {
+			PRESETS[0].name,
+			PRESETS[1].name,
+			PRESETS[2].name,
+			PRESETS[3].name,
+			PRESETS[4].name,
+			PRESETS[5].name,
+			PRESETS[6].name,
+			PRESETS[7].name,
+			PRESETS[8].name,
+			PRESETS[9].name
+		};
+
+		if (_selectedPresetRangeIndex == -1) {
+			_selectedPresetRangeIndex = 0;
+			const FontAssets::Entry::CodepointRanges &ranges = PRESETS[_selectedPresetRangeIndex].ranges;
+			if (!ranges.empty()) {
+				_rangeStart = ranges.front().first;
+				_rangeEnd = ranges.front().second;
+			}
+		}
+
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
+		VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2());
+
+		constexpr const float width = 280;
+		ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1, 1, 1, 0));
+		ImGui::BeginChild("@Rng", ImVec2(width + 4, 90), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
+		{
+			int toRemove = -1;
+			for (int i = 0; i < (int)_rangesShadow.size(); ++i) {
+				ImGui::PushID(i);
+				{
+					Font::Codepoint first = _rangesShadow[i].first;
+					Font::Codepoint last = _rangesShadow[i].second;
+					char buf[64];
+					snprintf(buf, GBBASIC_COUNTOF(buf), "U+%04X - U+%04X (%u)", (unsigned)first, (unsigned)last, (unsigned)(last - first + 1));
+					const float posX = ImGui::GetContentRegionAvail().x - 19;
+					ImGui::AlignTextToFramePadding();
+					ImGui::TextUnformatted(buf);
+					ImGui::SameLine();
+					ImGui::SetCursorPosX(posX);
+					if (ImGui::Button("-", ImVec2(19, 0))) {
+						toRemove = i;
+					}
+				}
+				ImGui::PopID();
+				ImGui::NewLine(1);
+			}
+			if (toRemove >= 0) {
+				_rangesShadow.erase(_rangesShadow.begin() + toRemove);
+			}
+		}
+		ImGui::EndChild();
+		ImGui::PopStyleColor();
+		ImGui::NewLine(1);
+
+		float clrPosY = ImGui::GetCursorPosY();
+		ImGui::PushID("Pst");
+		{
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(ws->theme()->windowArbitrary_Ranges_Preset());
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(4, 0));
+			ImGui::SameLine();
+			do {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+				VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 19 - 1 * 2 - 43);
+				if (ImGui::Combo("", &_selectedPresetRangeIndex, items, GBBASIC_COUNTOF(items))) {
+					// Do nothing.
+				}
+			} while (false);
+
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(1, 0));
+			ImGui::SameLine();
+			if (ImGui::Button("+", ImVec2(19, 0))) {
+				if (_selectedPresetRangeIndex >= 0 && _selectedPresetRangeIndex < GBBASIC_COUNTOF(PRESETS)) {
+					const FontAssets::Entry::CodepointRanges &ranges = PRESETS[_selectedPresetRangeIndex].ranges;
+					for (const FontAssets::Entry::CodepointRange &range : ranges)
+						_rangesShadow.push_back(range);
+				}
+			}
+		}
+		ImGui::PopID();
+		ImGui::SameLine();
+		ImGui::NewLine(1);
+		ImGui::NewLine(1);
+
+		ImGui::PushID("New");
+		{
+			char startBuf[16];
+			char endBuf[16];
+			snprintf(startBuf, GBBASIC_COUNTOF(startBuf), "\\u%04X", (unsigned)_rangeStart);
+			snprintf(endBuf, GBBASIC_COUNTOF(endBuf), "\\u%04X", (unsigned)_rangeEnd);
+
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(ws->theme()->windowArbitrary_Ranges_Range());
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(4, 0));
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(80);
+			if (ImGui::InputText("##start", startBuf, sizeof(startBuf), ImGuiInputTextFlags_AutoSelectAll) && *startBuf) {
+				_rangeStart = parseCodepoint(startBuf);
+			}
+
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(3, 0));
+			ImGui::SameLine();
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted("-");
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(4, 0));
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(80);
+			if (ImGui::InputText("##end", endBuf, sizeof(endBuf), ImGuiInputTextFlags_AutoSelectAll) && *endBuf) {
+				_rangeEnd = parseCodepoint(endBuf);
+			}
+
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(1, 0));
+			ImGui::SameLine();
+			if (ImGui::Button("+", ImVec2(19, 0))) {
+				if (_rangeStart <= _rangeEnd) {
+					_rangesShadow.push_back(std::make_pair(_rangeStart, _rangeEnd));
+				}
+			}
+
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(1, 0));
+			ImGui::SameLine();
+			ImGui::SetCursorPosY(clrPosY);
+			if (ImGui::Button(_theme->generic_Clear(), ImVec2(0, 39))) {
+				_rangesShadow.clear();
+			}
+		}
+		ImGui::PopID();
+	}
+
+	static std::string translate(const std::string &ch_) {
 		std::string ch = ch_;
 		if (ch == "\r")
 			ch = "\\r";
@@ -335,6 +530,23 @@ private:
 			ch = "\\t";
 
 		return ch;
+	}
+
+	static Font::Codepoint parseCodepoint(const char* buf) {
+		if (!buf || !*buf)
+			return 0;
+
+		if (buf[0] == '\\' && (buf[1] == 'u' || buf[1] == 'U')) {
+			unsigned hex = 0;
+			if (sscanf(buf + 2, "%x", &hex) == 1 && hex <= 0x10ffff && !(hex >= 0xd800 && hex <= 0xdfff))
+				return (Font::Codepoint)hex;
+		} else {
+			const long long num = std::atoll(buf);
+			if (num >= 0 && num <= 0x10ffff && !(num >= 0xd800 && num <= 0xdfff))
+				return (Font::Codepoint)num;
+		}
+
+		return 0;
 	}
 };
 

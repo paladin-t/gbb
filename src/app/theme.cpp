@@ -978,6 +978,11 @@ bool Theme::open(class Renderer* rnd) {
 	windowFont_Outline("Outline");
 	windowFont_Shadow("Shadow");
 
+	windowArbitrary_Basic("Basic");
+	windowArbitrary_Ranges("Ranges");
+	windowArbitrary_Ranges_Preset("Preset");
+	windowArbitrary_Ranges_Range(" Range");
+
 	windowActor("Actor");
 	windowActor_Analize("Analyze");
 	windowActor_Properties("Properties");

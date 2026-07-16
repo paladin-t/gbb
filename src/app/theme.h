@@ -743,6 +743,11 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowFont_Outline)
 	GBBASIC_PROPERTY_READONLY(std::string, windowFont_Shadow)
 
+	GBBASIC_PROPERTY_READONLY(std::string, windowArbitrary_Basic)
+	GBBASIC_PROPERTY_READONLY(std::string, windowArbitrary_Ranges)
+	GBBASIC_PROPERTY_READONLY(std::string, windowArbitrary_Ranges_Preset)
+	GBBASIC_PROPERTY_READONLY(std::string, windowArbitrary_Ranges_Range)
+
 	GBBASIC_PROPERTY_READONLY(std::string, windowActor)
 	GBBASIC_PROPERTY_READONLY(std::string, windowActor_Analize)
 	GBBASIC_PROPERTY_READONLY(std::string, windowActor_Properties)
