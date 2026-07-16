@@ -56,6 +56,7 @@ class SetName : public Command {
 public:
 	GBBASIC_PROPERTY(std::string, name)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(std::string, old)
 
 public:
@@ -86,6 +87,7 @@ class ResizeInt : public Command {
 public:
 	GBBASIC_PROPERTY(int, size)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(int, old)
 
 public:
@@ -116,6 +118,7 @@ class ResizeVec2 : public Command {
 public:
 	GBBASIC_PROPERTY(Math::Vec2i, size)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(Math::Vec2i, old)
 
 public:
@@ -146,6 +149,7 @@ class ChangeMaxSizeVec2 : public Command {
 public:
 	GBBASIC_PROPERTY(Math::Vec2i, size)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(Math::Vec2i, old)
 
 public:
@@ -176,6 +180,7 @@ class SetTrim : public Command {
 public:
 	GBBASIC_PROPERTY(bool, toTrim)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(bool, old)
 
 public:
@@ -206,6 +211,7 @@ class SetOffset : public Command {
 public:
 	GBBASIC_PROPERTY(int, offset)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(int, old)
 
 public:
@@ -236,6 +242,7 @@ class Set2Bpp : public Command {
 public:
 	GBBASIC_PROPERTY(bool, isTwoBitsPerPixel)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(bool, old)
 
 public:
@@ -266,6 +273,7 @@ class SetEffect : public Command {
 public:
 	GBBASIC_PROPERTY(int, enabledEffect)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(int, old)
 
 public:
@@ -298,6 +306,7 @@ public:
 	GBBASIC_PROPERTY(float, strength)
 	GBBASIC_PROPERTY(UInt8, direction)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(int, oldOffset)
 	GBBASIC_PROPERTY(float, oldStrength)
 	GBBASIC_PROPERTY(UInt8, oldDirection)
@@ -331,6 +340,7 @@ public:
 	GBBASIC_PROPERTY(int, offset)
 	GBBASIC_PROPERTY(float, strength)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(int, oldOffset)
 	GBBASIC_PROPERTY(float, oldStrength)
 
@@ -363,6 +373,7 @@ public:
 	GBBASIC_PROPERTY(bool, preferFullWord)
 	GBBASIC_PROPERTY(bool, preferFullWordForNonAscii)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(bool, oldPreferFullWord)
 	GBBASIC_PROPERTY(bool, oldPreferFullWordForNonAscii)
 
@@ -394,6 +405,7 @@ class SetThresholds : public Command {
 public:
 	GBBASIC_PROPERTY(Math::Vec4i, thresholds)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(Math::Vec4i, old)
 
 public:
@@ -424,6 +436,7 @@ class Invert : public Command {
 public:
 	GBBASIC_PROPERTY(bool, inverted)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(bool, old)
 
 public:
@@ -454,6 +467,7 @@ class SetArbitrary : public Command {
 public:
 	GBBASIC_PROPERTY(::Font::Codepoints, arbitrary)
 
+	GBBASIC_PROPERTY(bool, filled)
 	GBBASIC_PROPERTY(::Font::Codepoints, old)
 
 public:
@@ -472,6 +486,37 @@ public:
 	using Command::undo;
 
 	virtual SetArbitrary* with(const ::Font::Codepoints &arbitrary_);
+
+	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::exec;
+
+	static Command* create(void);
+	static void destroy(Command* ptr);
+};
+
+class SetRanges : public Command {
+public:
+	GBBASIC_PROPERTY(FontAssets::Entry::CodepointRanges, ranges)
+
+	GBBASIC_PROPERTY(bool, filled)
+	GBBASIC_PROPERTY(FontAssets::Entry::CodepointRanges, old)
+
+public:
+	SetRanges();
+	virtual ~SetRanges() override;
+
+	GBBASIC_CLASS_TYPE('S', 'R', 'N', 'F')
+
+	virtual unsigned type(void) const override;
+
+	virtual const char* toString(void) const override;
+
+	virtual Command* redo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::redo;
+	virtual Command* undo(Object::Ptr obj, int argc, const Variant* argv) override;
+	using Command::undo;
+
+	virtual SetRanges* with(const FontAssets::Entry::CodepointRanges &ranges_);
 
 	virtual Command* exec(Object::Ptr obj, int argc, const Variant* argv) override;
 	using Command::exec;

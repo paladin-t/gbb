@@ -123,6 +123,7 @@ void SetContent::destroy(Command* ptr) {
 }
 
 SetName::SetName() {
+	filled(false);
 }
 
 SetName::~SetName() {
@@ -142,7 +143,10 @@ Command* SetName::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	old(entry->name);
+	if (!filled()) {
+		old(entry->name);
+		filled(true);
+	}
 	entry->name = name();
 
 	return this;
@@ -183,6 +187,7 @@ void SetName::destroy(Command* ptr) {
 ResizeInt::ResizeInt() {
 	size(0);
 
+	filled(false);
 	old(0);
 }
 
@@ -203,7 +208,10 @@ Command* ResizeInt::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	old(entry->size.y);
+	if (!filled()) {
+		old(entry->size.y);
+		filled(true);
+	}
 	entry->size.y = size();
 
 	return this;
@@ -244,6 +252,7 @@ void ResizeInt::destroy(Command* ptr) {
 ResizeVec2::ResizeVec2() {
 	size(Math::Vec2i(-1, -1));
 
+	filled(false);
 	old(Math::Vec2i(-1, -1));
 }
 
@@ -264,7 +273,10 @@ Command* ResizeVec2::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	old(entry->size);
+	if (!filled()) {
+		old(entry->size);
+		filled(true);
+	}
 	entry->size = size();
 
 	return this;
@@ -305,6 +317,7 @@ void ResizeVec2::destroy(Command* ptr) {
 ChangeMaxSizeVec2::ChangeMaxSizeVec2() {
 	size(Math::Vec2i(GBBASIC_FONT_MAX_SIZE, GBBASIC_FONT_MAX_SIZE));
 
+	filled(false);
 	old(Math::Vec2i(GBBASIC_FONT_MAX_SIZE, GBBASIC_FONT_MAX_SIZE));
 }
 
@@ -325,7 +338,10 @@ Command* ChangeMaxSizeVec2::redo(Object::Ptr obj, int argc, const Variant* argv)
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	old(entry->maxSize);
+	if (!filled()) {
+		old(entry->maxSize);
+		filled(true);
+	}
 	entry->maxSize = size();
 
 	return this;
@@ -366,6 +382,7 @@ void ChangeMaxSizeVec2::destroy(Command* ptr) {
 SetTrim::SetTrim() {
 	toTrim(true);
 
+	filled(false);
 	old(true);
 }
 
@@ -386,7 +403,10 @@ Command* SetTrim::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	old(entry->trim);
+	if (!filled()) {
+		old(entry->trim);
+		filled(true);
+	}
 	entry->trim = toTrim();
 
 	return this;
@@ -427,6 +447,7 @@ void SetTrim::destroy(Command* ptr) {
 SetOffset::SetOffset() {
 	offset(0);
 
+	filled(false);
 	old(0);
 }
 
@@ -447,7 +468,10 @@ Command* SetOffset::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	old(entry->offset);
+	if (!filled()) {
+		old(entry->offset);
+		filled(true);
+	}
 	entry->offset = offset();
 
 	return this;
@@ -488,6 +512,7 @@ void SetOffset::destroy(Command* ptr) {
 Set2Bpp::Set2Bpp() {
 	isTwoBitsPerPixel(false);
 
+	filled(false);
 	old(false);
 }
 
@@ -508,7 +533,10 @@ Command* Set2Bpp::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	old(entry->isTwoBitsPerPixel);
+	if (!filled()) {
+		old(entry->isTwoBitsPerPixel);
+		filled(true);
+	}
 	entry->isTwoBitsPerPixel = isTwoBitsPerPixel();
 
 	return this;
@@ -549,6 +577,7 @@ void Set2Bpp::destroy(Command* ptr) {
 SetEffect::SetEffect() {
 	enabledEffect(0);
 
+	filled(false);
 	old(0);
 }
 
@@ -569,7 +598,10 @@ Command* SetEffect::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	old(entry->enabledEffect);
+	if (!filled()) {
+		old(entry->enabledEffect);
+		filled(true);
+	}
 	entry->enabledEffect = enabledEffect();
 
 	return this;
@@ -612,6 +644,7 @@ SetShadowParameters::SetShadowParameters() {
 	strength(0.0f);
 	direction(0);
 
+	filled(false);
 	oldOffset(0);
 	oldStrength(0.0f);
 	oldDirection(0);
@@ -634,11 +667,14 @@ Command* SetShadowParameters::redo(Object::Ptr obj, int argc, const Variant* arg
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	oldOffset(entry->shadowOffset);
+	if (!filled()) {
+		oldOffset(entry->shadowOffset);
+		oldStrength(entry->shadowStrength);
+		oldDirection(entry->shadowDirection);
+		filled(true);
+	}
 	entry->shadowOffset = offset();
-	oldStrength(entry->shadowStrength);
 	entry->shadowStrength = strength();
-	oldDirection(entry->shadowDirection);
 	entry->shadowDirection = direction();
 
 	return this;
@@ -684,6 +720,7 @@ SetOutlineParameters::SetOutlineParameters() {
 	offset(0);
 	strength(0.0f);
 
+	filled(false);
 	oldOffset(0);
 	oldStrength(0.0f);
 }
@@ -705,9 +742,12 @@ Command* SetOutlineParameters::redo(Object::Ptr obj, int argc, const Variant* ar
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	oldOffset(entry->outlineOffset);
+	if (!filled()) {
+		oldOffset(entry->outlineOffset);
+		oldStrength(entry->outlineStrength);
+		filled(true);
+	}
 	entry->outlineOffset = offset();
-	oldStrength(entry->outlineStrength);
 	entry->outlineStrength = strength();
 
 	return this;
@@ -751,6 +791,7 @@ SetWordWrap::SetWordWrap() {
 	preferFullWord(false);
 	preferFullWordForNonAscii(false);
 
+	filled(false);
 	oldPreferFullWord(false);
 	oldPreferFullWordForNonAscii(false);
 }
@@ -772,8 +813,11 @@ Command* SetWordWrap::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	oldPreferFullWord(entry->preferFullWord);
-	oldPreferFullWordForNonAscii(entry->preferFullWordForNonAscii);
+	if (!filled()) {
+		oldPreferFullWord(entry->preferFullWord);
+		oldPreferFullWordForNonAscii(entry->preferFullWordForNonAscii);
+		filled(true);
+	}
 	entry->preferFullWord = preferFullWord();
 	entry->preferFullWordForNonAscii = preferFullWordForNonAscii();
 
@@ -815,6 +859,7 @@ void SetWordWrap::destroy(Command* ptr) {
 }
 
 SetThresholds::SetThresholds() {
+	filled(false);
 }
 
 SetThresholds::~SetThresholds() {
@@ -834,14 +879,17 @@ Command* SetThresholds::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	old(
-		Math::Vec4i(
-			entry->thresholds[0],
-			entry->thresholds[1],
-			entry->thresholds[2],
-			entry->thresholds[3]
-		)
-	);
+	if (!filled()) {
+		old(
+			Math::Vec4i(
+				entry->thresholds[0],
+				entry->thresholds[1],
+				entry->thresholds[2],
+				entry->thresholds[3]
+			)
+		);
+		filled(true);
+	}
 	entry->thresholds[0] = (int)thresholds().x;
 	entry->thresholds[1] = (int)thresholds().y;
 	entry->thresholds[2] = (int)thresholds().z;
@@ -888,6 +936,7 @@ void SetThresholds::destroy(Command* ptr) {
 Invert::Invert() {
 	inverted(false);
 
+	filled(false);
 	old(false);
 }
 
@@ -908,7 +957,10 @@ Command* Invert::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	old(entry->inverted);
+	if (!filled()) {
+		old(entry->inverted);
+		filled(true);
+	}
 	entry->inverted = inverted();
 
 	return this;
@@ -947,6 +999,7 @@ void Invert::destroy(Command* ptr) {
 }
 
 SetArbitrary::SetArbitrary() {
+	filled(false);
 }
 
 SetArbitrary::~SetArbitrary() {
@@ -966,7 +1019,10 @@ Command* SetArbitrary::redo(Object::Ptr obj, int argc, const Variant* argv) {
 	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
 	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
 
-	old(entry->arbitrary);
+	if (!filled()) {
+		old(entry->arbitrary);
+		filled(true);
+	}
 	entry->arbitrary = arbitrary();
 
 	return this;
@@ -1001,6 +1057,68 @@ Command* SetArbitrary::create(void) {
 
 void SetArbitrary::destroy(Command* ptr) {
 	SetArbitrary* impl = static_cast<SetArbitrary*>(ptr);
+	delete impl;
+}
+
+SetRanges::SetRanges() {
+	filled(false);
+}
+
+SetRanges::~SetRanges() {
+}
+
+unsigned SetRanges::type(void) const {
+	return TYPE();
+}
+
+const char* SetRanges::toString(void) const {
+	return "Set ranges";
+}
+
+Command* SetRanges::redo(Object::Ptr obj, int argc, const Variant* argv) {
+	::Font::Ptr font = Object::as<::Font::Ptr>(obj);
+	(void)font;
+	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
+	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
+
+	if (!filled()) {
+		old(entry->ranges);
+		filled(true);
+	}
+	entry->ranges = ranges();
+
+	return this;
+}
+
+Command* SetRanges::undo(Object::Ptr obj, int argc, const Variant* argv) {
+	::Font::Ptr font = Object::as<::Font::Ptr>(obj);
+	(void)font;
+	void* arg0 = unpack<void*>(argc, argv, 0, nullptr);
+	FontAssets::Entry* entry = (FontAssets::Entry*)(arg0);
+
+	entry->ranges = old();
+
+	return this;
+}
+
+SetRanges* SetRanges::with(const FontAssets::Entry::CodepointRanges &ranges_) {
+	ranges(ranges_);
+
+	return this;
+}
+
+Command* SetRanges::exec(Object::Ptr obj, int argc, const Variant* argv) {
+	return redo(obj, argc, argv);
+}
+
+Command* SetRanges::create(void) {
+	SetRanges* result = new SetRanges();
+
+	return result;
+}
+
+void SetRanges::destroy(Command* ptr) {
+	SetRanges* impl = static_cast<SetRanges*>(ptr);
 	delete impl;
 }
 

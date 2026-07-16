@@ -26,6 +26,7 @@ public:
 	typedef std::shared_ptr<Font> Ptr;
 
 	typedef unsigned Codepoint;
+
 	class Codepoints : public Cloneable<Codepoints>, public virtual Object {
 	public:
 		typedef std::shared_ptr<Codepoints> Ptr;
