@@ -98,7 +98,7 @@ public:
 				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2());
 				VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2());
 
-				constexpr const float width = 266;
+				constexpr const float width = 280;
 				ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1, 1, 1, 0));
 				ImGui::BeginChild("@Pat", ImVec2(width + 4, 110), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
 				{
@@ -116,21 +116,32 @@ public:
 						ImGui::PushID(i);
 						{
 							char buf[16];
-							snprintf(buf, GBBASIC_COUNTOF(buf), "%d", _shadow->get(i));
+							snprintf(buf, GBBASIC_COUNTOF(buf), "\\u%04X", (unsigned)_shadow->get(i));
 							ImGui::SetNextItemWidth(ITEM_WIDTH - HEADER_WIDTH - MIN_WIDTH);
-							if (ImGui::InputText("", buf, sizeof(buf), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll) && *buf) {
-								const long long num = std::atoll(buf);
-								std::u32string u32str;
-								u32str.push_back((char32_t)num);
-								std::string ch = Unicode::fromUtf32(u32str);
-								const int n = Unicode::expectUtf8(ch.c_str());
-								if (n > 0) {
-									ch = ch.substr(0, n);
-									u32str = Unicode::toUtf32(ch);
-									ch = translate(ch);
-									const std::string str = Text::toString(i) + "(" + ch + ")";
-									_headers[i] = str;
-									_shadow->set(i, (Font::Codepoint)u32str.front());
+							if (ImGui::InputText("", buf, sizeof(buf), ImGuiInputTextFlags_AutoSelectAll) && *buf) {
+								Font::Codepoint cp = 0;
+								if (buf[0] == '\\' && (buf[1] == 'u' || buf[1] == 'U')) {
+									unsigned hex = 0;
+									if (sscanf(buf + 2, "%x", &hex) == 1 && hex <= 0x10ffff && !(hex >= 0xd800 && hex <= 0xdfff))
+										cp = (Font::Codepoint)hex;
+								} else {
+									const long long num = std::atoll(buf);
+									if (num >= 0 && num <= 0x10ffff && !(num >= 0xd800 && num <= 0xdfff))
+										cp = (Font::Codepoint)num;
+								}
+								if (cp > 0) {
+									std::u32string u32str;
+									u32str.push_back((char32_t)cp);
+									std::string ch = Unicode::fromUtf32(u32str);
+									const int n = Unicode::expectUtf8(ch.c_str());
+									if (n > 0) {
+										ch = ch.substr(0, n);
+										u32str = Unicode::toUtf32(ch);
+										ch = translate(ch);
+										const std::string str = Text::toString(i) + "(" + ch + ")";
+										_headers[i] = str;
+										_shadow->set(i, (Font::Codepoint)u32str.front());
+									}
 								}
 							}
 							ImGui::SameLine();
