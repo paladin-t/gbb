@@ -11,6 +11,7 @@
 #include "theme.h"
 #include "workspace.h"
 #include "../utils/encoding.h"
+#include "../utils/filesystem.h"
 #include <SDL.h>
 
 /*
@@ -440,13 +441,103 @@ public:
 			ImGui::Dummy(ImVec2(14, 0));
 			ImGui::SameLine();
 			if (ImGui::Url(_theme->menu_Import().c_str(), nullptr)) {
-				// TODO
+				do {
+					pfd::open_file open(
+						GBBASIC_TITLE,
+						"",
+						GBBASIC_CSV_FILE_FILTER,
+						pfd::opt::none);
+					if (open.result().empty())
+						break;
+					std::string path = open.result().front();
+					Path::uniform(path);
+					if (path.empty())
+						break;
+
+					std::string osstr;
+					File::Ptr file(File::create());
+					if (!file->open(path.c_str(), Stream::READ)) {
+						ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
+
+						break;
+					}
+					if (!file->readString(osstr)) {
+						file->close(); FileMonitor::unuse(path);
+
+						ws->bubble(ws->theme()->dialogPrompt_InvalidData(), nullptr);
+
+						break;
+					}
+					file->close(); FileMonitor::unuse(path);
+
+					const std::string txt = Unicode::fromOs(osstr);
+					FontAssets::Entry tmp;
+					if (!tmp.parseArbitraryMappingFromCsv(txt)) {
+						ws->bubble(_theme->dialogPrompt_InvalidData(), nullptr);
+
+						break;
+					}
+
+					Font::Codepoints* ptr = nullptr;
+					tmp.arbitrary.clone(&ptr);
+					_shadow = Font::Codepoints::Ptr(ptr);
+					_rangesShadow = tmp.ranges;
+					_headers.clear();
+					for (int j = 0; j < std::numeric_limits<Byte>::max() + 1 && j < _shadow->count(); ++j) {
+						std::u32string u32str;
+						u32str.push_back((char32_t)_shadow->get(j));
+						std::string ch = Unicode::fromUtf32(u32str);
+						ch = translate(ch);
+						_headers.push_back(Text::toString(j) + "(" + ch + ")");
+					}
+
+					ws->bubble(_theme->dialogPrompt_ImportedAsset(), nullptr);
+				} while (false);
 			}
 			ImGui::SameLine();
 			ImGui::Dummy(ImVec2(14, 0));
 			ImGui::SameLine();
 			if (ImGui::Url(_theme->menu_Export().c_str(), nullptr)) {
-				// TODO
+				do {
+					pfd::save_file save(
+						GBBASIC_TITLE,
+						"gbbasic-arbitrary.csv",
+						GBBASIC_CSV_FILE_FILTER,
+						pfd::opt::none);
+					std::string path = save.result();
+					Path::uniform(path);
+					if (path.empty())
+						break;
+					std::string ext;
+					Path::split(path, nullptr, &ext, nullptr);
+					Text::toLowerCase(ext);
+					if (ext.empty() || ext != "csv")
+						path += ".csv";
+
+					FontAssets::Entry tmp;
+					for (int j = 0; j < _shadow->count(); ++j)
+						tmp.arbitrary.add(_shadow->get(j));
+					tmp.ranges = _rangesShadow;
+					std::string txt;
+					if (!tmp.serializeArbitraryMappingToCsv(txt))
+						break;
+
+					const std::string osstr = Unicode::toOs(txt);
+					File::Ptr file(File::create());
+					if (!file->open(path.c_str(), Stream::WRITE))
+						break;
+					file->writeString(osstr);
+					file->close();
+
+#if !defined GBBASIC_OS_HTML
+					FileInfo::Ptr fileInfo = FileInfo::make(path.c_str());
+					std::string path_ = fileInfo->parentPath();
+					path_ = Unicode::toOs(path_);
+					Platform::browse(path_.c_str());
+#endif /* GBBASIC_OS_HTML */
+
+					ws->bubble(_theme->dialogPrompt_ExportedAsset(), nullptr);
+				} while (false);
 			}
 
 			ImGui::SameLine();
@@ -577,7 +668,7 @@ private:
 
 		constexpr const float width = 280;
 		ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1, 1, 1, 0));
-		ImGui::BeginChild("@Pat", ImVec2(width + 4, 110), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
+		ImGui::BeginChild("@Pat", ImVec2(width + 4, 120), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
 		{
 			constexpr const int ITEMS_PER_LINE = 2;
 			const float ITEM_WIDTH = (width - style.ScrollbarSize - (ITEMS_PER_LINE - 1)) / ITEMS_PER_LINE;
@@ -720,7 +811,7 @@ private:
 
 		constexpr const float width = 280;
 		ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(1, 1, 1, 0));
-		ImGui::BeginChild("@Rng", ImVec2(width + 4, 90), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
+		ImGui::BeginChild("@Rng", ImVec2(width + 4, 80), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav);
 		{
 			int toRemove = -1;
 			for (int i = 0; i < (int)_rangesShadow.size(); ++i) {

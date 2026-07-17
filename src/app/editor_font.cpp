@@ -2069,7 +2069,7 @@ private:
 			if (ImGui::MenuItem(ws->theme()->menu_Mapping())) {
 				do {
 					std::string txt;
-					if (!entry()->serializeArbitraryMappingInCsv(txt))
+					if (!entry()->serializeArbitraryMappingToCsv(txt))
 						break;
 
 					const std::string osstr = Unicode::toOs(txt);
@@ -2102,7 +2102,7 @@ private:
 						path += ".csv";
 
 					std::string txt;
-					if (!entry()->serializeArbitraryMappingInCsv(txt))
+					if (!entry()->serializeArbitraryMappingToCsv(txt))
 						break;
 
 					const std::string osstr = Unicode::toOs(txt);

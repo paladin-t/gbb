@@ -1410,6 +1410,15 @@ size_t FontAssets::Entry::hash(void) const {
 		result = Math::hash(result, thresholds[i]);
 	}
 
+	for (int i = 0; i < arbitrary.count(); ++i) {
+		result = Math::hash(result, arbitrary[i]);
+	}
+
+	for (int i = 0; i < (int)ranges.size(); ++i) {
+		result = Math::hash(result, ranges[i].first);
+		result = Math::hash(result, ranges[i].second);
+	}
+
 	// `content` doesn't count.
 
 	// `frameMargin` doesn't count.
@@ -1511,6 +1520,32 @@ int FontAssets::Entry::compare(const Entry &other) const {
 		return -1;
 	else if (inverted && !other.inverted)
 		return 1;
+
+	if (arbitrary.count() < other.arbitrary.count())
+		return -1;
+	else if (arbitrary.count() > other.arbitrary.count())
+		return 1;
+	for (int i = 0; i < arbitrary.count(); ++i) {
+		if (arbitrary[i] < other.arbitrary[i])
+			return -1;
+		else if (arbitrary[i] > other.arbitrary[i])
+			return 1;
+	}
+
+	if (ranges.size() < other.ranges.size())
+		return -1;
+	else if (ranges.size() > other.ranges.size())
+		return 1;
+	for (int i = 0; i < (int)ranges.size(); ++i) {
+		if (ranges[i].first < other.ranges[i].first)
+			return -1;
+		else if (ranges[i].first > other.ranges[i].first)
+			return 1;
+		if (ranges[i].second < other.ranges[i].second)
+			return -1;
+		else if (ranges[i].second > other.ranges[i].second)
+			return 1;
+	}
 
 	// `content` doesn't count.
 
@@ -1647,7 +1682,7 @@ bool FontAssets::Entry::serializeBasic(std::string &val, int page) const {
 	return true;
 }
 
-bool FontAssets::Entry::serializeArbitraryMappingInCsv(std::string &val) const {
+bool FontAssets::Entry::serializeArbitraryMappingToCsv(std::string &val) const {
 	// Prepare.
 	val.clear();
 
@@ -1684,6 +1719,112 @@ bool FontAssets::Entry::serializeArbitraryMappingInCsv(std::string &val) const {
 		val += ",";
 		val += Text::toString(val_);
 		val += "\r\n";
+	}
+
+	return true;
+}
+
+bool FontAssets::Entry::parseArbitraryMappingFromCsv(const std::string &val) {
+	// Prepare.
+	typedef std::pair<Font::Codepoint, int> Item;
+	typedef std::vector<Item> Items;
+
+	Items items;
+
+	Text::Array lines = Text::split(val, "\r\n", false);
+	if (lines.empty())
+		return false;
+
+	// Skip header line, and iterate the rest lines.
+	for (int i = 1; i < (int)lines.size(); ++i) {
+		// Prepare.
+		const std::string line = Text::trim(lines[i]);
+		if (line.empty())
+			continue;
+
+		Text::Array fields = Text::split(line, ',', '"');
+		if (fields.size() < 3)
+			continue;
+
+		// Get the fields.
+		const std::string utf8Field = Text::unquoteCsv(Text::trim(fields[1]));
+		const std::string idxField = Text::unquoteCsv(Text::trim(fields[2]));
+
+		// Parse the UTF-8 bytes.
+		std::string utf8Str;
+		const Text::Array byteTks = Text::split(utf8Field, " ", false);
+		for (const std::string &tk : byteTks) {
+			const std::string t = Text::trim(tk);
+			if (t.empty())
+				continue;
+
+			int byte = 0;
+			if (!Text::fromString(t, byte))
+				break;
+
+			utf8Str.push_back((char)(Byte)byte);
+		}
+
+		if (utf8Str.empty())
+			continue;
+
+		// Convert the UTF-8 to codepoint.
+		const std::u32string u32str = Unicode::toUtf32(utf8Str);
+		if (u32str.empty())
+			continue;
+
+		Font::Codepoint cp = (Font::Codepoint)u32str.front();
+
+		// Parse the index.
+		int index = -1;
+		if (!Text::fromString(idxField, index))
+			continue;
+
+		// Add an item.
+		items.push_back(std::make_pair(cp, index));
+	}
+
+	if (items.empty())
+		return false;
+
+	// Sort by index.
+	std::sort(
+		items.begin(), items.end(),
+		[] (const Item &l, const Item &r) {
+			return l.second < r.second;
+		}
+	);
+
+	// Build arbitrary array (indices 0-255) and ranges (indices >= 256).
+	arbitrary.clear();
+	ranges.clear();
+
+	std::vector<Font::Codepoint> rangeCodepoints;
+	for (const Item &item : items) {
+		if (item.second >= 0 && item.second <= 255) {
+			while (arbitrary.count() <= item.second)
+				arbitrary.add(0);
+			arbitrary.set(item.second, item.first);
+		} else if (item.second >= 256) {
+			rangeCodepoints.push_back(item.first);
+		}
+	}
+
+	// Build ranges from consecutive codepoints.
+	if (!rangeCodepoints.empty()) {
+		std::sort(rangeCodepoints.begin(), rangeCodepoints.end());
+		auto last = std::unique(rangeCodepoints.begin(), rangeCodepoints.end());
+		rangeCodepoints.erase(last, rangeCodepoints.end());
+
+		int i = 0;
+		while (i < (int)rangeCodepoints.size()) {
+			Font::Codepoint start = rangeCodepoints[i];
+			Font::Codepoint end = start;
+			while (i + 1 < (int)rangeCodepoints.size() && rangeCodepoints[i + 1] == end + 1)
+				end = rangeCodepoints[++i];
+			ranges.push_back(std::make_pair(start, end));
+			++i;
+		}
 	}
 
 	return true;
