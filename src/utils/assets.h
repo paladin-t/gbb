@@ -545,7 +545,13 @@ struct FontAssets {
 
 		typedef std::pair<Font::Codepoint, Font::Codepoint> CodepointRange;
 		typedef std::vector<CodepointRange> CodepointRanges;
+
 		typedef std::map<std::string, int> ArbitraryDictionary;
+		struct ArbitraryInfo {
+			std::string character;
+			int index = -1;
+		};
+		typedef std::vector<ArbitraryInfo> ArbitraryArray;
 
 		Copying copying = Copying::REFERENCED; // Non-serialized.
 		std::string directory; // Non-serialized. Calculated from path.
@@ -596,7 +602,10 @@ struct FontAssets {
 		Font::Ptr &touch(void);
 		void cleanup(void);
 
-		ArbitraryDictionary getArbitraryMapping(void) const;
+		/**
+		 * @param[out] mapping
+		 */
+		int getArbitraryMapping(Either<ArbitraryDictionary*, ArbitraryArray*> &mapping) const;
 		int getArbitraryIndex(const std::string &ch) const;
 
 		bool serializeBasic(std::string &val, int page) const;

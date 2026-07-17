@@ -881,6 +881,34 @@ void Font::Codepoints::sort(void) {
 	std::sort(_values.begin(), _values.end());
 }
 
+Font::Codepoints::iterator Font::Codepoints::erase(iterator pos) {
+	if (_values.empty())
+		return end();
+	
+	if (pos._index < 0 || pos._index >= (int)_values.size())
+		return end();
+
+	return erase(pos, pos + 1);
+}
+
+Font::Codepoints::iterator Font::Codepoints::erase(iterator first, iterator last) {
+	if (_values.empty())
+		return end();
+
+	const int startIdx = Math::clamp(first._index, 0, (int)_values.size());
+	const int endIdx = Math::clamp(last._index, 0, (int)_values.size());
+
+	if (startIdx >= endIdx)
+		return first;
+
+	_values.erase(_values.begin() + startIdx, _values.begin() + endIdx);
+
+	if (startIdx >= (int)_values.size())
+		return end();
+
+	return iterator(startIdx, &_values.front());
+}
+
 Font* Font::create() {
 	FontImpl* result = new FontImpl();
 

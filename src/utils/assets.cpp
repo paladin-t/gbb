@@ -1575,7 +1575,7 @@ void FontAssets::Entry::cleanup(void) {
 	object = nullptr;
 }
 
-FontAssets::Entry::ArbitraryDictionary FontAssets::Entry::getArbitraryMapping(void) const {
+int FontAssets::Entry::getArbitraryMapping(Either<ArbitraryDictionary*, ArbitraryArray*> &mapping) const {
 	Font::Codepoints fullArbitrary;
 	for (int j = 0; j < arbitrary.count(); ++j)
 		fullArbitrary.add(arbitrary[j]);
@@ -1584,31 +1584,67 @@ FontAssets::Entry::ArbitraryDictionary FontAssets::Entry::getArbitraryMapping(vo
 			fullArbitrary.add(cp);
 	}
 	fullArbitrary.sort();
+	Font::Codepoints::iterator last = std::unique(fullArbitrary.begin(), fullArbitrary.end());
+	fullArbitrary.erase(last, fullArbitrary.end());
 
-	ArbitraryDictionary result;
-	int k = 0;
-	for (Font::Codepoint cp : fullArbitrary) {
-		union {
-			Font::Codepoint codepoint;
-			Byte bytes[sizeof(Font::Codepoint)];
-		} u;
-		u.codepoint = cp;
-		std::string str;
-		for (int i = 0; i < sizeof(Font::Codepoint); ++i) {
-			const Byte b = u.bytes[i];
-			if (b == 0x00)
-				break;
+	if (mapping.isLeft()) {
+		mapping.left().get()->clear();
 
-			str.push_back(b);
+		int k = 0;
+		for (Font::Codepoint cp : fullArbitrary) {
+			std::u32string u32str;
+			u32str.push_back((char32_t)cp);
+			const std::string str = Unicode::fromUtf32(u32str);
+			/*union {
+				Font::Codepoint codepoint;
+				Byte bytes[sizeof(Font::Codepoint)];
+			} u;
+			u.codepoint = cp;
+			std::string str;
+			for (int i = 0; i < sizeof(Font::Codepoint); ++i) {
+				const Byte b = u.bytes[i];
+				if (b == 0x00)
+					break;
+
+				str.push_back(b);
+			}*/
+			mapping.left().get()->insert(std::make_pair(str, k++));
 		}
-		result.insert(std::make_pair(str, k++));
+	} else {
+		mapping.right().get()->clear();
+
+		int k = 0;
+		for (Font::Codepoint cp : fullArbitrary) {
+			std::u32string u32str;
+			u32str.push_back((char32_t)cp);
+			const std::string str = Unicode::fromUtf32(u32str);
+			/*union {
+				Font::Codepoint codepoint;
+				Byte bytes[sizeof(Font::Codepoint)];
+			} u;
+			u.codepoint = cp;
+			std::string str;
+			for (int i = 0; i < sizeof(Font::Codepoint); ++i) {
+				const Byte b = u.bytes[i];
+				if (b == 0x00)
+					break;
+
+				str.push_back(b);
+			}*/
+			ArbitraryInfo info;
+			info.character = str;
+			info.index = k++;
+			mapping.right().get()->push_back(info);
+		}
 	}
 
-	return result;
+	return fullArbitrary.count();
 }
 
 int FontAssets::Entry::getArbitraryIndex(const std::string &ch) const {
-	const ArbitraryDictionary dict = getArbitraryMapping();
+	ArbitraryDictionary dict;
+	Either<ArbitraryDictionary*, ArbitraryArray*> ret = (Left<ArbitraryDictionary*>(&dict));
+	getArbitraryMapping(ret);
 	auto it = dict.find(ch);
 	if (it == dict.end())
 		return -1;
@@ -1642,13 +1678,15 @@ bool FontAssets::Entry::serializeArbitraryMappingInCsv(std::string &val) const {
 	val.clear();
 
 	// Serialize the mapping.
-	const ArbitraryDictionary dict = getArbitraryMapping();
+	ArbitraryArray array;
+	Either<ArbitraryDictionary*, ArbitraryArray*> ret = (Right<ArbitraryArray*>(&array));
+	getArbitraryMapping(ret);
 	val += "Char,";
 	val += "UTF-8,";
 	val += "Arbitrary Index\r\n";
-	for (const ArbitraryDictionary::value_type kv : dict) {
-		const std::string &key = kv.first;
-		const int val_ = kv.second;
+	for (const ArbitraryInfo &info : array) {
+		const std::string &key = info.character;
+		const int val_ = info.index;
 		if (key.empty()) {
 			val += "\"\",";
 			val += "0x00";
@@ -1659,8 +1697,7 @@ bool FontAssets::Entry::serializeArbitraryMappingInCsv(std::string &val) const {
 				val += "\\n,";
 			} else {
 				const std::string quoted = Text::quoteCsv(key);
-				const std::string osstr = Unicode::toOs(quoted);
-				val += osstr;
+				val += quoted;
 				val += ",";
 			}
 			for (int i = 0; i < (int)key.length(); ++i) {

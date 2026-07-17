@@ -34,6 +34,8 @@ public:
 		typedef std::vector<Codepoint> Array;
 
 		class iterator {
+			friend class Codepoints;
+
 		public:
 			typedef Codepoint value_type;
 			typedef Codepoint & reference;
@@ -101,6 +103,8 @@ public:
 		bool remove(int idx);
 		void clear(void);
 		void sort(void);
+		iterator erase(iterator pos);
+		iterator erase(iterator first, iterator last);
 	};
 
 	enum class Effects : int {
