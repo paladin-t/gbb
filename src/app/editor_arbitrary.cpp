@@ -436,6 +436,18 @@ public:
 					return "https://paladin-t.github.io/kits/gbb/learn/arbitrary-characters.html";
 				}
 			);
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(14, 0));
+			ImGui::SameLine();
+			if (ImGui::Url(_theme->menu_Import().c_str(), nullptr)) {
+				// TODO
+			}
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(14, 0));
+			ImGui::SameLine();
+			if (ImGui::Url(_theme->menu_Export().c_str(), nullptr)) {
+				// TODO
+			}
 
 			ImGui::SameLine();
 			ImGui::NewLine(2);

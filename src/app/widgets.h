@@ -1265,8 +1265,8 @@ bool BarGraph(const ImVec2 &size, ImU32 border_col, ImU32 grid_col, ImU32 conten
 
 void TextUnformatted(const std::string &text);
 
-bool Url(const char* label, const char* link, bool adj = false);
-bool Url(const char* label, UrlHandler getLink, bool adj = false);
+bool Url(const char* label, const char* link /* nullable */, bool adj = false);
+bool Url(const char* label, UrlHandler getLink /* nullable */, bool adj = false);
 
 void OpenPopupTooltip(const char* id);
 void PopupTooltip(const char* id, const std::string &text);

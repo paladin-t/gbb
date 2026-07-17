@@ -370,6 +370,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Duplicate("Duplicate");
 	menu_EjectSourceCodeVm("Eject Source Code (VM)...");
 	menu_Examples("Examples");
+	menu_Export("Export...");
 	menu_Find("Find");
 	menu_FindInProject("Find in Project...");
 	menu_FineZooming("Fine Zooming");

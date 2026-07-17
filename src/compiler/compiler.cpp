@@ -44217,6 +44217,33 @@ bool compile(Program &program, const Options &options) {
 	};
 
 	// Prepare the asset processors.
+	struct ArbitraryDictionaryInfo {
+		FontAssets::Entry::ArbitraryDictionary dictionary;
+		bool cached = false;
+	};
+	typedef std::vector<ArbitraryDictionaryInfo> ArbitraryDictionaries;
+	ArbitraryDictionaries arbitraryDictionaries;
+	auto getArbitraryDictionary = [&] (int pg) -> const FontAssets::Entry::ArbitraryDictionary* {
+		if (pg < 0)
+			return nullptr;
+		if (pg >= (int)arbitraryDictionaries.size())
+			arbitraryDictionaries.resize(pg + 1);
+		ArbitraryDictionaryInfo &info = arbitraryDictionaries[pg];
+
+		if (!info.cached) {
+			const FontAssets &fonts = program.assets->fonts;
+			const FontAssets::Entry* entry = fonts.get(pg);
+			if (!entry)
+				return nullptr;
+
+			Either<FontAssets::Entry::ArbitraryDictionary*, FontAssets::Entry::ArbitraryArray*> ret = (Left<FontAssets::Entry::ArbitraryDictionary*>(&info.dictionary));
+			entry->getArbitraryMapping(ret);
+			info.cached = true;
+		}
+
+		return &info.dictionary;
+	};
+
 	Parser::ArbitraryCharacterLookupHandler arbLookup = [&] (int &out, const Variant &arg0, const Variant &arg1, const TextLocation &loc0, const TextLocation &loc1) -> bool {
 		// Prepare.
 		const FontAssets &fonts = program.assets->fonts;
@@ -44229,12 +44256,15 @@ bool compile(Program &program, const Options &options) {
 			if (arg1.type() == Variant::STRING) {
 				const std::string key = (std::string)arg1;
 				for (int i = 0; i < fonts.count(); ++i) {
-					const FontAssets::Entry* entry = fonts.get(i);
-					const int idx = entry->getArbitraryIndex(key);
-					if (idx != -1) {
-						out = idx;
+					const FontAssets::Entry::ArbitraryDictionary* dict = getArbitraryDictionary(i);
+					if (dict) {
+						auto it = dict->find(key);
+						const int idx = it->second;
+						if (idx != -1) {
+							out = idx;
 
-						return true;
+							return true;
+						}
 					}
 				}
 
@@ -44255,10 +44285,10 @@ bool compile(Program &program, const Options &options) {
 			}
 		} else {
 			// `=ARB(#pg|"{name}", ch)`
+			int pg = -1;
 			const FontAssets::Entry* entry = nullptr;
 			if (arg0.type() == Variant::STRING) {
 				const std::string name = (std::string)arg0;
-				int pg = -1;
 				std::string fuzzyName;
 				entry = fonts.fuzzy(name, &pg, fuzzyName);
 				if (!entry) {
@@ -44275,7 +44305,7 @@ bool compile(Program &program, const Options &options) {
 					}
 				}
 			} else if (arg0.type() == Variant::INTEGER) {
-				const int pg = (int)(Int)arg0;
+				pg = (int)(Int)arg0;
 				if (pg < 0 || pg >= fonts.count()) {
 					const std::string msg = "Asset page out of bounds";
 					onError_(msg, false, loc0.page, loc0.row, loc0.column);
@@ -44297,11 +44327,15 @@ bool compile(Program &program, const Options &options) {
 			}
 			if (arg1.type() == Variant::STRING) {
 				const std::string key = (std::string)arg1;
-				const int idx = entry->getArbitraryIndex(key);
-				if (idx != -1) {
-					out = idx;
+				const FontAssets::Entry::ArbitraryDictionary* dict = getArbitraryDictionary(pg);
+				if (dict) {
+					auto it = dict->find(key);
+					const int idx = it->second;
+					if (idx != -1) {
+						out = idx;
 
-					return true;
+						return true;
+					}
 				}
 
 				std::string ch;

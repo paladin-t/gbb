@@ -171,6 +171,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Duplicate)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_EjectSourceCodeVm)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Examples)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_Export)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Find)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_FindInProject)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_FineZooming)

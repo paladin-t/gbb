@@ -1595,19 +1595,6 @@ int FontAssets::Entry::getArbitraryMapping(Either<ArbitraryDictionary*, Arbitrar
 			std::u32string u32str;
 			u32str.push_back((char32_t)cp);
 			const std::string str = Unicode::fromUtf32(u32str);
-			/*union {
-				Font::Codepoint codepoint;
-				Byte bytes[sizeof(Font::Codepoint)];
-			} u;
-			u.codepoint = cp;
-			std::string str;
-			for (int i = 0; i < sizeof(Font::Codepoint); ++i) {
-				const Byte b = u.bytes[i];
-				if (b == 0x00)
-					break;
-
-				str.push_back(b);
-			}*/
 			mapping.left().get()->insert(std::make_pair(str, k++));
 		}
 	} else {
@@ -1618,19 +1605,6 @@ int FontAssets::Entry::getArbitraryMapping(Either<ArbitraryDictionary*, Arbitrar
 			std::u32string u32str;
 			u32str.push_back((char32_t)cp);
 			const std::string str = Unicode::fromUtf32(u32str);
-			/*union {
-				Font::Codepoint codepoint;
-				Byte bytes[sizeof(Font::Codepoint)];
-			} u;
-			u.codepoint = cp;
-			std::string str;
-			for (int i = 0; i < sizeof(Font::Codepoint); ++i) {
-				const Byte b = u.bytes[i];
-				if (b == 0x00)
-					break;
-
-				str.push_back(b);
-			}*/
 			ArbitraryInfo info;
 			info.character = str;
 			info.index = k++;
