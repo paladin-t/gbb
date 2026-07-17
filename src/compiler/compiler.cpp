@@ -35148,18 +35148,20 @@ private:
 					arg1 = id1->data();
 				}
 				if (!arbLookup(arb, arg0, arg1, id0 ? id0->begin() : TextLocation::INVALID(), id1 ? id1->begin() : TextLocation::INVALID())) {
-					arb = -1;
-
-					return false;
+					arg1 = Variant(std::string("?"));
+					if (!arbLookup(arb, arg0, arg1, id0 ? id0->begin() : TextLocation::INVALID(), id1 ? id1->begin() : TextLocation::INVALID())) {
+						arb = -1;
+					}
 				}
 			} else {
 				// `=ARB(ch)`.
 				if ((id0 = must(Token::Types::STRING)(q1))) {
-					const Variant arg0 = id0->data();
+					Variant arg0 = id0->data();
 					if (!arbLookup(arb, nullptr, arg0, id0 ? id0->begin() : TextLocation::INVALID(), id0 ? id0->begin() : TextLocation::INVALID())) {
-						arb = -1;
-
-						return false;
+						arg0 = Variant(std::string("?"));
+						if (!arbLookup(arb, nullptr, arg0, id0 ? id0->begin() : TextLocation::INVALID(), id0 ? id0->begin() : TextLocation::INVALID())) {
+							arb = -1;
+						}
 					}
 				} else {
 					THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
@@ -44226,8 +44228,10 @@ bool compile(Program &program, const Options &options) {
 	auto getArbitraryDictionary = [&] (int pg) -> const FontAssets::Entry::ArbitraryDictionary* {
 		if (pg < 0)
 			return nullptr;
+
 		if (pg >= (int)arbitraryDictionaries.size())
 			arbitraryDictionaries.resize(pg + 1);
+
 		ArbitraryDictionaryInfo &info = arbitraryDictionaries[pg];
 
 		if (!info.cached) {
@@ -44259,7 +44263,7 @@ bool compile(Program &program, const Options &options) {
 					const FontAssets::Entry::ArbitraryDictionary* dict = getArbitraryDictionary(i);
 					if (dict) {
 						auto it = dict->find(key);
-						const int idx = it->second;
+						const int idx = it == dict->end() ? -1 : it->second;
 						if (idx != -1) {
 							out = idx;
 
@@ -44273,6 +44277,8 @@ bool compile(Program &program, const Options &options) {
 					ch = "\\r";
 				else if (key == "\n")
 					ch = "\\n";
+				else
+					ch = key;
 				const std::string msg = Text::format("Cannot find arbitrary index with character \"{0}\"", { ch });
 				onError_(msg, true, loc1.page, loc1.row, loc1.column);
 
@@ -44330,7 +44336,7 @@ bool compile(Program &program, const Options &options) {
 				const FontAssets::Entry::ArbitraryDictionary* dict = getArbitraryDictionary(pg);
 				if (dict) {
 					auto it = dict->find(key);
-					const int idx = it->second;
+					const int idx = it == dict->end() ? -1 : it->second;
 					if (idx != -1) {
 						out = idx;
 
@@ -44343,6 +44349,8 @@ bool compile(Program &program, const Options &options) {
 					ch = "\\r";
 				else if (key == "\n")
 					ch = "\\n";
+				else
+					ch = key;
 				const std::string msg = Text::format("Cannot find arbitrary index with character \"{0}\"", { ch });
 				onError_(msg, true, loc1.page, loc1.row, loc1.column);
 
