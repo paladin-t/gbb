@@ -34606,6 +34606,72 @@ private:
 						if (!tk) return false;
 					}
 					q1.tokens.push_back(tk);
+				} else if (ignore(Token::Types::KEYWORD, "arb")(q1)) {
+					Token::Ptr tk = nullptr;
+					int arb = -1;
+					Token::Ptr id0 = nullptr;
+					Token::Ptr id1 = nullptr;
+					if (!ignore(Token::Types::OPERATOR, "(")(q1))
+						return false;
+					if (!forward(Token::Types::OPERATOR, ")")(q1.index)) {
+						if (forwardN(2, Token::Types::OPERATOR, ",")(q1.index)) {
+							// `=ARB(#pg|"{name}", ch)`.
+							Variant arg0 = nullptr;
+							Variant arg1 = nullptr;
+							if ((id0 = ignore(Token::Types::STRING)(q1))) {
+								arg0 = id0->data();
+							} else if ((id0 = ignore(Token::Types::PAGE)(q1))) {
+								std::string pg = (std::string)id0->text();
+								if (pg.empty() || pg.front() != '#') {
+									GBBASIC_ASSERT(false && "Impossible.");
+
+									return false;
+								}
+								pg.erase(pg.begin());
+								int pgn = -1;
+								if (!Text::fromString(pg, pgn))
+									return false;
+
+								arg0 = Variant(pgn);
+							}
+							if (!ignore(Token::Types::OPERATOR, ",")(q1)) return false;
+							if ((id1 = ignore(Token::Types::STRING)(q1))) {
+								arg1 = id1->data();
+							} else if ((id1 = ignore(Token::Types::INTEGER)(q1))) {
+								arg1 = id1->data();
+							}
+							if (!arbLookup(arb, arg0, arg1, id0 ? id0->begin() : TextLocation::INVALID(), id1 ? id1->begin() : TextLocation::INVALID())) {
+								arg1 = Variant(std::string("?"));
+								if (!arbLookup(arb, arg0, arg1, id0 ? id0->begin() : TextLocation::INVALID(), id1 ? id1->begin() : TextLocation::INVALID())) {
+									arb = -1;
+								}
+							}
+						} else {
+							// `=ARB(ch)`.
+							if ((id0 = ignore(Token::Types::STRING)(q1))) {
+								Variant arg0 = id0->data();
+								if (!arbLookup(arb, nullptr, arg0, id0 ? id0->begin() : TextLocation::INVALID(), id0 ? id0->begin() : TextLocation::INVALID())) {
+									arg0 = Variant(std::string("?"));
+									if (!arbLookup(arb, nullptr, arg0, id0 ? id0->begin() : TextLocation::INVALID(), id0 ? id0->begin() : TextLocation::INVALID())) {
+										arb = -1;
+									}
+								}
+							} else {
+								return false;
+							}
+						}
+					}
+
+					tk = Token::Ptr(new Token());
+					tk
+						->type(Token::Types::INTEGER)
+						->data(arb)
+						->text(Text::toString(arb))
+						->begin(id0 ? id0->begin() : TextLocation::INVALID())
+						->end(id0 ? id0->end() : TextLocation::INVALID());
+
+					if (!ignore(Token::Types::OPERATOR, ")")(q1)) return false;
+					q1.tokens.push_back(tk);
 				} else {
 					break;
 				}
@@ -34615,6 +34681,11 @@ private:
 						const Token::Ptr tk = q1.tokens.front();
 						if (iterater)
 							iterater(tk, nullptr);
+					} else if (q1.tokens.size() == 2) {
+						const Token::Ptr tk = q1.tokens[1];
+						const Token::Ptr tky = q1.tokens[0];
+						if (iterater)
+							iterater(tk, tky);
 					} else if (q1.tokens.size() == 4) {
 						const Token::Ptr tk = q1.tokens[2];
 						const Token::Ptr tky = q1.tokens[0];
@@ -44406,16 +44477,14 @@ bool compile(Program &program, const Options &options) {
 			// `=ARB(ch)`.
 			if (arg1.type() == Variant::STRING) {
 				const std::string key = (std::string)arg1;
-				for (int i = 0; i < fonts.count(); ++i) {
-					const FontAssets::Entry::ArbitraryDictionary* dict = getArbitraryDictionary(i);
-					if (dict) {
-						auto it = dict->find(key);
-						const int idx = it == dict->end() ? -1 : it->second;
-						if (idx != -1) {
-							out = idx;
+				const FontAssets::Entry::ArbitraryDictionary* dict = getArbitraryDictionary(0); // Get the first font page only.
+				if (dict) {
+					auto it = dict->find(key);
+					const int idx = it == dict->end() ? -1 : it->second;
+					if (idx != -1) {
+						out = idx;
 
-							return true;
-						}
+						return true;
 					}
 				}
 
