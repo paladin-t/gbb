@@ -365,11 +365,13 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 		// Graphics.
 		"color", "palette", "rgb", "hsv",
 		"plot", "point", "line", "rect", "rectfill", "text", "image",
+		"font",
 		"tile", "map", "window", "sprite",
 
 		// Audio.
 		"play", "stop",
 		"sound", "beep",
+		"music", "sfx",
 
 		// Input.
 		"btn", "btnd", "btnu",

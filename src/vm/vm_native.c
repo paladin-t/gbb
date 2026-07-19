@@ -14,6 +14,7 @@
 
 #include "vm_audio.h"
 #include "vm_game.h"
+#include "vm_gui.h"
 #include "vm_input.h"
 #include "vm_native.h"
 
@@ -191,6 +192,32 @@ BOOLEAN rumble(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED
     return TRUE;
 }
 #endif /* USE_RUMBLE_FUNCTIONS */
+
+#if USE_BLIT_TEXT_FUNCTIONS
+// Blits a buffer of arbitrary indices as text to the screen.
+BOOLEAN blit_text(POINTER THIS, BOOLEAN start, UINT16 * stack_frame) OLDCALL BANKED {
+    (void)THIS; (void)start;
+
+    const UINT8 bank       = (UINT8)   stack_frame[4];
+    const UINT16 * addr    = (UINT16 *)stack_frame[3];
+    const UINT8 count      = (UINT8)   stack_frame[2];
+    const UINT8 font_bank  = (UINT8)   stack_frame[1];
+    const UINT8 * font_ptr = (UINT8 *) stack_frame[0];
+
+    const glyph_t * arb = (const glyph_t *)GUI_GLYPH_ARBITRARY_ADDRESS(font_ptr);
+    glyph_option_t opt;
+    get_chunk((UINT8 *)&opt, font_bank, font_ptr, sizeof(glyph_option_t));
+    const UINT8 size = get_uint8(font_bank, (UINT8 *)font_ptr + sizeof(glyph_option_t));
+    for (UINT8 i = 0; i != count; ++i, ++addr) {
+        const UINT16 val = (bank == 0) ? *addr : get_uint16(bank, (UINT8 *)addr);
+        glyph_t glyph;
+        get_chunk((UINT8 *)&glyph, font_bank, (UINT8 *)(arb + val), sizeof(glyph_t));
+        gui_blit_char(size, &glyph, &opt);
+    }
+
+    return TRUE;
+}
+#endif /* USE_BLIT_TEXT_FUNCTIONS */
 
 #if USE_SGB_FUNCTIONS
 // Sends a packet of bytes to SGB device.

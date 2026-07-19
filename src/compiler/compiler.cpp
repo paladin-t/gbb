@@ -9782,6 +9782,7 @@ private:
 	enum class OperationTypes {
 		NONE,
 		PALETTE,
+		FONT,
 		TILE,
 		MAP,
 		SCENE,
@@ -9830,6 +9831,7 @@ public:
 			}
 			if (consume(Token::Types::KEYWORD, "get")) {
 				if (consume(Token::Types::KEYWORD, "palette")) { _type = OperationTypes::PALETTE; }
+				else if (consume(Token::Types::KEYWORD, "font")) { _type = OperationTypes::FONT; }
 				else if (consume(Token::Types::KEYWORD, "tile")) { _type = OperationTypes::TILE; }
 				else if (consume(Token::Types::KEYWORD, "map")) { _type = OperationTypes::MAP; }
 				else if (consume(Token::Types::KEYWORD, "scene")) { _type = OperationTypes::SCENE; }
@@ -9960,6 +9962,61 @@ public:
 
 					// Check the stack footprint.
 					CHECK_COUNTER(ctx, onError);
+				}
+
+				break;
+			case OperationTypes::FONT: {
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, nullptr)) byName_ = true;
+
+					Generator_Void_Byteptr opcodes = nullptr;
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
+					};
+					if (byName_) {
+						const FontAssets &fonts = ctx.assets->fonts;
+						int pageIndex = -1;
+						const FontAssets::Entry* fontEntry = fonts.find(name, &pageIndex); // By asset name.
+						if (fontEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::FONT, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							opcodes = [&] (Byte* &args) -> void {
+								const SourceLocation target(pageIndex);
+								_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
+								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+								args = fill(args, (Int16)ARG0);
+							};
+						} else {
+							std::string fuzzyName;
+							if (fonts.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						int page = -1;
+						Destination dest(0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::FONT, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						opcodes = [&] (Byte* &args) -> void {
+							const SourceLocation target(page, dest.left().get()); // `#pg`. By page number.
+							_scheduled = ScheduledBankOf(target, bytes->pointer(), args, false);
+							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+							args = fill(args, (Int16)ARG0);
+						};
+					}
+					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
 				}
 
 				break;
@@ -10515,6 +10572,18 @@ public:
 			GBBASIC_ASSERT(false && "Impossible.");
 
 			break;
+		case OperationTypes::FONT: {
+				const FontAssets &fonts = ctx.assets->fonts;
+				if (fonts.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.page < 0 || _scheduled.target.page >= fonts.count()) { THROW_INVALID_ASSET_POINT(onError); }
+				const FontAssets::Entry* font = fonts.get(_scheduled.target.page);
+				const int bank = font->bank;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (Int16)bank);
+			}
+
+			break;
 		case OperationTypes::TILE: {
 				if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
 				Pipeline::Resource::Array locations;
@@ -10712,6 +10781,7 @@ private:
 	enum class OperationTypes {
 		NONE,
 		PALETTE,
+		FONT,
 		TILE,
 		MAP,
 		SCENE,
@@ -10760,6 +10830,7 @@ public:
 			}
 			if (consume(Token::Types::KEYWORD, "get")) {
 				if (consume(Token::Types::KEYWORD, "palette")) { _type = OperationTypes::PALETTE; }
+				else if (consume(Token::Types::KEYWORD, "font")) { _type = OperationTypes::FONT; }
 				else if (consume(Token::Types::KEYWORD, "tile")) { _type = OperationTypes::TILE; }
 				else if (consume(Token::Types::KEYWORD, "map")) { _type = OperationTypes::MAP; }
 				else if (consume(Token::Types::KEYWORD, "scene")) { _type = OperationTypes::SCENE; }
@@ -10887,6 +10958,61 @@ public:
 
 					// Check the stack footprint.
 					CHECK_COUNTER(ctx, onError);
+				}
+
+				break;
+			case OperationTypes::FONT: {
+					std::string name;
+					bool byName_ = false;
+					if (isString(context, 0, &name, nullptr)) byName_ = true;
+
+					Generator_Void_Byteptr opcodes = nullptr;
+					Generator_Int_Counter argf = [&] (Counter &stk) -> int {
+						// Emit a `VM_PUSH` instruction to allocate for the return value for outer declaration.
+						Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
+						args = fill(args, (UInt16)0);
+
+						return 0; // The `VM_SET_CONST` instruction doesn't decrease the stack pointer.
+					};
+					if (byName_) {
+						const FontAssets &fonts = ctx.assets->fonts;
+						int pageIndex = -1;
+						const FontAssets::Entry* fontEntry = fonts.find(name, &pageIndex); // By asset name.
+						if (fontEntry) {
+							if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+							if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::FONT, pageIndex, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+							opcodes = [&] (Byte* &args) -> void {
+								const SourceLocation target(pageIndex);
+								_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
+								args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+								args = fill(args, (Int16)ARG0);
+							};
+						} else {
+							std::string fuzzyName;
+							if (fonts.fuzzy(name, nullptr, fuzzyName)) {
+								THROW_INVALID_ASSET_POINT_DID_YOU_MEAN(onError, fuzzyName);
+							}
+
+							THROW_INVALID_ASSET_POINT(onError);
+						}
+					} else /* From asset. */ {
+						int page = -1;
+						Destination dest(0);
+						const Token::Array tks = flatNumericDestinationTokens(context, page, &dest, 0);
+						if (tks.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+
+						if (!ctx.pipeline) { THROW_INVALID_ASSET_POINT(onError); }
+						if (!ctx.pipeline->touch(ctx.assets, AssetsBundle::Categories::FONT, page, true)) { THROW_INVALID_ASSET_POINT(onError); }
+
+						opcodes = [&] (Byte* &args) -> void {
+							const SourceLocation target(page, dest.left().get()); // `#pg`. By page number.
+							_scheduled = ScheduledAddressOf(target, bytes->pointer(), args, false);
+							args = fill(args, (Int16)COMPILER_PLACEHOLDER);
+							args = fill(args, (Int16)ARG0);
+						};
+					}
+					writeFunction(bytes, context, Asm::Types::SET_CONST, opcodes, -1, argf, nullptr, onError);
 				}
 
 				break;
@@ -11446,6 +11572,18 @@ public:
 		switch (_type) {
 		case OperationTypes::PALETTE:
 			GBBASIC_ASSERT(false && "Impossible.");
+
+			break;
+		case OperationTypes::FONT: {
+				const FontAssets &fonts = ctx.assets->fonts;
+				if (fonts.empty()) { THROW_INVALID_ASSET_POINT(onError); }
+				if (_scheduled.target.page < 0 || _scheduled.target.page >= fonts.count()) { THROW_INVALID_ASSET_POINT(onError); }
+				const FontAssets::Entry* font = fonts.get(_scheduled.target.page);
+				const int address = font->address;
+
+				Byte* args = _scheduled.args(bytes->pointer());
+				args = fill(args, (UInt16)address);
+			}
 
 			break;
 		case OperationTypes::TILE: {
@@ -32092,6 +32230,7 @@ public:
 			ADD_STATEMENT("rectfill",          node<NodeRect>("rectfill"),                 Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("text",              node<NodeText>(),                           Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("image",             node<NodeImageManipulation>(),              Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("font",              NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("tile",              node<NodeTileManipulation>(),               Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("map",               node<NodeMapManipulation>(),                Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("window",            node<NodeWindowManipulation>(),             Token::Types::KEYWORD,        false);
@@ -32102,6 +32241,8 @@ public:
 			ADD_STATEMENT("stop",              node<NodeRoutine>("stop"),                  Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("sound",             node<NodeSound>(),                          Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("beep",              node<NodeBeep>(),                           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("music",             NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("sfx",               NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 
 			// Input.
 			ADD_STATEMENT("btn",               node<NodeFunction>("btn", Defaults()),      Token::Types::KEYWORD,         true)
@@ -35508,6 +35649,7 @@ private:
 			else name = (std::string)id->data();
 			if (
 				name == "palette" ||
+				name == "font" ||
 				name == "tile" || name == "map" ||
 				name == "scene" || name == "actor" || name == "projectile" ||
 				name == "music" || name == "sfx" ||
@@ -35563,6 +35705,7 @@ private:
 			else name = (std::string)id->data();
 			if (
 				name == "palette" ||
+				name == "font" ||
 				name == "tile" || name == "map" ||
 				name == "scene" || name == "actor" || name == "projectile" ||
 				name == "music" || name == "sfx" ||
@@ -36143,6 +36286,7 @@ private:
 					if (name == "get") { // Bank getting.
 						const bool targets =
 							!!forwardN(2, Token::Types::KEYWORD, "palette")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "font")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "tile")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "map")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "scene")(q.index) ||
@@ -36165,6 +36309,7 @@ private:
 					if (name == "get") { // Address getting.
 						const bool targets =
 							!!forwardN(2, Token::Types::KEYWORD, "palette")(q.index) ||
+							!!forwardN(2, Token::Types::KEYWORD, "font")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "tile")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "map")(q.index) ||
 							!!forwardN(2, Token::Types::KEYWORD, "scene")(q.index) ||
@@ -39628,6 +39773,7 @@ private:
 					else name = (std::string)id->data();
 					if (
 						name == "palette" ||
+						name == "font" ||
 						name == "tile" || name == "map" ||
 						name == "scene" || name == "actor" || name == "projectile" ||
 						name == "music" || name == "sfx" ||
@@ -39701,6 +39847,7 @@ private:
 					else name = (std::string)id->data();
 					if (
 						name == "palette" ||
+						name == "font" ||
 						name == "tile" || name == "map" ||
 						name == "scene" || name == "actor" || name == "projectile" ||
 						name == "music" || name == "sfx" ||

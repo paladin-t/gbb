@@ -509,6 +509,10 @@
       "value": "1"
     },
     {
+      "syntax": "HAS_BLIT_TEXT_FUNCTIONS",
+      "value": "1"
+    },
+    {
       "syntax": "HAS_SGB_FUNCTIONS",
       "value": "1"
     },
@@ -565,6 +569,10 @@
     {
       "type": "generic",
       "syntax": "rumble"
+    },
+    {
+      "type": "generic",
+      "syntax": "blit_text"
     },
     {
       "type": "generic",
