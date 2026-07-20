@@ -608,6 +608,17 @@ private:
 
 			return false;
 		};
+		auto throwUnsupportedOperation = [&] (int idx, const std::string &op) -> bool {
+			if (idx == -1)
+				idx = cursor;
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
+			const std::string msg = Text::format("Unsupported operation \"{0}\"", { op });
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
 		auto throwWordExpected = [&] (int idx = -1) -> bool {
 			if (idx == -1)
 				idx = cursor;
@@ -847,6 +858,21 @@ private:
 						oprand = oprand & 0xff;
 					else if (unpackHighByte)
 						oprand = (oprand >> 8) & 0xff;
+
+					const IToken::Ptr tk_1 = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[cursor + 1] : nullptr;
+					const IToken::Ptr tk_2 = (cursor + 2 >= 0 && cursor + 2 < (int)tokens.size()) ? tokens[cursor + 2] : nullptr;
+					if (tk_1 && tk_1->is(IToken::Types::OPERATOR) && tk_2 && tk_2->is(IToken::Types::NUMBER)) {
+						const std::string op = (std::string)tk_1->data();
+						const int offset = (int)(Int)tk_2->data();
+						if (op == "+")
+							oprand += offset;
+						else if (op == "-")
+							oprand -= offset;
+						else
+							return throwUnsupportedOperation(cursor + 1, op);
+						cursor += 2;
+					}
+
 					oprands.push_back(oprand); // Number.
 					mnemonic += "*"; // Wildcard.
 				}

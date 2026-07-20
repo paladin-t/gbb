@@ -37272,6 +37272,18 @@ private:
 				const int r = q.index;
 				if (must(Token::Types::OPERATOR, "=")(q)) {
 					if (!New(q, children) && !Expression(q, children) && !Invoking(q, children, true) && !Is(q, children, true)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
+					if (
+						!children.empty() &&
+						in(
+							children.front()->type(),
+							{
+								INode::Types::DATA,
+								INode::Types::READ
+							}
+						)
+					) {
+						THROW_PARSER_ERROR(throwInvalidSyntax(q.index - 1));
+					}
 					if (forward(Token::Types::OPERATOR, ANYTHING)(q.index)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				} else {
 					if (let) { /* Do nothing. */ }
