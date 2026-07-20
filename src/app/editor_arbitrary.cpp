@@ -638,9 +638,14 @@ private:
 							if (sscanf(buf + 2, "%x", &hex) == 1 && hex <= 0x10ffff && !(hex >= 0xd800 && hex <= 0xdfff))
 								cp = (Font::Codepoint)hex;
 						} else {
-							const long long num = std::atoll(buf);
-							if (num >= 0 && num <= 0x10ffff && !(num >= 0xd800 && num <= 0xdfff))
-								cp = (Font::Codepoint)num;
+							long long num = 0;
+							if (Text::fromString(buf, num)) {
+								if (num >= 0 && num <= 0x10ffff && !(num >= 0xd800 && num <= 0xdfff))
+									cp = (Font::Codepoint)num;
+							} else {
+								const std::u32string u32str = Unicode::toUtf32(buf);
+								cp = !u32str.empty() ? (Font::Codepoint)u32str.front() : 0;
+							}
 						}
 						if (cp > 0) {
 							std::u32string u32str;
@@ -891,9 +896,15 @@ private:
 			if (sscanf(buf + 2, "%x", &hex) == 1 && hex <= 0x10ffff && !(hex >= 0xd800 && hex <= 0xdfff))
 				return (Font::Codepoint)hex;
 		} else {
-			const long long num = std::atoll(buf);
-			if (num >= 0 && num <= 0x10ffff && !(num >= 0xd800 && num <= 0xdfff))
-				return (Font::Codepoint)num;
+			long long num = 0;
+			if (Text::fromString(buf, num)) {
+				if (num >= 0 && num <= 0x10ffff && !(num >= 0xd800 && num <= 0xdfff))
+					return (Font::Codepoint)num;
+			} else {
+				const std::u32string u32str = Unicode::toUtf32(buf);
+
+				return !u32str.empty() ? (Font::Codepoint)u32str.front() : 0;
+			}
 		}
 
 		return 0;
