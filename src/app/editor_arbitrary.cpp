@@ -548,6 +548,11 @@ public:
 					const std::string str = Text::toString(i) + "(" + ch + ")";
 					_headers.push_back(str);
 				}
+
+				_rangesShadow.clear();
+				_selectedPresetRangeIndex = -1;
+				_rangeStart = 0;
+				_rangeEnd = 0;
 			}
 
 			if (!_init.begin() && !_init.end())
