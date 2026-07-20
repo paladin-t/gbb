@@ -7,6 +7,35 @@
 
 /**< ROM banking. */
 
+UINT8 get_byte(void) NONBANKED NAKED {
+#if defined __SDCC && defined NINTENDO
+__asm
+    ld	c, a
+    // const UINT8 _save = CURRENT_BANK;
+    ldh	a, (__current_bank)
+    ld	b, a
+    // SWITCH_ROM_BANK(bank);
+    ld	a, c
+    ldh	(__current_bank), a
+    ld	hl, #_rROMB0
+    ld	(hl), c
+    // const UINT8 result = *ptr;
+    ld	a, (de)
+    ld	c, a
+    // SWITCH_ROM_BANK(_save);
+    ld	a, b
+    ldh	(__current_bank), a
+    ld	(hl), b
+
+    // return result;
+    ld	a, c
+    ret
+__endasm;
+#else /* __SDCC && NINTENDO */
+#   error "Not implemented."
+#endif /* __SDCC && NINTENDO */
+}
+
 UINT8 get_uint8(UINT8 bank, const UINT8 * ptr) NONBANKED {
     const UINT8 _save = CURRENT_BANK;
     SWITCH_ROM_BANK(bank);

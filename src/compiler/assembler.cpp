@@ -684,6 +684,7 @@ private:
 		Oprands oprands;
 		std::string oprandType;
 		std::string labelRefName;
+		int labelRefOffset = 0;
 
 		cursor = lnBegin;
 		++cursor; // Ignore the line number.
@@ -838,6 +839,21 @@ private:
 					context.labels.find(data) != context.labels.end()
 				) {
 					labelRefName = data;
+
+					const IToken::Ptr tk_1 = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[cursor + 1] : nullptr;
+					const IToken::Ptr tk_2 = (cursor + 2 >= 0 && cursor + 2 < (int)tokens.size()) ? tokens[cursor + 2] : nullptr;
+					if (tk_1 && tk_1->is(IToken::Types::OPERATOR) && tk_2 && tk_2->is(IToken::Types::NUMBER)) {
+						const std::string op = (std::string)tk_1->data();
+						const int offset = (int)(Int)tk_2->data();
+						if (op == "+")
+							labelRefOffset = offset;
+						else if (op == "-")
+							labelRefOffset = -offset;
+						else
+							return throwUnsupportedOperation(cursor + 1, op);
+						cursor += 2;
+					}
+
 					oprands.push_back(0); // Placeholder.
 					mnemonic += "*"; // Wildcard.
 				} else { // Is an identifier.
@@ -988,7 +1004,7 @@ private:
 				const Context::LabelRef labelRef(
 					cursor - 1,
 					labelRefName,
-					context.size,
+					context.size + labelRefOffset,
 					(oprandType == "n16" || oprandType == "a16") ? Context::LabelRef::Types::ADDRESS : Context::LabelRef::Types::OFFSET
 				);
 				context.labelRefs.push_back(labelRef);

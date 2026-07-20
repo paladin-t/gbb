@@ -33,6 +33,7 @@
 #define ASSET_SOURCE_DATA                        2
 #define ASSET_SOURCE_FAR                         3
 
+UINT8 get_byte(void) NONBANKED NAKED;
 UINT8 get_uint8(UINT8 bank, const UINT8 * ptr) NONBANKED;
 void get_chunk(UINT8 * dst, UINT8 bank, const UINT8 * ptr, UINT8 size) NONBANKED;
 inline INT8 get_int8(UINT8 bank, const UINT8 * ptr) {
