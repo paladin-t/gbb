@@ -330,6 +330,8 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Add("Add");
 	menu_Anchor("Anchor");
 	menu_Application("Application");
+	menu_ArbitraryMapping("Arbitrary Mapping");
+	menu_ArbitraryMappingFile("Arbitrary Mapping File...");
 	menu_Attributes("Attributes");
 	menu_Bank("Bank");
 	menu_Bin("BIN");
@@ -403,8 +405,6 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Library("Library");
 	menu_Manual("Manual...");
 	menu_Map("Map");
-	menu_Mapping("Mapping");
-	menu_MappingFile("Mapping File...");
 	menu_MoreOfficialKernels("More Official Kernels");
 	menu_MoveBackward("Move Backward");
 	menu_MoveDown("Move Down");

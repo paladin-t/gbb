@@ -2066,7 +2066,7 @@ private:
 
 				ImGui::SetTooltip(ws->theme()->tooltip_ViaClipboard());
 			}
-			if (ImGui::MenuItem(ws->theme()->menu_Mapping())) {
+			if (ImGui::MenuItem(ws->theme()->menu_ArbitraryMapping())) {
 				do {
 					std::string txt;
 					if (!entry()->serializeArbitraryMappingToCsv(txt))
@@ -2084,7 +2084,7 @@ private:
 
 				ImGui::SetTooltip(ws->theme()->tooltip_ViaClipboardCsv());
 			}
-			if (ImGui::MenuItem(ws->theme()->menu_MappingFile())) {
+			if (ImGui::MenuItem(ws->theme()->menu_ArbitraryMappingFile())) {
 				do {
 					pfd::save_file save(
 						ws->theme()->generic_SaveTo(),
