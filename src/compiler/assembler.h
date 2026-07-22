@@ -72,7 +72,7 @@ public:
 		AssemblingOptions(int b, int addr, IdentifierResolver resolveid, ErrorHandler onerr);
 	};
 	struct PostingOptions {
-		typedef std::function<bool(const std::string &, int &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
+		typedef std::function<bool(const IToken::Ptr &, int &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
 		typedef std::function<Byte*(const Byte*)> ArgsResolver;
 
 		int bank = 0;

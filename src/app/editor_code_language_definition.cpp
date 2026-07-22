@@ -529,7 +529,10 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 		"db", "dw",
 
 		// Unpacking.
-		"low", "high"
+		"low", "high",
+
+		// Banking.
+		"bank"
 	};
 	for (const char* const k : ASM_KEYWORDS) {
 		langDef.AsmKeys.insert(std::string(k));

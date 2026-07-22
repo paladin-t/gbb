@@ -476,7 +476,9 @@ public:
 				RamLocation loc;
 				std::string id;
 				std::string fuzzyName;
-				if (options.resolveIdentifier(lblRef.label, bank, loc, id, fuzzyName)) {
+				const int idx = Math::clamp(lblRef.tokenIndex, 0, (int)tokens.size() - 1);
+				const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
+				if (options.resolveIdentifier(tk, bank, loc, id, fuzzyName)) {
 					address = loc.address;
 				} else {
 					if (!fuzzyName.empty())
@@ -715,6 +717,7 @@ private:
 		std::string opcode;
 		Oprands oprands;
 		std::string oprandType;
+		int labelRefTokenIndex = -1;
 		std::string labelRefName;
 		int labelRefOffset = 0;
 
@@ -757,8 +760,10 @@ private:
 
 		bool unpackLowByte = false;
 		bool unpackHighByte = false;
+		bool addressBank = false;
 		bool expectOpenBracket = false;
 		bool expectCloseBracket = false;
+		bool includeCloseBracket = false;
 		for (; cursor < lnEnd; ++cursor) {
 			// Prepare.
 			if (cursor == lnEnd - 1) continue; // Ignore the line end.
@@ -814,7 +819,7 @@ private:
 			if (tk->is(IToken::Types::IDENTIFIER)) {
 				const std::string data = (std::string)tk->data();
 				if (data == "low") {
-					if (unpackLowByte || unpackHighByte || expectOpenBracket || expectCloseBracket)
+					if ((unpackLowByte || unpackHighByte || addressBank) || (expectOpenBracket || expectCloseBracket))
 						return throwUnexpectedToken(cursor, tk->caseSensitiveText());
 
 					unpackLowByte = true;
@@ -822,10 +827,18 @@ private:
 
 					continue;
 				} else if (data == "high") {
-					if (unpackLowByte || unpackHighByte || expectOpenBracket || expectCloseBracket)
+					if ((unpackLowByte || unpackHighByte || addressBank) || (expectOpenBracket || expectCloseBracket))
 						return throwUnexpectedToken(cursor, tk->caseSensitiveText());
 
 					unpackHighByte = true;
+					expectOpenBracket = true;
+
+					continue;
+				} else if (data == "bank") {
+					if ((unpackLowByte || unpackHighByte || addressBank) || (expectOpenBracket || expectCloseBracket))
+						return throwUnexpectedToken(cursor, tk->caseSensitiveText());
+
+					addressBank = true;
 					expectOpenBracket = true;
 
 					continue;
@@ -833,28 +846,37 @@ private:
 			} else if (tk->is(IToken::Types::OPERATOR)) {
 				const std::string data = (std::string)tk->data();
 				if (data == "<") {
-					if (unpackLowByte || unpackHighByte || expectOpenBracket || expectCloseBracket)
+					if ((unpackLowByte || unpackHighByte || addressBank) || (expectOpenBracket || expectCloseBracket))
 						return throwUnexpectedToken(cursor, tk->caseSensitiveText());
 
 					unpackLowByte = true;
 
 					continue;
 				} else if (data == ">") {
-					if (unpackLowByte || unpackHighByte || expectOpenBracket || expectCloseBracket)
+					if ((unpackLowByte || unpackHighByte || addressBank) || (expectOpenBracket || expectCloseBracket))
 						return throwUnexpectedToken(cursor, tk->caseSensitiveText());
 
 					unpackHighByte = true;
 
 					continue;
-				} else if ((unpackLowByte || unpackHighByte) && expectOpenBracket && data == "(") {
+				} else if ((unpackLowByte || unpackHighByte || addressBank) && (expectOpenBracket && data == "(")) {
 					expectOpenBracket = false;
 					expectCloseBracket = true;
+					includeCloseBracket = false;
 
 					continue;
 				} else if (expectCloseBracket && data == ")") {
+					const bool inc = includeCloseBracket;
 					expectCloseBracket = false;
-
-					continue;
+					includeCloseBracket = false;
+					if (!inc)
+						continue;
+				} else if (!(unpackLowByte || unpackHighByte || addressBank) && data == "(") {
+					expectOpenBracket = false;
+					expectCloseBracket = true;
+					includeCloseBracket = true;
+				} else if (!expectCloseBracket && data == ")") {
+					return throwUnexpectedToken(cursor, tk->caseSensitiveText());
 				}
 			}
 			if (expectOpenBracket) {
@@ -870,6 +892,7 @@ private:
 					opcode == "jp" || opcode == "jr" || opcode == "call" ||
 					context.labels.find(data) != context.labels.end()
 				) {
+					labelRefTokenIndex = cursor;
 					labelRefName = data;
 
 					const IToken::Ptr tk_1 = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[cursor + 1] : nullptr;
@@ -906,6 +929,8 @@ private:
 						oprand = oprand & 0xff;
 					else if (unpackHighByte)
 						oprand = (oprand >> 8) & 0xff;
+					else if (addressBank)
+						oprand = bank;
 
 					const IToken::Ptr tk_1 = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[cursor + 1] : nullptr;
 					const IToken::Ptr tk_2 = (cursor + 2 >= 0 && cursor + 2 < (int)tokens.size()) ? tokens[cursor + 2] : nullptr;
@@ -951,6 +976,8 @@ private:
 						oprand = oprand & 0xff;
 					else if (unpackHighByte)
 						oprand = (oprand >> 8) & 0xff;
+					else if (addressBank)
+						return throwUnsupportedOperation(cursor, "bank");
 					oprands.push_back(oprand); // Number.
 					mnemonic += "*"; // Wildcard.
 				}
@@ -962,6 +989,7 @@ private:
 
 			unpackLowByte = false;
 			unpackHighByte = false;
+			addressBank = false;
 		}
 		if (expectOpenBracket || expectCloseBracket) {
 			const int idx = Math::clamp(cursor - 1, 0, (int)tokens.size() - 1);
@@ -1033,11 +1061,14 @@ private:
 
 			// Resolve jump destination.
 			if (!labelRefName.empty()) {
+				Context::LabelRef::Types type = Context::LabelRef::Types::ADDRESS;
+				if (!(oprandType == "n16" || oprandType == "a16"))
+					type = Context::LabelRef::Types::OFFSET;
 				const Context::LabelRef labelRef(
-					cursor - 1,
+					labelRefTokenIndex,
 					labelRefName,
 					context.size + labelRefOffset,
-					(oprandType == "n16" || oprandType == "a16") ? Context::LabelRef::Types::ADDRESS : Context::LabelRef::Types::OFFSET
+					type
 				);
 				context.labelRefs.push_back(labelRef);
 			}

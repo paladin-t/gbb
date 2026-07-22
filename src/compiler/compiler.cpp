@@ -15769,7 +15769,13 @@ public:
 			const Assembler::AssemblingOptions options(
 				bank, address,
 				[&] (const IToken::Ptr &tk, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool { // Resolve identifier.
+					const std::string caseSensitiveName = (std::string)tk->caseSensitiveText();
 					const std::string name = (std::string)tk->data();
+					if (resolveIdentifier(ctx, caseSensitiveName, bank_, loc, id_, fuzzyName_))
+						return true;
+
+					if (caseSensitiveName == name)
+						return false;
 
 					return resolveIdentifier(ctx, name, bank_, loc, id_, fuzzyName_);
 				},
@@ -15892,15 +15898,17 @@ public:
 
 		const Assembler::PostingOptions options(
 			ctx.bank, _scheduled.baseAddress,
-			std::bind( // Resolve identifier.
-				&NodeBeginAsm::resolveIdentifier, this,
-				ctx,
-				std::placeholders::_1,
-				std::placeholders::_2,
-				std::placeholders::_3,
-				std::placeholders::_4,
-				std::placeholders::_5
-			),
+			[&] (const IToken::Ptr &tk, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool { // Resolve identifier.
+				const std::string caseSensitiveName = (std::string)tk->caseSensitiveText();
+				const std::string name = (std::string)tk->data();
+				if (resolveIdentifier(ctx, caseSensitiveName, bank_, loc, id_, fuzzyName_))
+					return true;
+
+				if (caseSensitiveName == name)
+					return false;
+
+				return resolveIdentifier(ctx, name, bank_, loc, id_, fuzzyName_);
+			},
 			[&] (const Byte* begin) -> Byte* {
 				return _scheduled.args(begin);
 			},
