@@ -411,10 +411,28 @@ public:
 	}
 	virtual bool post(Bytes::Ptr &bytes, Context &context, const IToken::Array &tokens, const PostingOptions &options) const override {
 		// Error handlers.
+		auto throwInvalidProgramOffset = [&] (int idx = -1) -> bool {
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
+			const std::string msg = "Invalid program offset";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
 		auto throwInvalidProgramPoint = [&] (int idx = -1) -> bool {
 			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
 			const std::string msg = "Invalid program point";
+			if (options.onError)
+				options.onError(msg, tk);
+
+			return false;
+		};
+		auto throwInvalidProgramPointDidYouMean = [&] (int idx, const std::string &id, const std::string &fuzzy) -> bool {
+			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
+			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
+			const std::string msg = Text::format("Invalid program point \"{0}\", did you mean \"{1}\"", { id, fuzzy });
 			if (options.onError)
 				options.onError(msg, tk);
 
@@ -448,11 +466,25 @@ public:
 
 		// Fill the addresses.
 		for (const Assembler::Context::LabelRef &lblRef : context.labelRefs) {
+			int address = 0;
 			Assembler::Context::LabeledDestination::Dictionary::const_iterator it = context.labels.find(lblRef.label);
-			if (it == context.labels.end()) return throwInvalidProgramPoint(lblRef.tokenIndex);
+			if (it != context.labels.end()) {
+				const Assembler::Context::LabeledDestination &dest = it->second;
+				address = options.baseAddress + dest.address;
+			} else {
+				int bank = -1;
+				RamLocation loc;
+				std::string id;
+				std::string fuzzyName;
+				if (options.resolveIdentifier(lblRef.label, bank, loc, id, fuzzyName)) {
+					address = loc.address;
+				} else {
+					if (!fuzzyName.empty())
+						return throwInvalidProgramPointDidYouMean(lblRef.tokenIndex, id, fuzzyName);
 
-			const Assembler::Context::LabeledDestination &dest = it->second;
-			const int address = options.baseAddress + dest.address;
+					return throwInvalidProgramPoint(lblRef.tokenIndex);
+				}
+			}
 
 			Byte* args = options.resolveArgs(bytes->pointer()) + lblRef.offset;
 			if (lblRef.type == Assembler::Context::LabelRef::Types::ADDRESS) {
@@ -460,7 +492,7 @@ public:
 			} else if (lblRef.type == Assembler::Context::LabelRef::Types::OFFSET) {
 				const int relOffset = address - (options.baseAddress + lblRef.offset + 1);
 				if (relOffset < std::numeric_limits<Int8>::min() || relOffset > std::numeric_limits<Int8>::max())
-					return throwInvalidProgramPoint(lblRef.tokenIndex);
+					return throwInvalidProgramOffset(lblRef.tokenIndex);
 
 				args = fillInt8(args, (Int8)relOffset);
 			}
@@ -1102,8 +1134,9 @@ Assembler::AssemblingOptions::AssemblingOptions(int b, int addr, IdentifierResol
 Assembler::PostingOptions::PostingOptions() {
 }
 
-Assembler::PostingOptions::PostingOptions(int b, int addr, ArgsResolver resolveargs, ErrorHandler onerr) :
+Assembler::PostingOptions::PostingOptions(int b, int addr, IdentifierResolver resolveid, ArgsResolver resolveargs, ErrorHandler onerr) :
 	bank(b), baseAddress(addr),
+	resolveIdentifier(resolveid),
 	resolveArgs(resolveargs),
 	onError(onerr)
 {

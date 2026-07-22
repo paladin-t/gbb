@@ -7755,7 +7755,7 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 					editor->paste();
 				}
 			);
-		} else if (del && !modifier && !io.KeyShift && !io.KeyAlt) {
+		} else if (del /* && !modifier */ && !io.KeyShift && !io.KeyAlt) {
 			withCurrentAsset(
 				[io] (Categories /* cat */, BaseAssets::Entry* /* entry */, Editable* editor) -> void {
 					editor->del(io.KeyShift);

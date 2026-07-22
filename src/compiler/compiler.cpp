@@ -15768,77 +15768,10 @@ public:
 			// Assemble the instructions.
 			const Assembler::AssemblingOptions options(
 				bank, address,
-				/* Resolve BASIC identifier */ [&] (const IToken::Ptr &tk, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool {
-					// Prepare.
-					bank_ = 0;
-					loc = RamLocation();
-
+				[&] (const IToken::Ptr &tk, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool { // Resolve identifier.
 					const std::string name = (std::string)tk->data();
-					std::string fuzzyName;
-					int bank = -1;
-					int address = -1;
-					bool found = false;
 
-					// Search for named assembly block.
-					const RomLocation* romLocation = ctx.namedAssemblyBlocks->find(name);
-					if (romLocation) {
-						bank = romLocation->bank;
-						address = romLocation->address;
-						found = true;
-
-						bank_ = bank;
-						loc = RamLocation(RamLocation::Types::NONE, address, romLocation->size, RamLocation::Usages::NONE, TextLocation());
-					}
-
-					// Search for builtin name.
-					if (!found) {
-						if (ctx.symbols) {
-							const RomLocation* romLocation = ctx.symbols->find(name);
-							if (romLocation) { // By builtin name.
-								bank = romLocation->bank;
-								address = romLocation->address;
-								found = true;
-
-								bank_ = bank;
-								loc = RamLocation(RamLocation::Types::NONE, address, romLocation->size, RamLocation::Usages::NONE, TextLocation());
-							}
-						}
-					}
-
-					// Search for identifier.
-					if (!found) {
-						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
-						const RamLocation* ramLocation = ctx.findPageAndGlobal(name, fuzzyName);
-						const Context::Array::Dimensions* dimensions = ctx.array->find(name);
-						if (scriptMemoryRamLocation && ramLocation) {
-							if (dimensions) { // By array name.
-								address =
-									scriptMemoryRamLocation->address /* start address */ +
-									ramLocation->address /* address in RAM as `int16_t*` */ *
-									WORD_SIZE /* 2 bytes per word */;
-							} else { // By variable name.
-								address =
-									scriptMemoryRamLocation->address /* start address */ +
-									ramLocation->address /* address in RAM as `int16_t*` */ *
-									WORD_SIZE /* 2 bytes per word */;
-							}
-							found = true;
-
-							bank_ = 0;
-							loc = *ramLocation;
-							loc.address = address;
-						}
-					}
-
-					// Finish.
-					if (!found) {
-						id_ = name;
-						fuzzyName_ = fuzzyName;
-
-						return false;
-					}
-
-					return true;
+					return resolveIdentifier(ctx, name, bank_, loc, id_, fuzzyName_);
 				},
 				[&] (const std::string &msg, const IToken::Ptr &tk) -> void {
 					const Error err(msg, false);
@@ -15959,6 +15892,15 @@ public:
 
 		const Assembler::PostingOptions options(
 			ctx.bank, _scheduled.baseAddress,
+			std::bind( // Resolve identifier.
+				&NodeBeginAsm::resolveIdentifier, this,
+				ctx,
+				std::placeholders::_1,
+				std::placeholders::_2,
+				std::placeholders::_3,
+				std::placeholders::_4,
+				std::placeholders::_5
+			),
 			[&] (const Byte* begin) -> Byte* {
 				return _scheduled.args(begin);
 			},
@@ -15979,6 +15921,79 @@ public:
 		return dump(depth, "BEGIN ASM");
 	}
 	using Node::dump;
+
+private:
+	bool resolveIdentifier(Context &ctx, const std::string &name, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) const {
+		// Prepare.
+		bank_ = 0;
+		loc = RamLocation();
+
+		std::string fuzzyName;
+		int bank = -1;
+		int address = -1;
+		bool found = false;
+
+		// Search for named assembly block.
+		const RomLocation* romLocation = ctx.namedAssemblyBlocks->find(name);
+		if (romLocation) {
+			bank = romLocation->bank;
+			address = romLocation->address;
+			found = true;
+
+			bank_ = bank;
+			loc = RamLocation(RamLocation::Types::NONE, address, romLocation->size, RamLocation::Usages::NONE, TextLocation());
+		}
+
+		// Search for builtin name.
+		if (!found) {
+			if (ctx.symbols) {
+				const RomLocation* romLocation = ctx.symbols->find(name);
+				if (romLocation) { // By builtin name.
+					bank = romLocation->bank;
+					address = romLocation->address;
+					found = true;
+
+					bank_ = bank;
+					loc = RamLocation(RamLocation::Types::NONE, address, romLocation->size, RamLocation::Usages::NONE, TextLocation());
+				}
+			}
+		}
+
+		// Search for identifier.
+		if (!found) {
+			const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+			const RamLocation* ramLocation = ctx.findPageAndGlobal(name, fuzzyName);
+			const Context::Array::Dimensions* dimensions = ctx.array->find(name);
+			if (scriptMemoryRamLocation && ramLocation) {
+				if (dimensions) { // By array name.
+					address =
+						scriptMemoryRamLocation->address /* start address */ +
+						ramLocation->address /* address in RAM as `int16_t*` */ *
+						WORD_SIZE /* 2 bytes per word */;
+				} else { // By variable name.
+					address =
+						scriptMemoryRamLocation->address /* start address */ +
+						ramLocation->address /* address in RAM as `int16_t*` */ *
+						WORD_SIZE /* 2 bytes per word */;
+				}
+				found = true;
+
+				bank_ = 0;
+				loc = *ramLocation;
+				loc.address = address;
+			}
+		}
+
+		// Finish.
+		if (!found) {
+			id_ = name;
+			fuzzyName_ = fuzzyName;
+
+			return false;
+		}
+
+		return true;
+	}
 };
 
 /* ===========================================================================} */
