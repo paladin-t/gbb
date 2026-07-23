@@ -94,8 +94,9 @@ static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A8[] = {
 };
 static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A16[] = {
 	"ld (a16),sp",
-	"jp nz,a16",   "jp a16",      "call nz,a16", "jp z,a16",   "call z,a16", "call a16",
-	"jp nc,a16",   "call nc,a16", "jp c,a16",    "call c,a16",
+	"jp a16",      "call a16",
+	"jp nz,a16",   "call nz,a16", "jp z,a16", "call z,a16",
+	"jp nc,a16",   "call nc,a16", "jp c,a16", "call c,a16",
 	"ld (a16),a",
 	"ld a,(a16)"
 };
