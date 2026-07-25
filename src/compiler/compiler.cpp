@@ -4739,7 +4739,17 @@ public:
 				}
 			};
 			struct Labeled {
-				typedef std::map<Labeled, int> Dictionary;
+				struct Info {
+					int dataCursor = 0;
+					int count = 0;
+
+					Info() {
+					}
+					Info(int cursor, int n) : dataCursor(cursor), count(n) {
+					}
+				};
+
+				typedef std::map<Labeled, Info> Dictionary;
 
 				int page = 0;     // The page index of the label.
 				std::string name; // The name of the label.
@@ -4808,12 +4818,18 @@ public:
 
 				return -1;
 			}
-			int find(int page, const std::string &name) const { // Gets the data index by label name.
+			int find(bool optionalPage, int page, const std::string &name) const { // Gets the data index by label name.
 				Labeled::Dictionary::const_iterator it = labeled.find(Labeled(page, name));
-				if (it == labeled.end())
-					return -1;
+				if (it != labeled.end())
+					return it->second.dataCursor;
 
-				return it->second;
+				if (optionalPage) {
+					it = labeled.find(Labeled(-1, name));
+					if (it != labeled.end() && it->second.count == 1) // Unique.
+						return it->second.dataCursor;
+				}
+
+				return -1;
 			}
 		};
 
@@ -19262,7 +19278,7 @@ public:
 					address = ctx.data->find(PAGE(page, state.inCode.page), dest.left().get()); // `#pg:lno`. By line number.
 			} else {
 				if (ctx.data)
-					address = ctx.data->find(PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
+					address = ctx.data->find(MAYBE_PAGE(page, state.inCode.page), dest.right().get()); // `#pg:lbl`. By label.
 			}
 			if (address == -1) {
 #if !DATA_SEQUENCE_WITH_CONSTANT_ONLY
@@ -38787,7 +38803,24 @@ private:
 				if (!name.empty() && name.back() == ':')
 					name.pop_back();
 				const int dataCursor = (int)data.size();
-				data.labeled.insert(std::make_pair(Node::Context::Data::Labeled(page, name), dataCursor));
+				const Node::Context::Data::Labeled key(page, name);
+				Node::Context::Data::Labeled::Dictionary::iterator it = data.labeled.find(key);
+				if (it == data.labeled.end()) {
+					const Node::Context::Data::Labeled::Info info(dataCursor, 1);
+					data.labeled.insert(std::make_pair(key, info));
+				} else {
+					Node::Context::Data::Labeled::Info &info = it->second;
+					++info.count;
+				}
+				const Node::Context::Data::Labeled globalKey(-1, name);
+				it = data.labeled.find(globalKey);
+				if (it == data.labeled.end()) {
+					const Node::Context::Data::Labeled::Info info(dataCursor, 1);
+					data.labeled.insert(std::make_pair(globalKey, info));
+				} else {
+					Node::Context::Data::Labeled::Info &info = it->second;
+					++info.count;
+				}
 
 				Node::Ptr dst(new NodeDestination());
 				std::string caseSensitiveName = tk->caseSensitiveText();
