@@ -479,13 +479,13 @@ public:
 				std::string fuzzyName;
 				const int idx = Math::clamp(lblRef.tokenIndex, 0, (int)tokens.size() - 1);
 				const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
-				if (options.resolveIdentifier(tk, bank, loc, id, fuzzyName)) {
-					address = loc.address;
-				} else {
+				if (options.resolveIdentifier(tk, bank, loc, id, fuzzyName) == IdentifierResolvingResults::NONE) {
 					if (!fuzzyName.empty())
 						return throwInvalidProgramPointDidYouMean(lblRef.tokenIndex, id, fuzzyName);
 
 					return throwInvalidProgramPoint(lblRef.tokenIndex);
+				} else {
+					address = loc.address;
 				}
 			}
 
@@ -885,6 +885,41 @@ private:
 			}
 
 			// Handle instructions.
+			auto resolveNumericOpcode = [unpackLowByte, unpackHighByte, addressBank, throwUnsupportedOperation] (
+				const IToken::Array &tokens, const std::string &opcode, int oprand, std::string &mnemonic, Oprands &oprands, int &cursor
+			) -> bool {
+				if (opcode == "bit" || opcode == "res" || opcode == "set") {
+					mnemonic += Text::toString(oprand);
+				} else if (opcode == "rst") {
+					const int idx = cursor + 1;
+					bool endsWithH = false;
+					if (idx >= 0 && idx < (int)tokens.size()) {
+						const IToken::Ptr &ntk = tokens[idx];
+						std::string ntxt = (std::string)ntk->data();
+						Text::toLowerCase(ntxt);
+						if (ntxt == "h") {
+							endsWithH = true;
+							++cursor;
+						}
+					}
+					const std::string data = endsWithH ?
+						(Text::toHex(oprand, 2, '0', true) + "h") :
+						("0x" + Text::toHex(oprand, 2, '0', true));
+					mnemonic += data;
+				} else {
+					if (unpackLowByte)
+						oprand = oprand & 0xff;
+					else if (unpackHighByte)
+						oprand = (oprand >> 8) & 0xff;
+					else if (addressBank)
+						return throwUnsupportedOperation(cursor, "bank");
+					oprands.push_back(oprand); // Number.
+					mnemonic += "*"; // Wildcard.
+				}
+
+				return true;
+			};
+
 			if (isOpcode(tk)) {
 				const std::string data = (std::string)tk->data();
 				if (_registers.find(data) != _registers.end()) { // Is a register.
@@ -918,70 +953,49 @@ private:
 					RamLocation loc;
 					std::string id;
 					std::string fuzzyName;
-					if (!options.resolveIdentifier(tk, bank, loc, id, fuzzyName)) {
+					const IdentifierResolvingResults ret = options.resolveIdentifier(tk, bank, loc, id, fuzzyName);
+					if (ret == IdentifierResolvingResults::NONE) {
 						if (!fuzzyName.empty())
 							return throwIdHasNotBeenDeclaredDidYouMean(cursor, id, fuzzyName);
 
 						return throwIdHasNotBeenDeclared(cursor, id);
+					} else if (ret == IdentifierResolvingResults::NUMBER) {
+						const int oprand = loc.address;
+						if (!resolveNumericOpcode(tokens, opcode, oprand, mnemonic, oprands, cursor))
+							return false;
+					} else {
+						int oprand = loc.address;
+						if (unpackLowByte)
+							oprand = oprand & 0xff;
+						else if (unpackHighByte)
+							oprand = (oprand >> 8) & 0xff;
+						else if (addressBank)
+							oprand = bank;
+
+						const IToken::Ptr tk_1 = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[cursor + 1] : nullptr;
+						const IToken::Ptr tk_2 = (cursor + 2 >= 0 && cursor + 2 < (int)tokens.size()) ? tokens[cursor + 2] : nullptr;
+						if (tk_1 && tk_1->is(IToken::Types::OPERATOR) && tk_2 && tk_2->is(IToken::Types::NUMBER)) {
+							const std::string op = (std::string)tk_1->data();
+							const int offset = (int)(Int)tk_2->data();
+							if (op == "+")
+								oprand += offset;
+							else if (op == "-")
+								oprand -= offset;
+							else
+								return throwUnsupportedOperation(cursor + 1, op);
+							cursor += 2;
+						}
+
+						oprands.push_back(oprand); // Number.
+						mnemonic += "*"; // Wildcard.
 					}
-
-					int oprand = loc.address;
-					if (unpackLowByte)
-						oprand = oprand & 0xff;
-					else if (unpackHighByte)
-						oprand = (oprand >> 8) & 0xff;
-					else if (addressBank)
-						oprand = bank;
-
-					const IToken::Ptr tk_1 = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[cursor + 1] : nullptr;
-					const IToken::Ptr tk_2 = (cursor + 2 >= 0 && cursor + 2 < (int)tokens.size()) ? tokens[cursor + 2] : nullptr;
-					if (tk_1 && tk_1->is(IToken::Types::OPERATOR) && tk_2 && tk_2->is(IToken::Types::NUMBER)) {
-						const std::string op = (std::string)tk_1->data();
-						const int offset = (int)(Int)tk_2->data();
-						if (op == "+")
-							oprand += offset;
-						else if (op == "-")
-							oprand -= offset;
-						else
-							return throwUnsupportedOperation(cursor + 1, op);
-						cursor += 2;
-					}
-
-					oprands.push_back(oprand); // Number.
-					mnemonic += "*"; // Wildcard.
 				}
 			} else if (tk->is(IToken::Types::OPERATOR)) {
 				mnemonic += (std::string)tk->data();
 			} else if (tk->is(IToken::Types::NUMBER)) {
-				int oprand = (int)(Int)tk->data();
-				if (opcode == "bit" || opcode == "res" || opcode == "set") {
-					mnemonic += Text::toString(oprand);
-				} else if (opcode == "rst") {
-					const int idx = cursor + 1;
-					bool endsWithH = false;
-					if (idx >= 0 && idx < (int)tokens.size()) {
-						const IToken::Ptr &ntk = tokens[idx];
-						std::string ntxt = (std::string)ntk->data();
-						Text::toLowerCase(ntxt);
-						if (ntxt == "h") {
-							endsWithH = true;
-							++cursor;
-						}
-					}
-					const std::string data = endsWithH ?
-						(Text::toHex(oprand, 2, '0', true) + "h") :
-						("0x" + Text::toHex(oprand, 2, '0', true));
-					mnemonic += data;
-				} else {
-					if (unpackLowByte)
-						oprand = oprand & 0xff;
-					else if (unpackHighByte)
-						oprand = (oprand >> 8) & 0xff;
-					else if (addressBank)
-						return throwUnsupportedOperation(cursor, "bank");
-					oprands.push_back(oprand); // Number.
-					mnemonic += "*"; // Wildcard.
-				}
+				const int oprand = (int)(Int)tk->data();
+				if (!resolveNumericOpcode(tokens, opcode, oprand, mnemonic, oprands, cursor))
+					return false;
 			} else if (tk->is(IToken::Types::COMMENT)) {
 				// Do nothing.
 			} else {

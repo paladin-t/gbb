@@ -60,8 +60,14 @@ public:
 		Context();
 	};
 
+	enum class IdentifierResolvingResults {
+		NONE,
+		IDENTIFIER,
+		NUMBER
+	};
+
 	struct AssemblingOptions {
-		typedef std::function<bool(const IToken::Ptr &, int &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
+		typedef std::function<IdentifierResolvingResults(const IToken::Ptr &, int &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
 
 		int bank = 0;
 		int address = 0;
@@ -72,7 +78,7 @@ public:
 		AssemblingOptions(int b, int addr, IdentifierResolver resolveid, ErrorHandler onerr);
 	};
 	struct PostingOptions {
-		typedef std::function<bool(const IToken::Ptr &, int &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
+		typedef std::function<IdentifierResolvingResults(const IToken::Ptr &, int &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
 		typedef std::function<Byte*(const Byte*)> ArgsResolver;
 
 		int bank = 0;

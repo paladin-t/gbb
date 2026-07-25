@@ -4869,31 +4869,34 @@ public:
 
 		/**< Compiling variables. */
 
-		const Asm::Instructions* instructions = nullptr;          // Stores the VM instructions.
+		const Asm::Instructions* instructions = nullptr;                      // Stores the VM instructions.
 
-		bool caseInsensitive = true;                              // Stores whether is running as case insensitive.
-		bool strictOn = true;                                     // Stores whether is running in strict mode.
-		bool kernelImplementedTouchApi = false;                   // Stores whether the kernel has implemented `touch` APIs for non-extension emulation.
-		Expect expect;                                            // Stores the syntax expectations.
-		Declaration declaration;                                  // Stores the declaration context.
-		Expression expression;                                    // Stores the expression context.
-		Loop::Stack loop;                                         // Stores the loop context.
+		bool caseInsensitive = true;                                          // Stores whether is running as case insensitive.
+		bool strictOn = true;                                                 // Stores whether is running in strict mode.
+		bool kernelImplementedTouchApi = false;                               // Stores whether the kernel has implemented `touch` APIs for non-extension emulation.
+		Expect expect;                                                        // Stores the syntax expectations.
+		Declaration declaration;                                              // Stores the declaration context.
+		Expression expression;                                                // Stores the expression context.
+		Loop::Stack loop;                                                     // Stores the loop context.
 
-		const Array* array = nullptr;                             // Stores the array configuration, and user defined arrays.
-		const Data* data = nullptr;                               // Stores the data sequence information.
-		const SymbolTable* symbols = nullptr;                     // Stores the symbols of the input VM ROM.
-		const BuiltinTable* builtins = nullptr;                   // Stores the system defined, and user defined builtin variables, constants and registers.
-		const FunctionTable* functions = nullptr;                 // Stores the generic function information for `NodeRoutine` and `NodeFunction`.
-		const OperatorTable* operators = nullptr;                 // Stores the regular and function-like math operators.
-		MacroFunctionTable::Stack* macroFunctions = nullptr;      // FEAT: MACRO. Stores the user defined macro functions.
-		SymbolTable* namedAssemblyBlocks = nullptr;               // Stores the user defined named assembly blocks. The `RomLocation` values store the final addresses in ROM.
-		Assembler::Ptr assembler = nullptr;                       // Stores the assembler.
-		Text::Array* assembledInformation = nullptr;              // Stores the assembled information.
+		const Array* array = nullptr;                                         // Stores the array configuration, and user defined arrays.
+		const Data* data = nullptr;                                           // Stores the data sequence information.
+		const SymbolTable* symbols = nullptr;                                 // Stores the symbols of the input VM ROM.
+		const BuiltinTable* builtins = nullptr;                               // Stores the system defined, and user defined builtin variables, constants and registers.
+		const FunctionTable* functions = nullptr;                             // Stores the generic function information for `NodeRoutine` and `NodeFunction`.
+		const OperatorTable* operators = nullptr;                             // Stores the regular and function-like math operators.
+		MacroAliasTable::Stack* macroAliases = nullptr;                       // FEAT: MACRO. Stores the user defined macro aliases.
+		MacroFunctionTable::Stack* macroFunctions = nullptr;                  // FEAT: MACRO. Stores the user defined macro functions.
+		MacroConstantTable::Stack* macroConstants = nullptr;                  // FEAT: MACRO. Stores the user defined macro constants.
+		MacroIdentifierAliasTable::Stack* macroIdentifierAliases = nullptr;   // FEAT: MACRO. Stores the user defined macro identifier aliases.
+		SymbolTable* namedAssemblyBlocks = nullptr;                           // Stores the user defined named assembly blocks. The `RomLocation` values store the final addresses in ROM.
+		Assembler::Ptr assembler = nullptr;                                   // Stores the assembler.
+		Text::Array* assembledInformation = nullptr;                          // Stores the assembled information.
 
-		BorderFrameResources* borderFrameResources = nullptr;     // Stores the border resources.
-		SuperPaletteResources* superPaletteResources = nullptr;   // Stores the "Super" palettes.
-		AssetsBundle::Ptr assets = nullptr;                       // Stores the assets.
-		Pipeline::Ptr pipeline = nullptr;                         // Stores the resources.
+		BorderFrameResources* borderFrameResources = nullptr;                 // Stores the border resources.
+		SuperPaletteResources* superPaletteResources = nullptr;               // Stores the "Super" palettes.
+		AssetsBundle::Ptr assets = nullptr;                                   // Stores the assets.
+		Pipeline::Ptr pipeline = nullptr;                                     // Stores the resources.
 
 		/**< Constructors. */
 
@@ -15784,14 +15787,15 @@ public:
 			// Assemble the instructions.
 			const Assembler::AssemblingOptions options(
 				bank, address,
-				[&] (const IToken::Ptr &tk, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool { // Resolve identifier.
+				[&] (const IToken::Ptr &tk, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> Assembler::IdentifierResolvingResults { // Resolve identifier.
 					const std::string caseSensitiveName = (std::string)tk->caseSensitiveText();
 					const std::string name = (std::string)tk->data();
-					if (resolveIdentifier(ctx, caseSensitiveName, bank_, loc, id_, fuzzyName_))
-						return true;
+					const Assembler::IdentifierResolvingResults ret = resolveIdentifier(ctx, caseSensitiveName, bank_, loc, id_, fuzzyName_);
+					if (ret != Assembler::IdentifierResolvingResults::NONE)
+						return ret;
 
 					if (caseSensitiveName == name)
-						return false;
+						return Assembler::IdentifierResolvingResults::NONE;
 
 					return resolveIdentifier(ctx, name, bank_, loc, id_, fuzzyName_);
 				},
@@ -15914,14 +15918,15 @@ public:
 
 		const Assembler::PostingOptions options(
 			ctx.bank, _scheduled.baseAddress,
-			[&] (const IToken::Ptr &tk, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> bool { // Resolve identifier.
+			[&] (const IToken::Ptr &tk, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> Assembler::IdentifierResolvingResults { // Resolve identifier.
 				const std::string caseSensitiveName = (std::string)tk->caseSensitiveText();
 				const std::string name = (std::string)tk->data();
-				if (resolveIdentifier(ctx, caseSensitiveName, bank_, loc, id_, fuzzyName_))
-					return true;
+				const Assembler::IdentifierResolvingResults ret = resolveIdentifier(ctx, caseSensitiveName, bank_, loc, id_, fuzzyName_);
+				if (ret != Assembler::IdentifierResolvingResults::NONE)
+					return ret;
 
 				if (caseSensitiveName == name)
-					return false;
+					return Assembler::IdentifierResolvingResults::NONE;
 
 				return resolveIdentifier(ctx, name, bank_, loc, id_, fuzzyName_);
 			},
@@ -15947,7 +15952,7 @@ public:
 	using Node::dump;
 
 private:
-	bool resolveIdentifier(Context &ctx, const std::string &name, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) const {
+	Assembler::IdentifierResolvingResults resolveIdentifier(Context &ctx, const std::string &name, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) const {
 		// Prepare.
 		bank_ = 0;
 		loc = RamLocation();
@@ -15957,8 +15962,26 @@ private:
 		int address = -1;
 		bool found = false;
 
+		// Search for macro.
+		std::string name_ = name;
+		const MacroAliasTable::Entry* macroAlias = ctx.macroAliases ? ctx.macroAliases->find(name_) : nullptr;
+		if (macroAlias) {
+			name_ = macroAlias->alias->text();
+		}
+		const MacroConstantTable::Entry* macroConstant = ctx.macroConstants ? ctx.macroConstants->find(name_) : nullptr;
+		const MacroIdentifierAliasTable::Entry* macroIdAlias = ctx.macroIdentifierAliases ? ctx.macroIdentifierAliases->find(name_) : nullptr;
+		if (macroConstant) {
+			const int data = (int)(Int)macroConstant->constant->data();
+			bank_ = bank;
+			loc = RamLocation(RamLocation::Types::NONE, data, 0, RamLocation::Usages::NONE, TextLocation());
+
+			return Assembler::IdentifierResolvingResults::NUMBER;
+		} else if (macroIdAlias) {
+			name_ = macroIdAlias->alias->text();
+		}
+
 		// Search for named assembly block.
-		const RomLocation* romLocation = ctx.namedAssemblyBlocks->find(name);
+		const RomLocation* romLocation = ctx.namedAssemblyBlocks->find(name_);
 		if (romLocation) {
 			bank = romLocation->bank;
 			address = romLocation->address;
@@ -15971,7 +15994,7 @@ private:
 		// Search for builtin name.
 		if (!found) {
 			if (ctx.symbols) {
-				const RomLocation* romLocation = ctx.symbols->find(name);
+				const RomLocation* romLocation = ctx.symbols->find(name_);
 				if (romLocation) { // By builtin name.
 					bank = romLocation->bank;
 					address = romLocation->address;
@@ -15986,8 +16009,8 @@ private:
 		// Search for identifier.
 		if (!found) {
 			const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
-			const RamLocation* ramLocation = ctx.findPageAndGlobal(name, fuzzyName);
-			const Context::Array::Dimensions* dimensions = ctx.array->find(name);
+			const RamLocation* ramLocation = ctx.findPageAndGlobal(name_, fuzzyName);
+			const Context::Array::Dimensions* dimensions = ctx.array->find(name_);
 			if (scriptMemoryRamLocation && ramLocation) {
 				if (dimensions) { // By array name.
 					address =
@@ -16013,10 +16036,10 @@ private:
 			id_ = name;
 			fuzzyName_ = fuzzyName;
 
-			return false;
+			return Assembler::IdentifierResolvingResults::NONE;
 		}
 
-		return true;
+		return Assembler::IdentifierResolvingResults::IDENTIFIER;
 	}
 };
 
@@ -43240,10 +43263,10 @@ private:
 		context.top().builtins                        = &builtins;
 		context.top().functions                       = &functions;
 		context.top().operators                       = &operators;
-		(void)                                           macroAliases;           // FEAT: MACRO.
+		context.top().macroAliases                    = &macroAliases;           // FEAT: MACRO.
 		context.top().macroFunctions                  = &macroFunctions;         // FEAT: MACRO.
-		(void)                                           macroConstants;         // FEAT: MACRO.
-		(void)                                           macroIdentifierAliases; // FEAT: MACRO.
+		context.top().macroConstants                  = &macroConstants;         // FEAT: MACRO.
+		context.top().macroIdentifierAliases          = &macroIdentifierAliases; // FEAT: MACRO.
 		(void)                                           macroStackReferences;   // FEAT: MACRO.
 		(void)                                           macroStrings;           // FEAT: MACRO.
 		context.top().namedAssemblyBlocks             = &namedAssemblyBlocks;
