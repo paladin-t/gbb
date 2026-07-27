@@ -15898,6 +15898,7 @@ public:
 			msg += ": ";
 			msg += "bank " + Text::toString(bank);
 			msg += ", address 0x" + Text::toHex(address, 4, '0', true);
+			msg += ", size " + Text::toScaledBytes(n);
 			if (isOnVbl) msg += " (VBL ISR)";
 			if (isOnLcd) msg += " (LCD ISR)";
 
