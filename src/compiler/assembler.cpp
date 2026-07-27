@@ -885,8 +885,9 @@ private:
 			}
 
 			// Handle instructions.
-			auto resolveNumericOpcode = [unpackLowByte, unpackHighByte, addressBank, throwUnsupportedOperation] (
-				const IToken::Array &tokens, const std::string &opcode, int oprand, std::string &mnemonic, Oprands &oprands, int &cursor
+			auto handleNumericOpcode = [unpackLowByte, unpackHighByte, addressBank, throwUnsupportedOperation] (
+				const IToken::Array &tokens, const std::string &opcode, int oprand,
+				std::string &mnemonic, Oprands &oprands, int &cursor
 			) -> bool {
 				if (opcode == "bit" || opcode == "res" || opcode == "set") {
 					mnemonic += Text::toString(oprand);
@@ -961,7 +962,7 @@ private:
 						return throwIdHasNotBeenDeclared(cursor, id);
 					} else if (ret == IdentifierResolvingResults::NUMBER) {
 						const int oprand = loc.address;
-						if (!resolveNumericOpcode(tokens, opcode, oprand, mnemonic, oprands, cursor))
+						if (!handleNumericOpcode(tokens, opcode, oprand, mnemonic, oprands, cursor))
 							return false;
 					} else {
 						int oprand = loc.address;
@@ -994,7 +995,7 @@ private:
 				mnemonic += (std::string)tk->data();
 			} else if (tk->is(IToken::Types::NUMBER)) {
 				const int oprand = (int)(Int)tk->data();
-				if (!resolveNumericOpcode(tokens, opcode, oprand, mnemonic, oprands, cursor))
+				if (!handleNumericOpcode(tokens, opcode, oprand, mnemonic, oprands, cursor))
 					return false;
 			} else if (tk->is(IToken::Types::COMMENT)) {
 				// Do nothing.
