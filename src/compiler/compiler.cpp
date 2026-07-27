@@ -4881,6 +4881,7 @@ public:
 
 		const Array* array = nullptr;                                               // Stores the array configuration, and user defined arrays.
 		const Data* data = nullptr;                                                 // Stores the data sequence information.
+		Text::Array* dataSequenceInformation = nullptr;                             // Stores the data sequence information.
 		const SymbolTable* symbols = nullptr;                                       // Stores the symbols of the input VM ROM.
 		const BuiltinTable* builtins = nullptr;                                     // Stores the system defined, and user defined builtin variables, constants and registers.
 		const FunctionTable* functions = nullptr;                                   // Stores the generic function information for `NodeRoutine` and `NodeFunction`.
@@ -7643,6 +7644,7 @@ private:
 	void emitDataSection(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) {
 		// Prepare.
 		Context &ctx = context.top();
+		State &state = top();
 
 		const Asm::Instructions &INSTRUCTIONS = *ctx.instructions;
 
@@ -7662,6 +7664,10 @@ private:
 		if (dataOverflow) { THROW_DATA_SECTION_OVERFLOW(onError); }
 
 		// Emit the data.
+		const int istSize = sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::JUMP_FAR].size;
+		const int bank = state.inRom.bank;
+		const int address = state.inRom.address + ctx.startAddress + istSize;
+		int n = 0;
 		for (int i = 0; i < (int)values.size(); ++i) {
 			const Context::Data::Value &data = values.at(i);
 			switch (data.type) {
@@ -7669,15 +7675,18 @@ private:
 				if (data.value >= (Variant::Int)std::numeric_limits<Int8>::min() && data.value < 0) {
 					// Is 8-bit signed integer.
 					emit(bytes, context, (Int8)data.value);
+					n += 1;
 				} else {
 					// Is 8-bit unsigned integer.
 					emit(bytes, context, (UInt8)data.value);
+					n += 1;
 				}
 
 				break;
 			case Token::IntegerTypes::INT:
 				// Is 16-bit signed integer.
 				emit(bytes, context, (Int16)data.value, Endians::LITTLE);
+				n += 2;
 
 				break;
 			default:
@@ -7691,6 +7700,17 @@ private:
 		const int addressA = ctx.startAddress + ctx.addressCursor;
 		fill(bytes, offset0, (UInt16)addressA);
 		fill(bytes, offset1, (UInt8)ctx.bank);
+
+		// Output the data information.
+		std::string msg;
+		msg += Text::toString(values.size()) + " elements";
+		msg += ": ";
+		msg += "bank " + Text::toString(bank);
+		msg += ", address 0x" + Text::toHex(address, 4, '0', true);
+		msg += ", size " + Text::toScaledBytes(n);
+
+		if (ctx.dataSequenceInformation)
+			ctx.dataSequenceInformation->push_back(msg);
 	}
 	void emitGlyphSection(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) {
 		// Prepare.
@@ -15922,7 +15942,8 @@ public:
 			};
 		};
 
-		if (write(bytes, context, generator, false, onError)) {
+		const bool ret = write(bytes, context, generator, false, onError);
+		if (ret) {
 			if (_namingAction) {
 				_namingAction();
 				_namingAction = nullptr;
@@ -43176,6 +43197,7 @@ public:
 	bool process(
 		const Node::Ptr &ast, AssetsBundle::Ptr assets, Pipeline::Ptr pipeline,
 		RamLocation::Dictionary* allocations,
+		Text::Array* dataSequenceInformation,
 		Text::Array* assembledInformation,
 		FeatureUsages* featureUsages,
 		BorderFrameResources &borderFrameResources, SuperPaletteResources &superPaletteResources,
@@ -43212,6 +43234,7 @@ public:
 			_macroStackReferences,
 			_macroStrings,
 			_namedAssemblyBlocks,
+			dataSequenceInformation,
 			assembledInformation,
 			_assets,
 			pipeline,
@@ -43255,6 +43278,7 @@ private:
 		Node::MacroStackReferenceTable::Stack &macroStackReferences,
 		Node::MacroStringTable::Stack &macroStrings,
 		SymbolTable &namedAssemblyBlocks,
+		Text::Array* dataSequenceInformation,
 		Text::Array* assembledInformation,
 		AssetsBundle::Ptr assets,
 		Pipeline::Ptr pipeline,
@@ -43287,6 +43311,7 @@ private:
 		context.top().instructions                    = &instructions;
 		context.top().array                           = &array;
 		context.top().data                            = &data;
+		context.top().dataSequenceInformation         =  dataSequenceInformation;
 		context.top().symbols                         = &symbols;
 		context.top().builtins                        = &builtins;
 		context.top().functions                       = &functions;
@@ -45098,6 +45123,7 @@ bool compile(Program &program, const Options &options) {
 
 		// Compile.
 		RamLocation::Dictionary allocations;
+		Text::Array dataSequenceInformation;
 		Text::Array assembledInformation;
 		FeatureUsages featureUsages;
 		BorderFrameResources borderFrameResources(superFeatures.enabled, superFeatures.border);
@@ -45107,6 +45133,7 @@ bool compile(Program &program, const Options &options) {
 			!compiler.process(
 				organizer.ast(), program.assets, pipeline,
 				&allocations,
+				&dataSequenceInformation,
 				&assembledInformation,
 				&featureUsages,
 				borderFrameResources, superPaletteResources,
@@ -45128,6 +45155,19 @@ bool compile(Program &program, const Options &options) {
 		std::swap(program.compiled.featureUsages, featureUsages);
 		program.compiled.effectiveSize.addCode(codeSize);
 		program.compiled.effectiveSize += pipeline->effectiveSize();
+
+		if (!dataSequenceInformation.empty()) {
+			std::string msg_ = "Succeeded to embed data sequence:\n";
+			for (int i = 0; i < (int)dataSequenceInformation.size(); ++i) {
+				const std::string &msg = dataSequenceInformation[i];
+				msg_ += "  " + msg;
+				if (i != (int)dataSequenceInformation.size() - 1)
+					msg_ += "\n";
+
+				fprintf(stdout, "Data sequence %s.\n", msg.c_str());
+			}
+			onPrint(msg_);
+		}
 
 		if (!assembledInformation.empty()) {
 			std::string msg_ = "Succeeded to assemble:\n";
