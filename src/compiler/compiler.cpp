@@ -3789,7 +3789,7 @@ namespace GBBASIC {
 #	define THROW_BANK_OVERFLOW(ON_ERROR) \
 		do { \
 			throwBankOverflow(ON_ERROR); \
-			return; \
+			return false; \
 		} while (false)
 #endif /* THROW_BANK_OVERFLOW */
 #ifndef THROW_DATA_SECTION_OVERFLOW
@@ -4869,34 +4869,34 @@ public:
 
 		/**< Compiling variables. */
 
-		const Asm::Instructions* instructions = nullptr;                      // Stores the VM instructions.
+		const Asm::Instructions* instructions = nullptr;                            // Stores the VM instructions.
 
-		bool caseInsensitive = true;                                          // Stores whether is running as case insensitive.
-		bool strictOn = true;                                                 // Stores whether is running in strict mode.
-		bool kernelImplementedTouchApi = false;                               // Stores whether the kernel has implemented `touch` APIs for non-extension emulation.
-		Expect expect;                                                        // Stores the syntax expectations.
-		Declaration declaration;                                              // Stores the declaration context.
-		Expression expression;                                                // Stores the expression context.
-		Loop::Stack loop;                                                     // Stores the loop context.
+		bool caseInsensitive = true;                                                // Stores whether is running as case insensitive.
+		bool strictOn = true;                                                       // Stores whether is running in strict mode.
+		bool kernelImplementedTouchApi = false;                                     // Stores whether the kernel has implemented `touch` APIs for non-extension emulation.
+		Expect expect;                                                              // Stores the syntax expectations.
+		Declaration declaration;                                                    // Stores the declaration context.
+		Expression expression;                                                      // Stores the expression context.
+		Loop::Stack loop;                                                           // Stores the loop context.
 
-		const Array* array = nullptr;                                         // Stores the array configuration, and user defined arrays.
-		const Data* data = nullptr;                                           // Stores the data sequence information.
-		const SymbolTable* symbols = nullptr;                                 // Stores the symbols of the input VM ROM.
-		const BuiltinTable* builtins = nullptr;                               // Stores the system defined, and user defined builtin variables, constants and registers.
-		const FunctionTable* functions = nullptr;                             // Stores the generic function information for `NodeRoutine` and `NodeFunction`.
-		const OperatorTable* operators = nullptr;                             // Stores the regular and function-like math operators.
-		MacroAliasTable::Stack* macroAliases = nullptr;                       // FEAT: MACRO. Stores the user defined macro aliases.
-		MacroFunctionTable::Stack* macroFunctions = nullptr;                  // FEAT: MACRO. Stores the user defined macro functions.
-		MacroConstantTable::Stack* macroConstants = nullptr;                  // FEAT: MACRO. Stores the user defined macro constants.
-		MacroIdentifierAliasTable::Stack* macroIdentifierAliases = nullptr;   // FEAT: MACRO. Stores the user defined macro identifier aliases.
-		SymbolTable* namedAssemblyBlocks = nullptr;                           // Stores the user defined named assembly blocks. The `RomLocation` values store the final addresses in ROM.
-		Assembler::Ptr assembler = nullptr;                                   // Stores the assembler.
-		Text::Array* assembledInformation = nullptr;                          // Stores the assembled information.
+		const Array* array = nullptr;                                               // Stores the array configuration, and user defined arrays.
+		const Data* data = nullptr;                                                 // Stores the data sequence information.
+		const SymbolTable* symbols = nullptr;                                       // Stores the symbols of the input VM ROM.
+		const BuiltinTable* builtins = nullptr;                                     // Stores the system defined, and user defined builtin variables, constants and registers.
+		const FunctionTable* functions = nullptr;                                   // Stores the generic function information for `NodeRoutine` and `NodeFunction`.
+		const OperatorTable* operators = nullptr;                                   // Stores the regular and function-like math operators.
+		const MacroAliasTable::Stack* macroAliases = nullptr;                       // FEAT: MACRO. Stores the user defined macro aliases.
+		MacroFunctionTable::Stack* macroFunctions = nullptr;                        // FEAT: MACRO. Stores the user defined macro functions.
+		const MacroConstantTable::Stack* macroConstants = nullptr;                  // FEAT: MACRO. Stores the user defined macro constants.
+		const MacroIdentifierAliasTable::Stack* macroIdentifierAliases = nullptr;   // FEAT: MACRO. Stores the user defined macro identifier aliases.
+		SymbolTable* namedAssemblyBlocks = nullptr;                                 // Stores the user defined named assembly blocks. The `RomLocation` values store the final addresses in ROM.
+		Assembler::Ptr assembler = nullptr;                                         // Stores the assembler.
+		Text::Array* assembledInformation = nullptr;                                // Stores the assembled information.
 
-		BorderFrameResources* borderFrameResources = nullptr;                 // Stores the border resources.
-		SuperPaletteResources* superPaletteResources = nullptr;               // Stores the "Super" palettes.
-		AssetsBundle::Ptr assets = nullptr;                                   // Stores the assets.
-		Pipeline::Ptr pipeline = nullptr;                                     // Stores the resources.
+		BorderFrameResources* borderFrameResources = nullptr;                       // Stores the border resources.
+		SuperPaletteResources* superPaletteResources = nullptr;                     // Stores the "Super" palettes.
+		AssetsBundle::Ptr assets = nullptr;                                         // Stores the assets.
+		Pipeline::Ptr pipeline = nullptr;                                           // Stores the resources.
 
 		/**< Constructors. */
 
@@ -6304,7 +6304,7 @@ public:
 
 	/**< Writing functions. */
 
-	void write(Bytes::Ptr &bytes, Context::Stack &context, Generator_Void_Bool generator, bool allowTail, Error::Handler onError) {
+	bool write(Bytes::Ptr &bytes, Context::Stack &context, Generator_Void_Bool generator, bool allowTail, Error::Handler onError) {
 		// Save the context and state.
 		context.push(context.top());
 		push();
@@ -6378,10 +6378,13 @@ public:
 
 		// Put the code to ROM location correspondence.
 		context.top().put(top().inCode, top().inRom);
+
+		// Finish.
+		return true;
 	}
-	void write(Bytes::Ptr &bytes, Context::Stack &context, Generator_Void_Void generator, bool allowTail, Error::Handler onError) {
+	bool write(Bytes::Ptr &bytes, Context::Stack &context, Generator_Void_Void generator, bool allowTail, Error::Handler onError) {
 		// Same as the above version, but doesn't care about the `overflow` parameter.
-		write(
+		return write(
 			bytes, context,
 			[&] (bool /* overflow */) -> void {
 				generator();
@@ -15638,6 +15641,8 @@ private:
 		}
 	};
 
+	typedef std::function<void(void)> DeferAction;
+
 private:
 	ScheduledAsmJump _scheduled;
 	IToken::Array _asmTokens;
@@ -15645,6 +15650,8 @@ private:
 	std::string _name;
 	TextLocation _inCode;
 	RomLocation _inRom;
+	DeferAction _namingAction = nullptr;
+	DeferAction _informationCollectingAction = nullptr;
 
 public:
 	NodeBeginAsm() {
@@ -15781,7 +15788,12 @@ public:
 				if (romLocation) {
 					THROW_ID_HAS_BEEN_ALREADY_DECLARED(onError, nametk);
 				}
-				ctx.namedAssemblyBlocks->add(name, bank, address);
+
+				_namingAction = [&context, name, bank, address] (void) -> void {
+					Context &ctx = context.top();
+
+					ctx.namedAssemblyBlocks->add(name, bank, address);
+				};
 			}
 
 			// Assemble the instructions.
@@ -15902,11 +15914,24 @@ public:
 			if (isOnVbl) msg += " (VBL ISR)";
 			if (isOnLcd) msg += " (LCD ISR)";
 
-			if (ctx.assembledInformation)
-				ctx.assembledInformation->push_back(msg);
+			_informationCollectingAction = [&context, msg] (void) -> void {
+				Context &ctx = context.top();
+
+				if (ctx.assembledInformation)
+					ctx.assembledInformation->push_back(msg);
+			};
 		};
 
-		write(bytes, context, generator, false, onError);
+		if (write(bytes, context, generator, false, onError)) {
+			if (_namingAction) {
+				_namingAction();
+				_namingAction = nullptr;
+			}
+			if (_informationCollectingAction) {
+				_informationCollectingAction();
+				_informationCollectingAction = nullptr;
+			}
+		}
 	}
 	virtual void post(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
 		Context &ctx = context.top();
