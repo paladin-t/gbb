@@ -13394,7 +13394,12 @@ public:
 					if (!scheduled.pending())
 						continue;
 
-					const RomLocation* romLocation = ctx.find(scheduled.target);
+					const RomLocation* romLocation = nullptr;
+					findDestination(ctx, scheduled.target, &romLocation, onError);
+					if (!romLocation)
+						romLocation = ctx.find(scheduled.target);
+					if (!romLocation)
+						return;
 					const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 					if (romLocation) {
 						Byte* args = scheduled.args(bytes->pointer());
@@ -13418,7 +13423,12 @@ public:
 				if (!scheduled.pending())
 					return;
 
-				const RomLocation* romLocation = ctx.find(scheduled.target);
+				const RomLocation* romLocation = nullptr;
+				findDestination(ctx, scheduled.target, &romLocation, onError);
+				if (!romLocation)
+					romLocation = ctx.find(scheduled.target);
+				if (!romLocation)
+					return;
 				const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 				if (romLocation) {
 					Byte* args = scheduled.args(bytes->pointer());
@@ -26832,7 +26842,12 @@ public:
 
 				for (int i = 0; i < (int)_scheduled.size(); ++i) {
 					scheduled = _scheduled[i];
-					const RomLocation* romLocation = ctx.find(scheduled.target);
+					const RomLocation* romLocation = nullptr;
+					findDestination(ctx, scheduled.target, &romLocation, onError);
+					if (!romLocation)
+						romLocation = ctx.find(scheduled.target);
+					if (!romLocation)
+						return;
 					const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 					if (romLocation) {
 						Byte* args = scheduled.args(bytes->pointer());
@@ -26854,7 +26869,12 @@ public:
 				if (!scheduled.pending())
 					return;
 
-				const RomLocation* romLocation = ctx.find(scheduled.target);
+				const RomLocation* romLocation = nullptr;
+				findDestination(ctx, scheduled.target, &romLocation, onError);
+				if (!romLocation)
+					romLocation = ctx.find(scheduled.target);
+				if (!romLocation)
+					return;
 				const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 				if (romLocation) {
 					Byte* args = scheduled.args(bytes->pointer());
@@ -28605,7 +28625,12 @@ public:
 				if (!scheduled.pending())
 					return;
 
-				const RomLocation* romLocation = ctx.find(scheduled.target);
+				const RomLocation* romLocation = nullptr;
+				findDestination(ctx, scheduled.target, &romLocation, onError);
+				if (!romLocation)
+					romLocation = ctx.find(scheduled.target);
+				if (!romLocation)
+					return;
 				const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 				if (romLocation) {
 					Byte* args = scheduled.args(bytes->pointer());
@@ -30069,7 +30094,12 @@ public:
 				if (!scheduled.pending())
 					return;
 
-				const RomLocation* romLocation = ctx.find(scheduled.target);
+				const RomLocation* romLocation = nullptr;
+				findDestination(ctx, scheduled.target, &romLocation, onError);
+				if (!romLocation)
+					romLocation = ctx.find(scheduled.target);
+				if (!romLocation)
+					return;
 				const int address = romLocation ? ctx.startAddress + romLocation->address : 0;
 				if (romLocation) {
 					Byte* args = scheduled.args(bytes->pointer());
