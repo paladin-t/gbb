@@ -35498,6 +35498,15 @@ private:
 						return false;
 
 					arg0 = Variant(pgn);
+				} else if ((id0 = must(Token::Types::IDENTIFIER)(q1))) {
+					const std::string name = (std::string)id0->text();
+					const Node::MacroStringTable::Entry* string = macroStrings.find(name); // FEAT: MACRO.
+					if (string) {
+						const std::string &val = string->value;
+						arg0 = Variant(val);
+					} else {
+						THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
+					}
 				}
 				if (!must(Token::Types::OPERATOR, ",")(q1)) THROW_PARSER_ERROR(throwInvalidSyntax(q1.index));
 				if ((id1 = must(Token::Types::STRING)(q1))) {
