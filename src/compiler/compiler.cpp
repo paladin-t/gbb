@@ -11864,6 +11864,7 @@ public:
 
 				THROW_ID_HAS_NOT_BEEN_DECLARED(onError, idtk);
 			}
+			const int address = ramLocation->address;
 
 			// Set the stack footprint guard.
 			COUNTER_GUARD(ctx, stk);
@@ -11876,7 +11877,7 @@ public:
 
 			// Emit a `VM_RPN` instruction to calculate the indirect address.
 			Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
-			args = fill(args, (UInt16)ramLocation->address);
+			args = fill(args, (UInt16)address);
 
 			emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::RPN]);
 			{
@@ -11962,6 +11963,7 @@ public:
 
 				THROW_ID_HAS_NOT_BEEN_DECLARED(onError, idtk);
 			}
+			const int address = ramLocation->address;
 
 			// Set the stack footprint guard.
 			VAR_GUARD(ctx.stackFootprint, Counter::Ptr(new Counter()));
@@ -11972,7 +11974,7 @@ public:
 
 			// Emit a `VM_RPN` instruction to calculate the indirect address.
 			Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::PUSH]); INC_COUNTER(stk, 2);
-			args = fill(args, (UInt16)ramLocation->address);
+			args = fill(args, (UInt16)address);
 
 			emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::RPN]);
 			{
