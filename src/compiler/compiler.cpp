@@ -32293,6 +32293,8 @@ public:
 			ADD_STATEMENT("asm",               node<NodeAsm>(),                            Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("beginasm",          node<NodeBeginAsm>(),                       Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("endasm",            NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("banked",            RESERVED,                                   Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("nonbanked",         RESERVED,                                   Token::Types::KEYWORD,        false);
 
 			// Thread.
 			ADD_STATEMENT("start",             node<NodeStart>(),                          Token::Types::KEYWORD,        false);

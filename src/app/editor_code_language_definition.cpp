@@ -273,8 +273,11 @@ ImGui::CodeEditor::LanguageDefinition EditorCodeLanguageDefinition::languageDefi
 		"return",
 		"end",
 		"call",
+
+		// Inline assembly.
 		"asm",
 		"beginasm", "endasm",
+		"banked", "nonbanked",
 
 		// Scope and macros.
 		"begin",
