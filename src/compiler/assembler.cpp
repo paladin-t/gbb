@@ -1104,9 +1104,14 @@ private:
 				if (oprands.empty())
 					return false;
 
-				const int oprand = oprands.front();
-				if (oprand < std::numeric_limits<Int8>::min() || oprand > std::numeric_limits<UInt8>::max())
-					return throwByteExpected(cursor - 1);
+				int oprand = oprands.front();
+				if (oprand < std::numeric_limits<Int8>::min() || oprand > std::numeric_limits<UInt8>::max()) {
+					if (oprandType == "a8") {
+						// Do nothing.
+					} else {
+						return throwByteExpected(cursor - 1);
+					}
+				}
 
 				emitUInt8(bytes, context, (UInt8)oprand);
 

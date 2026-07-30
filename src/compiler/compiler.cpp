@@ -291,6 +291,10 @@ namespace GBBASIC {
 #	define BOOTSTRAP_ENTRY_ADDRESS 0x4000 // DOC: ROM SCHEMA.
 #endif /* BOOTSTRAP_ENTRY_ADDRESS */
 
+#ifndef BANK0FINAL_ENTRY_NAME
+#	define BANK0FINAL_ENTRY_NAME "BANK0FINAL" // DOC: ROM SCHEMA.
+#endif /* BANK0FINAL_ENTRY_NAME */
+
 #ifndef SCRIPT_MEMORY_ENTRY_NAME
 #	define SCRIPT_MEMORY_ENTRY_NAME "script_memory" // DOC: RAM SCHEMA.
 #endif /* SCRIPT_MEMORY_ENTRY_NAME */
@@ -4890,6 +4894,7 @@ public:
 		MacroFunctionTable::Stack* macroFunctions = nullptr;                        // FEAT: MACRO. Stores the user defined macro functions.
 		const MacroConstantTable::Stack* macroConstants = nullptr;                  // FEAT: MACRO. Stores the user defined macro constants.
 		const MacroIdentifierAliasTable::Stack* macroIdentifierAliases = nullptr;   // FEAT: MACRO. Stores the user defined macro identifier aliases.
+		Bytes::Ptr nonbankedAssemblyBlocks = nullptr;                               // Stores the nonbanked assembly blocks.
 		SymbolTable* namedAssemblyBlocks = nullptr;                                 // Stores the user defined named assembly blocks. The `RomLocation` values store the final addresses in ROM.
 		Assembler::Ptr assembler = nullptr;                                         // Stores the assembler.
 		Text::Array* assembledInformation = nullptr;                                // Stores the assembled information.
@@ -15773,12 +15778,14 @@ public:
 
 			// Consume the tokens.
 			Token::Ptr tkbegin = nullptr;
+			bool nonbanked = false;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
 					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
 				})) { THROW_INVALID_SYNTAX(onError); }
 			}
 			if (!(tkbegin = consume(Token::Types::KEYWORD, "beginasm"))) { THROW_INVALID_SYNTAX(onError); }
+			if (consume(Token::Types::KEYWORD, "nonbanked")) { nonbanked = true; }
 
 			// Check the children.
 			if (_children.size() > 1) {
@@ -15805,16 +15812,30 @@ public:
 			const bool isOnVbl = name == ON_VBL_ENTRY_NAME;
 			const bool isOnLcd = name == ON_LCD_ENTRY_NAME;
 
-			// Add to the table if it's named.
-			int istSize = 0;
-			if (isOnVbl || isOnLcd) {
-				istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN].size;
-				istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::JUMP].size;
+			// Determine the bank and address.
+			int bank = 0;
+			int address = 0;
+			if (nonbanked) {
+				int istSize = 0;
+				if (!isOnVbl && !isOnLcd) {
+					istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+				}
+				// TODO: nonbanked assembly.
+				// Allocate and resolve bank and address
+				// const RomLocation* bank0FinalRomLocation = symbols.find(BANK0FINAL_ENTRY_NAME);
 			} else {
-				istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+				int istSize = 0;
+				if (isOnVbl || isOnLcd) {
+					istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN].size;
+					istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::JUMP].size;
+				} else {
+					istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+				}
+				bank = state.inRom.bank;
+				address = state.inRom.address + ctx.startAddress + istSize;
 			}
-			const int bank = state.inRom.bank;
-			const int address = state.inRom.address + ctx.startAddress + istSize;
+
+			// Add to the table if it's named.
 			if (!name.empty()) {
 				const RomLocation* romLocation = ctx.namedAssemblyBlocks->find(name);
 				if (romLocation) {
@@ -15861,66 +15882,84 @@ public:
 			const int n = (int)asmBytes->count();
 
 			// Emit the VM instructions.
-			if (isOnVbl) { // Specialized for "ON VBL".
-				// Find the ISR entry.
-				if (!ctx.symbols) { THROW_INVALID_OPERATION(onError, nullptr); }
-				const RomLocation* romLocation = ctx.symbols->find(ISR_VBL_ENTRY_NAME);
-				if (!romLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
+			if (nonbanked) {
+				if (!isOnVbl && !isOnLcd) { // Normal assembly block.
+					// Emit a `VM_ASM` instruction to set the data.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
+					args = fill(args, (UInt16)n);
+					args = fill(args, (UInt16)address);
+					args = fill(args, (UInt8)bank);
 
-				// Find the installer.
-				const RomLocation* isrInstallerRomLocation = ctx.symbols->find(INSTALL_VBL_ISR_FUNCTION_NAME);
-				if (!isrInstallerRomLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
-				const int isrInstallerBank = isrInstallerRomLocation->bank;
-				const int isrInstallerAddress = isrInstallerRomLocation->address;
+					_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
+				}
+			} else {
+				if (isOnVbl) { // Specialized for "ON VBL".
+					// Find the ISR entry.
+					if (!ctx.symbols) { THROW_INVALID_OPERATION(onError, nullptr); }
+					const RomLocation* romLocation = ctx.symbols->find(ISR_VBL_ENTRY_NAME);
+					if (!romLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
 
-				// Emit a `VM_INVOKE_FN` instruction to install the ISR handler.
-				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
-				args = fill(args, (Int16)0);
-				args = fill(args, (UInt8)0);
-				args = fill(args, (UInt16)isrInstallerAddress);
-				args = fill(args, (UInt8)isrInstallerBank);
+					// Find the installer.
+					const RomLocation* isrInstallerRomLocation = ctx.symbols->find(INSTALL_VBL_ISR_FUNCTION_NAME);
+					if (!isrInstallerRomLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
+					const int isrInstallerBank = isrInstallerRomLocation->bank;
+					const int isrInstallerAddress = isrInstallerRomLocation->address;
 
-				// Emit a `VM_JUMP` instruction to skip the assembly block.
-				args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
-				args = fill(args, (UInt16)(address + n));
+					// Emit a `VM_INVOKE_FN` instruction to install the ISR handler.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
+					args = fill(args, (Int16)0);
+					args = fill(args, (UInt8)0);
+					args = fill(args, (UInt16)isrInstallerAddress);
+					args = fill(args, (UInt8)isrInstallerBank);
 
-				_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
-			} else if (isOnLcd) { // Specialized for "ON LCD".
-				// Find the ISR entry.
-				if (!ctx.symbols) { THROW_INVALID_OPERATION(onError, nullptr); }
-				const RomLocation* romLocation = ctx.symbols->find(ISR_LCD_ENTRY_NAME);
-				if (!romLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
+					// Emit a `VM_JUMP` instruction to skip the assembly block.
+					args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
+					args = fill(args, (UInt16)(address + n));
 
-				// Find the installer.
-				const RomLocation* isrInstallerRomLocation = ctx.symbols->find(INSTALL_LCD_ISR_FUNCTION_NAME);
-				if (!isrInstallerRomLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
-				const int isrInstallerBank = isrInstallerRomLocation->bank;
-				const int isrInstallerAddress = isrInstallerRomLocation->address;
+					_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
+				} else if (isOnLcd) { // Specialized for "ON LCD".
+					// Find the ISR entry.
+					if (!ctx.symbols) { THROW_INVALID_OPERATION(onError, nullptr); }
+					const RomLocation* romLocation = ctx.symbols->find(ISR_LCD_ENTRY_NAME);
+					if (!romLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
 
-				// Emit a `VM_INVOKE_FN` instruction to install the ISR handler.
-				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
-				args = fill(args, (Int16)0);
-				args = fill(args, (UInt8)0);
-				args = fill(args, (UInt16)isrInstallerAddress);
-				args = fill(args, (UInt8)isrInstallerBank);
+					// Find the installer.
+					const RomLocation* isrInstallerRomLocation = ctx.symbols->find(INSTALL_LCD_ISR_FUNCTION_NAME);
+					if (!isrInstallerRomLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
+					const int isrInstallerBank = isrInstallerRomLocation->bank;
+					const int isrInstallerAddress = isrInstallerRomLocation->address;
 
-				// Emit a `VM_JUMP` instruction to skip the assembly block.
-				args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
-				args = fill(args, (UInt16)(address + n));
+					// Emit a `VM_INVOKE_FN` instruction to install the ISR handler.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
+					args = fill(args, (Int16)0);
+					args = fill(args, (UInt8)0);
+					args = fill(args, (UInt16)isrInstallerAddress);
+					args = fill(args, (UInt8)isrInstallerBank);
 
-				_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
-			} else { // Normal assembly block.
-				// Emit a `VM_ASM` instruction to set the data.
-				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
-				args = fill(args, (UInt16)n);
-				args = fill(args, (UInt16)address);
-				args = fill(args, (UInt8)bank);
+					// Emit a `VM_JUMP` instruction to skip the assembly block.
+					args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
+					args = fill(args, (UInt16)(address + n));
 
-				_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
+					_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
+				} else { // Normal assembly block.
+					// Emit a `VM_ASM` instruction to set the data.
+					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
+					args = fill(args, (UInt16)n);
+					args = fill(args, (UInt16)address);
+					args = fill(args, (UInt8)bank);
+
+					_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
+				}
 			}
 
 			// Emit the assembly instructions.
-			emit(bytes, context, asmBytes->pointer(), (size_t)n);
+			if (nonbanked) {
+				// Add to nonbanked assembly if needed.
+				// TODO: nonbanked assembly.
+				// Add to ctx.nonbankedAssemblyBlocks
+			} else {
+				emit(bytes, context, asmBytes->pointer(), (size_t)n);
+			}
 
 			_inRom = RomLocation(bank, address, n);
 
@@ -32294,7 +32333,7 @@ public:
 			ADD_STATEMENT("beginasm",          node<NodeBeginAsm>(),                       Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("endasm",            NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("banked",            RESERVED,                                   Token::Types::KEYWORD,        false);
-			ADD_STATEMENT("nonbanked",         RESERVED,                                   Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("nonbanked",         NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 
 			// Thread.
 			ADD_STATEMENT("start",             node<NodeStart>(),                          Token::Types::KEYWORD,        false);
@@ -42468,6 +42507,7 @@ private:
 						CHECK_UNEXPECTED(q);
 					}
 				}
+				if (must(Token::Types::KEYWORD, "nonbanked")(q)) { /* Do nothing. */ }
 				ignore(Token::Types::COMMENT)(q);
 				if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				Token::Array asmTokens;
@@ -43037,6 +43077,7 @@ private:
 	Node::MacroIdentifierAliasTable::Stack _macroIdentifierAliases;
 	Node::MacroStackReferenceTable::Stack _macroStackReferences;
 	Node::MacroStringTable::Stack _macroStrings;
+	Bytes::Ptr _nonbankedAssemblyBlocks = nullptr;
 	SymbolTable _namedAssemblyBlocks;
 	BorderFrameResources _borderFrameResources;
 	SuperPaletteResources _superPaletteResources;
@@ -43223,6 +43264,9 @@ public:
 	Node::MacroStringTable::Stack &macroStrings(void) {
 		return _macroStrings;
 	}
+	Bytes::Ptr &nonbankedAssemblyBlocks(void) {
+		return _nonbankedAssemblyBlocks;
+	}
 	SymbolTable &namedAssemblyBlocks(void) {
 		return _namedAssemblyBlocks;
 	}
@@ -43276,6 +43320,7 @@ public:
 			_macroIdentifierAliases,
 			_macroStackReferences,
 			_macroStrings,
+			_nonbankedAssemblyBlocks,
 			_namedAssemblyBlocks,
 			dataSequenceInformation,
 			assembledInformation,
@@ -43320,6 +43365,7 @@ private:
 		Node::MacroIdentifierAliasTable::Stack &macroIdentifierAliases,
 		Node::MacroStackReferenceTable::Stack &macroStackReferences,
 		Node::MacroStringTable::Stack &macroStrings,
+		Bytes::Ptr &nonbankedAssemblyBlocks,
 		SymbolTable &namedAssemblyBlocks,
 		Text::Array* dataSequenceInformation,
 		Text::Array* assembledInformation,
@@ -43365,6 +43411,7 @@ private:
 		context.top().macroIdentifierAliases          = &macroIdentifierAliases; // FEAT: MACRO.
 		(void)                                           macroStackReferences;   // FEAT: MACRO.
 		(void)                                           macroStrings;           // FEAT: MACRO.
+		context.top().nonbankedAssemblyBlocks         =  nonbankedAssemblyBlocks;
 		context.top().namedAssemblyBlocks             = &namedAssemblyBlocks;
 		context.top().assembledInformation            =  assembledInformation;
 		context.top().borderFrameResources            =  borderFrameResources;
@@ -43634,7 +43681,7 @@ public:
 
 	bool process(
 		const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const FeatureUsages &featureUsages,
-		const SymbolTable &namedAssemblyBlocks,
+		const Bytes::Ptr &nonbankedAssemblyBlocks, const SymbolTable &namedAssemblyBlocks,
 		const BorderFrameResources &borderFrameResources, const SuperPaletteResources &superPaletteResources,
 		Error::Handler onError
 	) {
@@ -43653,7 +43700,7 @@ public:
 		// Program the ROM with the specific bytes.
 		_bytes = program(
 			rom, compiled, featureUsages,
-			namedAssemblyBlocks,
+			nonbankedAssemblyBlocks, namedAssemblyBlocks,
 			borderFrameResources, superPaletteResources,
 			_options,
 			_symbols,
@@ -43667,7 +43714,7 @@ public:
 private:
 	static Bytes::Ptr program(
 		const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const FeatureUsages &featureUsages,
-		const SymbolTable &namedAssemblyBlocks,
+		const Bytes::Ptr &nonbankedAssemblyBlocks, const SymbolTable &namedAssemblyBlocks,
 		const BorderFrameResources &borderFrameResources, const SuperPaletteResources &superPaletteResources,
 		const Options &options,
 		const SymbolTable &symbols,
@@ -43741,6 +43788,18 @@ private:
 				resized |= true;
 			}
 		}
+
+		// Link nonbanked assembly blocks.
+		do {
+			if (nonbankedAssemblyBlocks->empty())
+				break;
+
+			const RomLocation* bank0FinalRomLocation = symbols.find(BANK0FINAL_ENTRY_NAME);
+			if (!bank0FinalRomLocation)
+				break;
+
+			// TODO: nonbanked assembly.
+		} while (false);
 
 		// Install ISRs.
 		constexpr const Byte BANKING_BYTES[] = ISR_STUB_BANKING_BYTES;
@@ -45259,7 +45318,7 @@ bool compile(Program &program, const Options &options) {
 		if (
 			!programmer.process(
 				program.rom, compiler.bytes(), program.compiled.featureUsages,
-				compiler.namedAssemblyBlocks(),
+				compiler.nonbankedAssemblyBlocks(), compiler.namedAssemblyBlocks(),
 				compiler.borderFrameResources(), compiler.superPaletteResources(),
 				onError
 			)
