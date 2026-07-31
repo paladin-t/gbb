@@ -83,12 +83,13 @@ public:
 
 		int bank = 0;
 		int baseAddress = 0;
+		bool nonbanked = false;
 		IdentifierResolver resolveIdentifier = nullptr;
 		ArgsResolver resolveArgs = nullptr;
 		ErrorHandler onError = nullptr;
 
 		PostingOptions();
-		PostingOptions(int b, int addr, IdentifierResolver resolveid, ArgsResolver resolveargs, ErrorHandler onerr);
+		PostingOptions(int b, int addr, bool nonbanked_, IdentifierResolver resolveid, ArgsResolver resolveargs, ErrorHandler onerr);
 	};
 
 public:

@@ -466,11 +466,11 @@ public:
 		};
 
 		// Fill the addresses.
-		for (const Assembler::Context::LabelRef &lblRef : context.labelRefs) {
+		for (const Context::LabelRef &lblRef : context.labelRefs) {
 			int address = 0;
-			Assembler::Context::LabeledDestination::Dictionary::const_iterator it = context.labels.find(lblRef.label);
+			Context::LabeledDestination::Dictionary::const_iterator it = context.labels.find(lblRef.label);
 			if (it != context.labels.end()) {
-				const Assembler::Context::LabeledDestination &dest = it->second;
+				const Context::LabeledDestination &dest = it->second;
 				address = options.baseAddress + dest.address;
 			} else {
 				int bank = -1;
@@ -489,10 +489,11 @@ public:
 				}
 			}
 
+			Byte* nonbankedArgs = bytes->pointer() + lblRef.offset;
 			Byte* args = options.resolveArgs(bytes->pointer()) + lblRef.offset;
-			if (lblRef.type == Assembler::Context::LabelRef::Types::ADDRESS) {
+			if (lblRef.type == Context::LabelRef::Types::ADDRESS) {
 				args = fillUInt16(args, (UInt16)address);
-			} else if (lblRef.type == Assembler::Context::LabelRef::Types::OFFSET) {
+			} else if (lblRef.type == Context::LabelRef::Types::OFFSET) {
 				const int relOffset = address - (options.baseAddress + lblRef.offset + 1);
 				if (relOffset < std::numeric_limits<Int8>::min() || relOffset > std::numeric_limits<Int8>::max())
 					return throwInvalidProgramOffset(lblRef.tokenIndex);
@@ -1186,8 +1187,9 @@ Assembler::AssemblingOptions::AssemblingOptions(int b, int addr, IdentifierResol
 Assembler::PostingOptions::PostingOptions() {
 }
 
-Assembler::PostingOptions::PostingOptions(int b, int addr, IdentifierResolver resolveid, ArgsResolver resolveargs, ErrorHandler onerr) :
+Assembler::PostingOptions::PostingOptions(int b, int addr, bool nonbanked_, IdentifierResolver resolveid, ArgsResolver resolveargs, ErrorHandler onerr) :
 	bank(b), baseAddress(addr),
+	nonbanked(nonbanked_),
 	resolveIdentifier(resolveid),
 	resolveArgs(resolveargs),
 	onError(onerr)

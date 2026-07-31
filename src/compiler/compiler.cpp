@@ -3789,6 +3789,13 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_ASSET_PAGE_OUT_OF_BOUNDS */
+#ifndef THROW_BANK_0_OVERFLOW
+#	define THROW_BANK_0_OVERFLOW(ON_ERROR) \
+		do { \
+			throwBank0Overflow(ON_ERROR); \
+			return; \
+		} while (false)
+#endif /* THROW_BANK_0_OVERFLOW */
 #ifndef THROW_BANK_OVERFLOW
 #	define THROW_BANK_OVERFLOW(ON_ERROR) \
 		do { \
@@ -3938,6 +3945,20 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_INVALID_NATIVE_SYMBOL_DID_YOU_MEAN */
+#ifndef THROW_INVALID_NONBANKED_ASSEMBLY_BUFFER
+#	define THROW_INVALID_NONBANKED_ASSEMBLY_BUFFER(ON_ERROR) \
+		do { \
+			throwInvalidNonbankedAssemblyBuffer(ON_ERROR); \
+			return; \
+		} while (false)
+#endif /* THROW_INVALID_NONBANKED_ASSEMBLY_BUFFER */
+#ifndef THROW_INVALID_NONBANKED_POINT
+#	define THROW_INVALID_NONBANKED_POINT(ON_ERROR) \
+		do { \
+			throwInvalidNonbankedPoint(ON_ERROR); \
+			return false; \
+		} while (false)
+#endif /* THROW_INVALID_NONBANKED_POINT */
 #ifndef THROW_INVALID_OPERATION
 #	define THROW_INVALID_OPERATION(ON_ERROR, TK) \
 		do { \
@@ -7202,6 +7223,12 @@ public:
 		const Error err("Asset page out of bounds", false);
 		onError(err, err.format(), tk->begin());
 	}
+	void throwBank0Overflow(Error::Handler onError, Token::Ptr tk = nullptr) const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("Bank 0 overflow", false);
+		onError(err, err.format(), tk->begin());
+	}
 	void throwBankOverflow(Error::Handler onError, Token::Ptr tk = nullptr) const {
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
@@ -7333,6 +7360,18 @@ public:
 			tk = firstNonNumericTokenInThisOrChildren();
 		const Error err("Invalid native symbol, did you mean \"{0}\"", false);
 		onError(err, err.format({ fuzzy }), tk->begin());
+	}
+	void throwInvalidNonbankedAssemblyBuffer(Error::Handler onError, Token::Ptr tk = nullptr) const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("Invalid nonbanked assembly buffer", false);
+		onError(err, err.format(), tk->begin());
+	}
+	void throwInvalidNonbankedPoint(Error::Handler onError, Token::Ptr tk = nullptr) const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("Invalid nonbanked point", false);
+		onError(err, err.format(), tk->begin());
 	}
 	void throwInvalidOperation(Error::Handler onError, Token::Ptr tk = nullptr) const {
 		if (tk == nullptr)
@@ -15685,6 +15724,8 @@ private:
 	IToken::Array _asmTokens;
 	Assembler::Context _asmCtx;
 	std::string _name;
+	bool _nonbanked = false;
+	size_t _nonbankedSize = 0;
 	TextLocation _inCode;
 	RomLocation _inRom;
 	DeferAction _namingAction = nullptr;
@@ -15760,6 +15801,10 @@ public:
 	}
 
 	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		_nonbankedSize = context.top().nonbankedAssemblyBlocks ?
+			context.top().nonbankedAssemblyBlocks->count() :
+			0;
+
 		const Generator_Void_Void generator = [&] (void) -> void {
 			// Prepare.
 			Context &ctx = context.top();
@@ -15778,14 +15823,14 @@ public:
 
 			// Consume the tokens.
 			Token::Ptr tkbegin = nullptr;
-			bool nonbanked = false;
+			_nonbanked = false;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
 					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
 				})) { THROW_INVALID_SYNTAX(onError); }
 			}
 			if (!(tkbegin = consume(Token::Types::KEYWORD, "beginasm"))) { THROW_INVALID_SYNTAX(onError); }
-			if (consume(Token::Types::KEYWORD, "nonbanked")) { nonbanked = true; }
+			if (consume(Token::Types::KEYWORD, "nonbanked")) { _nonbanked = true; }
 
 			// Check the children.
 			if (_children.size() > 1) {
@@ -15815,14 +15860,17 @@ public:
 			// Determine the bank and address.
 			int bank = 0;
 			int address = 0;
-			if (nonbanked) {
+			if (_nonbanked) {
+				if (!ctx.nonbankedAssemblyBlocks) {
+					THROW_INVALID_NONBANKED_ASSEMBLY_BUFFER(onError);
+				}
+				ctx.nonbankedAssemblyBlocks->resize(_nonbankedSize);
 				int istSize = 0;
 				if (!isOnVbl && !isOnLcd) {
 					istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
 				}
-				// TODO: nonbanked assembly.
-				// Allocate and resolve bank and address
-				// const RomLocation* bank0FinalRomLocation = symbols.find(BANK0FINAL_ENTRY_NAME);
+				const bool ok = allocateNonbanked(context, bank, address, onError); // Allocate and resolve bank and address.
+				if (!ok) return;
 			} else {
 				int istSize = 0;
 				if (isOnVbl || isOnLcd) {
@@ -15882,7 +15930,7 @@ public:
 			const int n = (int)asmBytes->count();
 
 			// Emit the VM instructions.
-			if (nonbanked) {
+			if (_nonbanked) {
 				if (!isOnVbl && !isOnLcd) { // Normal assembly block.
 					// Emit a `VM_ASM` instruction to set the data.
 					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
@@ -15953,10 +16001,13 @@ public:
 			}
 
 			// Emit the assembly instructions.
-			if (nonbanked) {
+			if (_nonbanked) {
 				// Add to nonbanked assembly if needed.
-				// TODO: nonbanked assembly.
-				// Add to ctx.nonbankedAssemblyBlocks
+				const int address_ = address + (int)asmBytes->count();
+				if (address_ >= ctx.bankSize) {
+					THROW_BANK_0_OVERFLOW(onError);
+				}
+				ctx.nonbankedAssemblyBlocks->writeBytes(asmBytes.get());
 			} else {
 				emit(bytes, context, asmBytes->pointer(), (size_t)n);
 			}
@@ -16016,6 +16067,7 @@ public:
 
 		const Assembler::PostingOptions options(
 			ctx.bank, _scheduled.baseAddress,
+			_nonbanked,
 			[&] (const IToken::Ptr &tk, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> Assembler::IdentifierResolvingResults { // Resolve identifier.
 				const std::string caseSensitiveName = (std::string)tk->caseSensitiveText();
 				const std::string name = (std::string)tk->data();
@@ -16029,6 +16081,12 @@ public:
 				return resolveIdentifier(ctx, name, bank_, loc, id_, fuzzyName_);
 			},
 			[&] (const Byte* begin) -> Byte* {
+				auto aaa = (Byte*)((intptr_t)begin + _nonbankedSize);
+				auto bbb = _scheduled.args(begin);
+
+				if (_nonbanked)
+					return (Byte*)((intptr_t)begin + _nonbankedSize);
+
 				return _scheduled.args(begin);
 			},
 			[&] (const std::string &msg, const IToken::Ptr &tk) -> void {
@@ -16036,7 +16094,10 @@ public:
 				onError(err, err.format(), tk->begin());
 			}
 		);
-		ctx.assembler->post(bytes, _asmCtx, _asmTokens, options);
+		if (_nonbanked)
+			ctx.assembler->post(ctx.nonbankedAssemblyBlocks, _asmCtx, _asmTokens, options);
+		else
+			ctx.assembler->post(bytes, _asmCtx, _asmTokens, options);
 	}
 
 	virtual Abstract abstract(void) const override {
@@ -16138,6 +16199,20 @@ private:
 		}
 
 		return Assembler::IdentifierResolvingResults::IDENTIFIER;
+	}
+
+	bool allocateNonbanked(const Context::Stack &context, int &bank, int &address, Error::Handler onError) const {
+		const Context &ctx = context.top();
+
+		const RomLocation* bank0FinalRomLocation = ctx.symbols->find(BANK0FINAL_ENTRY_NAME);
+		if (!bank0FinalRomLocation) {
+			THROW_INVALID_NONBANKED_POINT(onError);
+		}
+
+		bank = bank0FinalRomLocation->bank;
+		address = bank0FinalRomLocation->address + (int)ctx.nonbankedAssemblyBlocks->count();
+
+		return true;
 	}
 };
 
@@ -43087,6 +43162,7 @@ private:
 
 public:
 	Compiler() {
+		_nonbankedAssemblyBlocks = Bytes::Ptr(Bytes::create());
 	}
 	~Compiler() {
 	}
@@ -43795,10 +43871,19 @@ private:
 				break;
 
 			const RomLocation* bank0FinalRomLocation = symbols.find(BANK0FINAL_ENTRY_NAME);
-			if (!bank0FinalRomLocation)
+			if (!bank0FinalRomLocation) {
+				const Error err("Invalid nonbanked point", true);
+				onError(err, err.format(), TextLocation::INVALID());
+
+				break;
+			}
+
+			const int size = options.bankSize - bank0FinalRomLocation->address + 1;
+			if ((int)nonbankedAssemblyBlocks->count() > size)
 				break;
 
-			// TODO: nonbanked assembly.
+			bytes->poke(bank0FinalRomLocation->address);
+			bytes->writeBytes(nonbankedAssemblyBlocks.get());
 		} while (false);
 
 		// Install ISRs.
