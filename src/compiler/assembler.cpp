@@ -489,7 +489,6 @@ public:
 				}
 			}
 
-			Byte* nonbankedArgs = bytes->pointer() + lblRef.offset;
 			Byte* args = options.resolveArgs(bytes->pointer()) + lblRef.offset;
 			if (lblRef.type == Context::LabelRef::Types::ADDRESS) {
 				args = fillUInt16(args, (UInt16)address);

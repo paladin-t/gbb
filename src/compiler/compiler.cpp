@@ -15820,10 +15820,12 @@ public:
 			// Reset the states.
 			_scheduled = ScheduledAsmJump();
 			_asmCtx = Assembler::Context();
+			_nonbanked = false;
+			_namingAction = nullptr;
+			_informationCollectingAction = nullptr;
 
 			// Consume the tokens.
 			Token::Ptr tkbegin = nullptr;
-			_nonbanked = false;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
 					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
@@ -16081,9 +16083,6 @@ public:
 				return resolveIdentifier(ctx, name, bank_, loc, id_, fuzzyName_);
 			},
 			[&] (const Byte* begin) -> Byte* {
-				auto aaa = (Byte*)((intptr_t)begin + _nonbankedSize);
-				auto bbb = _scheduled.args(begin);
-
 				if (_nonbanked)
 					return (Byte*)((intptr_t)begin + _nonbankedSize);
 
