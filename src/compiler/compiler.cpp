@@ -291,6 +291,10 @@ namespace GBBASIC {
 #	define BOOTSTRAP_ENTRY_ADDRESS 0x4000 // DOC: ROM SCHEMA.
 #endif /* BOOTSTRAP_ENTRY_ADDRESS */
 
+#ifndef BANK0FINAL_ENTRY_NAME
+#	define BANK0FINAL_ENTRY_NAME "BANK0FINAL" // DOC: ROM SCHEMA.
+#endif /* BANK0FINAL_ENTRY_NAME */
+
 #ifndef SCRIPT_MEMORY_ENTRY_NAME
 #	define SCRIPT_MEMORY_ENTRY_NAME "script_memory" // DOC: RAM SCHEMA.
 #endif /* SCRIPT_MEMORY_ENTRY_NAME */
@@ -3785,6 +3789,13 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_ASSET_PAGE_OUT_OF_BOUNDS */
+#ifndef THROW_BANK_0_OVERFLOW
+#	define THROW_BANK_0_OVERFLOW(ON_ERROR) \
+		do { \
+			throwBank0Overflow(ON_ERROR); \
+			return; \
+		} while (false)
+#endif /* THROW_BANK_0_OVERFLOW */
 #ifndef THROW_BANK_OVERFLOW
 #	define THROW_BANK_OVERFLOW(ON_ERROR) \
 		do { \
@@ -3934,6 +3945,20 @@ namespace GBBASIC {
 			return; \
 		} while (false)
 #endif /* THROW_INVALID_NATIVE_SYMBOL_DID_YOU_MEAN */
+#ifndef THROW_INVALID_NONBANKED_ASSEMBLY_BUFFER
+#	define THROW_INVALID_NONBANKED_ASSEMBLY_BUFFER(ON_ERROR) \
+		do { \
+			throwInvalidNonbankedAssemblyBuffer(ON_ERROR); \
+			return; \
+		} while (false)
+#endif /* THROW_INVALID_NONBANKED_ASSEMBLY_BUFFER */
+#ifndef THROW_INVALID_NONBANKED_POINT
+#	define THROW_INVALID_NONBANKED_POINT(ON_ERROR) \
+		do { \
+			throwInvalidNonbankedPoint(ON_ERROR); \
+			return false; \
+		} while (false)
+#endif /* THROW_INVALID_NONBANKED_POINT */
 #ifndef THROW_INVALID_OPERATION
 #	define THROW_INVALID_OPERATION(ON_ERROR, TK) \
 		do { \
@@ -4890,6 +4915,7 @@ public:
 		MacroFunctionTable::Stack* macroFunctions = nullptr;                        // FEAT: MACRO. Stores the user defined macro functions.
 		const MacroConstantTable::Stack* macroConstants = nullptr;                  // FEAT: MACRO. Stores the user defined macro constants.
 		const MacroIdentifierAliasTable::Stack* macroIdentifierAliases = nullptr;   // FEAT: MACRO. Stores the user defined macro identifier aliases.
+		Bytes::Ptr nonbankedAssemblyBlocks = nullptr;                               // Stores the nonbanked assembly blocks.
 		SymbolTable* namedAssemblyBlocks = nullptr;                                 // Stores the user defined named assembly blocks. The `RomLocation` values store the final addresses in ROM.
 		Assembler::Ptr assembler = nullptr;                                         // Stores the assembler.
 		Text::Array* assembledInformation = nullptr;                                // Stores the assembled information.
@@ -7197,6 +7223,12 @@ public:
 		const Error err("Asset page out of bounds", false);
 		onError(err, err.format(), tk->begin());
 	}
+	void throwBank0Overflow(Error::Handler onError, Token::Ptr tk = nullptr) const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("Bank 0 overflow", false);
+		onError(err, err.format(), tk->begin());
+	}
 	void throwBankOverflow(Error::Handler onError, Token::Ptr tk = nullptr) const {
 		if (tk == nullptr)
 			tk = firstNonNumericTokenInThisOrChildren();
@@ -7328,6 +7360,18 @@ public:
 			tk = firstNonNumericTokenInThisOrChildren();
 		const Error err("Invalid native symbol, did you mean \"{0}\"", false);
 		onError(err, err.format({ fuzzy }), tk->begin());
+	}
+	void throwInvalidNonbankedAssemblyBuffer(Error::Handler onError, Token::Ptr tk = nullptr) const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("Invalid nonbanked assembly buffer", false);
+		onError(err, err.format(), tk->begin());
+	}
+	void throwInvalidNonbankedPoint(Error::Handler onError, Token::Ptr tk = nullptr) const {
+		if (tk == nullptr)
+			tk = firstNonNumericTokenInThisOrChildren();
+		const Error err("Invalid nonbanked point", false);
+		onError(err, err.format(), tk->begin());
 	}
 	void throwInvalidOperation(Error::Handler onError, Token::Ptr tk = nullptr) const {
 		if (tk == nullptr)
@@ -15680,6 +15724,8 @@ private:
 	IToken::Array _asmTokens;
 	Assembler::Context _asmCtx;
 	std::string _name;
+	bool _nonbanked = false;
+	size_t _nonbankedSize = 0;
 	TextLocation _inCode;
 	RomLocation _inRom;
 	DeferAction _namingAction = nullptr;
@@ -15755,6 +15801,10 @@ public:
 	}
 
 	virtual void generate(Bytes::Ptr &bytes, Context::Stack &context, Error::Handler onError) override {
+		_nonbankedSize = context.top().nonbankedAssemblyBlocks ?
+			context.top().nonbankedAssemblyBlocks->count() :
+			0;
+
 		const Generator_Void_Void generator = [&] (void) -> void {
 			// Prepare.
 			Context &ctx = context.top();
@@ -15770,6 +15820,9 @@ public:
 			// Reset the states.
 			_scheduled = ScheduledAsmJump();
 			_asmCtx = Assembler::Context();
+			_nonbanked = false;
+			_namingAction = nullptr;
+			_informationCollectingAction = nullptr;
 
 			// Consume the tokens.
 			Token::Ptr tkbegin = nullptr;
@@ -15779,6 +15832,7 @@ public:
 				})) { THROW_INVALID_SYNTAX(onError); }
 			}
 			if (!(tkbegin = consume(Token::Types::KEYWORD, "beginasm"))) { THROW_INVALID_SYNTAX(onError); }
+			if (consume(Token::Types::KEYWORD, "nonbanked")) { _nonbanked = true; }
 
 			// Check the children.
 			if (_children.size() > 1) {
@@ -15805,16 +15859,35 @@ public:
 			const bool isOnVbl = name == ON_VBL_ENTRY_NAME;
 			const bool isOnLcd = name == ON_LCD_ENTRY_NAME;
 
-			// Add to the table if it's named.
-			int istSize = 0;
-			if (isOnVbl || isOnLcd) {
-				istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN].size;
-				istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::JUMP].size;
+			// Determine the bank and address.
+			int bank = 0;
+			int address = 0;
+			if (_nonbanked) {
+				if (!ctx.nonbankedAssemblyBlocks) {
+					THROW_INVALID_NONBANKED_ASSEMBLY_BUFFER(onError);
+				}
+				ctx.nonbankedAssemblyBlocks->resize(_nonbankedSize);
+				int istSize = 0;
+				if (isOnVbl || isOnLcd) {
+					istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN].size;
+				} else {
+					istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+				}
+				const bool ok = allocateNonbanked(context, bank, address, onError); // Allocate and resolve bank and address.
+				if (!ok) return;
 			} else {
-				istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+				int istSize = 0;
+				if (isOnVbl || isOnLcd) {
+					istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN].size;
+					istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::JUMP].size;
+				} else {
+					istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
+				}
+				bank = state.inRom.bank;
+				address = state.inRom.address + ctx.startAddress + istSize;
 			}
-			const int bank = state.inRom.bank;
-			const int address = state.inRom.address + ctx.startAddress + istSize;
+
+			// Add to the table if it's named.
 			if (!name.empty()) {
 				const RomLocation* romLocation = ctx.namedAssemblyBlocks->find(name);
 				if (romLocation) {
@@ -15881,8 +15954,10 @@ public:
 				args = fill(args, (UInt8)isrInstallerBank);
 
 				// Emit a `VM_JUMP` instruction to skip the assembly block.
-				args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
-				args = fill(args, (UInt16)(address + n));
+				if (!_nonbanked) {
+					args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
+					args = fill(args, (UInt16)(address + n));
+				}
 
 				_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
 			} else if (isOnLcd) { // Specialized for "ON LCD".
@@ -15905,14 +15980,19 @@ public:
 				args = fill(args, (UInt8)isrInstallerBank);
 
 				// Emit a `VM_JUMP` instruction to skip the assembly block.
-				args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
-				args = fill(args, (UInt16)(address + n));
+				if (!_nonbanked) {
+					args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
+					args = fill(args, (UInt16)(address + n));
+				}
 
 				_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
 			} else { // Normal assembly block.
+				// Count the banked size.
+				const int m = _nonbanked ? 0 : n;
+
 				// Emit a `VM_ASM` instruction to set the data.
 				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
-				args = fill(args, (UInt16)n);
+				args = fill(args, (UInt16)m);
 				args = fill(args, (UInt16)address);
 				args = fill(args, (UInt8)bank);
 
@@ -15920,7 +16000,16 @@ public:
 			}
 
 			// Emit the assembly instructions.
-			emit(bytes, context, asmBytes->pointer(), (size_t)n);
+			if (_nonbanked) {
+				// Add to nonbanked assembly if needed.
+				const int address_ = address + (int)asmBytes->count();
+				if (address_ >= ctx.bankSize) {
+					THROW_BANK_0_OVERFLOW(onError);
+				}
+				ctx.nonbankedAssemblyBlocks->writeBytes(asmBytes.get());
+			} else {
+				emit(bytes, context, asmBytes->pointer(), (size_t)n);
+			}
 
 			_inRom = RomLocation(bank, address, n);
 
@@ -15977,6 +16066,7 @@ public:
 
 		const Assembler::PostingOptions options(
 			ctx.bank, _scheduled.baseAddress,
+			_nonbanked,
 			[&] (const IToken::Ptr &tk, int &bank_, RamLocation &loc, std::string &id_, std::string &fuzzyName_) -> Assembler::IdentifierResolvingResults { // Resolve identifier.
 				const std::string caseSensitiveName = (std::string)tk->caseSensitiveText();
 				const std::string name = (std::string)tk->data();
@@ -15990,6 +16080,9 @@ public:
 				return resolveIdentifier(ctx, name, bank_, loc, id_, fuzzyName_);
 			},
 			[&] (const Byte* begin) -> Byte* {
+				if (_nonbanked)
+					return (Byte*)((intptr_t)begin + _nonbankedSize);
+
 				return _scheduled.args(begin);
 			},
 			[&] (const std::string &msg, const IToken::Ptr &tk) -> void {
@@ -15997,7 +16090,10 @@ public:
 				onError(err, err.format(), tk->begin());
 			}
 		);
-		ctx.assembler->post(bytes, _asmCtx, _asmTokens, options);
+		if (_nonbanked)
+			ctx.assembler->post(ctx.nonbankedAssemblyBlocks, _asmCtx, _asmTokens, options);
+		else
+			ctx.assembler->post(bytes, _asmCtx, _asmTokens, options);
 	}
 
 	virtual Abstract abstract(void) const override {
@@ -16099,6 +16195,20 @@ private:
 		}
 
 		return Assembler::IdentifierResolvingResults::IDENTIFIER;
+	}
+
+	bool allocateNonbanked(const Context::Stack &context, int &bank, int &address, Error::Handler onError) const {
+		const Context &ctx = context.top();
+
+		const RomLocation* bank0FinalRomLocation = ctx.symbols->find(BANK0FINAL_ENTRY_NAME);
+		if (!bank0FinalRomLocation) {
+			THROW_INVALID_NONBANKED_POINT(onError);
+		}
+
+		bank = bank0FinalRomLocation->bank;
+		address = bank0FinalRomLocation->address + (int)ctx.nonbankedAssemblyBlocks->count();
+
+		return true;
 	}
 };
 
@@ -32294,7 +32404,7 @@ public:
 			ADD_STATEMENT("beginasm",          node<NodeBeginAsm>(),                       Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("endasm",            NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 			ADD_STATEMENT("banked",            RESERVED,                                   Token::Types::KEYWORD,        false);
-			ADD_STATEMENT("nonbanked",         RESERVED,                                   Token::Types::KEYWORD,        false);
+			ADD_STATEMENT("nonbanked",         NODE /* for syntax assistance */,           Token::Types::KEYWORD,        false);
 
 			// Thread.
 			ADD_STATEMENT("start",             node<NodeStart>(),                          Token::Types::KEYWORD,        false);
@@ -42468,6 +42578,7 @@ private:
 						CHECK_UNEXPECTED(q);
 					}
 				}
+				if (must(Token::Types::KEYWORD, "nonbanked")(q)) { /* Do nothing. */ }
 				ignore(Token::Types::COMMENT)(q);
 				if (!ignore(Token::Types::END_OF_LINE)(q)) THROW_PARSER_ERROR(throwInvalidSyntax(q.index));
 				Token::Array asmTokens;
@@ -43037,6 +43148,7 @@ private:
 	Node::MacroIdentifierAliasTable::Stack _macroIdentifierAliases;
 	Node::MacroStackReferenceTable::Stack _macroStackReferences;
 	Node::MacroStringTable::Stack _macroStrings;
+	Bytes::Ptr _nonbankedAssemblyBlocks = nullptr;
 	SymbolTable _namedAssemblyBlocks;
 	BorderFrameResources _borderFrameResources;
 	SuperPaletteResources _superPaletteResources;
@@ -43046,6 +43158,7 @@ private:
 
 public:
 	Compiler() {
+		_nonbankedAssemblyBlocks = Bytes::Ptr(Bytes::create());
 	}
 	~Compiler() {
 	}
@@ -43223,6 +43336,9 @@ public:
 	Node::MacroStringTable::Stack &macroStrings(void) {
 		return _macroStrings;
 	}
+	Bytes::Ptr &nonbankedAssemblyBlocks(void) {
+		return _nonbankedAssemblyBlocks;
+	}
 	SymbolTable &namedAssemblyBlocks(void) {
 		return _namedAssemblyBlocks;
 	}
@@ -43276,6 +43392,7 @@ public:
 			_macroIdentifierAliases,
 			_macroStackReferences,
 			_macroStrings,
+			_nonbankedAssemblyBlocks,
 			_namedAssemblyBlocks,
 			dataSequenceInformation,
 			assembledInformation,
@@ -43320,6 +43437,7 @@ private:
 		Node::MacroIdentifierAliasTable::Stack &macroIdentifierAliases,
 		Node::MacroStackReferenceTable::Stack &macroStackReferences,
 		Node::MacroStringTable::Stack &macroStrings,
+		Bytes::Ptr &nonbankedAssemblyBlocks,
 		SymbolTable &namedAssemblyBlocks,
 		Text::Array* dataSequenceInformation,
 		Text::Array* assembledInformation,
@@ -43365,6 +43483,7 @@ private:
 		context.top().macroIdentifierAliases          = &macroIdentifierAliases; // FEAT: MACRO.
 		(void)                                           macroStackReferences;   // FEAT: MACRO.
 		(void)                                           macroStrings;           // FEAT: MACRO.
+		context.top().nonbankedAssemblyBlocks         =  nonbankedAssemblyBlocks;
 		context.top().namedAssemblyBlocks             = &namedAssemblyBlocks;
 		context.top().assembledInformation            =  assembledInformation;
 		context.top().borderFrameResources            =  borderFrameResources;
@@ -43634,7 +43753,7 @@ public:
 
 	bool process(
 		const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const FeatureUsages &featureUsages,
-		const SymbolTable &namedAssemblyBlocks,
+		const Bytes::Ptr &nonbankedAssemblyBlocks, const SymbolTable &namedAssemblyBlocks,
 		const BorderFrameResources &borderFrameResources, const SuperPaletteResources &superPaletteResources,
 		Error::Handler onError
 	) {
@@ -43653,7 +43772,7 @@ public:
 		// Program the ROM with the specific bytes.
 		_bytes = program(
 			rom, compiled, featureUsages,
-			namedAssemblyBlocks,
+			nonbankedAssemblyBlocks, namedAssemblyBlocks,
 			borderFrameResources, superPaletteResources,
 			_options,
 			_symbols,
@@ -43667,7 +43786,7 @@ public:
 private:
 	static Bytes::Ptr program(
 		const Bytes::Ptr &rom, const Bytes::Ptr &compiled, const FeatureUsages &featureUsages,
-		const SymbolTable &namedAssemblyBlocks,
+		const Bytes::Ptr &nonbankedAssemblyBlocks, const SymbolTable &namedAssemblyBlocks,
 		const BorderFrameResources &borderFrameResources, const SuperPaletteResources &superPaletteResources,
 		const Options &options,
 		const SymbolTable &symbols,
@@ -43741,6 +43860,27 @@ private:
 				resized |= true;
 			}
 		}
+
+		// Link nonbanked assembly blocks.
+		do {
+			if (nonbankedAssemblyBlocks->empty())
+				break;
+
+			const RomLocation* bank0FinalRomLocation = symbols.find(BANK0FINAL_ENTRY_NAME);
+			if (!bank0FinalRomLocation) {
+				const Error err("Invalid nonbanked point", true);
+				onError(err, err.format(), TextLocation::INVALID());
+
+				break;
+			}
+
+			const int size = options.bankSize - bank0FinalRomLocation->address + 1;
+			if ((int)nonbankedAssemblyBlocks->count() > size)
+				break;
+
+			bytes->poke(bank0FinalRomLocation->address);
+			bytes->writeBytes(nonbankedAssemblyBlocks.get());
+		} while (false);
 
 		// Install ISRs.
 		constexpr const Byte BANKING_BYTES[] = ISR_STUB_BANKING_BYTES;
@@ -45259,7 +45399,7 @@ bool compile(Program &program, const Options &options) {
 		if (
 			!programmer.process(
 				program.rom, compiler.bytes(), program.compiled.featureUsages,
-				compiler.namedAssemblyBlocks(),
+				compiler.nonbankedAssemblyBlocks(), compiler.namedAssemblyBlocks(),
 				compiler.borderFrameResources(), compiler.superPaletteResources(),
 				onError
 			)

@@ -844,9 +844,9 @@ AssetsSortingPopupBox::AssetsSortingPopupBox(
 		_orders[(unsigned)AssetsBundle::Categories::ACTOR].push_back(i);
 	for (int i = 0; i < _project->fontPageCount(); ++i)
 		_orders[(unsigned)AssetsBundle::Categories::FONT].push_back(i);
-	for (int i = 0; i < _project->musicPageCount(); ++i)
-		_orders[(unsigned)AssetsBundle::Categories::I18N].push_back(i);
 	for (int i = 0; i < _project->i18nPageCount(); ++i)
+		_orders[(unsigned)AssetsBundle::Categories::I18N].push_back(i);
+	for (int i = 0; i < _project->musicPageCount(); ++i)
 		_orders[(unsigned)AssetsBundle::Categories::MUSIC].push_back(i);
 	for (int i = 0; i < _project->sfxPageCount(); ++i)
 		_orders[(unsigned)AssetsBundle::Categories::SFX].push_back(i);
