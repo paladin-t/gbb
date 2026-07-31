@@ -15868,7 +15868,9 @@ public:
 				}
 				ctx.nonbankedAssemblyBlocks->resize(_nonbankedSize);
 				int istSize = 0;
-				if (!isOnVbl && !isOnLcd) {
+				if (isOnVbl || isOnLcd) {
+					istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN].size;
+				} else {
 					istSize += sizeof(Asm::Opcode) + INSTRUCTIONS[(size_t)Asm::Types::ASM].size;
 				}
 				const bool ok = allocateNonbanked(context, bank, address, onError); // Allocate and resolve bank and address.
@@ -15932,74 +15934,69 @@ public:
 			const int n = (int)asmBytes->count();
 
 			// Emit the VM instructions.
-			if (_nonbanked) {
-				if (!isOnVbl && !isOnLcd) { // Normal assembly block.
-					// Emit a `VM_ASM` instruction to set the data.
-					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
-					args = fill(args, (UInt16)n);
-					args = fill(args, (UInt16)address);
-					args = fill(args, (UInt8)bank);
+			if (isOnVbl) { // Specialized for "ON VBL".
+				// Find the ISR entry.
+				if (!ctx.symbols) { THROW_INVALID_OPERATION(onError, nullptr); }
+				const RomLocation* romLocation = ctx.symbols->find(ISR_VBL_ENTRY_NAME);
+				if (!romLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
 
-					_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
-				}
-			} else {
-				if (isOnVbl) { // Specialized for "ON VBL".
-					// Find the ISR entry.
-					if (!ctx.symbols) { THROW_INVALID_OPERATION(onError, nullptr); }
-					const RomLocation* romLocation = ctx.symbols->find(ISR_VBL_ENTRY_NAME);
-					if (!romLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
+				// Find the installer.
+				const RomLocation* isrInstallerRomLocation = ctx.symbols->find(INSTALL_VBL_ISR_FUNCTION_NAME);
+				if (!isrInstallerRomLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
+				const int isrInstallerBank = isrInstallerRomLocation->bank;
+				const int isrInstallerAddress = isrInstallerRomLocation->address;
 
-					// Find the installer.
-					const RomLocation* isrInstallerRomLocation = ctx.symbols->find(INSTALL_VBL_ISR_FUNCTION_NAME);
-					if (!isrInstallerRomLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
-					const int isrInstallerBank = isrInstallerRomLocation->bank;
-					const int isrInstallerAddress = isrInstallerRomLocation->address;
+				// Emit a `VM_INVOKE_FN` instruction to install the ISR handler.
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
+				args = fill(args, (Int16)0);
+				args = fill(args, (UInt8)0);
+				args = fill(args, (UInt16)isrInstallerAddress);
+				args = fill(args, (UInt8)isrInstallerBank);
 
-					// Emit a `VM_INVOKE_FN` instruction to install the ISR handler.
-					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
-					args = fill(args, (Int16)0);
-					args = fill(args, (UInt8)0);
-					args = fill(args, (UInt16)isrInstallerAddress);
-					args = fill(args, (UInt8)isrInstallerBank);
-
-					// Emit a `VM_JUMP` instruction to skip the assembly block.
+				// Emit a `VM_JUMP` instruction to skip the assembly block.
+				if (!_nonbanked) {
 					args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
 					args = fill(args, (UInt16)(address + n));
+				}
 
-					_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
-				} else if (isOnLcd) { // Specialized for "ON LCD".
-					// Find the ISR entry.
-					if (!ctx.symbols) { THROW_INVALID_OPERATION(onError, nullptr); }
-					const RomLocation* romLocation = ctx.symbols->find(ISR_LCD_ENTRY_NAME);
-					if (!romLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
+				_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
+			} else if (isOnLcd) { // Specialized for "ON LCD".
+				// Find the ISR entry.
+				if (!ctx.symbols) { THROW_INVALID_OPERATION(onError, nullptr); }
+				const RomLocation* romLocation = ctx.symbols->find(ISR_LCD_ENTRY_NAME);
+				if (!romLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
 
-					// Find the installer.
-					const RomLocation* isrInstallerRomLocation = ctx.symbols->find(INSTALL_LCD_ISR_FUNCTION_NAME);
-					if (!isrInstallerRomLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
-					const int isrInstallerBank = isrInstallerRomLocation->bank;
-					const int isrInstallerAddress = isrInstallerRomLocation->address;
+				// Find the installer.
+				const RomLocation* isrInstallerRomLocation = ctx.symbols->find(INSTALL_LCD_ISR_FUNCTION_NAME);
+				if (!isrInstallerRomLocation) { THROW_INVALID_NATIVE_SYMBOL(onError); }
+				const int isrInstallerBank = isrInstallerRomLocation->bank;
+				const int isrInstallerAddress = isrInstallerRomLocation->address;
 
-					// Emit a `VM_INVOKE_FN` instruction to install the ISR handler.
-					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
-					args = fill(args, (Int16)0);
-					args = fill(args, (UInt8)0);
-					args = fill(args, (UInt16)isrInstallerAddress);
-					args = fill(args, (UInt8)isrInstallerBank);
+				// Emit a `VM_INVOKE_FN` instruction to install the ISR handler.
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::INVOKE_FN]);
+				args = fill(args, (Int16)0);
+				args = fill(args, (UInt8)0);
+				args = fill(args, (UInt16)isrInstallerAddress);
+				args = fill(args, (UInt8)isrInstallerBank);
 
-					// Emit a `VM_JUMP` instruction to skip the assembly block.
+				// Emit a `VM_JUMP` instruction to skip the assembly block.
+				if (!_nonbanked) {
 					args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::JUMP]);
 					args = fill(args, (UInt16)(address + n));
-
-					_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
-				} else { // Normal assembly block.
-					// Emit a `VM_ASM` instruction to set the data.
-					Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
-					args = fill(args, (UInt16)n);
-					args = fill(args, (UInt16)address);
-					args = fill(args, (UInt8)bank);
-
-					_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
 				}
+
+				_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
+			} else { // Normal assembly block.
+				// Count the banked size.
+				const int m = _nonbanked ? 0 : n;
+
+				// Emit a `VM_ASM` instruction to set the data.
+				Byte* args = emit(bytes, context, INSTRUCTIONS[(size_t)Asm::Types::ASM]);
+				args = fill(args, (UInt16)m);
+				args = fill(args, (UInt16)address);
+				args = fill(args, (UInt8)bank);
+
+				_scheduled = ScheduledAsmJump(bytes->pointer(), args, address);
 			}
 
 			// Emit the assembly instructions.
