@@ -16090,10 +16090,12 @@ public:
 				onError(err, err.format(), tk->begin());
 			}
 		);
-		if (_nonbanked)
-			ctx.assembler->post(ctx.nonbankedAssemblyBlocks, _asmCtx, _asmTokens, options);
-		else
+		if (_nonbanked) {
+			if (ctx.nonbankedAssemblyBlocks)
+				ctx.assembler->post(ctx.nonbankedAssemblyBlocks, _asmCtx, _asmTokens, options);
+		} else {
 			ctx.assembler->post(bytes, _asmCtx, _asmTokens, options);
+		}
 	}
 
 	virtual Abstract abstract(void) const override {
@@ -43158,7 +43160,6 @@ private:
 
 public:
 	Compiler() {
-		_nonbankedAssemblyBlocks = Bytes::Ptr(Bytes::create());
 	}
 	~Compiler() {
 	}
@@ -43451,6 +43452,7 @@ private:
 	) {
 		// Prepare.
 		Bytes::Ptr bytes(Bytes::create());
+		nonbankedAssemblyBlocks = Bytes::Ptr(Bytes::create());
 
 		// Setup the generation context.
 		Node::Context::Stack context;
@@ -43863,7 +43865,7 @@ private:
 
 		// Link nonbanked assembly blocks.
 		do {
-			if (nonbankedAssemblyBlocks->empty())
+			if (!nonbankedAssemblyBlocks || nonbankedAssemblyBlocks->empty())
 				break;
 
 			const RomLocation* bank0FinalRomLocation = symbols.find(BANK0FINAL_ENTRY_NAME);
