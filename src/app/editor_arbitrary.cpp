@@ -643,7 +643,7 @@ private:
 							if (sscanf(buf + 2, "%x", &hex) == 1 && hex <= 0x10ffff && !(hex >= 0xd800 && hex <= 0xdfff))
 								cp = (Font::Codepoint)hex;
 						} else {
-							long long num = 0;
+							Int64 num = 0;
 							if (Text::fromString(buf, num)) {
 								if (num >= 0 && num <= 0x10ffff && !(num >= 0xd800 && num <= 0xdfff))
 									cp = (Font::Codepoint)num;
@@ -901,7 +901,7 @@ private:
 			if (sscanf(buf + 2, "%x", &hex) == 1 && hex <= 0x10ffff && !(hex >= 0xd800 && hex <= 0xdfff))
 				return (Font::Codepoint)hex;
 		} else {
-			long long num = 0;
+			Int64 num = 0;
 			if (Text::fromString(buf, num)) {
 				if (num >= 0 && num <= 0x10ffff && !(num >= 0xd800 && num <= 0xdfff))
 					return (Font::Codepoint)num;
