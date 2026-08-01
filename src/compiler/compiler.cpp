@@ -7747,7 +7747,7 @@ private:
 
 		// Output the data information.
 		std::string msg;
-		msg += Text::toString(values.size()) + " elements";
+		msg += Text::toString((int)values.size()) + " elements";
 		msg += ": ";
 		msg += "bank " + Text::toString(bank);
 		msg += ", address 0x" + Text::toHex(address, 4, '0', true);

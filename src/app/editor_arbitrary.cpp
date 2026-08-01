@@ -726,7 +726,7 @@ private:
 			const char* name = nullptr;
 			FontAssets::Entry::CodepointRanges ranges;
 
-			constexpr Preset(const char* n, const FontAssets::Entry::CodepointRanges &r)
+			Preset(const char* n, const FontAssets::Entry::CodepointRanges &r)
 				: name(n), ranges(r)
 			{
 			}
