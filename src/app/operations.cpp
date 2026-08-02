@@ -4761,6 +4761,8 @@ promise::Promise Operations::projectRun(Window* wnd, Renderer* rnd, Workspace* w
 				sram,
 				true, true, traceless
 			);
+			for (int i = 0; i < GBBASIC_COUNTOF(ws->settings().emulatorChannelMuted); ++i)
+				ws->canvasDevice()->muteAudioChannel(i, ws->settings().emulatorChannelMuted[i]);
 			if (!suc) {
 				ws->canvasDevice()->close(nullptr);
 				ws->canvasDevice(nullptr);
