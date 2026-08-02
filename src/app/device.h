@@ -65,6 +65,10 @@
 #	define DEVICE_OBJ_COUNT 40
 #endif /* DEVICE_OBJ_COUNT */
 
+#ifndef DEVICE_AUDIO_CHANNEL_COUNT
+#	define DEVICE_AUDIO_CHANNEL_COUNT 4
+#endif /* DEVICE_AUDIO_CHANNEL_COUNT */
+
 /* ===========================================================================} */
 
 /*
@@ -207,9 +211,9 @@ public:
 public:
 	/**< Cartridge properties. */
 
-	virtual bool cartridgeHasCgbSupport(void) const = 0;
-	virtual bool cartridgeHasExtSupport(void) const = 0;
-	virtual bool cartridgeHasSgbSupport(void) const = 0;
+	virtual bool isCartridgeCgbCompatible(void) const = 0;
+	virtual bool isCartridgeExtCompatible(void) const = 0;
+	virtual bool isCartridgeSgbCompatible(void) const = 0;
 	virtual int cartridgeRomSize(int* banks /* nullable */) const = 0;
 	virtual int cartridgeSramSize(int* banks /* nullable */) const = 0;
 	virtual int cartridgeMbcType(void) const = 0;
@@ -221,29 +225,34 @@ public:
 
 	virtual DeviceTypes deviceType(void) const = 0;
 	virtual DeviceTypes enabledDeviceType(void) const = 0;
-	virtual bool deviceHasCgbSupport(void) const = 0;
-	virtual bool deviceHasExtSupport(void) const = 0;
-	virtual bool deviceHasSgbSupport(void) const = 0;
+	virtual bool isDeviceCgbCompatible(void) const = 0;
+	virtual bool isDeviceExtCompatible(void) const = 0;
+	virtual bool isDeviceSgbCompatible(void) const = 0;
 
 	/**< Emulation properties. */
 
+	virtual bool supportsGettingDuty(void) const = 0;
+	virtual bool supportsVariableSpeed(void) const = 0;
+	virtual bool supportsSgbBorder(void) const = 0;
+	virtual bool supportsVramDebugging(void) const = 0;
+	virtual bool supportsMutingAudioChannel(void) const = 0;
+
 	virtual Colour classicPalette(int index) const = 0;
 	virtual void classicPalette(int index, const Colour &col) = 0;
-
-	virtual bool isVariableSpeedSupported(void) const = 0;
-	virtual bool isSgbBorderSupported(void) const = 0;
-	virtual void* audioSpecification(void) const = 0;
 
 	virtual unsigned speed(void) const = 0;
 	virtual bool speed(unsigned s) = 0;
 
 	virtual unsigned fps(void) const = 0;
 
-	virtual bool canGetDuty(void) const = 0;
 	virtual int getDuty(int* l /* nullable */) const = 0;
 
 	virtual long long timeoutThreshold(void) const = 0;
 	virtual void timeoutThreshold(long long val) = 0;
+
+	virtual void* audioSpecification(void) const = 0;
+	virtual bool mutedAudioChannel(int ch) const = 0;
+	virtual void muteAudioChannel(int ch, bool muted) = 0;
 
 	virtual bool traceless(void) const = 0;
 
@@ -255,8 +264,6 @@ public:
 	virtual void stroke(int key) = 0;
 
 	/**< VRAM debugging operations. */
-
-	virtual bool isVramDebuggingSupported(void) const = 0;
 
 	virtual TileSourceTypes getTileSourceType(void) const = 0;
 	virtual MapSourceTypes getMapSourceType(LayerTypes layer) const = 0;

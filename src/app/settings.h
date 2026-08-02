@@ -73,6 +73,7 @@ struct Settings {
 	Colour deviceClassicPalette[4];
 
 	bool emulatorMuted = false;
+	bool emulatorChannelMuted[DEVICE_AUDIO_CHANNEL_COUNT];
 	int emulatorSpeed = DEVICE_BASE_SPEED_FACTOR * 1;
 	int emulatorPreferedSpeed = DEVICE_BASE_SPEED_FACTOR * DEVICE_DEFAULT_PREFERED_SPEED;
 

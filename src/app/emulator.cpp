@@ -57,6 +57,7 @@ struct Context {
 	float statusBarHeight;
 	bool showStatus;
 	bool* emulatorMuted = nullptr;
+	bool (&emulatorChannelMuted)[DEVICE_AUDIO_CHANNEL_COUNT];
 	int* emulatorSpeed = nullptr;
 	int* emulatorPreferedSpeed = nullptr;
 	bool integerScale;
@@ -100,7 +101,7 @@ struct Context {
 		Input* input_,
 		const Device::Ptr &canvasDevice_, const Texture::Ptr &canvasTexture_, const Texture::Ptr &canvasTextureForBorderFrame_,
 		const std::string &cartridgeStatusText_, const std::string &deviceStatusText_, const std::string &statusTooltip_, float* statusBarWidth_, float statusBarHeight_, bool showStatus_,
-		bool* emulatorMuted_, int* emulatorSpeed_, int* emulatorFastForwardSpeed_,
+		bool* emulatorMuted_, bool (&emulatorChannelMuted_)[DEVICE_AUDIO_CHANNEL_COUNT], int* emulatorSpeed_, int* emulatorFastForwardSpeed_,
 		bool integerScale_, bool fixRatio_,
 		bool* onscreenGamepadEnabled_, bool onscreenGamepadSwapAB_, float onscreenGamepadScale_, const Math::Vec2<float> onscreenGamepadPadding_,
 		bool* onscreenDebugEnabled_,
@@ -117,7 +118,7 @@ struct Context {
 		input(input_),
 		canvasDevice(canvasDevice_.get()), canvasTexture(canvasTexture_.get()), canvasTextureForBorderFrame(canvasTextureForBorderFrame_.get()),
 		cartridgeStatusText(cartridgeStatusText_), deviceStatusText(deviceStatusText_), statusTooltip(statusTooltip_), statusBarWidth(statusBarWidth_), statusBarHeight(statusBarHeight_), showStatus(showStatus_),
-		emulatorMuted(emulatorMuted_), emulatorSpeed(emulatorSpeed_), emulatorPreferedSpeed(emulatorFastForwardSpeed_),
+		emulatorMuted(emulatorMuted_), emulatorChannelMuted(emulatorChannelMuted_), emulatorSpeed(emulatorSpeed_), emulatorPreferedSpeed(emulatorFastForwardSpeed_),
 		integerScale(integerScale_), fixRatio(fixRatio_),
 		onscreenGamepadEnabled(onscreenGamepadEnabled_), onscreenGamepadSwapAB(onscreenGamepadSwapAB_), onscreenGamepadScale(onscreenGamepadScale_), onscreenGamepadPadding(onscreenGamepadPadding_),
 		onscreenDebugEnabled(onscreenDebugEnabled_),
@@ -474,7 +475,7 @@ static void renderStatus(const Context &context) {
 		}
 	} while (false);
 	if (ImGui::GetWindowWidth() >= 430) {
-		if (context.canvasDevice->canGetDuty()) {
+		if (context.canvasDevice->supportsGettingDuty()) {
 			ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImGui::GetStyleColorVec4(ImGuiCol_CheckMark));
 			ImGui::PushStyleColor(ImGuiCol_SliderGrabActive, ImGui::GetStyleColorVec4(ImGuiCol_CheckMark));
 			ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
@@ -501,7 +502,7 @@ static void renderStatus(const Context &context) {
 		float width_ = 0.0f;
 		const float wndWidth = ImGui::GetWindowWidth();
 		ImGui::SetCursorPosX(wndWidth - *context.statusBarWidth);
-		if (context.canvasDevice->isVariableSpeedSupported()) {
+		if (context.canvasDevice->supportsVariableSpeed()) {
 			if (*context.emulatorSpeed == DEVICE_BASE_SPEED_FACTOR * 1) {
 				if (ImGui::ImageButton(context.theme->iconFastForward()->pointer(context.renderer), ImVec2(13, 13), ImVec4(1, 1, 1, 1), false, context.theme->tooltipEmulator_AlternativeSpeed().c_str())) {
 					ImGui::OpenPopup("@Spd");
@@ -517,13 +518,29 @@ static void renderStatus(const Context &context) {
 			width_ += ImGui::GetItemRectSize().x;
 			ImGui::SameLine();
 		}
-		if (*context.emulatorMuted) {
-			if (ImGui::ImageButton(context.theme->iconMuted()->pointer(context.renderer), ImVec2(13, 13), ImVec4(1, 1, 1, 1))) {
-				*context.emulatorMuted = false;
+		if (context.canvasDevice->supportsMutingAudioChannel()) {
+			if (*context.emulatorMuted) {
+				if (ImGui::ImageButton(context.theme->iconMuted()->pointer(context.renderer), ImVec2(13, 13), ImVec4(1, 1, 1, 1))) {
+					*context.emulatorMuted = false;
+					for (int i = 0; i < DEVICE_AUDIO_CHANNEL_COUNT; ++i) {
+						context.emulatorChannelMuted[i] = false;
+						context.canvasDevice->muteAudioChannel(i, false);
+					}
+				}
+			} else {
+				if (ImGui::ImageButton(context.theme->iconLoud()->pointer(context.renderer), ImVec2(13, 13), ImVec4(1, 1, 1, 1))) {
+					ImGui::OpenPopup("@Mute");
+				}
 			}
 		} else {
-			if (ImGui::ImageButton(context.theme->iconLoud()->pointer(context.renderer), ImVec2(13, 13), ImVec4(1, 1, 1, 1))) {
-				*context.emulatorMuted = true;
+			if (*context.emulatorMuted) {
+				if (ImGui::ImageButton(context.theme->iconMuted()->pointer(context.renderer), ImVec2(13, 13), ImVec4(1, 1, 1, 1))) {
+					*context.emulatorMuted = false;
+				}
+			} else {
+				if (ImGui::ImageButton(context.theme->iconLoud()->pointer(context.renderer), ImVec2(13, 13), ImVec4(1, 1, 1, 1))) {
+					*context.emulatorMuted = true;
+				}
 			}
 		}
 		width_ += ImGui::GetItemRectSize().x;
@@ -540,7 +557,53 @@ static void renderStatus(const Context &context) {
 	}
 
 	ImGui::SetCursorPos(pos);
+}
 
+static void shortcuts(const Context &context) {
+	// Prepare.
+	if (context.hasPopup)
+		return;
+
+	if (!context.showStatus)
+		return;
+
+	ImGuiIO &io = ImGui::GetIO();
+
+	// Get key states.
+#if GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CTRL
+	const bool modifier = io.KeyCtrl;
+#elif GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CMD
+	const bool modifier = io.KeySuper;
+#endif /* GBBASIC_MODIFIER_KEY */
+
+	const bool g     = ImGui::IsKeyPressed(SDL_SCANCODE_G);
+	const bool slash = ImGui::IsKeyPressed(SDL_SCANCODE_SLASH);
+
+	// Overlay operations.
+	if (modifier && !io.KeyShift && !io.KeyAlt) {
+		if (context.canShowOnscreenGamepad) {
+			if (g)
+				*context.onscreenGamepadEnabled = !*context.onscreenGamepadEnabled;
+		}
+	}
+	if (modifier && !io.KeyShift && !io.KeyAlt) {
+		if (slash) {
+			if (*context.emulatorSpeed == DEVICE_BASE_SPEED_FACTOR * 1) {
+				*context.emulatorSpeed = Math::clamp(*context.emulatorPreferedSpeed, DEVICE_BASE_SPEED_FACTOR / 10, DEVICE_BASE_SPEED_FACTOR * 16);
+				context.canvasDevice->speed(Math::clamp(*context.emulatorPreferedSpeed, DEVICE_BASE_SPEED_FACTOR / 10, DEVICE_BASE_SPEED_FACTOR * 16));
+			} else {
+				*context.emulatorSpeed = DEVICE_BASE_SPEED_FACTOR * 1;
+				context.canvasDevice->speed(DEVICE_BASE_SPEED_FACTOR * 1);
+			}
+		}
+	}
+}
+
+static void menu(const Context &context) {
+	// Prepare.
+	ImGuiStyle &style = ImGui::GetStyle();
+
+	// Show the menus.
 	do {
 		VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
 		VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
@@ -588,95 +651,125 @@ static void renderStatus(const Context &context) {
 			ImGui::EndPopup();
 		}
 	} while (false);
-}
 
-static void shortcuts(const Context &context) {
-	// Prepare.
-	if (context.hasPopup)
-		return;
+	do {
+		VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+		VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
 
-	if (!context.showStatus)
-		return;
+		if (ImGui::BeginPopup("@Mute")) {
+			bool channels[DEVICE_AUDIO_CHANNEL_COUNT];
+			for (int i = 0; i < DEVICE_AUDIO_CHANNEL_COUNT; ++i)
+				channels[i] = !context.emulatorChannelMuted[i];
 
-	ImGuiIO &io = ImGui::GetIO();
+			if (ImGui::MenuItem(context.theme->menu_Channel0Duty1(), nullptr, &channels[0])) {
+				context.emulatorChannelMuted[0] = !channels[0];
+				context.canvasDevice->muteAudioChannel(0, !channels[0]);
+				bool allMuted = true;
+				for (int i = 0; i < DEVICE_AUDIO_CHANNEL_COUNT; ++i) {
+					if (channels[i]) {
+						allMuted = false;
 
-	// Get key states.
-#if GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CTRL
-	const bool modifier = io.KeyCtrl;
-#elif GBBASIC_MODIFIER_KEY == GBBASIC_MODIFIER_KEY_CMD
-	const bool modifier = io.KeySuper;
-#endif /* GBBASIC_MODIFIER_KEY */
-
-	const bool g     = ImGui::IsKeyPressed(SDL_SCANCODE_G);
-	const bool slash = ImGui::IsKeyPressed(SDL_SCANCODE_SLASH);
-
-	// Overlay operations.
-	if (modifier && !io.KeyShift && !io.KeyAlt) {
-		if (context.canShowOnscreenGamepad) {
-			if (g)
-				*context.onscreenGamepadEnabled = !*context.onscreenGamepadEnabled;
-		}
-	}
-	if (modifier && !io.KeyShift && !io.KeyAlt) {
-		if (slash) {
-			if (*context.emulatorSpeed == DEVICE_BASE_SPEED_FACTOR * 1) {
-				*context.emulatorSpeed = Math::clamp(*context.emulatorPreferedSpeed, DEVICE_BASE_SPEED_FACTOR / 10, DEVICE_BASE_SPEED_FACTOR * 16);
-				context.canvasDevice->speed(Math::clamp(*context.emulatorPreferedSpeed, DEVICE_BASE_SPEED_FACTOR / 10, DEVICE_BASE_SPEED_FACTOR * 16));
-			} else {
-				*context.emulatorSpeed = DEVICE_BASE_SPEED_FACTOR * 1;
-				context.canvasDevice->speed(DEVICE_BASE_SPEED_FACTOR * 1);
-			}
-		}
-	}
-}
-
-static void menu(const Context &context) {
-	// Prepare.
-	ImGuiStyle &style = ImGui::GetStyle();
-
-	// Show the menu.
-	VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
-	VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
-
-	if (ImGui::BeginPopup("@Views")) {
-		if (context.canShowOnscreenGamepad) {
-			ImGui::MenuItem(context.theme->menu_OnscreenGamepad(), GBBASIC_MODIFIER_KEY_NAME "+G", context.onscreenGamepadEnabled);
-		} else {
-			ImGui::BeginDisabled();
-			ImGui::MenuItem(context.theme->menu_OnscreenGamepad(), GBBASIC_MODIFIER_KEY_NAME "+G", context.onscreenGamepadEnabled);
-			ImGui::EndDisabled();
-		}
-
-		ImGui::MenuItem(context.theme->menu_OnscreenDebug(), nullptr, context.onscreenDebugEnabled);
-
-		if (!!context.vramDebugger) {
-			ImGui::Separator();
-
-			if (context.canShowVramDebugger) {
-				ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
-			} else {
-				ImGui::BeginDisabled();
-				ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
-				ImGui::EndDisabled();
-			}
-			if (context.canShowVramDebugger && *context.vramDebugEnabled) {
-				ImGui::MenuItem(context.theme->menu_PaletteBits(), nullptr, context.vramDebuggerPreviewPaletteBits);
-				if (ImGui::IsItemHovered()) {
-					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
-
-					ImGui::SetTooltip(context.theme->tooltip_PreviewPaletteBitsForColoredOnly());
+						break;
+					}
 				}
-				ImGui::MenuItem(context.theme->menu_Grids(), nullptr, context.vramDebuggerShowGrids);
+				*context.emulatorMuted = allMuted;
+			}
+			if (ImGui::MenuItem(context.theme->menu_Channel1Duty2(), nullptr, &channels[1])) {
+				context.emulatorChannelMuted[1] = !channels[1];
+				context.canvasDevice->muteAudioChannel(1, !channels[1]);
+				bool allMuted = true;
+				for (int i = 0; i < DEVICE_AUDIO_CHANNEL_COUNT; ++i) {
+					if (channels[i]) {
+						allMuted = false;
+
+						break;
+					}
+				}
+				*context.emulatorMuted = allMuted;
+			}
+			if (ImGui::MenuItem(context.theme->menu_Channel2Wave(), nullptr, &channels[2])) {
+				context.emulatorChannelMuted[2] = !channels[2];
+				context.canvasDevice->muteAudioChannel(2, !channels[2]);
+				bool allMuted = true;
+				for (int i = 0; i < DEVICE_AUDIO_CHANNEL_COUNT; ++i) {
+					if (channels[i]) {
+						allMuted = false;
+
+						break;
+					}
+				}
+				*context.emulatorMuted = allMuted;
+			}
+			if (ImGui::MenuItem(context.theme->menu_Channel3Noise(), nullptr, &channels[3])) {
+				context.emulatorChannelMuted[3] = !channels[3];
+				context.canvasDevice->muteAudioChannel(3, !channels[3]);
+				bool allMuted = true;
+				for (int i = 0; i < DEVICE_AUDIO_CHANNEL_COUNT; ++i) {
+					if (channels[i]) {
+						allMuted = false;
+
+						break;
+					}
+				}
+				*context.emulatorMuted = allMuted;
+			}
+			ImGui::Separator();
+			if (ImGui::MenuItem(context.theme->menu_MuteAllChannels())) {
+				for (int i = 0; i < DEVICE_AUDIO_CHANNEL_COUNT; ++i) {
+					context.emulatorChannelMuted[i] = true;
+					context.canvasDevice->muteAudioChannel(i, true);
+				}
+				*context.emulatorMuted = true;
+			}
+
+			ImGui::EndPopup();
+		}
+	} while (false);
+
+	do {
+		VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+		VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+		if (ImGui::BeginPopup("@Views")) {
+			if (context.canShowOnscreenGamepad) {
+				ImGui::MenuItem(context.theme->menu_OnscreenGamepad(), GBBASIC_MODIFIER_KEY_NAME "+G", context.onscreenGamepadEnabled);
 			} else {
 				ImGui::BeginDisabled();
-				ImGui::MenuItem(context.theme->menu_PaletteBits(), nullptr, context.vramDebuggerPreviewPaletteBits);
-				ImGui::MenuItem(context.theme->menu_Grids(), nullptr, context.vramDebuggerShowGrids);
+				ImGui::MenuItem(context.theme->menu_OnscreenGamepad(), GBBASIC_MODIFIER_KEY_NAME "+G", context.onscreenGamepadEnabled);
 				ImGui::EndDisabled();
 			}
-		}
 
-		ImGui::EndPopup();
-	}
+			ImGui::MenuItem(context.theme->menu_OnscreenDebug(), nullptr, context.onscreenDebugEnabled);
+
+			if (!!context.vramDebugger) {
+				ImGui::Separator();
+
+				if (context.canShowVramDebugger) {
+					ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
+				} else {
+					ImGui::BeginDisabled();
+					ImGui::MenuItem(context.theme->menu_VramDebugger(), nullptr, context.vramDebugEnabled);
+					ImGui::EndDisabled();
+				}
+				if (context.canShowVramDebugger && *context.vramDebugEnabled) {
+					ImGui::MenuItem(context.theme->menu_PaletteBits(), nullptr, context.vramDebuggerPreviewPaletteBits);
+					if (ImGui::IsItemHovered()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						ImGui::SetTooltip(context.theme->tooltip_PreviewPaletteBitsForColoredOnly());
+					}
+					ImGui::MenuItem(context.theme->menu_Grids(), nullptr, context.vramDebuggerShowGrids);
+				} else {
+					ImGui::BeginDisabled();
+					ImGui::MenuItem(context.theme->menu_PaletteBits(), nullptr, context.vramDebuggerPreviewPaletteBits);
+					ImGui::MenuItem(context.theme->menu_Grids(), nullptr, context.vramDebuggerShowGrids);
+					ImGui::EndDisabled();
+				}
+			}
+
+			ImGui::EndPopup();
+		}
+	} while (false);
 }
 
 void emulator(
@@ -685,7 +778,7 @@ void emulator(
 	Input* input,
 	const Device::Ptr &canvasDevice, const Texture::Ptr &canvasTexture, const Texture::Ptr &canvasTextureForBorderFrame,
 	const std::string &cartridgeStatusText, const std::string &deviceStatusText, const std::string &statusTooltip, float &statusBarWidth, float statusBarHeight, bool showStatus,
-	bool &emulatorMuted, int &emulatorSpeed, int &emulatorPreferedSpeed,
+	bool &emulatorMuted, bool (&emulatorChannelMuted)[DEVICE_AUDIO_CHANNEL_COUNT], int &emulatorSpeed, int &emulatorPreferedSpeed,
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,
@@ -705,7 +798,7 @@ void emulator(
 		input,
 		canvasDevice, canvasTexture, canvasTextureForBorderFrame,
 		cartridgeStatusText, deviceStatusText, statusTooltip, &statusBarWidth, statusBarHeight, showStatus,
-		&emulatorMuted, &emulatorSpeed, &emulatorPreferedSpeed,
+		&emulatorMuted, emulatorChannelMuted, &emulatorSpeed, &emulatorPreferedSpeed,
 		integerScale, fixRatio,
 		&onscreenGamepadEnabled, onscreenGamepadSwapAB, onscreenGamepadScale, onscreenGamepadPadding,
 		&onscreenDebugEnabled,

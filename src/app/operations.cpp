@@ -4777,9 +4777,9 @@ promise::Promise Operations::projectRun(Window* wnd, Renderer* rnd, Workspace* w
 
 			ws->canvasDevice()->speed(ws->settings().emulatorSpeed);
 
-			const bool cgb = ws->canvasDevice()->cartridgeHasCgbSupport();
-			const bool sgb = ws->canvasDevice()->cartridgeHasSgbSupport();
-			const bool ext = ws->canvasDevice()->cartridgeHasExtSupport();
+			const bool cgb = ws->canvasDevice()->isCartridgeCgbCompatible();
+			const bool sgb = ws->canvasDevice()->isCartridgeSgbCompatible();
+			const bool ext = ws->canvasDevice()->isCartridgeExtCompatible();
 			const Device::DeviceTypes dev = ws->canvasDevice()->deviceType();
 			const Device::DeviceTypes edev = ws->canvasDevice()->enabledDeviceType();
 			const int sram_ = ws->canvasDevice()->cartridgeSramSize(nullptr);

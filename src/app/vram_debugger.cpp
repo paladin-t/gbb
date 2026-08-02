@@ -599,7 +599,7 @@ public:
 private:
 	void refresh(Renderer* /* rnd */, Theme* /* theme */, Device* device, bool previewPaletteBits, bool /* isNewFrame */) {
 		// Retrieve data.
-		const bool isCgb = device->deviceHasCgbSupport();
+		const bool isCgb = device->isDeviceCgbCompatible();
 
 		const Device::MapSourceTypes bgMapSrc = device->getMapSourceType(Device::LayerTypes::BG);
 		const Device::MapSourceTypes winMapSrc = device->getMapSourceType(Device::LayerTypes::WINDOW);
@@ -1670,7 +1670,7 @@ private:
 		}
 	}
 	void palettes(Renderer* /* rnd */, Theme* theme, Device* device) {
-		const bool isCgb = device->deviceHasCgbSupport();
+		const bool isCgb = device->isDeviceCgbCompatible();
 
 		ImGuiStyle &style = ImGui::GetStyle();
 

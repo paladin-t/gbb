@@ -6796,6 +6796,11 @@ bool Workspace::loadConfig(Window*, Renderer*, const rapidjson::Document &doc) {
 	}
 
 	Jpath::get(doc, settings().emulatorMuted, "emulator", "muted");
+	for (int i = 0; i < GBBASIC_COUNTOF(settings().emulatorChannelMuted); ++i) {
+		bool val = false;
+		if (Jpath::get(doc, val, "emulator", "channel", i, "muted"))
+			settings().emulatorChannelMuted[i] = val;
+	}
 	Jpath::get(doc, settings().emulatorSpeed, "emulator", "speed");
 	Jpath::get(doc, settings().emulatorPreferedSpeed, "emulator", "prefered_speed");
 
@@ -6887,6 +6892,9 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 	}
 
 	Jpath::set(doc, doc, settings().emulatorMuted, "emulator", "muted");
+	for (int i = 0; i < GBBASIC_COUNTOF(settings().emulatorChannelMuted); ++i) {
+		Jpath::set(doc, doc, settings().emulatorChannelMuted[i], "emulator", "channel", i, "muted");
+	}
 	Jpath::set(doc, doc, settings().emulatorSpeed, "emulator", "speed");
 	Jpath::set(doc, doc, settings().emulatorPreferedSpeed, "emulator", "prefered_speed");
 
@@ -7329,8 +7337,8 @@ bool Workspace::execute(Window* wnd, Renderer* rnd, double delta, unsigned* fpsR
 	}
 
 	if (
-		canvasDevice()->isSgbBorderSupported() &&
-		canvasDevice()->cartridgeHasSgbSupport() && canvasDevice()->deviceHasSgbSupport() &&
+		canvasDevice()->supportsSgbBorder() &&
+		canvasDevice()->isCartridgeSgbCompatible() && canvasDevice()->isDeviceSgbCompatible() &&
 		!canvasTextureForBorderFrame()
 	) {
 		canvasTextureForBorderFrame(Texture::Ptr(Texture::create()));
@@ -12413,7 +12421,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			input(),
 			canvasDevice(), canvasTexture(), canvasTextureForBorderFrame(),
 			canvasCartridgeStatusText(), canvasDeviceStatusText(), canvasStatusTooltip(), statusWidth(), statusBarHeight, true,
-			settings().emulatorMuted, settings().emulatorSpeed, settings().emulatorPreferedSpeed,
+			settings().emulatorMuted, settings().emulatorChannelMuted, settings().emulatorSpeed, settings().emulatorPreferedSpeed,
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
 			settings().debugOnscreenShellEnabled,

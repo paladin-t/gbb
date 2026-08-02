@@ -84,6 +84,8 @@ Settings &Settings::operator = (const Settings &other) {
 		deviceClassicPalette[i] = other.deviceClassicPalette[i];
 
 	emulatorMuted = other.emulatorMuted;
+	for (int i = 0; i < GBBASIC_COUNTOF(emulatorChannelMuted); ++i)
+		emulatorChannelMuted[i] = other.emulatorChannelMuted[i];
 	emulatorSpeed = other.emulatorSpeed;
 	emulatorPreferedSpeed = other.emulatorPreferedSpeed;
 
@@ -164,6 +166,10 @@ bool Settings::operator != (const Settings &other) const {
 		emulatorPreferedSpeed != other.emulatorPreferedSpeed
 	) {
 		return true;
+	}
+	for (int i = 0; i < GBBASIC_COUNTOF(emulatorChannelMuted); ++i) {
+		if (emulatorChannelMuted[i] != other.emulatorChannelMuted[i])
+			return true;
 	}
 
 	if (canvasFixRatio != other.canvasFixRatio ||

@@ -348,6 +348,10 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Build("Build");
 	menu_C("C");
 	menu_CFile("C File...");
+	menu_Channel0Duty1("Channel 0 (Duty 1)");
+	menu_Channel1Duty2("Channel 1 (Duty 2)");
+	menu_Channel2Wave("Channel 2 (Wave)");
+	menu_Channel3Noise("Channel 3 (Noise)");
 	menu_ClearConsole("Clear Console");
 	menu_ClearRecent("Clear Recent");
 	menu_Close("Close");
@@ -416,6 +420,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_OnscreenDebug("Onscreen Debug");
 	menu_OnscreenGamepad("Onscreen Gamepad");
 	menu_Music("Music");
+	menu_MuteAllChannels("Mute All Channels");
 	menu_Open("Open");
 	menu_OpenExample("Open Example...");
 	menu_Page("Page");

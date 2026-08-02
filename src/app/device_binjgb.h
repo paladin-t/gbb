@@ -54,6 +54,7 @@ private:
 	SDL_AudioCVT _audioCvt;
 	size_t _audioCvtBufferLength = 0;
 	Bytes::Ptr _audioBuffer = nullptr;
+	bool _audioChannelMuted[DEVICE_AUDIO_CHANNEL_COUNT];
 	class Input* _input = nullptr; // Foreign.
 	bool _inputEnabled = true;
 	KeyboardModifiers _keyboardModifiers;
@@ -75,9 +76,9 @@ public:
 
 	virtual unsigned type(void) const override;
 
-	virtual bool cartridgeHasCgbSupport(void) const override;
-	virtual bool cartridgeHasExtSupport(void) const override;
-	virtual bool cartridgeHasSgbSupport(void) const override;
+	virtual bool isCartridgeCgbCompatible(void) const override;
+	virtual bool isCartridgeExtCompatible(void) const override;
+	virtual bool isCartridgeSgbCompatible(void) const override;
 	virtual int cartridgeRomSize(int* banks) const override;
 	virtual int cartridgeSramSize(int* banks) const override;
 	virtual int cartridgeMbcType(void) const override;
@@ -87,27 +88,32 @@ public:
 
 	virtual DeviceTypes deviceType(void) const override;
 	virtual DeviceTypes enabledDeviceType(void) const override;
-	virtual bool deviceHasCgbSupport(void) const override;
-	virtual bool deviceHasExtSupport(void) const override;
-	virtual bool deviceHasSgbSupport(void) const override;
+	virtual bool isDeviceCgbCompatible(void) const override;
+	virtual bool isDeviceExtCompatible(void) const override;
+	virtual bool isDeviceSgbCompatible(void) const override;
+
+	virtual bool supportsGettingDuty(void) const override;
+	virtual bool supportsVariableSpeed(void) const override;
+	virtual bool supportsSgbBorder(void) const override;
+	virtual bool supportsVramDebugging(void) const override;
+	virtual bool supportsMutingAudioChannel(void) const override;
 
 	virtual Colour classicPalette(int index) const override;
 	virtual void classicPalette(int index, const Colour &col) override;
-
-	virtual bool isVariableSpeedSupported(void) const override;
-	virtual bool isSgbBorderSupported(void) const override;
-	virtual void* audioSpecification(void) const override;
 
 	virtual unsigned speed(void) const override;
 	virtual bool speed(unsigned s) override;
 
 	virtual unsigned fps(void) const override;
 
-	virtual bool canGetDuty(void) const override;
 	virtual int getDuty(int* l) const override;
 
 	virtual long long timeoutThreshold(void) const override;
 	virtual void timeoutThreshold(long long val) override;
+
+	virtual void* audioSpecification(void) const override;
+	virtual bool mutedAudioChannel(int ch) const override;
+	virtual void muteAudioChannel(int ch, bool muted) override;
 
 	virtual bool traceless(void) const override;
 
@@ -115,8 +121,6 @@ public:
 	virtual void inputEnabled(bool val) override;
 
 	virtual void stroke(int key) override;
-
-	virtual bool isVramDebuggingSupported(void) const override;
 
 	virtual TileSourceTypes getTileSourceType(void) const override;
 	virtual MapSourceTypes getMapSourceType(LayerTypes layer) const override;

@@ -28,7 +28,7 @@ void emulator(
 	Input* input,
 	const Device::Ptr &canvasDevice, const Texture::Ptr &canvasTexture, const Texture::Ptr &canvasTextureForBorderFrame,
 	const std::string &cartridgeStatusText, const std::string &deviceStatusText, const std::string &statusTooltip, float &statusBarWidth, float statusBarHeight, bool showStatus,
-	bool &emulatorMuted, int &emulatorSpeed, int &emulatorPreferedSpeed,
+	bool &emulatorMuted, bool (&emulatorChannelMuted)[DEVICE_AUDIO_CHANNEL_COUNT], int &emulatorSpeed, int &emulatorPreferedSpeed,
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,

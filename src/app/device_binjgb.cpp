@@ -302,6 +302,8 @@ DeviceBinjgb::DeviceBinjgb(Protocol* dbgListener)
 	wantSpec.size = wantSpec.samples * wantSpec.channels * sampleSize;
 
 	_audioSpec = wantSpec;
+
+	memset(_audioChannelMuted, 0, sizeof(_audioChannelMuted));
 }
 
 DeviceBinjgb::~DeviceBinjgb() {
@@ -312,7 +314,7 @@ unsigned DeviceBinjgb::type(void) const {
 	return TYPE();
 }
 
-bool DeviceBinjgb::cartridgeHasCgbSupport(void) const {
+bool DeviceBinjgb::isCartridgeCgbCompatible(void) const {
 	const int y = (_cartridgeType & ~DEVICE_BINJGB_CARTRIDGE_EXTENSION_TYPE);
 
 	return
@@ -320,11 +322,11 @@ bool DeviceBinjgb::cartridgeHasCgbSupport(void) const {
 		y == DEVICE_BINJGB_CARTRIDGE_CGB_ONLY_TYPE;
 }
 
-bool DeviceBinjgb::cartridgeHasExtSupport(void) const {
+bool DeviceBinjgb::isCartridgeExtCompatible(void) const {
 	return !!(_cartridgeType & DEVICE_BINJGB_CARTRIDGE_EXTENSION_TYPE);
 }
 
-bool DeviceBinjgb::cartridgeHasSgbSupport(void) const {
+bool DeviceBinjgb::isCartridgeSgbCompatible(void) const {
 	const int y = _cartridgeSuperType;
 	const int l = _cartridgeOldLicenseCode;
 
@@ -495,16 +497,36 @@ Device::DeviceTypes DeviceBinjgb::enabledDeviceType(void) const {
 	return _enabledDeviceType;
 }
 
-bool DeviceBinjgb::deviceHasCgbSupport(void) const {
+bool DeviceBinjgb::isDeviceCgbCompatible(void) const {
 	return _enabledDeviceType == DeviceTypes::COLORED || _enabledDeviceType == DeviceTypes::COLORED_EXTENDED;
 }
 
-bool DeviceBinjgb::deviceHasExtSupport(void) const {
+bool DeviceBinjgb::isDeviceExtCompatible(void) const {
 	return _enabledDeviceType == DeviceTypes::CLASSIC_EXTENDED || _enabledDeviceType == DeviceTypes::COLORED_EXTENDED || _enabledDeviceType == DeviceTypes::SUPER_EXTENDED;
 }
 
-bool DeviceBinjgb::deviceHasSgbSupport(void) const {
+bool DeviceBinjgb::isDeviceSgbCompatible(void) const {
 	return _enabledDeviceType == DeviceTypes::SUPER || _enabledDeviceType == DeviceTypes::SUPER_EXTENDED;
+}
+
+bool DeviceBinjgb::supportsGettingDuty(void) const {
+	return true;
+}
+
+bool DeviceBinjgb::supportsVariableSpeed(void) const {
+	return true;
+}
+
+bool DeviceBinjgb::supportsSgbBorder(void) const {
+	return true;
+}
+
+bool DeviceBinjgb::supportsVramDebugging(void) const {
+	return true;
+}
+
+bool DeviceBinjgb::supportsMutingAudioChannel(void) const {
+	return true;
 }
 
 Colour DeviceBinjgb::classicPalette(int index) const {
@@ -523,18 +545,6 @@ void DeviceBinjgb::classicPalette(int index, const Colour &col) {
 	setBwPalette(PALETTE_TYPE_BGP,  _classicPalette[0].toRGBA(), _classicPalette[1].toRGBA(), _classicPalette[2].toRGBA(), _classicPalette[3].toRGBA());
 	setBwPalette(PALETTE_TYPE_OBP0, _classicPalette[0].toRGBA(), _classicPalette[1].toRGBA(), _classicPalette[2].toRGBA(), _classicPalette[3].toRGBA());
 	setBwPalette(PALETTE_TYPE_OBP1, _classicPalette[0].toRGBA(), _classicPalette[1].toRGBA(), _classicPalette[2].toRGBA(), _classicPalette[3].toRGBA());
-}
-
-bool DeviceBinjgb::isVariableSpeedSupported(void) const {
-	return true;
-}
-
-bool DeviceBinjgb::isSgbBorderSupported(void) const {
-	return true;
-}
-
-void* DeviceBinjgb::audioSpecification(void) const {
-	return (void*)&_audioSpec;
 }
 
 unsigned DeviceBinjgb::speed(void) const {
@@ -561,10 +571,6 @@ unsigned DeviceBinjgb::fps(void) const {
 	return _fps;
 }
 
-bool DeviceBinjgb::canGetDuty(void) const {
-	return true;
-}
-
 int DeviceBinjgb::getDuty(int* l) const {
 	if (l)
 		*l = _longPeriodDuty;
@@ -578,6 +584,32 @@ long long DeviceBinjgb::timeoutThreshold(void) const {
 
 void DeviceBinjgb::timeoutThreshold(long long val) {
 	_timeoutThreshold = val;
+}
+
+void* DeviceBinjgb::audioSpecification(void) const {
+	return (void*)&_audioSpec;
+}
+
+bool DeviceBinjgb::mutedAudioChannel(int ch) const {
+	if (ch < 0 || ch >= DEVICE_AUDIO_CHANNEL_COUNT)
+		return false;
+
+	if (!_emulator)
+		return false;
+
+	return _audioChannelMuted[ch];
+}
+
+void DeviceBinjgb::muteAudioChannel(int ch, bool muted) {
+	if (ch < 0 || ch >= DEVICE_AUDIO_CHANNEL_COUNT)
+		return;
+
+	if (!_emulator)
+		return;
+
+	_audioChannelMuted[ch] = muted;
+
+	set_audio_channel_mute(_emulator, ch, muted ? TRUE : FALSE);
 }
 
 bool DeviceBinjgb::traceless(void) const {
@@ -597,10 +629,6 @@ void DeviceBinjgb::stroke(int key) {
 		return;
 
 	_keyBuffer.push_back(key);
-}
-
-bool DeviceBinjgb::isVramDebuggingSupported(void) const {
-	return true;
 }
 
 Device::TileSourceTypes DeviceBinjgb::getTileSourceType(void) const {
@@ -834,7 +862,7 @@ bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, 
 	if (DEVICE_BINJGB_CARTRIDGE_OLD_LICENSE_CODE_ADDRESS < rom->count())
 		_cartridgeOldLicenseCode = rom->get(DEVICE_BINJGB_CARTRIDGE_OLD_LICENSE_CODE_ADDRESS);
 
-	if (cartridgeHasSgbSupport() && deviceHasCgbSupport() && (!cartridgeHasCgbSupport() || preferSgb)) {
+	if (isCartridgeSgbCompatible() && isDeviceCgbCompatible() && (!isCartridgeCgbCompatible() || preferSgb)) {
 		// The device's SGB features are only available if the cartridge prefers it and the user does as well.
 		if (_enabledDeviceType == DeviceTypes::COLORED)
 			_enabledDeviceType = DeviceTypes::SUPER;
@@ -842,7 +870,7 @@ bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, 
 			_enabledDeviceType = DeviceTypes::SUPER_EXTENDED;
 
 		// Interpolate the ROM to remove CGB flag.
-		if (cartridgeHasCgbSupport()) {
+		if (isCartridgeCgbCompatible()) {
 			RomInspector header;
 			header.load(rom);
 			{
@@ -858,9 +886,9 @@ bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, 
 		}
 	}
 
-	if (deviceHasExtSupport()) { // GBB EXTENSION.
+	if (isDeviceExtCompatible()) { // GBB EXTENSION.
 		// The device's extension is only turned on if the cartridge prefers it.
-		if (!cartridgeHasExtSupport()) {
+		if (!isCartridgeExtCompatible()) {
 			// Otherwise turn it off.
 			if (_enabledDeviceType == DeviceTypes::CLASSIC_EXTENDED)
 				_enabledDeviceType = DeviceTypes::CLASSIC;
@@ -895,7 +923,7 @@ bool DeviceBinjgb::open(Bytes::Ptr rom, DeviceTypes deviceType, bool preferSgb, 
 	setBwPalette(PALETTE_TYPE_OBP0, _classicPalette[0].toRGBA(), _classicPalette[1].toRGBA(), _classicPalette[2].toRGBA(), _classicPalette[3].toRGBA());
 	setBwPalette(PALETTE_TYPE_OBP1, _classicPalette[0].toRGBA(), _classicPalette[1].toRGBA(), _classicPalette[2].toRGBA(), _classicPalette[3].toRGBA());
 
-	if (deviceHasExtSupport()) { // GBB EXTENSION.
+	if (isDeviceExtCompatible()) { // GBB EXTENSION.
 		// Initialize the extension RAM to zero.
 		for (int i = 0; i < DEVICE_BINJGB_EXTENSION_AREA_SIZE; ++i)
 			emulator_write_u8_raw(_emulator, (Address)(DEVICE_BINJGB_EXTENSION_START_ADDRESS + i), 0);
@@ -1533,7 +1561,7 @@ void DeviceBinjgb::updateAudio(
 
 bool DeviceBinjgb::processStreaming(class Window* wnd, class Renderer* rnd) {
 	// Extension feature: stream transferring.
-	if (!deviceHasExtSupport()) // GBB EXTENSION.
+	if (!isDeviceExtCompatible()) // GBB EXTENSION.
 		return false;
 
 	const u8 statusByte = emulator_read_u8_raw(_emulator, DEVICE_BINJGB_STREAMING_STATUS_REG);
@@ -1567,7 +1595,7 @@ bool DeviceBinjgb::processStreaming(class Window* wnd, class Renderer* rnd) {
 
 bool DeviceBinjgb::processShellCommand(class Window* wnd, class Renderer* rnd) {
 	// Extension feature: shell command.
-	if (!deviceHasExtSupport()) // GBB EXTENSION.
+	if (!isDeviceExtCompatible()) // GBB EXTENSION.
 		return false;
 
 	const u8 statusByte = emulator_read_u8_raw(_emulator, DEVICE_BINJGB_TRANSFER_STATUS_REG);
@@ -1745,7 +1773,7 @@ void DeviceBinjgb::onInput(JoypadButtons* joyp, void* data) {
 	);
 
 	// Update the touch states.
-	if (self->deviceHasExtSupport()) { // GBB EXTENSION.
+	if (self->isDeviceExtCompatible()) { // GBB EXTENSION.
 		// Extension feature: touch input.
 		int x = 0;
 		int y = 0;
