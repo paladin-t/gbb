@@ -123,8 +123,16 @@
     "ref": "OCPD_REG",
     "offset": 0
   },
-  "WBK_REG" : {
+  "WBK_REG": {
     "ref": "SVBK_REG",
+    "offset": 0
+  },
+  "VBL_DONE": {
+    "ref": "_vbl_done",
+    "offset": 0
+  },
+  "CURRENT_BANK": {
+    "ref": "_current_bank",
     "offset": 0
   },
 
