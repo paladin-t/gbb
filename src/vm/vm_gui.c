@@ -21,6 +21,10 @@ BANKREF(VM_GUI)
 #   warning "Message: Compiling without GUI blit inverse."
 #endif /* GUI_BLIT_INVERSE_ENABLED */
 
+#if !GUI_BLIT_FAST_TILE_ALIGNED_8x8_ENABLED
+#   warning "Message: Compiling without GUI blit fast tile-aligned 8x8."
+#endif /* GUI_BLIT_FAST_TILE_ALIGNED_8x8_ENABLED */
+
 #define GUI_BLIT_INTERVAL       10
 #define GUI_BLIT_MAX_INTERVAL   0x1F
 
@@ -136,9 +140,78 @@ void gui_tile_filled(UINT8 layer, UINT8 first, UINT8 n, UINT8 bank, UINT8 * ptr)
     gui_tiles_address = ptr;
 }
 
+#if GUI_BLIT_FAST_TILE_ALIGNED_8x8_ENABLED
+STATIC BOOLEAN gui_blit_char_tile_aligned_8x8(const glyph_t * glyph, const glyph_option_t * option) {
+    // The glyph must be 8x8 and cursor tile-aligned.
+    if (GUI_GLYPH_WIDTH(*glyph) != 8 || GUI_GLYPH_HEIGHT(*glyph) != 8)
+        return FALSE;
+    if (MOD8(gui_cursor_x) || MOD8(gui_cursor_y))
+        return FALSE;
+
+    const BOOLEAN _2bpp = option->two_bits_per_pixel;
+    const BOOLEAN inv = option->inverted;
+
+    // The source data length is fixed, 8 bytes for 1bpp, or 16 bytes for 2bpp.
+    UINT8 buf[16];
+    const UINT8 n = _2bpp ? 16 : 8;
+    if (GUI_GLYPH_IS_SPACE(*glyph)) {
+        memset(buf, inv ? 0xFF : 0, n);
+    } else {
+        get_chunk(buf, glyph->bank, glyph->ptr, n);
+    }
+
+    // The target occupies exactly one tile; compute its address once.
+    const UINT8 tx   = DIV8(gui_cursor_x);
+    const UINT8 ty   = DIV8(gui_cursor_y);
+    const UINT8 base = gui_base_tile + (tx + ty * gui_width);
+    UINT8 * addr     = VRAM_BASE_TILE_ADDRESS(base);
+
+    // Blit 8 rows; each row targets one VRAM plane pair with no shifting.
+    for (UINT8 row = 0; row != 8; ++row) {
+        const UINT8 a0 = _2bpp ? buf[MUL2(row)] : buf[row];
+        const UINT8 b0 = get_vram_byte(addr);
+#if GUI_BLIT_INVERSE_ENABLED
+        const UINT8 p0 = inv ? (b0 & a0) : (b0 | a0);
+#else /* GUI_BLIT_INVERSE_ENABLED */
+        const UINT8 p0 = b0 | a0;
+#endif /* GUI_BLIT_INVERSE_ENABLED */
+        set_vram_byte(addr, p0);
+
+        const UINT8 a1 = _2bpp ? buf[MUL2(row) + 1] : a0;
+        const UINT8 b1 = get_vram_byte(addr + 1);
+#if GUI_BLIT_INVERSE_ENABLED
+        const UINT8 p1 = inv ? (b1 & a1) : (b1 | a1);
+#else /* GUI_BLIT_INVERSE_ENABLED */
+        const UINT8 p1 = b1 | a1;
+#endif /* GUI_BLIT_INVERSE_ENABLED */
+        set_vram_byte(addr + 1, p1);
+
+        addr += 2;
+    }
+
+    // Move the cursor.
+    gui_cursor_x += 8;
+
+    // Process line wrapping.
+    if (gui_cursor_x + GUI_MARGIN_X(gui_margin) >= MUL8(gui_width)) {
+        gui_cursor_x = GUI_MARGIN_X(gui_margin) + GUI_LABEL_X_OFFSET;
+        gui_cursor_y += 8;
+    }
+
+    return TRUE;
+}
+#endif /* GUI_BLIT_FAST_TILE_ALIGNED_8x8_ENABLED */
+
 void gui_blit_char(UINT8 size, const glyph_t * glyph, const glyph_option_t * option) BANKED {
     // Prepare.
     (void)size;
+
+#if GUI_BLIT_FAST_TILE_ALIGNED_8x8_ENABLED
+    if (option->tile_aligned_8x8) {
+        if (gui_blit_char_tile_aligned_8x8(glyph, option))
+            return;
+    }
+#endif /* GUI_BLIT_FAST_TILE_ALIGNED_8x8_ENABLED */
 
     // Get the option.
     const BOOLEAN _2bpp = option->two_bits_per_pixel;

@@ -264,14 +264,14 @@ struct glyph_option_t {
 	bool full_word                 : 1;
 	bool full_word_for_non_ascii   : 1;
 	bool inverted                  : 1;
+	bool tile_aligned_8x8          : 1;
 	bool reserved1                 : 1;
 	bool reserved2                 : 1;
 	bool reserved3                 : 1;
-	bool reserved4                 : 1;
 
 	glyph_option_t();
 	glyph_option_t(bool tbpp);
-	glyph_option_t(bool tbpp, bool fullword, bool fullword4all, bool inverted_);
+	glyph_option_t(bool tbpp, bool fullword, bool fullword4all, bool inverted_, bool tileAligned8x8);
 };
 
 struct glyph_t {

@@ -58,10 +58,10 @@ glyph_option_t::glyph_option_t() :
 	full_word(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD),
 	full_word_for_non_ascii(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD_FOR_NON_ASCII),
 	inverted(false),
+	tile_aligned_8x8(false),
 	reserved1(false),
 	reserved2(false),
-	reserved3(false),
-	reserved4(false)
+	reserved3(false)
 {
 }
 
@@ -70,22 +70,22 @@ glyph_option_t::glyph_option_t(bool tbpp) :
 	full_word(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD),
 	full_word_for_non_ascii(GBBASIC_FONT_DEFAULT_PREFER_FULL_WORD_FOR_NON_ASCII),
 	inverted(false),
+	tile_aligned_8x8(false),
 	reserved1(false),
 	reserved2(false),
-	reserved3(false),
-	reserved4(false)
+	reserved3(false)
 {
 }
 
-glyph_option_t::glyph_option_t(bool tbpp, bool fullword, bool fullword4all, bool inverted_) :
+glyph_option_t::glyph_option_t(bool tbpp, bool fullword, bool fullword4all, bool inverted_, bool tileAligned8x8) :
 	two_bits_per_pixel(tbpp),
 	full_word(fullword),
 	full_word_for_non_ascii(fullword4all),
 	inverted(inverted_),
+	tile_aligned_8x8(tileAligned8x8),
 	reserved1(false),
 	reserved2(false),
-	reserved3(false),
-	reserved4(false)
+	reserved3(false)
 {
 }
 

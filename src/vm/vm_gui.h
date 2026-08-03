@@ -14,6 +14,10 @@ BANKREF_EXTERN(VM_GUI_MENU)
 #   define GUI_BLIT_INVERSE_ENABLED                           1
 #endif /* GUI_BLIT_INVERSE_ENABLED */
 
+#ifndef GUI_BLIT_FAST_TILE_ALIGNED_8x8_ENABLED
+#   define GUI_BLIT_FAST_TILE_ALIGNED_8x8_ENABLED             1
+#endif /* GUI_BLIT_FAST_TILE_ALIGNED_8x8_ENABLED */
+
 #define GUI_IMPLEMENT_TOUCH_HANDLING_ENABLED                  1
 #define GUI_IMPLEMENT_LABEL_ACCURATE_TOUCH_HANDLING_ENABLED   0
 #define GUI_IMPLEMENT_MENU_PAGING_ENABLED                     0
@@ -87,10 +91,10 @@ typedef struct glyph_option_t {
     bool full_word                 : 1;
     bool full_word_for_non_ascii   : 1;
     bool inverted                  : 1;
+    bool tile_aligned_8x8          : 1;
     bool reserved1                 : 1;
     bool reserved2                 : 1;
     bool reserved3                 : 1;
-    bool reserved4                 : 1;
 } glyph_option_t;
 
 typedef struct glyph_t {

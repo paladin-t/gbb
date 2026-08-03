@@ -7836,7 +7836,8 @@ private:
 				font->isTwoBitsPerPixel,
 				font->preferFullWord,
 				font->preferFullWordForNonAscii,
-				font->inverted
+				font->inverted,
+				font->size.y == GBBASIC_TILE_SIZE
 			);
 			emit<glyph_option_t>(bytes, context, opt); // Emit the option.
 			emit(bytes, context, (UInt8)font->size.y); // Emit the font size.
