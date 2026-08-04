@@ -23,6 +23,16 @@ extern const UInt8 ASSEMBLER_OPCODE_SIZE[256];
 extern const char* const ASSEMBLER_OPCODE_MNEMONICS[256];
 extern const char* const ASSEMBLER_CB_OPCODE_MNEMONICS[256];
 
+extern const UInt8 ASSEMBLER_OPCODE_NOP;
+extern const UInt8 ASSEMBLER_OPCODE_STOP;
+extern const UInt8 ASSEMBLER_OPCODE_RETNZ;
+extern const UInt8 ASSEMBLER_OPCODE_RETZ;
+extern const UInt8 ASSEMBLER_OPCODE_RET;
+extern const UInt8 ASSEMBLER_OPCODE_RETNC;
+extern const UInt8 ASSEMBLER_OPCODE_RETC;
+extern const UInt8 ASSEMBLER_OPCODE_RETI;
+extern const UInt8 ASSEMBLER_OPCODE_CB;
+
 }
 
 /* ===========================================================================} */

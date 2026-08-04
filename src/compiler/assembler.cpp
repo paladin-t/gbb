@@ -128,15 +128,15 @@ static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_E8[] = {
 	"ldhl sp,e8", "ld hl,sp+e8"
 };
 
-static const UInt8 ASSEMBLER_OPCODE_NOP   = 0x00;
-static const UInt8 ASSEMBLER_OPCODE_STOP  = 0x10;
-static const UInt8 ASSEMBLER_OPCODE_RETNZ = 0xc0;
-static const UInt8 ASSEMBLER_OPCODE_RETZ  = 0xc8;
-static const UInt8 ASSEMBLER_OPCODE_RET   = 0xc9;
-static const UInt8 ASSEMBLER_OPCODE_RETNC = 0xd0;
-static const UInt8 ASSEMBLER_OPCODE_RETC  = 0xd8;
-static const UInt8 ASSEMBLER_OPCODE_RETI  = 0xd9;
-static const UInt8 ASSEMBLER_OPCODE_CB    = 0xcb;
+const UInt8 ASSEMBLER_OPCODE_NOP   = 0x00;
+const UInt8 ASSEMBLER_OPCODE_STOP  = 0x10;
+const UInt8 ASSEMBLER_OPCODE_RETNZ = 0xc0;
+const UInt8 ASSEMBLER_OPCODE_RETZ  = 0xc8;
+const UInt8 ASSEMBLER_OPCODE_RET   = 0xc9;
+const UInt8 ASSEMBLER_OPCODE_RETNC = 0xd0;
+const UInt8 ASSEMBLER_OPCODE_RETC  = 0xd8;
+const UInt8 ASSEMBLER_OPCODE_RETI  = 0xd9;
+const UInt8 ASSEMBLER_OPCODE_CB    = 0xcb;
 
 }
 
