@@ -5367,7 +5367,7 @@ uint32_t emulator_get_banked_PC(Emulator *e) { return REG.PC; }
 
 #endif
 
-#ifdef GBSTUDIO
+//#ifdef GBSTUDIO
 Bool set_audio_channel_mute(Emulator *e, int channel, Bool muted) {
   EmulatorConfig emu_config = emulator_get_config(e);
   emu_config.disable_sound[channel] = muted;
@@ -5375,10 +5375,10 @@ Bool set_audio_channel_mute(Emulator *e, int channel, Bool muted) {
   return emu_config.disable_sound[channel];
 }
 
-#else  // !GBSTUDIO
+//#else  // !GBSTUDIO
 
-Bool set_audio_channel_mute(Emulator *e, int channel, Bool muted) { 
+/*Bool set_audio_channel_mute(Emulator *e, int channel, Bool muted) { 
   return FALSE;
-}
+}*/
 
-#endif
+//#endif

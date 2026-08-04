@@ -467,6 +467,16 @@ void emulator_set_breakpoint_address(Emulator* e, int id, Address addr) {
   calculate_breakpoint_mask();
 }
 
+void emulator_set_breakpoint_address_and_bank(Emulator* e, int id, Address addr, u8 bank) {
+  if (!is_breakpoint_valid(id)) {
+    return;
+  }
+  Breakpoint* bp = &s_breakpoints[id];
+  bp->addr = addr;
+  bp->bank = bank;
+  calculate_breakpoint_mask();
+}
+
 void emulator_enable_breakpoint(int id, Bool enabled) {
   if (!is_breakpoint_valid(id)) {
     return;

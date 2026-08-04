@@ -4872,7 +4872,7 @@ public:
 		int startBank = 0;
 		// Const. The size of a ROM bank.
 		int bankSize = 0;
-		// Const. The start address of a ROM bank.
+		// Const. The start address of a non-zero ROM bank.
 		int startAddress = 0;
 		// Non-const. The index of the ROM bank.
 		int bank = 0;

@@ -119,6 +119,17 @@ public:
 
 	typedef std::deque<int> KeyBuffer;
 
+	/**< Debugger operations. */
+
+	struct Breakpoint {
+		bool valid = false;
+		UInt8 bank = 0;
+		UInt16 address = 0;
+
+		Breakpoint();
+		Breakpoint(UInt8 b, UInt16 addr);
+	};
+
 	/**< VRAM debugging structures. */
 
 	enum class Colors {
@@ -197,6 +208,8 @@ public:
 		virtual bool running(void) const = 0;
 		virtual void pause(class Window* wnd, class Renderer* rnd) = 0;
 		virtual void stop(class Window* wnd, class Renderer* rnd) = 0;
+
+		virtual void breakpointHit(void) = 0;
 	};
 
 	/**< Handlers. */
@@ -234,6 +247,7 @@ public:
 	virtual bool supportsGettingDuty(void) const = 0;
 	virtual bool supportsVariableSpeed(void) const = 0;
 	virtual bool supportsSgbBorder(void) const = 0;
+	virtual bool supportsBreakpoint(void) const = 0;
 	virtual bool supportsVramDebugging(void) const = 0;
 	virtual bool supportsMutingAudioChannel(void) const = 0;
 
@@ -262,6 +276,15 @@ public:
 	virtual void inputEnabled(bool val) = 0;
 
 	virtual void stroke(int key) = 0;
+
+	/**< Debugger operations. */
+
+	virtual int getBreakpointCount(void) const = 0;
+	virtual Breakpoint getBreakpoint(int idx) const = 0;
+	virtual Breakpoint getBreakpointByAddress(UInt8 bank, UInt16 addr) const = 0;
+	virtual int addBreakpoint(UInt8 bank, UInt16 addr) = 0;
+	virtual void removeBreakpoint(int idx) = 0;
+	virtual void setBreakpointEnabled(int idx, bool enabled) = 0;
 
 	/**< VRAM debugging operations. */
 

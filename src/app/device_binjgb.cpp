@@ -521,6 +521,10 @@ bool DeviceBinjgb::supportsSgbBorder(void) const {
 	return true;
 }
 
+bool DeviceBinjgb::supportsBreakpoint(void) const {
+	return true;
+}
+
 bool DeviceBinjgb::supportsVramDebugging(void) const {
 	return true;
 }
@@ -629,6 +633,48 @@ void DeviceBinjgb::stroke(int key) {
 		return;
 
 	_keyBuffer.push_back(key);
+}
+
+int DeviceBinjgb::getBreakpointCount(void) const {
+	return emulator_get_max_breakpoint_id();
+}
+
+Device::Breakpoint DeviceBinjgb::getBreakpoint(int idx) const {
+	const ::Breakpoint bp = emulator_get_breakpoint(idx);
+	Breakpoint result(bp.bank, bp.addr);
+	result.valid = bp.valid;
+
+	return result;
+}
+
+Device::Breakpoint DeviceBinjgb::getBreakpointByAddress(UInt8 bank, UInt16 addr) const {
+	const int n = getBreakpointCount();
+	for (int i = 0; i < n; ++i) {
+		const ::Breakpoint bp = emulator_get_breakpoint(i);
+		if (bp.bank == bank && bp.addr == addr) {
+			Breakpoint result(bp.bank, bp.addr);
+			result.valid = bp.valid;
+
+			return result;
+		}
+	}
+
+	return Breakpoint();
+}
+
+int DeviceBinjgb::addBreakpoint(UInt8 bank, UInt16 addr) {
+	const int idx = emulator_add_empty_breakpoint();
+	emulator_set_breakpoint_address_and_bank(_emulator, idx, addr, bank);
+
+	return idx;
+}
+
+void DeviceBinjgb::removeBreakpoint(int idx) {
+	emulator_remove_breakpoint(idx);
+}
+
+void DeviceBinjgb::setBreakpointEnabled(int idx, bool enabled) {
+	emulator_enable_breakpoint(idx, enabled ? TRUE : FALSE);
 }
 
 Device::TileSourceTypes DeviceBinjgb::getTileSourceType(void) const {
@@ -1175,13 +1221,14 @@ bool DeviceBinjgb::update(
 	// Tick a frame.
 	bool timeout = false;
 	long long start = 0;
-	if (_timeoutThreshold > 0) {
+	if (_timeoutThreshold > 0)
 		start = DateTime::ticks();
-	}
+
 	delta = Math::min(delta, DEVICE_BINJGB_DELTA_TIME_MIN_SECONDS);
 	const Ticks deltaTicks = (Ticks)(delta * CPU_TICKS_PER_SECOND);
 	const Ticks scaleTicks = deltaTicks * _speed / DEVICE_BASE_SPEED_FACTOR;
 	const Ticks untilTicks = emulator_get_ticks(_emulator) + scaleTicks;
+
 	EmulatorEvent event = 0;
 	bool disabledInput = false;
 	if (_inputEnabled && !allowInput) {
@@ -1248,8 +1295,16 @@ bool DeviceBinjgb::update(
 			}
 		}
 	} while (!(event & (EMULATOR_EVENT_UNTIL_TICKS | EMULATOR_EVENT_BREAKPOINT | EMULATOR_EVENT_INVALID_OPCODE)));
+
 	if (disabledInput) {
 		_inputEnabled = true;
+	}
+
+	if (event & EMULATOR_EVENT_BREAKPOINT) {
+		pause();
+
+		if (_debugListener)
+			_debugListener->breakpointHit();
 	}
 
 	// Tick the RTC.

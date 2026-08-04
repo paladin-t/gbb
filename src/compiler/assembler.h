@@ -19,6 +19,31 @@
 
 namespace GBBASIC {
 
+extern const UInt8 ASSEMBLER_OPCODE_SIZE[256];
+extern const char* const ASSEMBLER_OPCODE_MNEMONICS[256];
+extern const char* const ASSEMBLER_CB_OPCODE_MNEMONICS[256];
+
+extern const UInt8 ASSEMBLER_OPCODE_NOP;
+extern const UInt8 ASSEMBLER_OPCODE_STOP;
+extern const UInt8 ASSEMBLER_OPCODE_RETNZ;
+extern const UInt8 ASSEMBLER_OPCODE_RETZ;
+extern const UInt8 ASSEMBLER_OPCODE_RET;
+extern const UInt8 ASSEMBLER_OPCODE_RETNC;
+extern const UInt8 ASSEMBLER_OPCODE_RETC;
+extern const UInt8 ASSEMBLER_OPCODE_RETI;
+extern const UInt8 ASSEMBLER_OPCODE_CB;
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Assembler
+*/
+
+namespace GBBASIC {
+
 class Assembler : public virtual Object {
 public:
 	typedef std::shared_ptr<Assembler> Ptr;
@@ -29,7 +54,7 @@ public:
 		struct LabeledDestination {
 			typedef std::map<std::string, LabeledDestination> Dictionary;
 
-			int address = 0;
+			int address = 0; // Local address.
 
 			LabeledDestination();
 			LabeledDestination(int a);
@@ -44,15 +69,15 @@ public:
 
 			int tokenIndex = -1;
 			std::string label;
-			int offset = 0;
+			int offset = 0; // Instruction offset from lexical token.
 			Types type = Types::ADDRESS;
 
 			LabelRef();
 			LabelRef(int tkidx, const std::string &lbl, int off, Types y);
 		};
 
-		int size = 0;
-		int addressCursor = 0;
+		int size = 0; // Current emitted size.
+		int addressCursor = 0; // Current emitting address.
 		LabeledDestination::Dictionary labels;
 		LabelRef::Array labelRefs;
 		bool hasRet = false;
@@ -69,8 +94,8 @@ public:
 	struct AssemblingOptions {
 		typedef std::function<IdentifierResolvingResults(const IToken::Ptr &, int &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
 
-		int bank = 0;
-		int address = 0;
+		int bank = 0; // The bank of the current assembly block.
+		int address = 0; // The start address of the current assembly block.
 		IdentifierResolver resolveIdentifier = nullptr;
 		ErrorHandler onError = nullptr;
 
@@ -81,8 +106,8 @@ public:
 		typedef std::function<IdentifierResolvingResults(const IToken::Ptr &, int &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
 		typedef std::function<Byte*(const Byte*)> ArgsResolver;
 
-		int bank = 0;
-		int baseAddress = 0;
+		int bank = 0; // The bank of the current assembly block.
+		int baseAddress = 0; // The start address of the current assembly block.
 		bool nonbanked = false;
 		IdentifierResolver resolveIdentifier = nullptr;
 		ArgsResolver resolveArgs = nullptr;

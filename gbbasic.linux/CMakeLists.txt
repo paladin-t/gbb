@@ -288,6 +288,7 @@ list(
   "../src/compiler/assembler.cpp"
   "../src/compiler/codepoint.cpp"
   "../src/compiler/compiler.cpp"
+  "../src/compiler/disassembler.cpp"
   "../src/compiler/evaluator.cpp"
   "../src/compiler/kernel.cpp"
   "../src/compiler/pipeline.cpp"

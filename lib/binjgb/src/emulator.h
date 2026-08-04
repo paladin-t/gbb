@@ -246,6 +246,8 @@ EmulatorEvent emulator_run_until(Emulator*, Ticks until_ticks);
 ApuLog* emulator_get_apu_log(Emulator*);
 void emulator_reset_apu_log(Emulator*);
 
+Bool set_audio_channel_mute(Emulator *e, int channel, Bool muted);
+
 #ifdef __cplusplus
 }
 #endif
