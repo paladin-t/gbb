@@ -68,6 +68,7 @@
 		68786E173001203E007E9626 /* Psdminiz.c in Sources */ = {isa = PBXBuildFile; fileRef = 68786DFA3001203C007E9626 /* Psdminiz.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		68786E183001203E007E9626 /* PsdParseColorModeDataSection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DFC3001203D007E9626 /* PsdParseColorModeDataSection.cpp */; };
 		68786E193001203E007E9626 /* PsdFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68786DFF3001203D007E9626 /* PsdFile.cpp */; };
+		6888D76F3021A6BB000502A5 /* disassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6888D76E3021A6BB000502A5 /* disassembler.cpp */; };
 		689D9AE02FC1CC8400982109 /* assembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689D9ADF2FC1CC8400982109 /* assembler.cpp */; };
 		689DD3FA2E2F37C5001D2B86 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD3F72E2F37C5001D2B86 /* main.cpp */; };
 		689DD4282E2F3A36001D2B86 /* stb_vorbis.c in Sources */ = {isa = PBXBuildFile; fileRef = 689DD4142E2F3A34001D2B86 /* stb_vorbis.c */; settings = {COMPILER_FLAGS = "-w"; }; };
@@ -423,6 +424,8 @@
 		68786DFD3001203D007E9626 /* PsdExportDocument.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdExportDocument.h; path = lib/psd/src/psd/PsdExportDocument.h; sourceTree = "<group>"; };
 		68786DFE3001203D007E9626 /* PsdVectorMask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PsdVectorMask.h; path = lib/psd/src/psd/PsdVectorMask.h; sourceTree = "<group>"; };
 		68786DFF3001203D007E9626 /* PsdFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PsdFile.cpp; path = lib/psd/src/psd/PsdFile.cpp; sourceTree = "<group>"; };
+		6888D76D3021A6BB000502A5 /* disassembler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = disassembler.h; path = src/compiler/disassembler.h; sourceTree = "<group>"; };
+		6888D76E3021A6BB000502A5 /* disassembler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = disassembler.cpp; path = src/compiler/disassembler.cpp; sourceTree = "<group>"; };
 		688D8A2B2E33339700B7C5DA /* Info-Emu.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "Info-Emu.plist"; path = "src/app/mac/Info-Emu.plist"; sourceTree = "<group>"; };
 		688D8A2D2E3333A900B7C5DA /* Info-Steam.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "Info-Steam.plist"; path = "src/app/mac/Info-Steam.plist"; sourceTree = "<group>"; };
 		68913EE52F542A5800B15C51 /* editor_map.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = editor_map.inl; path = src/app/editor_map.inl; sourceTree = "<group>"; };
@@ -879,6 +882,8 @@
 				689DD56A2E2F3EED001D2B86 /* codepoint.h */,
 				689DD56B2E2F3EED001D2B86 /* compiler.cpp */,
 				689DD56E2E2F3EED001D2B86 /* compiler.h */,
+				6888D76E3021A6BB000502A5 /* disassembler.cpp */,
+				6888D76D3021A6BB000502A5 /* disassembler.h */,
 				68CF99D12F8BCEA5004E1FBC /* evaluator.cpp */,
 				68CF99D22F8BCEA6004E1FBC /* evaluator.h */,
 				689DD5692E2F3EED001D2B86 /* kernel.cpp */,
@@ -2025,6 +2030,7 @@
 				689DD5CE2E2F3F18001D2B86 /* project.cpp in Sources */,
 				689DD4662E2F3BC5001D2B86 /* common.c in Sources */,
 				038E776C2582133D00A94374 /* trees.c in Sources */,
+				6888D76F3021A6BB000502A5 /* disassembler.cpp in Sources */,
 				03FEADAF25C94ED3006A5EF0 /* imgui_tables.cpp in Sources */,
 				68786E173001203E007E9626 /* Psdminiz.c in Sources */,
 				689DD5E22E2F3F18001D2B86 /* commands_font.cpp in Sources */,

@@ -626,6 +626,9 @@
     <ClCompile Include="lib\psd\src\psd\PsdSyncFileWriter.cpp">
       <Filter>lib\psd\src\psd</Filter>
     </ClCompile>
+    <ClCompile Include="src\compiler\disassembler.cpp">
+      <Filter>compiler</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="utils">
@@ -1893,6 +1896,9 @@
     </ClInclude>
     <ClInclude Include="lib\psd\src\psd\PsdVectorMask.h">
       <Filter>lib\psd\src\psd</Filter>
+    </ClInclude>
+    <ClInclude Include="src\compiler\disassembler.h">
+      <Filter>compiler</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

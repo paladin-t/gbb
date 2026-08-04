@@ -760,6 +760,7 @@
       <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='release|x64'">4503;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='debug|x64'">4503;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
+    <ClCompile Include="src\compiler\disassembler.cpp" />
     <ClCompile Include="src\compiler\evaluator.cpp" />
     <ClCompile Include="src\compiler\kernel.cpp" />
     <ClCompile Include="src\compiler\pipeline.cpp" />
@@ -1190,6 +1191,7 @@
     <ClInclude Include="src\compiler\assembler.h" />
     <ClInclude Include="src\compiler\codepoint.h" />
     <ClInclude Include="src\compiler\compiler.h" />
+    <ClInclude Include="src\compiler\disassembler.h" />
     <ClInclude Include="src\compiler\evaluator.h" />
     <ClInclude Include="src\compiler\kernel.h" />
     <ClInclude Include="src\compiler\pipeline.h" />

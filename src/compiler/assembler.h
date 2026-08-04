@@ -19,6 +19,21 @@
 
 namespace GBBASIC {
 
+extern const UInt8 ASSEMBLER_OPCODE_SIZE[256];
+extern const char* const ASSEMBLER_OPCODE_MNEMONICS[256];
+extern const char* const ASSEMBLER_CB_OPCODE_MNEMONICS[256];
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Assembler
+*/
+
+namespace GBBASIC {
+
 class Assembler : public virtual Object {
 public:
 	typedef std::shared_ptr<Assembler> Ptr;

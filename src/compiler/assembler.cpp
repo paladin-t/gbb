@@ -19,21 +19,40 @@ namespace GBBASIC {
 
 // See: https://gbdev.io/gb-opcodes/optables/
 //
-//   n8 : immediate 8 bit data.
-//   n16: immediate 16 bit data.
-//   a8 : 8 bit unsigned data, which are added to $FF00 in certain instructions (replacement for missing IN and OUT instructions).
-//   a16: 16 bit address.
-//   e8 : 8 bit signed data, which are added to program counter.
+// n8 : immediate 8 bit data.
+// n16: immediate 16 bit data.
+// a8 : 8 bit unsigned data, which are added to $FF00 in certain instructions (replacement for missing IN and OUT instructions).
+// a16: 16 bit address.
+// e8 : 8 bit signed data, which are added to program counter.
 //
-//  `ld a, (hl+)` has the alternative mnemonics `ld a, (hli)` and `ldi a, (hl)`.
-//  `ld (hl+), a` has the alternative mnemonics `ld (hli), a` and `ldi (hl), a`.
-//  `ld a, (hl-)` has the alternative mnemonics `ld a, (hld)` and `ldd a, (hl)`.
-//  `ld (hl-), a` has the alternative mnemonics `ld (hld), a` and `ldd (hl), a`.
-//  `ld hl, sp+e8` has the alternative mnemonics `ldhl sp, e8`.
-//  ALU instructions (`add`, `adc`, `sub`, `sbc`, `and`, `xor`, `or`, and `cp`) can be written with the left-hand side `a` omitted.
-//  Thus for example `add a, b` has the alternative mnemonic `add b`, and `cp a, 0xf` has the alternative mnemonic `cp 0xf`.
+// `ld a, (hl+)` has the alternative mnemonics `ld a, (hli)` and `ldi a, (hl)`.
+// `ld (hl+), a` has the alternative mnemonics `ld (hli), a` and `ldi (hl), a`.
+// `ld a, (hl-)` has the alternative mnemonics `ld a, (hld)` and `ldd a, (hl)`.
+// `ld (hl-), a` has the alternative mnemonics `ld (hld), a` and `ldd (hl), a`.
+// `ld hl, sp+e8` has the alternative mnemonics `ldhl sp, e8`.
+// ALU instructions (`add`, `adc`, `sub`, `sbc`, `and`, `xor`, `or`, and `cp`) can be written with the left-hand side `a` omitted.
+// Thus for example `add a, b` has the alternative mnemonic `add b`, and `cp a, 0xf` has the alternative mnemonic `cp 0xf`.
 
-static constexpr const char* const ASSEMBLER_OPCODE_MNEMONICS[256] = {
+const UInt8 ASSEMBLER_OPCODE_SIZE[256] = {
+	/*       x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF */
+	/* 0x */ 1, 3, 1, 1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 2, 1,
+	/* 1x */ 1, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+	/* 2x */ 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+	/* 3x */ 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
+	/* 4x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* 5x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* 6x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* 7x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* 8x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* 9x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* Ax */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* Bx */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	/* Cx */ 1, 1, 3, 3, 3, 1, 2, 1, 1, 1, 3, 2, 3, 3, 2, 1,
+	/* Dx */ 1, 1, 3, 1, 3, 1, 2, 1, 1, 1, 3, 1, 3, 1, 2, 1,
+	/* Ex */ 2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 1, 2, 1,
+	/* Fx */ 2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 1, 2, 1
+};
+const char* const ASSEMBLER_OPCODE_MNEMONICS[256] = {
 	/*       x0            x1           x2            x3           x4             x5           x6            x7           x8             x9           xA            xB         xC            xD          xE            xF      */
 	/* 0x */ "nop",        "ld bc,n16", "ld (bc),a",  "inc bc",    "inc b",       "dec b",     "ld b,n8",    "rlca",      "ld (a16),sp", "add hl,bc", "ld a,(bc)",  "dec bc",  "inc c",      "dec c",    "ld c,n8",    "rrca",
 	/* 1x */ "stop",       "ld de,n16", "ld (de),a",  "inc de",    "inc d",       "dec d",     "ld d,n8",    "rla",       "jr e8",       "add hl,de", "ld a,(de)",  "dec de",  "inc e",      "dec e",    "ld e,n8",    "rra",
@@ -52,7 +71,7 @@ static constexpr const char* const ASSEMBLER_OPCODE_MNEMONICS[256] = {
 	/* Ex */ "ldh (a8),a", "pop hl",    "ld (c),a",   nullptr,     nullptr,       "push hl",   "and a,n8",   "rst 20h",   "add sp,e8",   "jp hl",     "ld (a16),a", nullptr,   nullptr,      nullptr,    "xor a,n8",   "rst 28h",
 	/* Fx */ "ldh a,(a8)", "pop af",    "ld a,(c)",   "di",        nullptr,       "push af",   "or a,n8",    "rst 30h",   "ld hl,sp+e8", "ld sp,hl",  "ld a,(a16)", "ei",      nullptr,      nullptr,    "cp a,n8",    "rst 38h"
 };
-static constexpr const char* const ASSEMBLER_CB_OPCODE_MNEMONICS[256] = {
+const char* const ASSEMBLER_CB_OPCODE_MNEMONICS[256] = {
 	/*       x0         x1         x2         x3         x4         x5         x6            x7         x8         x9         xA         xB         xC         xD         xE            xF      */
 	/* 0x */ "rlc b",   "rlc c",   "rlc d",   "rlc e",   "rlc h",   "rlc l",   "rlc (hl)",   "rlc a",   "rrc b",   "rrc c",   "rrc d",   "rrc e",   "rrc h",   "rrc l",   "rrc (hl)",   "rrc a",
 	/* 1x */ "rl b",    "rl c",    "rl d",    "rl e",    "rl h",    "rl l",    "rl (hl)",    "rl a",    "rr b",    "rr c",    "rr d",    "rr e",    "rr h",    "rr l",    "rr (hl)",    "rr a",
@@ -72,7 +91,7 @@ static constexpr const char* const ASSEMBLER_CB_OPCODE_MNEMONICS[256] = {
 	/* Fx */ "set 6,b", "set 6,c", "set 6,d", "set 6,e", "set 6,h", "set 6,l", "set 6,(hl)", "set 6,a", "set 7,b", "set 7,c", "set 7,d", "set 7,e", "set 7,h", "set 7,l", "set 7,(hl)", "set 7,a"
 };
 
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_N8[] = {
+static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_N8[] = {
 	"ld b,n8",    "ld c,n8",
 	"ld d,n8",    "ld e,n8",
 	"ld h,n8",    "ld l,n8",
@@ -82,17 +101,17 @@ static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_N8[] = {
 	"and a,n8",   "xor a,n8",
 	"or a,n8",    "cp a,n8"
 };
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_N16[] = {
+static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_N16[] = {
 	"ld bc,n16",
 	"ld de,n16",
 	"ld hl,n16",
 	"ld sp,n16"
 };
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A8[] = {
+static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A8[] = {
 	"ldh (a8),a",
 	"ldh a,(a8)"
 };
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A16[] = {
+static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A16[] = {
 	"ld (a16),sp",
 	"jp a16",      "call a16",
 	"jp nz,a16",   "call nz,a16", "jp z,a16", "call z,a16",
@@ -100,7 +119,7 @@ static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A16[] = {
 	"ld (a16),a",
 	"ld a,(a16)"
 };
-static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_E8[] = {
+static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_E8[] = {
 	"jr e8",
 	"jr nz,e8",   "jr z,e8",
 	"jr nc,e8",   "jr c,e8",
@@ -109,35 +128,15 @@ static constexpr const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_E8[] = {
 	"ldhl sp,e8", "ld hl,sp+e8"
 };
 
-static constexpr const UInt8 ASSEMBLER_OPCODE_SIZE[256] = {
-	/*       x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF */
-	/* 0x */ 1, 3, 1, 1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 2, 1,
-	/* 1x */ 1, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
-	/* 2x */ 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
-	/* 3x */ 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
-	/* 4x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	/* 5x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	/* 6x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	/* 7x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	/* 8x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	/* 9x */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	/* Ax */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	/* Bx */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	/* Cx */ 1, 1, 3, 3, 3, 1, 2, 1, 1, 1, 3, 2, 3, 3, 2, 1,
-	/* Dx */ 1, 1, 3, 1, 3, 1, 2, 1, 1, 1, 3, 1, 3, 1, 2, 1,
-	/* Ex */ 2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 1, 2, 1,
-	/* Fx */ 2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 1, 2, 1
-};
-
-static constexpr const UInt8 ASSEMBLER_OPCODE_NOP   = 0x00;
-static constexpr const UInt8 ASSEMBLER_OPCODE_STOP  = 0x10;
-static constexpr const UInt8 ASSEMBLER_OPCODE_RETNZ = 0xc0;
-static constexpr const UInt8 ASSEMBLER_OPCODE_RETZ  = 0xc8;
-static constexpr const UInt8 ASSEMBLER_OPCODE_RET   = 0xc9;
-static constexpr const UInt8 ASSEMBLER_OPCODE_RETNC = 0xd0;
-static constexpr const UInt8 ASSEMBLER_OPCODE_RETC  = 0xd8;
-static constexpr const UInt8 ASSEMBLER_OPCODE_RETI  = 0xd9;
-static constexpr const UInt8 ASSEMBLER_OPCODE_CB    = 0xcb;
+static const UInt8 ASSEMBLER_OPCODE_NOP   = 0x00;
+static const UInt8 ASSEMBLER_OPCODE_STOP  = 0x10;
+static const UInt8 ASSEMBLER_OPCODE_RETNZ = 0xc0;
+static const UInt8 ASSEMBLER_OPCODE_RETZ  = 0xc8;
+static const UInt8 ASSEMBLER_OPCODE_RET   = 0xc9;
+static const UInt8 ASSEMBLER_OPCODE_RETNC = 0xd0;
+static const UInt8 ASSEMBLER_OPCODE_RETC  = 0xd8;
+static const UInt8 ASSEMBLER_OPCODE_RETI  = 0xd9;
+static const UInt8 ASSEMBLER_OPCODE_CB    = 0xcb;
 
 }
 
