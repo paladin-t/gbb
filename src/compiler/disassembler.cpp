@@ -33,11 +33,11 @@ public:
 		return false;
 	}
 
-	virtual bool disassemble(Mnemonic::Array &mnemonic, const Bytes::Ptr &bytes, const DisassemblingOptions &options) const override {
+	virtual bool disassemble(Mnemonic::Array &mnemonics, const Bytes::Ptr &bytes, const DisassemblingOptions &options) const override {
 		// Prepare.
-		mnemonic.clear();
+		mnemonics.clear();
 
-		// TODO
+		// TODO: DBG.
 
 		// Finish.
 		return true;
@@ -56,8 +56,10 @@ Disassembler::Mnemonic::Mnemonic(const std::string &txt, UInt8 b, UInt16 addr) :
 Disassembler::DisassemblingOptions::DisassemblingOptions() {
 }
 
-Disassembler::DisassemblingOptions::DisassemblingOptions(int bankSize_, int startAddr) :
-	bankSize(bankSize_), startAddress(startAddr)
+Disassembler::DisassemblingOptions::DisassemblingOptions(int bankSize_, int startAddr, int b, int addr) :
+	bankSize(bankSize_),
+	startAddress(startAddr),
+	bank(b), addressCursor(addr)
 {
 }
 

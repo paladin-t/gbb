@@ -1221,13 +1221,14 @@ bool DeviceBinjgb::update(
 	// Tick a frame.
 	bool timeout = false;
 	long long start = 0;
-	if (_timeoutThreshold > 0) {
+	if (_timeoutThreshold > 0)
 		start = DateTime::ticks();
-	}
+
 	delta = Math::min(delta, DEVICE_BINJGB_DELTA_TIME_MIN_SECONDS);
 	const Ticks deltaTicks = (Ticks)(delta * CPU_TICKS_PER_SECOND);
 	const Ticks scaleTicks = deltaTicks * _speed / DEVICE_BASE_SPEED_FACTOR;
 	const Ticks untilTicks = emulator_get_ticks(_emulator) + scaleTicks;
+
 	EmulatorEvent event = 0;
 	bool disabledInput = false;
 	if (_inputEnabled && !allowInput) {
@@ -1294,8 +1295,16 @@ bool DeviceBinjgb::update(
 			}
 		}
 	} while (!(event & (EMULATOR_EVENT_UNTIL_TICKS | EMULATOR_EVENT_BREAKPOINT | EMULATOR_EVENT_INVALID_OPCODE)));
+
 	if (disabledInput) {
 		_inputEnabled = true;
+	}
+
+	if (event & EMULATOR_EVENT_BREAKPOINT) {
+		pause();
+
+		if (_debugListener)
+			_debugListener->breakpointHit();
 	}
 
 	// Tick the RTC.

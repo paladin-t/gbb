@@ -2128,6 +2128,10 @@ void Workspace::stop(class Window* wnd, class Renderer* rnd) {
 		);
 }
 
+void Workspace::breakpointHit(void) {
+	// TODO: DBG.
+}
+
 class VramDebugger* Workspace::initializeVramDebugger(class Window* /* wnd */, class Renderer* rnd) {
 	if (vramDebugger())
 		return vramDebugger();

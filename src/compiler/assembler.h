@@ -44,7 +44,7 @@ public:
 		struct LabeledDestination {
 			typedef std::map<std::string, LabeledDestination> Dictionary;
 
-			int address = 0;
+			int address = 0; // Local address.
 
 			LabeledDestination();
 			LabeledDestination(int a);
@@ -59,15 +59,15 @@ public:
 
 			int tokenIndex = -1;
 			std::string label;
-			int offset = 0;
+			int offset = 0; // Instruction offset from lexical token.
 			Types type = Types::ADDRESS;
 
 			LabelRef();
 			LabelRef(int tkidx, const std::string &lbl, int off, Types y);
 		};
 
-		int size = 0;
-		int addressCursor = 0;
+		int size = 0; // Current emitted size.
+		int addressCursor = 0; // Current emitting address.
 		LabeledDestination::Dictionary labels;
 		LabelRef::Array labelRefs;
 		bool hasRet = false;
@@ -84,8 +84,8 @@ public:
 	struct AssemblingOptions {
 		typedef std::function<IdentifierResolvingResults(const IToken::Ptr &, int &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
 
-		int bank = 0;
-		int address = 0;
+		int bank = 0; // The bank of the current assembly block.
+		int address = 0; // The start address of the current assembly block.
 		IdentifierResolver resolveIdentifier = nullptr;
 		ErrorHandler onError = nullptr;
 
@@ -96,8 +96,8 @@ public:
 		typedef std::function<IdentifierResolvingResults(const IToken::Ptr &, int &, RamLocation &, std::string &, std::string &)> IdentifierResolver;
 		typedef std::function<Byte*(const Byte*)> ArgsResolver;
 
-		int bank = 0;
-		int baseAddress = 0;
+		int bank = 0; // The bank of the current assembly block.
+		int baseAddress = 0; // The start address of the current assembly block.
 		bool nonbanked = false;
 		IdentifierResolver resolveIdentifier = nullptr;
 		ArgsResolver resolveArgs = nullptr;

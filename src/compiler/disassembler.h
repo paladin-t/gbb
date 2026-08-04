@@ -35,17 +35,19 @@ public:
 	};
 
 	struct DisassemblingOptions {
-		int bankSize = 0;
-		int startAddress = 0;
+		int bankSize = 0; // Const. The size of a ROM bank.
+		int startAddress = 0; // Const. The start address of a non-zero ROM bank. (Bank zero always starts from 0.)
+		int bank = 0; // Const. The index of the ROM bank of the input `bytes`.
+		int addressCursor = 0; // Const. The address cursor in the ROM bank of the input `bytes`.
 
 		DisassemblingOptions();
-		DisassemblingOptions(int bankSize_, int startAddr);
+		DisassemblingOptions(int bankSize_, int startAddr, int b, int addr);
 	};
 
 public:
 	GBBASIC_CLASS_TYPE('D', 'S', 'M', 'B')
 
-	virtual bool disassemble(Mnemonic::Array &mnemonic, const Bytes::Ptr &bytes, const DisassemblingOptions &options) const = 0;
+	virtual bool disassemble(Mnemonic::Array &mnemonics, const Bytes::Ptr &bytes, const DisassemblingOptions &options) const = 0;
 
 	static Disassembler* create(void);
 	static void destroy(Disassembler* ptr);
