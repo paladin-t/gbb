@@ -25,6 +25,15 @@ Device::KeyboardModifiers::KeyboardModifiers(bool ctrl_, bool shift_, bool alt_,
 {
 }
 
+Device::Breakpoint::Breakpoint() {
+}
+
+Device::Breakpoint::Breakpoint(UInt8 b, UInt16 addr) :
+	bank(b),
+	address(addr)
+{
+}
+
 Device* Device::create(CoreTypes type, Protocol* dbgListener) {
 	Device* result = nullptr;
 	switch (type) {

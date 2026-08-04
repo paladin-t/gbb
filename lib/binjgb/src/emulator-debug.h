@@ -132,6 +132,7 @@ Breakpoint emulator_get_breakpoint_by_address(Emulator*, Address addr);
 int emulator_add_empty_breakpoint(void);
 int emulator_add_breakpoint(Emulator*, Address, Bool enabled);
 void emulator_set_breakpoint_address(Emulator*, int id, Address);
+void emulator_set_breakpoint_address_and_bank(Emulator*, int id, Address, u8);
 void emulator_enable_breakpoint(int id, Bool enabled);
 void emulator_remove_breakpoint(int id);
 

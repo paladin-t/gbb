@@ -95,6 +95,7 @@ public:
 	virtual bool supportsGettingDuty(void) const override;
 	virtual bool supportsVariableSpeed(void) const override;
 	virtual bool supportsSgbBorder(void) const override;
+	virtual bool supportsBreakpoint(void) const override;
 	virtual bool supportsVramDebugging(void) const override;
 	virtual bool supportsMutingAudioChannel(void) const override;
 
@@ -121,6 +122,13 @@ public:
 	virtual void inputEnabled(bool val) override;
 
 	virtual void stroke(int key) override;
+
+	virtual int getBreakpointCount(void) const override;
+	virtual Breakpoint getBreakpoint(int idx) const override;
+	virtual Breakpoint getBreakpointByAddress(UInt8 bank, UInt16 addr) const override;
+	virtual int addBreakpoint(UInt8 bank, UInt16 addr) override;
+	virtual void removeBreakpoint(int idx) override;
+	virtual void setBreakpointEnabled(int idx, bool enabled) override;
 
 	virtual TileSourceTypes getTileSourceType(void) const override;
 	virtual MapSourceTypes getMapSourceType(LayerTypes layer) const override;

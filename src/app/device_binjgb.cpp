@@ -521,6 +521,10 @@ bool DeviceBinjgb::supportsSgbBorder(void) const {
 	return true;
 }
 
+bool DeviceBinjgb::supportsBreakpoint(void) const {
+	return true;
+}
+
 bool DeviceBinjgb::supportsVramDebugging(void) const {
 	return true;
 }
@@ -629,6 +633,48 @@ void DeviceBinjgb::stroke(int key) {
 		return;
 
 	_keyBuffer.push_back(key);
+}
+
+int DeviceBinjgb::getBreakpointCount(void) const {
+	return emulator_get_max_breakpoint_id();
+}
+
+Device::Breakpoint DeviceBinjgb::getBreakpoint(int idx) const {
+	const ::Breakpoint bp = emulator_get_breakpoint(idx);
+	Breakpoint result(bp.bank, bp.addr);
+	result.valid = bp.valid;
+
+	return result;
+}
+
+Device::Breakpoint DeviceBinjgb::getBreakpointByAddress(UInt8 bank, UInt16 addr) const {
+	const int n = getBreakpointCount();
+	for (int i = 0; i < n; ++i) {
+		const ::Breakpoint bp = emulator_get_breakpoint(i);
+		if (bp.bank == bank && bp.addr == addr) {
+			Breakpoint result(bp.bank, bp.addr);
+			result.valid = bp.valid;
+
+			return result;
+		}
+	}
+
+	return Breakpoint();
+}
+
+int DeviceBinjgb::addBreakpoint(UInt8 bank, UInt16 addr) {
+	const int idx = emulator_add_empty_breakpoint();
+	emulator_set_breakpoint_address_and_bank(_emulator, idx, addr, bank);
+
+	return idx;
+}
+
+void DeviceBinjgb::removeBreakpoint(int idx) {
+	emulator_remove_breakpoint(idx);
+}
+
+void DeviceBinjgb::setBreakpointEnabled(int idx, bool enabled) {
+	emulator_enable_breakpoint(idx, enabled ? TRUE : FALSE);
 }
 
 Device::TileSourceTypes DeviceBinjgb::getTileSourceType(void) const {
