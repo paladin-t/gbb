@@ -30,7 +30,7 @@ namespace filesystem = std::experimental::filesystem;
 */
 
 #ifndef PLATFORM_WINDOWS_IAP_DEBUG_ENABLED
-#	define PLATFORM_WINDOWS_IAP_DEBUG_ENABLED 1
+#	define PLATFORM_WINDOWS_IAP_DEBUG_ENABLED 0
 #endif /* PLATFORM_WINDOWS_IAP_DEBUG_ENABLED */
 #ifndef PLATFORM_WINDOWS_IAP_DELAY_FRAME_COUNT
 #	define PLATFORM_WINDOWS_IAP_DELAY_FRAME_COUNT 30
@@ -605,7 +605,7 @@ bool Platform::listenedPurchase(Transaction &transaction) {
 		_transaction->productId = "1";
 		_transaction->ok = true;
 
-		msgbox("Purchased.", "Urban Player");
+		msgbox("Purchased.", "Product Name");
 
 		transaction = *_transaction;
 
@@ -710,7 +710,7 @@ bool Platform::respondedPurchase(Transaction &transaction) {
 				_transaction->ok = true;
 				_pending = false;
 
-				msgbox("Purchased.", "Urban Player");
+				msgbox("Purchased.", "Product Name");
 			};
 			/*auto failed = [&] (void) -> void {
 				_transaction->id = Text::toString(_id++);
@@ -718,7 +718,7 @@ bool Platform::respondedPurchase(Transaction &transaction) {
 				_transaction->ok = false;
 				_pending = false;
 
-				msgbox("Cannot purchase in App Store.", "Urban Player");
+				msgbox("Cannot purchase in App Store.", "Product Name");
 			};*/
 			succeeded();
 		}
@@ -768,7 +768,7 @@ bool Platform::respondedRestoring(Transactions &transactions) {
 				_transactions->ok = true;
 				_pending = false;
 
-				msgbox("Restored.", "Urban Player");
+				msgbox("Restored.", "Product Name");
 			};*/
 			auto failed = [&] (void) -> void {
 				_transactions->ids.clear();
@@ -776,7 +776,7 @@ bool Platform::respondedRestoring(Transactions &transactions) {
 				_transactions->ok = false;
 				_pending = false;
 
-				msgbox("Nothing to restore.", "Urban Player");
+				msgbox("Nothing to restore.", "Product Name");
 			};
 			failed();
 		}
