@@ -295,10 +295,6 @@ namespace GBBASIC {
 #	define BANK0FINAL_ENTRY_NAME "BANK0FINAL" // DOC: ROM SCHEMA.
 #endif /* BANK0FINAL_ENTRY_NAME */
 
-#ifndef SCRIPT_MEMORY_ENTRY_NAME
-#	define SCRIPT_MEMORY_ENTRY_NAME "script_memory" // DOC: RAM SCHEMA.
-#endif /* SCRIPT_MEMORY_ENTRY_NAME */
-
 // ISRs.
 #ifndef ON_VBL_ENTRY_NAME
 #	define ON_VBL_ENTRY_NAME "on vbl"
@@ -1164,118 +1160,16 @@ static bool analyzeString(std::string str, Font::Codepoints &codepoints, Font::C
 	return hasEsc;
 }
 
-struct Counter {
-	typedef std::shared_ptr<Counter> Ptr;
-
-	int value = 0;
-	int max = 0;
-
-	Counter() {
-	}
-	Counter(int val) : value(val), max(val) {
-	}
-	Counter(const Counter &other) : value(other.value), max(other.max) {
-	}
-
-	Counter &operator = (const Counter &other) {
-		value = other.value;
-		max = other.max;
-
-		return *this;
-	}
-
-	bool operator == (const Counter &other) const {
-		return
-			value == other.value &&
-			max == other.max;
-	}
-	bool operator != (const Counter &other) const {
-		return
-			value != other.value ||
-			max != other.max;
-	}
-
-	Counter operator + (const Counter &other) const {
-		return Counter(value + other.value);
-	}
-	Counter operator + (int other) const {
-		return Counter(value + other);
-	}
-	Counter operator - (const Counter &other) const {
-		return Counter(value - other.value);
-	}
-	Counter operator - (int other) const {
-		return Counter(value - other);
-	}
-	Counter &operator += (const Counter &other) {
-		value += other.value;
-		if (value > max)
-			max = value;
-
-		return *this;
-	}
-	Counter &operator += (int other) {
-		value += other;
-		if (value > max)
-			max = value;
-
-		return *this;
-	}
-	Counter &operator -= (const Counter &other) {
-		value -= other.value;
-
-		return *this;
-	}
-	Counter &operator -= (int other) {
-		value -= other;
-
-		return *this;
-	}
-
-	operator int (void) const {
-		return value;
-	}
-};
-static Counter &operator ++ (Counter &val) {
-	val += 1;
-
-	return val;
-}
-static Counter &operator -- (Counter &val) {
-	val -= 1;
-
-	return val;
-}
-static Counter operator ++ (Counter &val, int) {
-	const Counter old(val);
-	val += 1;
-
-	return old;
-}
-static Counter operator -- (Counter &val, int) {
-	const Counter old(val);
-	val -= 1;
-
-	return old;
 }
 
-#ifndef COUNTER_GUARD
-#	define COUNTER_GUARD(CTX, VAR) Counter GBBASIC_UNIQUE_NAME(__COUNTERGUARD__); Counter &(VAR) = ((CTX).stackFootprint ? *(CTX).stackFootprint : GBBASIC_UNIQUE_NAME(__COUNTERGUARD__))
-#endif /* COUNTER_GUARD */
-#ifndef CHECK_COUNTER
-#	define CHECK_COUNTER(CTX, ON_ERROR) \
-		do { \
-			if ((CTX).stackFootprint && (CTX).stackFootprint->max > (CTX).stackSize) { \
-				THROW_STACK_OVERFLOW((ON_ERROR), !(CTX).strictOn); \
-			} \
-		} while (false)
-#endif /* CHECK_COUNTER */
-#ifndef INC_COUNTER
-#	define INC_COUNTER(COUNTER, AMOUNT) do { if ((AMOUNT) > 0) { (COUNTER) += (AMOUNT); } } while (false);
-#endif /* INC_COUNTER */
-#ifndef DEC_COUNTER
-#	define DEC_COUNTER(COUNTER, AMOUNT) do { if ((AMOUNT) > 0) { GBBASIC_ASSERT((COUNTER) - (AMOUNT) >= 0 && "Wrong data."); (COUNTER) -= (AMOUNT); } } while (false);
-#endif /* DEC_COUNTER */
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of allocations
+*/
+
+namespace GBBASIC {
 
 TextLocation::TextLocation() {
 }
@@ -1284,6 +1178,9 @@ TextLocation::TextLocation(int p) : page(p) {
 }
 
 TextLocation::TextLocation(int p, int r, int c) : page(p), row(r), column(c) {
+}
+
+TextLocation::TextLocation(int p, int r, int c, const std::string &lbl) : page(p), row(r), column(c), label(lbl) {
 }
 
 bool TextLocation::operator == (const TextLocation &other) const {
@@ -1326,6 +1223,11 @@ int TextLocation::compare(const TextLocation &other) const {
 	else if (column > other.column)
 		return 1;
 
+	if (label < other.label)
+		return -1;
+	else if (label > other.label)
+		return 1;
+
 	return 0;
 }
 
@@ -1337,65 +1239,235 @@ TextLocation TextLocation::INVALID(void) {
 	return TextLocation(-1, -1, -1);
 }
 
-struct Prompt {
-	typedef std::function<void(const Prompt &, const std::string &, const TextLocation* /* nullable */)> Handler;
+RomLocation::RomLocation() {
+}
 
-	typedef std::initializer_list<std::string> Arguments;
+RomLocation::RomLocation(int b, int a) : bank(b), address(a) {
+}
 
-	std::string message;
+RomLocation::RomLocation(int b, int a, int s) : bank(b), address(a), size(s) {
+}
 
-	Prompt() {
+RamLocation::RamLocation() {
+}
+
+RamLocation::RamLocation(Types y, int a, int s, Usages u, const TextLocation &txtLoc) :
+	type(y), address(a), size(s),
+	usage(u), textLocation(txtLoc)
+{
+}
+
+SymbolTable::SymbolTable() {
+}
+
+bool SymbolTable::parseSymbols(const std::string &symbols) {
+	// Prepare.
+	std::string symbols_ = symbols;
+
+	// Uniform new line characters to '\n'.
+	symbols_ = Text::replace(symbols_, "\r\n", "\n");
+	symbols_ = Text::replace(symbols_, "\r", "\n");
+
+	// Split the symbol data into lines.
+	Text::Array lines;
+	const Text::Array lines_ = Text::split(symbols_, "\n");
+	for (std::string ln : lines_) {
+		const size_t idx = Text::indexOf(ln, ";");
+		if (idx != std::string::npos)
+			ln = ln.substr(0, idx);
+
+		ln = Text::trim(ln);
+
+		if (ln.empty())
+			continue;
+
+		lines.push_back(ln);
 	}
-	Prompt(const std::string &msg) :
-		message(msg)
-	{
+
+	// Parse the symbol lines.
+	for (const std::string &ln : lines) {
+		const Text::Array parts = Text::split(ln, " ");
+		if (parts.size() != 2)
+			continue;
+
+		const std::string &address_ = parts.front();
+		std::string name = parts.back();
+		const Text::Array addressParts = Text::split(address_, ":");
+		if (addressParts.size() != 2)
+			continue;
+
+		const std::string &bank = addressParts.front();
+		const std::string &address = addressParts.back();
+
+		if (Text::startsWith(name, "_", true))
+			name = name.substr(1 /* after "_" */);
+		const int nbank = std::stoi(bank, 0, 16);
+		const int naddress = std::stoi(address, 0, 16);
+		const RomLocation romLocation(nbank, naddress);
+		_dictionary.insert(std::make_pair(name, romLocation));
 	}
 
-	std::string format(void) const {
-		return message;
-	}
-	std::string format(const Arguments &args) const {
-		Text::Array args_ = args;
-		for (std::string &arg : args_) {
-			if (arg == "\n")
-				arg = "<EOL>";
+	// Finish.
+	return true;
+}
+
+bool SymbolTable::parseAliases(const std::string &aliases) {
+	rapidjson::Document doc;
+	if (!Json::fromString(doc, aliases.c_str()))
+		return false;
+	if (!doc.IsObject())
+		return false;
+
+	for (rapidjson::Value::ConstMemberIterator it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
+		const rapidjson::Value &jkey = it->name;
+		const rapidjson::Value &jval = it->value;
+
+		const std::string name = jkey.GetString();
+		if (!jval.IsObject()) {
+			fprintf(stderr, "Object expected for the alias of the \"%s\" symbol.\n", name.c_str());
+
+			continue;
 		}
-		const std::string result = Text::format(message, args_);
 
-		return result;
-	}
-};
+		std::string ref;
+		int offset = 0;
+		if (!Jpath::get(jval, ref, "ref")) {
+			fprintf(stderr, "Cannot read the \"ref\" field of the alias of the \"%s\" symbol.\n", name.c_str());
 
-struct Error {
-	typedef std::function<void(const Error &, const std::string &, const TextLocation &)> Handler;
-
-	typedef std::initializer_list<std::string> Arguments;
-
-	std::string message;
-	bool isWarning = false;
-
-	Error() {
-	}
-	Error(const std::string &msg, bool isWarning) :
-		message(msg),
-		isWarning(isWarning)
-	{
-	}
-
-	std::string format(void) const {
-		return message;
-	}
-	std::string format(const Arguments &args) const {
-		Text::Array args_ = args;
-		for (std::string &arg : args_) {
-			if (arg == "\n")
-				arg = "<EOL>";
+			continue;
 		}
-		const std::string result = Text::format(message, args_);
+		if (!Jpath::get(jval, offset, "offset")) {
+			fprintf(stderr, "Cannot read the \"offset\" field of the alias of the \"%s\" symbol.\n", name.c_str());
 
-		return result;
+			continue;
+		}
+
+		const RomLocation* refLocation = find(ref);
+		if (!refLocation) {
+			fprintf(stderr, "Cannot find the \"%s\" ref alias of the \"%s\" symbol.\n", ref.c_str(), name.c_str());
+
+			continue;
+		}
+
+		const int nbank = refLocation->bank;
+		const int naddress = refLocation->address + offset;
+		const RomLocation romLocation(nbank, naddress);
+		_dictionary.insert(std::make_pair(name, romLocation));
 	}
-};
+
+	return true;
+}
+
+bool SymbolTable::add(const std::string &key, const RomLocation &val) {
+	auto ret = _dictionary.insert(std::make_pair(key, val));
+
+	return ret.second;
+}
+
+bool SymbolTable::add(const std::string &key, int bank, int address) {
+	const RomLocation romLocation(bank, address);
+
+	return add(key, romLocation);
+}
+
+bool SymbolTable::add(const std::string &key, int bank, int address, RomLocation::Types y) {
+	RomLocation romLocation(bank, address);
+	romLocation.type = y;
+
+	return add(key, romLocation);
+}
+
+int SymbolTable::merge(const SymbolTable &other) {
+	int result = 0;
+	for (Dictionary::const_iterator it = other._dictionary.begin(); it != other._dictionary.end(); ++it) {
+		if (_dictionary.find(it->first) != _dictionary.end()) {
+			GBBASIC_ASSERT(false && "Wrong data.");
+
+			continue;
+		}
+		_dictionary.insert(*it);
+		++result;
+	}
+
+	return result;
+}
+
+const RomLocation* SymbolTable::find(const std::string &key) const {
+	Dictionary::const_iterator it = _dictionary.find(key);
+	if (it == _dictionary.end())
+		return nullptr;
+
+	return &it->second;
+}
+
+const RomLocation* SymbolTable::fuzzy(const std::string &key, std::string &gotKey) const {
+	gotKey.clear();
+
+	if (_dictionary.empty())
+		return nullptr;
+
+	double fuzzyScore = 0.0;
+	Dictionary::const_iterator fuzzyIt = _dictionary.end();
+	for (Dictionary::const_iterator it = _dictionary.begin(); it != _dictionary.end(); ++it) {
+		const std::string &name = it->first;
+		if (name == key) {
+			gotKey = name;
+
+			return &it->second;
+		}
+
+		if (name.empty())
+			continue;
+
+		const double score = rapidfuzz::fuzz::ratio(name, key);
+		if (score < FUZZY_MATCHING_SCORE_THRESHOLD)
+			continue;
+		if (score > fuzzyScore) {
+			fuzzyScore = score;
+			fuzzyIt = it;
+		}
+	}
+
+	if (fuzzyIt != _dictionary.end()) {
+		gotKey = fuzzyIt->first;
+
+		return &fuzzyIt->second;
+	}
+
+	return nullptr;
+}
+
+TracePoint::TracePoint() {
+}
+
+TracePoint::TracePoint(const RomLocation &rom, const TextLocation &code) :
+	inRom(rom), inCode(code)
+{
+}
+
+int TracePoint::compare(const TracePoint &other) const {
+	if (inRom.bank < other.inRom.bank)
+		return -1;
+	else if (inRom.bank > other.inRom.bank)
+		return 1;
+
+	if (inRom.address < other.inRom.address)
+		return -1;
+	else if (inRom.address > other.inRom.address)
+		return 1;
+
+	if ((unsigned)inRom.type < (unsigned)other.inRom.type)
+		return -1;
+	else if ((unsigned)inRom.type > (unsigned)other.inRom.type)
+		return 1;
+
+	if (inRom.size < other.inRom.size)
+		return -1;
+	else if (inRom.size > other.inRom.size)
+		return 1;
+
+	return 0;
+}
 
 struct SourceLocation {
 	int page = 0;
@@ -1461,462 +1533,16 @@ struct SourceLocation {
 	}
 };
 
-struct RomLocation {
-	int bank = 0;
-	int address = 0;
-	int size = 0;
-
-	RomLocation() {
-	}
-	RomLocation(int b, int a) : bank(b), address(a) {
-	}
-	RomLocation(int b, int a, int s) : bank(b), address(a), size(s) {
-	}
-};
-
-RamLocation::RamLocation() {
 }
 
-RamLocation::RamLocation(Types y, int a, int s, Usages u, const TextLocation &txtLoc) :
-	type(y), address(a), size(s),
-	usage(u), textLocation(txtLoc)
-{
-}
+/* ===========================================================================} */
 
-Macro::Macro() {
-	scopeLocationRange.first = TextLocation::INVALID();
-	scopeLocationRange.second = TextLocation::INVALID();
-}
+/*
+** {===========================================================================
+** Structure of instructions and operators
+*/
 
-Macro::Macro(const std::string &name_, Types y, const Variant &d) :
-	name(name_),
-	type(y),
-	data(d)
-{
-	scopeLocationRange.first = TextLocation::INVALID();
-	scopeLocationRange.second = TextLocation::INVALID();
-}
-
-Macro::Macro(const std::string &name_, Types y, const Variant &d, const TextLocation &begin) :
-	name(name_),
-	type(y),
-	data(d)
-{
-	scopeLocationRange.first = begin;
-	scopeLocationRange.second = TextLocation::INVALID();
-}
-
-bool Macro::operator == (const Macro &other) const {
-	return compare(other) == 0;
-}
-
-bool Macro::operator != (const Macro &other) const {
-	return compare(other) != 0;
-}
-
-bool Macro::operator < (const Macro &other) const {
-	return compare(other) < 0;
-}
-
-bool Macro::operator <= (const Macro &other) const {
-	return compare(other) <= 0;
-}
-
-bool Macro::operator > (const Macro &other) const {
-	return compare(other) > 0;
-}
-
-bool Macro::operator >= (const Macro &other) const {
-	return compare(other) >= 0;
-}
-
-int Macro::compare(const Macro &other) const {
-	if (name < other.name)
-		return -1;
-	else if (name > other.name)
-		return 1;
-
-	if (type < other.type)
-		return -1;
-	else if (type > other.type)
-		return 1;
-
-	const int cd = data.compare(other.data);
-	if (cd != 0)
-		return cd;
-
-	if (scopeLocationRange < other.scopeLocationRange)
-		return -1;
-	else if (scopeLocationRange > other.scopeLocationRange)
-		return 1;
-
-	return 0;
-}
-
-PreprocessorBranch::PreprocessorBranch() {
-}
-
-PreprocessorBranch::PreprocessorBranch(bool alive, int pg, int begin, int end, int cond) :
-	isAlive(alive),
-	page(pg), beginLine(begin), endLine(end),
-	conditionLine(cond)
-{
-}
-
-bool PreprocessorBranch::operator == (const PreprocessorBranch &other) const {
-	return compare(other) == 0;
-}
-
-bool PreprocessorBranch::operator != (const PreprocessorBranch &other) const {
-	return compare(other) != 0;
-}
-
-bool PreprocessorBranch::operator < (const PreprocessorBranch &other) const {
-	return compare(other) < 0;
-}
-
-bool PreprocessorBranch::operator <= (const PreprocessorBranch &other) const {
-	return compare(other) <= 0;
-}
-
-bool PreprocessorBranch::operator > (const PreprocessorBranch &other) const {
-	return compare(other) > 0;
-}
-
-bool PreprocessorBranch::operator >= (const PreprocessorBranch &other) const {
-	return compare(other) >= 0;
-}
-
-int PreprocessorBranch::compare(const PreprocessorBranch &other) const {
-	if (!isAlive && other.isAlive)
-		return -1;
-	else if (isAlive && !other.isAlive)
-		return 1;
-
-	if (page < other.page)
-		return -1;
-	else if (page > other.page)
-		return 1;
-
-	if (beginLine < other.beginLine)
-		return -1;
-	else if (beginLine > other.beginLine)
-		return 1;
-
-	if (endLine < other.endLine)
-		return -1;
-	else if (endLine > other.endLine)
-		return 1;
-
-	if (conditionLine < other.conditionLine)
-		return -1;
-	else if (conditionLine > other.conditionLine)
-		return 1;
-
-	return 0;
-}
-
-bool PreprocessorBranch::valid(void) const {
-	if (page == -1 || beginLine == -1 || endLine == -1 || conditionLine == -1)
-		return false;
-
-	return true;
-}
-
-void PreprocessorBranch::clear(void) {
-	isAlive = true;
-	page = -1;
-	beginLine = -1;
-	endLine = -1;
-	conditionLine = -1;
-}
-
-AsmBlock::AsmBlock() {
-}
-
-AsmBlock::AsmBlock(
-	int pg, int ln, int col, const std::string &name_,
-	int begin, int end,
-	int b,
-	int addr
-) :
-	page(pg), row(ln), column(col), name(name_),
-	beginLine(begin), endLine(end),
-	bank(b), address(addr)
-{
-}
-
-bool AsmBlock::operator == (const AsmBlock &other) const {
-	return compare(other) == 0;
-}
-
-bool AsmBlock::operator != (const AsmBlock &other) const {
-	return compare(other) != 0;
-}
-
-bool AsmBlock::operator < (const AsmBlock &other) const {
-	return compare(other) <  0;
-}
-
-bool AsmBlock::operator <= (const AsmBlock &other) const {
-	return compare(other) <= 0;
-}
-
-bool AsmBlock::operator > (const AsmBlock &other) const {
-	return compare(other) >  0;
-}
-
-bool AsmBlock::operator >= (const AsmBlock &other) const {
-	return compare(other) >= 0;
-}
-
-int AsmBlock::compare(const AsmBlock &other) const {
-	if (page < other.page)
-		return -1;
-	else if (page > other.page)
-		return 1;
-
-	if (row < other.row)
-		return -1;
-	else if (row > other.row)
-		return 1;
-
-	if (column < other.column)
-		return -1;
-	else if (column > other.column)
-		return 1;
-
-	if (name < other.name)
-		return -1;
-	else if (name > other.name)
-		return 1;
-
-	if (beginLine < other.beginLine)
-		return -1;
-	else if (beginLine > other.beginLine)
-		return 1;
-
-	if (endLine < other.endLine)
-		return -1;
-	else if (endLine > other.endLine)
-		return 1;
-
-	return 0;
-}
-
-bool AsmBlock::valid(void) const {
-	if (page == -1 || beginLine == -1 || endLine == -1)
-		return false;
-
-	return true;
-}
-
-void AsmBlock::clear(void) {
-	page = -1;
-	beginLine = -1;
-	endLine = -1;
-}
-
-FeatureUsages::FeatureUsages() {
-}
-
-struct SymbolTable {
-private:
-	typedef std::map<std::string, RomLocation> Dictionary;
-
-private:
-	Dictionary _dictionary;
-
-public:
-	SymbolTable() {
-	}
-
-	bool parseSymbols(const std::string &symbols) {
-		// Prepare.
-		std::string symbols_ = symbols;
-
-		// Uniform new line characters to '\n'.
-		symbols_ = Text::replace(symbols_, "\r\n", "\n");
-		symbols_ = Text::replace(symbols_, "\r", "\n");
-
-		// Split the symbol data into lines.
-		Text::Array lines;
-		const Text::Array lines_ = Text::split(symbols_, "\n");
-		for (std::string ln : lines_) {
-			const size_t idx = Text::indexOf(ln, ";");
-			if (idx != std::string::npos)
-				ln = ln.substr(0, idx);
-
-			ln = Text::trim(ln);
-
-			if (ln.empty())
-				continue;
-
-			lines.push_back(ln);
-		}
-
-		// Parse the symbol lines.
-		for (const std::string &ln : lines) {
-			const Text::Array parts = Text::split(ln, " ");
-			if (parts.size() != 2)
-				continue;
-
-			const std::string &address_ = parts.front();
-			std::string name = parts.back();
-			const Text::Array addressParts = Text::split(address_, ":");
-			if (addressParts.size() != 2)
-				continue;
-
-			const std::string &bank = addressParts.front();
-			const std::string &address = addressParts.back();
-
-			if (Text::startsWith(name, "_", true))
-				name = name.substr(1 /* after "_" */);
-			const int nbank = std::stoi(bank, 0, 16);
-			const int naddress = std::stoi(address, 0, 16);
-			const RomLocation romLocation(nbank, naddress);
-			_dictionary.insert(std::make_pair(name, romLocation));
-		}
-
-		// Finish.
-		return true;
-	}
-	bool parseAliases(const std::string &aliases) {
-		rapidjson::Document doc;
-		if (!Json::fromString(doc, aliases.c_str()))
-			return false;
-		if (!doc.IsObject())
-			return false;
-
-		for (rapidjson::Value::ConstMemberIterator it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
-			const rapidjson::Value &jkey = it->name;
-			const rapidjson::Value &jval = it->value;
-
-			const std::string name = jkey.GetString();
-			if (!jval.IsObject()) {
-				fprintf(stderr, "Object expected for the alias of the \"%s\" symbol.\n", name.c_str());
-
-				continue;
-			}
-
-			std::string ref;
-			int offset = 0;
-			if (!Jpath::get(jval, ref, "ref")) {
-				fprintf(stderr, "Cannot read the \"ref\" field of the alias of the \"%s\" symbol.\n", name.c_str());
-
-				continue;
-			}
-			if (!Jpath::get(jval, offset, "offset")) {
-				fprintf(stderr, "Cannot read the \"offset\" field of the alias of the \"%s\" symbol.\n", name.c_str());
-
-				continue;
-			}
-
-			const RomLocation* refLocation = find(ref);
-			if (!refLocation) {
-				fprintf(stderr, "Cannot find the \"%s\" ref alias of the \"%s\" symbol.\n", ref.c_str(), name.c_str());
-
-				continue;
-			}
-
-			const int nbank = refLocation->bank;
-			const int naddress = refLocation->address + offset;
-			const RomLocation romLocation(nbank, naddress);
-			_dictionary.insert(std::make_pair(name, romLocation));
-		}
-
-		return true;
-	}
-	bool add(const std::string &key, const RomLocation &val) {
-		auto ret = _dictionary.insert(std::make_pair(key, val));
-
-		return ret.second;
-	}
-	bool add(const std::string &key, int bank, int address) {
-		const RomLocation romLocation(bank, address);
-
-		return add(key, romLocation);
-	}
-	const RomLocation* find(const std::string &key) const {
-		Dictionary::const_iterator it = _dictionary.find(key);
-		if (it == _dictionary.end())
-			return nullptr;
-
-		return &it->second;
-	}
-	const RomLocation* fuzzy(const std::string &key, std::string &gotKey) const {
-		gotKey.clear();
-
-		if (_dictionary.empty())
-			return nullptr;
-
-		double fuzzyScore = 0.0;
-		Dictionary::const_iterator fuzzyIt = _dictionary.end();
-		for (Dictionary::const_iterator it = _dictionary.begin(); it != _dictionary.end(); ++it) {
-			const std::string &name = it->first;
-			if (name == key) {
-				gotKey = name;
-
-				return &it->second;
-			}
-
-			if (name.empty())
-				continue;
-
-			const double score = rapidfuzz::fuzz::ratio(name, key);
-			if (score < FUZZY_MATCHING_SCORE_THRESHOLD)
-				continue;
-			if (score > fuzzyScore) {
-				fuzzyScore = score;
-				fuzzyIt = it;
-			}
-		}
-
-		if (fuzzyIt != _dictionary.end()) {
-			gotKey = fuzzyIt->first;
-
-			return &fuzzyIt->second;
-		}
-
-		return nullptr;
-	}
-};
-
-struct BorderFrameResources {
-	bool enabled = false;
-	bool serialized = false;
-	Image::Ptr image = nullptr;
-	UInt8 paletteBank = 0;
-	UInt16 paletteAddress = 0;
-	UInt16 paletteSize = 0;
-	UInt8 tilesBank = 0;
-	UInt16 tilesAddress = 0;
-	UInt16 tilesSize = 0;
-	UInt8 mapBank = 0;
-	UInt16 mapAddress = 0;
-	UInt16 mapSize = 0;
-	long long interval = 0;
-
-	BorderFrameResources() {
-	}
-	BorderFrameResources(bool e, const Image::Ptr &img) : enabled(e), image(img) {
-	}
-};
-
-struct SuperPaletteResources {
-	bool enabled = false;
-	bool serialized = false;
-	Options::SuperFeatures::Palettes palettes;
-	UInt8 palettesBank;
-	UInt16 palettesAddress;
-	UInt16 palettesSize = 0;
-	long long interval = 0;
-
-	SuperPaletteResources() {
-	}
-	SuperPaletteResources(bool e, const Options::SuperFeatures::Palettes &plt) : enabled(e), palettes(plt) {
-	}
-};
+namespace GBBASIC {
 
 struct Asm {
 	typedef Byte Opcode;
@@ -2649,96 +2275,250 @@ Op::Operators Op::OPERATORS = array(
 	Op(31,    0,       2,            -1,           2,        true)  // MAX.
 );
 
-enum class EventTypes {
-	NONE              =  0,
-	CONDITIONAL       =  1 << 0,
-	BUTTON_INPUT      = (1 << 1) | (1 << 2) | (1 << 3),
-		BUTTON        =  1 << 1,
-		BUTTON_DOWN   =  1 << 2,
-		BUTTON_UP     =  1 << 3,
-	TOUCH_INPUT       = (1 << 4) | (1 << 5) | (1 << 6),
-		TOUCH         =  1 << 4,
-		TOUCH_DOWN    =  1 << 5,
-		TOUCH_UP      =  1 << 6,
-	HITS              =  1 << 7,
-	MOVE              =  1 << 8
-};
-
-enum class EventTargets {
-	GOTO,
-	GOSUB,
-	START
-};
-
-enum class ResourceManipulations : unsigned {
-	// None.
-	NONE,
-	// Define dimension.
-	DIM,
-	// Filling, defining and loading.
-	FILL,
-	DEF,
-	LOAD,
-	// Constructing and deconstructing.
-	NEW,
-	DEL,
-	// Getting and setting.
-	GET,
-	SET,
-	LEN,
-	GET_WIDTH,
-	GET_HEIGHT,
-	// Controlling.
-	FIND,
-	PUT,
-	STOP,
-	CONTROL,
-	// Playing.
-	PLAY,
-	// Threading.
-	START,
-	JOIN,
-	KILL,
-	WAIT,
-	// Toggling.
-	ON,
-	OFF
-};
-static bool expectAssign(ResourceManipulations y) {
-	return
-		y == ResourceManipulations::FILL ||
-		y == ResourceManipulations::DEF  ||
-		y == ResourceManipulations::LOAD ||
-		y == ResourceManipulations::SET;
 }
-static bool expectAssign(const std::string &y) {
-	return
-		y == "fill" ||
-		y == "def"  ||
-		y == "load" ||
-		y == "set";
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of syntax
+*/
+
+namespace GBBASIC {
+
+Macro::Macro() {
+	scopeLocationRange.first = TextLocation::INVALID();
+	scopeLocationRange.second = TextLocation::INVALID();
 }
-static bool expectBrackets(ResourceManipulations y) {
-	switch (y) {
-	case ResourceManipulations::FILL:       // Fall through.
-	case ResourceManipulations::DEF:        // Fall through.
-	case ResourceManipulations::LOAD:       // Fall through.
-	case ResourceManipulations::GET:        // Fall through.
-	case ResourceManipulations::SET:        // Fall through.
-	case ResourceManipulations::LEN:        // Fall through.
-	case ResourceManipulations::GET_WIDTH:  // Fall through.
-	case ResourceManipulations::GET_HEIGHT:
-		return true;
-	default:
+
+Macro::Macro(const std::string &name_, Types y, const Variant &d) :
+	name(name_),
+	type(y),
+	data(d)
+{
+	scopeLocationRange.first = TextLocation::INVALID();
+	scopeLocationRange.second = TextLocation::INVALID();
+}
+
+Macro::Macro(const std::string &name_, Types y, const Variant &d, const TextLocation &begin) :
+	name(name_),
+	type(y),
+	data(d)
+{
+	scopeLocationRange.first = begin;
+	scopeLocationRange.second = TextLocation::INVALID();
+}
+
+bool Macro::operator == (const Macro &other) const {
+	return compare(other) == 0;
+}
+
+bool Macro::operator != (const Macro &other) const {
+	return compare(other) != 0;
+}
+
+bool Macro::operator < (const Macro &other) const {
+	return compare(other) < 0;
+}
+
+bool Macro::operator <= (const Macro &other) const {
+	return compare(other) <= 0;
+}
+
+bool Macro::operator > (const Macro &other) const {
+	return compare(other) > 0;
+}
+
+bool Macro::operator >= (const Macro &other) const {
+	return compare(other) >= 0;
+}
+
+int Macro::compare(const Macro &other) const {
+	if (name < other.name)
+		return -1;
+	else if (name > other.name)
+		return 1;
+
+	if (type < other.type)
+		return -1;
+	else if (type > other.type)
+		return 1;
+
+	const int cd = data.compare(other.data);
+	if (cd != 0)
+		return cd;
+
+	if (scopeLocationRange < other.scopeLocationRange)
+		return -1;
+	else if (scopeLocationRange > other.scopeLocationRange)
+		return 1;
+
+	return 0;
+}
+
+PreprocessorBranch::PreprocessorBranch() {
+}
+
+PreprocessorBranch::PreprocessorBranch(bool alive, int pg, int begin, int end, int cond) :
+	isAlive(alive),
+	page(pg), beginLine(begin), endLine(end),
+	conditionLine(cond)
+{
+}
+
+bool PreprocessorBranch::operator == (const PreprocessorBranch &other) const {
+	return compare(other) == 0;
+}
+
+bool PreprocessorBranch::operator != (const PreprocessorBranch &other) const {
+	return compare(other) != 0;
+}
+
+bool PreprocessorBranch::operator < (const PreprocessorBranch &other) const {
+	return compare(other) < 0;
+}
+
+bool PreprocessorBranch::operator <= (const PreprocessorBranch &other) const {
+	return compare(other) <= 0;
+}
+
+bool PreprocessorBranch::operator > (const PreprocessorBranch &other) const {
+	return compare(other) > 0;
+}
+
+bool PreprocessorBranch::operator >= (const PreprocessorBranch &other) const {
+	return compare(other) >= 0;
+}
+
+int PreprocessorBranch::compare(const PreprocessorBranch &other) const {
+	if (!isAlive && other.isAlive)
+		return -1;
+	else if (isAlive && !other.isAlive)
+		return 1;
+
+	if (page < other.page)
+		return -1;
+	else if (page > other.page)
+		return 1;
+
+	if (beginLine < other.beginLine)
+		return -1;
+	else if (beginLine > other.beginLine)
+		return 1;
+
+	if (endLine < other.endLine)
+		return -1;
+	else if (endLine > other.endLine)
+		return 1;
+
+	if (conditionLine < other.conditionLine)
+		return -1;
+	else if (conditionLine > other.conditionLine)
+		return 1;
+
+	return 0;
+}
+
+bool PreprocessorBranch::valid(void) const {
+	if (page == -1 || beginLine == -1 || endLine == -1 || conditionLine == -1)
 		return false;
-	}
+
+	return true;
 }
 
-enum class SerialManipulations : unsigned {
-	NONE,
-	ASYNC,
-	SYNC
-};
+void PreprocessorBranch::clear(void) {
+	isAlive = true;
+	page = -1;
+	beginLine = -1;
+	endLine = -1;
+	conditionLine = -1;
+}
+
+AsmBlock::AsmBlock() {
+}
+
+AsmBlock::AsmBlock(
+	int pg, int ln, int col, const std::string &name_,
+	int begin, int end,
+	int b,
+	int addr
+) :
+	page(pg), row(ln), column(col), name(name_),
+	beginLine(begin), endLine(end),
+	bank(b), address(addr)
+{
+}
+
+bool AsmBlock::operator == (const AsmBlock &other) const {
+	return compare(other) == 0;
+}
+
+bool AsmBlock::operator != (const AsmBlock &other) const {
+	return compare(other) != 0;
+}
+
+bool AsmBlock::operator < (const AsmBlock &other) const {
+	return compare(other) <  0;
+}
+
+bool AsmBlock::operator <= (const AsmBlock &other) const {
+	return compare(other) <= 0;
+}
+
+bool AsmBlock::operator > (const AsmBlock &other) const {
+	return compare(other) >  0;
+}
+
+bool AsmBlock::operator >= (const AsmBlock &other) const {
+	return compare(other) >= 0;
+}
+
+int AsmBlock::compare(const AsmBlock &other) const {
+	if (page < other.page)
+		return -1;
+	else if (page > other.page)
+		return 1;
+
+	if (row < other.row)
+		return -1;
+	else if (row > other.row)
+		return 1;
+
+	if (column < other.column)
+		return -1;
+	else if (column > other.column)
+		return 1;
+
+	if (name < other.name)
+		return -1;
+	else if (name > other.name)
+		return 1;
+
+	if (beginLine < other.beginLine)
+		return -1;
+	else if (beginLine > other.beginLine)
+		return 1;
+
+	if (endLine < other.endLine)
+		return -1;
+	else if (endLine > other.endLine)
+		return 1;
+
+	return 0;
+}
+
+bool AsmBlock::valid(void) const {
+	if (page == -1 || beginLine == -1 || endLine == -1)
+		return false;
+
+	return true;
+}
+
+void AsmBlock::clear(void) {
+	page = -1;
+	beginLine = -1;
+	endLine = -1;
+}
 
 struct DefaultTable {
 public:
@@ -3049,6 +2829,218 @@ private:
 			return false;
 
 		return true;
+	}
+};
+
+struct Prompt {
+	typedef std::function<void(const Prompt &, const std::string &, const TextLocation* /* nullable */)> Handler;
+
+	typedef std::initializer_list<std::string> Arguments;
+
+	std::string message;
+
+	Prompt() {
+	}
+	Prompt(const std::string &msg) :
+		message(msg)
+	{
+	}
+
+	std::string format(void) const {
+		return message;
+	}
+	std::string format(const Arguments &args) const {
+		Text::Array args_ = args;
+		for (std::string &arg : args_) {
+			if (arg == "\n")
+				arg = "<EOL>";
+		}
+		const std::string result = Text::format(message, args_);
+
+		return result;
+	}
+};
+
+struct Error {
+	typedef std::function<void(const Error &, const std::string &, const TextLocation &)> Handler;
+
+	typedef std::initializer_list<std::string> Arguments;
+
+	std::string message;
+	bool isWarning = false;
+
+	Error() {
+	}
+	Error(const std::string &msg, bool isWarning) :
+		message(msg),
+		isWarning(isWarning)
+	{
+	}
+
+	std::string format(void) const {
+		return message;
+	}
+	std::string format(const Arguments &args) const {
+		Text::Array args_ = args;
+		for (std::string &arg : args_) {
+			if (arg == "\n")
+				arg = "<EOL>";
+		}
+		const std::string result = Text::format(message, args_);
+
+		return result;
+	}
+};
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of nodes
+*/
+
+namespace GBBASIC {
+
+enum class EventTypes {
+	NONE              =  0,
+	CONDITIONAL       =  1 << 0,
+	BUTTON_INPUT      = (1 << 1) | (1 << 2) | (1 << 3),
+		BUTTON        =  1 << 1,
+		BUTTON_DOWN   =  1 << 2,
+		BUTTON_UP     =  1 << 3,
+	TOUCH_INPUT       = (1 << 4) | (1 << 5) | (1 << 6),
+		TOUCH         =  1 << 4,
+		TOUCH_DOWN    =  1 << 5,
+		TOUCH_UP      =  1 << 6,
+	HITS              =  1 << 7,
+	MOVE              =  1 << 8
+};
+
+enum class EventTargets {
+	GOTO,
+	GOSUB,
+	START
+};
+
+enum class ResourceManipulations : unsigned {
+	// None.
+	NONE,
+	// Define dimension.
+	DIM,
+	// Filling, defining and loading.
+	FILL,
+	DEF,
+	LOAD,
+	// Constructing and deconstructing.
+	NEW,
+	DEL,
+	// Getting and setting.
+	GET,
+	SET,
+	LEN,
+	GET_WIDTH,
+	GET_HEIGHT,
+	// Controlling.
+	FIND,
+	PUT,
+	STOP,
+	CONTROL,
+	// Playing.
+	PLAY,
+	// Threading.
+	START,
+	JOIN,
+	KILL,
+	WAIT,
+	// Toggling.
+	ON,
+	OFF
+};
+static bool expectAssign(ResourceManipulations y) {
+	return
+		y == ResourceManipulations::FILL ||
+		y == ResourceManipulations::DEF  ||
+		y == ResourceManipulations::LOAD ||
+		y == ResourceManipulations::SET;
+}
+static bool expectAssign(const std::string &y) {
+	return
+		y == "fill" ||
+		y == "def"  ||
+		y == "load" ||
+		y == "set";
+}
+static bool expectBrackets(ResourceManipulations y) {
+	switch (y) {
+	case ResourceManipulations::FILL:       // Fall through.
+	case ResourceManipulations::DEF:        // Fall through.
+	case ResourceManipulations::LOAD:       // Fall through.
+	case ResourceManipulations::GET:        // Fall through.
+	case ResourceManipulations::SET:        // Fall through.
+	case ResourceManipulations::LEN:        // Fall through.
+	case ResourceManipulations::GET_WIDTH:  // Fall through.
+	case ResourceManipulations::GET_HEIGHT:
+		return true;
+	default:
+		return false;
+	}
+}
+
+enum class SerialManipulations : unsigned {
+	NONE,
+	ASYNC,
+	SYNC
+};
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of features
+*/
+
+namespace GBBASIC {
+
+FeatureUsages::FeatureUsages() {
+}
+
+struct BorderFrameResources {
+	bool enabled = false;
+	bool serialized = false;
+	Image::Ptr image = nullptr;
+	UInt8 paletteBank = 0;
+	UInt16 paletteAddress = 0;
+	UInt16 paletteSize = 0;
+	UInt8 tilesBank = 0;
+	UInt16 tilesAddress = 0;
+	UInt16 tilesSize = 0;
+	UInt8 mapBank = 0;
+	UInt16 mapAddress = 0;
+	UInt16 mapSize = 0;
+	long long interval = 0;
+
+	BorderFrameResources() {
+	}
+	BorderFrameResources(bool e, const Image::Ptr &img) : enabled(e), image(img) {
+	}
+};
+
+struct SuperPaletteResources {
+	bool enabled = false;
+	bool serialized = false;
+	Options::SuperFeatures::Palettes palettes;
+	UInt8 palettesBank;
+	UInt16 palettesAddress;
+	UInt16 palettesSize = 0;
+	long long interval = 0;
+
+	SuperPaletteResources() {
+	}
+	SuperPaletteResources(bool e, const Options::SuperFeatures::Palettes &plt) : enabled(e), palettes(plt) {
 	}
 };
 
@@ -3423,7 +3415,7 @@ void IToken::destroy(IToken* ptr) {
 
 /*
 ** {===========================================================================
-** Node interface
+** Node interfaces
 */
 
 namespace GBBASIC {
@@ -3738,6 +3730,119 @@ Select &Select::fail(void) {
 */
 
 namespace GBBASIC {
+
+struct Counter {
+	typedef std::shared_ptr<Counter> Ptr;
+
+	int value = 0;
+	int max = 0;
+
+	Counter() {
+	}
+	Counter(int val) : value(val), max(val) {
+	}
+	Counter(const Counter &other) : value(other.value), max(other.max) {
+	}
+
+	Counter &operator = (const Counter &other) {
+		value = other.value;
+		max = other.max;
+
+		return *this;
+	}
+
+	bool operator == (const Counter &other) const {
+		return
+			value == other.value &&
+			max == other.max;
+	}
+	bool operator != (const Counter &other) const {
+		return
+			value != other.value ||
+			max != other.max;
+	}
+
+	Counter operator + (const Counter &other) const {
+		return Counter(value + other.value);
+	}
+	Counter operator + (int other) const {
+		return Counter(value + other);
+	}
+	Counter operator - (const Counter &other) const {
+		return Counter(value - other.value);
+	}
+	Counter operator - (int other) const {
+		return Counter(value - other);
+	}
+	Counter &operator += (const Counter &other) {
+		value += other.value;
+		if (value > max)
+			max = value;
+
+		return *this;
+	}
+	Counter &operator += (int other) {
+		value += other;
+		if (value > max)
+			max = value;
+
+		return *this;
+	}
+	Counter &operator -= (const Counter &other) {
+		value -= other.value;
+
+		return *this;
+	}
+	Counter &operator -= (int other) {
+		value -= other;
+
+		return *this;
+	}
+
+	operator int (void) const {
+		return value;
+	}
+};
+static Counter &operator ++ (Counter &val) {
+	val += 1;
+
+	return val;
+}
+static Counter &operator -- (Counter &val) {
+	val -= 1;
+
+	return val;
+}
+static Counter operator ++ (Counter &val, int) {
+	const Counter old(val);
+	val += 1;
+
+	return old;
+}
+static Counter operator -- (Counter &val, int) {
+	const Counter old(val);
+	val -= 1;
+
+	return old;
+}
+
+#ifndef COUNTER_GUARD
+#	define COUNTER_GUARD(CTX, VAR) Counter GBBASIC_UNIQUE_NAME(__COUNTERGUARD__); Counter &(VAR) = ((CTX).stackFootprint ? *(CTX).stackFootprint : GBBASIC_UNIQUE_NAME(__COUNTERGUARD__))
+#endif /* COUNTER_GUARD */
+#ifndef CHECK_COUNTER
+#	define CHECK_COUNTER(CTX, ON_ERROR) \
+		do { \
+			if ((CTX).stackFootprint && (CTX).stackFootprint->max > (CTX).stackSize) { \
+				THROW_STACK_OVERFLOW((ON_ERROR), !(CTX).strictOn); \
+			} \
+		} while (false)
+#endif /* CHECK_COUNTER */
+#ifndef INC_COUNTER
+#	define INC_COUNTER(COUNTER, AMOUNT) do { if ((AMOUNT) > 0) { (COUNTER) += (AMOUNT); } } while (false);
+#endif /* INC_COUNTER */
+#ifndef DEC_COUNTER
+#	define DEC_COUNTER(COUNTER, AMOUNT) do { if ((AMOUNT) > 0) { GBBASIC_ASSERT((COUNTER) - (AMOUNT) >= 0 && "Wrong data."); (COUNTER) -= (AMOUNT); } } while (false);
+#endif /* DEC_COUNTER */
 
 #if true
 #ifndef THROW_AMBIGUOUS_PROGRAM_POINT
@@ -4388,6 +4493,14 @@ public:
 
 			return ret.second;
 		}
+		bool put(const TextLocation &key, const RomLocation &val) {
+			const SourceLocation srcLoc = key.label.empty() ?
+				SourceLocation(key.page, key.row) :
+				SourceLocation(key.page, key.label);
+			const std::pair<Dictionary::iterator, bool> ret = _dictionary.insert(std::make_pair(srcLoc, val));
+
+			return ret.second;
+		}
 	};
 	struct RamAllocator {
 	private:
@@ -4919,6 +5032,7 @@ public:
 		SymbolTable* namedAssemblyBlocks = nullptr;                                 // Stores the user defined named assembly blocks. The `RomLocation` values store the final addresses in ROM.
 		Assembler::Ptr assembler = nullptr;                                         // Stores the assembler.
 		Text::Array* assembledInformation = nullptr;                                // Stores the assembled information.
+		TracePoint::Array* tracePoints = nullptr;                                   // Stores the ROM allocation points.
 
 		BorderFrameResources* borderFrameResources = nullptr;                       // Stores the border resources.
 		SuperPaletteResources* superPaletteResources = nullptr;                     // Stores the "Super" palettes.
@@ -5052,7 +5166,7 @@ protected:
 		typedef std::stack<State> Stack;
 
 		int tokenCursor = 0;
-		SourceLocation inCode;
+		TextLocation inCode;
 		RomLocation inRom;
 		RamLocation inRam;
 
@@ -5412,6 +5526,13 @@ public:
 		State &state = top();
 
 		return current(_tokens, state.tokenCursor, y, d);
+	}
+	Token::Ptr current(Token::Types y, Variant d, Consumer consumer) {
+		Token::Ptr tk = current(y, d);
+		if (consumer && tk)
+			consumer(tk);
+
+		return tk;
 	}
 	// The `consume(...)` functions check whether the current token matches the specific pattern,
 	// then move the cursor to the next location if matched, otherwise return `nullptr`.
@@ -6395,6 +6516,12 @@ public:
 			context.pop();
 
 			THROW_BANK_OVERFLOW(onError);
+		}
+
+		// Trace ROM allocation points.
+		if (context.top().tracePoints) {
+			const State &state = top();
+			context.top().tracePoints->push_back(TracePoint(state.inRom, state.inCode));
 		}
 
 		// Active the top context and state.
@@ -8105,7 +8232,7 @@ public:
 		state.inRom.size = 0;
 
 		// Determine the location in code.
-		state.inCode = SourceLocation(_page);
+		state.inCode = TextLocation(_page);
 
 		// Generate all the children.
 		Node::generate(bytes, context, onError);
@@ -8193,8 +8320,12 @@ public:
 		// Consume the tokens.
 		if (ctx.expect.lnno) {
 			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 			})) { THROW_INVALID_SYNTAX(onError); }
+		} else {
+			current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+			});
 		}
 		if (!consume(Token::Types::PREPROCESSOR, "#if")) { THROW_INVALID_SYNTAX(onError); }
 
@@ -8247,8 +8378,12 @@ public:
 		Token::Ptr tkmsg = nullptr;
 		if (ctx.expect.lnno) {
 			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 			})) { THROW_INVALID_SYNTAX(onError); }
+		} else {
+			current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+			});
 		}
 		if (!consume(Token::Types::PREPROCESSOR, "#message")) { THROW_INVALID_SYNTAX(onError); }
 		if (!(tkmsg = consume(Token::Types::STRING, ANYTHING))) { THROW_TYPE_EXPECTED(onError, "String", tkmsg); }
@@ -8297,8 +8432,12 @@ public:
 		Token::Ptr tkmsg = nullptr;
 		if (ctx.expect.lnno) {
 			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 			})) { THROW_INVALID_SYNTAX(onError); }
+		} else {
+			current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+			});
 		}
 		if (!consume(Token::Types::PREPROCESSOR, "#warn")) { THROW_INVALID_SYNTAX(onError); }
 		if (!(tkmsg = consume(Token::Types::STRING, ANYTHING))) { THROW_TYPE_EXPECTED(onError, "String", tkmsg); }
@@ -8353,8 +8492,12 @@ public:
 		Token::Ptr tkmsg = nullptr;
 		if (ctx.expect.lnno) {
 			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 			})) { THROW_INVALID_SYNTAX(onError); }
+		} else {
+			current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+			});
 		}
 		if (!consume(Token::Types::PREPROCESSOR, "#error")) { THROW_INVALID_SYNTAX(onError); }
 		if (!(tkmsg = consume(Token::Types::STRING, ANYTHING))) { THROW_TYPE_EXPECTED(onError, "String", tkmsg); }
@@ -8433,8 +8576,12 @@ public:
 		// Consume the tokens.
 		if (ctx.expect.lnno) {
 			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 			})) { THROW_INVALID_SYNTAX(onError); }
+		} else {
+			current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+			});
 		}
 
 		// Generate.
@@ -9215,8 +9362,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -9298,8 +9449,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "deg")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -9386,8 +9541,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "asc")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -9557,8 +9716,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "len")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -9664,8 +9827,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "randomize")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -9773,8 +9940,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::OPERATOR, "rnd")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -9913,8 +10084,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (consume(Token::Types::KEYWORD, "get")) {
 				if (consume(Token::Types::KEYWORD, "palette")) { _type = OperationTypes::PALETTE; }
@@ -10588,7 +10763,7 @@ public:
 
 					// Search for identifier.
 					if (!found) {
-						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(COMPILER_SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
 						const RamLocation* ramLocation = ctx.findPageAndGlobal(name);
 						const Context::Array::Dimensions* dimensions = ctx.array->find(name);
 						if (scriptMemoryRamLocation && ramLocation) {
@@ -10912,8 +11087,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (consume(Token::Types::KEYWORD, "get")) {
 				if (consume(Token::Types::KEYWORD, "palette")) { _type = OperationTypes::PALETTE; }
@@ -11584,7 +11763,7 @@ public:
 
 					// Search for identifier.
 					if (!found) {
-						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(COMPILER_SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
 						const RamLocation* ramLocation = ctx.findPageAndGlobal(name);
 						const Context::Array::Dimensions* dimensions = ctx.array->find(name);
 						if (scriptMemoryRamLocation && ramLocation) {
@@ -11882,8 +12061,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -11980,8 +12163,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -12087,8 +12274,12 @@ public:
 		// Consume the tokens.
 		if (ctx.expect.lnno) {
 			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 			})) { THROW_INVALID_SYNTAX(onError); }
+		} else {
+			current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+			});
 		}
 		if (consume(Token::Types::OPERATOR, ";")) { /* Do nothing. */ }
 		if (!consume(Token::Types::END_OF_LINE)) { THROW_INVALID_SYNTAX(onError); }
@@ -12129,8 +12320,12 @@ public:
 		// Consume the tokens.
 		if (ctx.expect.lnno) {
 			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 			})) { THROW_INVALID_SYNTAX(onError); }
+		} else {
+			current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+			});
 		}
 		if (!consume(Token::Types::COMMENT)) { THROW_INVALID_SYNTAX(onError); }
 		if (!consume(Token::Types::END_OF_LINE)) { THROW_INVALID_SYNTAX(onError); }
@@ -12174,8 +12369,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "do")) { THROW_INVALID_SYNTAX(onError); }
 			if (!consume(Token::Types::IDENTIFIER, "nothing")) { THROW_INVALID_SYNTAX(onError); }
@@ -12230,8 +12429,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "do")) { THROW_INVALID_SYNTAX(onError); }
 			if (!consume(Token::Types::IDENTIFIER, "nothing")) { THROW_INVALID_SYNTAX(onError); }
@@ -12297,8 +12500,12 @@ public:
 			bool hasAssign = false;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			const bool withKey = !!current(Token::Types::KEYWORD, keyword);
 			if (withKey) {
@@ -12542,8 +12749,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "const")) { THROW_INVALID_SYNTAX(onError); }
 			if (!consume([&] (Token::Ptr tk) -> void {
@@ -12621,8 +12832,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "dim")) { THROW_INVALID_SYNTAX(onError); }
 			if (!consume([&] (Token::Ptr tk) -> void {
@@ -12713,8 +12928,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 
 			// Check the children.
@@ -12894,8 +13113,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "iif")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -12984,8 +13207,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "select")) { THROW_INVALID_SYNTAX(onError); }
 			if (!consume(Token::Types::KEYWORD, "case")) { THROW_INVALID_SYNTAX(onError); }
@@ -13159,8 +13386,12 @@ public:
 			EventTargets target = EventTargets::GOTO;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "on")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::KEYWORD, "btn")) { _type = EventTypes::BUTTON; }
@@ -13531,8 +13762,12 @@ public:
 			EventTypes type = EventTypes::NONE;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "off")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::KEYWORD, "btn")) { type = EventTypes::BUTTON; }
@@ -13733,8 +13968,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "for")) { THROW_INVALID_SYNTAX(onError); }
 			if (!consume([&] (Token::Ptr tk) -> void {
@@ -14272,8 +14511,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "next")) { THROW_INVALID_SYNTAX(onError); }
 			const bool withId = !!current(Token::Types::IDENTIFIER);
@@ -14335,8 +14578,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 
 			// Check the children.
@@ -14445,8 +14692,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 
 			// Check the children.
@@ -14548,8 +14799,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "exit")) { THROW_INVALID_SYNTAX(onError); }
 
@@ -14642,20 +14897,24 @@ public:
 					state_.inRom.bank = ctx.bank;
 					state_.inRom.address = ctx.addressCursor;
 					state_.inRom.size = 0;
-					state_.inCode = SourceLocation(tk->begin().page, (int)tk->data()); // `#pg:lno`.
+					state_.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column); // `#pg:lno`.
 					if (!context.top().put(top().inCode, top().inRom)) {
 						THROW_DUPLICATE_DESTINATION(onError, idtk);
 					}
 				}
 				pop();
 			})) { THROW_INVALID_SYNTAX(onError); }
+		} else {
+			current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+			});
 		}
 		if (!consume(Token::Types::LABEL, ANYTHING, [&] (Token::Ptr tk) -> void {
 			idtk = tk;
 			std::string lbl = (std::string)tk->data();
 			if (!lbl.empty() && lbl.back() == ':')
 				lbl = lbl.substr(0, lbl.length() - 1);
-			state.inCode = SourceLocation(tk->begin().page, lbl); // `#pg:lbl`. Labeled destination is determined by page and label name.
+			state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column, lbl); // `#pg:lbl`. Labeled destination is determined by page and label name.
 		})) { THROW_INVALID_SYNTAX(onError); }
 
 		// Put the code to ROM location correspondence.
@@ -14719,8 +14978,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "goto")) { /* Do nothing. */ }
 
@@ -14841,8 +15104,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "gosub")) { THROW_INVALID_SYNTAX(onError); }
 
@@ -14939,8 +15206,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "return")) { THROW_INVALID_SYNTAX(onError); }
 
@@ -15006,8 +15277,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "end")) { THROW_INVALID_SYNTAX(onError); }
 
@@ -15065,8 +15340,12 @@ public:
 			std::string functionName, caseSensitiveFunctionName;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "call")) { THROW_INVALID_SYNTAX(onError); }
 			if (!consume(ctx, byAddress, bank, address, functionName, caseSensitiveFunctionName, onError)) { THROW_INVALID_SYNTAX(onError); }
@@ -15453,8 +15732,12 @@ public:
 			std::string name;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (consume(Token::Types::KEYWORD, "call")) { /* Do nothing. */ }
 			if (!consume(Token::Types::KEYWORD, "asm")) { THROW_INVALID_SYNTAX(onError); }
@@ -15572,7 +15855,7 @@ public:
 
 					// Search for identifier.
 					if (!found) {
-						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(COMPILER_SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
 						const RamLocation* ramLocation = ctx.findPageAndGlobal(name);
 						const Context::Array::Dimensions* dimensions = ctx.array->find(name);
 						if (scriptMemoryRamLocation && ramLocation) {
@@ -15730,6 +16013,7 @@ private:
 	TextLocation _inCode;
 	RomLocation _inRom;
 	DeferAction _namingAction = nullptr;
+	DeferAction _tracingAction = nullptr;
 	DeferAction _informationCollectingAction = nullptr;
 
 public:
@@ -15823,14 +16107,19 @@ public:
 			_asmCtx = Assembler::Context();
 			_nonbanked = false;
 			_namingAction = nullptr;
+			_tracingAction = nullptr;
 			_informationCollectingAction = nullptr;
 
 			// Consume the tokens.
 			Token::Ptr tkbegin = nullptr;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!(tkbegin = consume(Token::Types::KEYWORD, "beginasm"))) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::KEYWORD, "nonbanked")) { _nonbanked = true; }
@@ -15898,7 +16187,7 @@ public:
 				_namingAction = [&context, name, bank, address] (void) -> void {
 					Context &ctx = context.top();
 
-					ctx.namedAssemblyBlocks->add(name, bank, address);
+					ctx.namedAssemblyBlocks->add(name, bank, address, RomLocation::Types::ASM);
 				};
 			}
 
@@ -15933,6 +16222,19 @@ public:
 				THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK(onError);
 			}
 			const int n = (int)asmBytes->count();
+
+			// Fill trace points for inline assembly.
+			if (context.top().tracePoints) {
+				_tracingAction = [this, &context, bank, address] (void) -> void {
+					Context &ctx = context.top();
+
+					for (const Assembler::Context::InstructionTrace &trace : _asmCtx.instructionTraces) {
+						RomLocation rom(bank, address + trace.offset, trace.size);
+						rom.type = RomLocation::Types::ASM;
+						ctx.tracePoints->push_back(TracePoint(rom, trace.source));
+					}
+				};
+			}
 
 			// Emit the VM instructions.
 			if (isOnVbl) { // Specialized for "ON VBL".
@@ -16016,14 +16318,14 @@ public:
 
 			// Output the assembled information.
 			std::string msg;
-			if (state.inCode.page != -1 || state.inCode.sub != -1) {
+			if (state.inCode.page != -1 || state.inCode.row != -1) {
 				if (state.inCode.page != -1) {
 					msg += "page ";
 					msg += Text::toPageNumber(state.inCode.page);
 					msg += ", ";
 				}
 				msg += "ln ";
-				msg += Text::toString(state.inCode.sub + 1);
+				msg += Text::toString(state.inCode.row + 1);
 			}
 			if (!name.empty()) {
 				msg += ", ";
@@ -16049,6 +16351,10 @@ public:
 			if (_namingAction) {
 				_namingAction();
 				_namingAction = nullptr;
+			}
+			if (_tracingAction) {
+				_tracingAction();
+				_tracingAction = nullptr;
 			}
 			if (_informationCollectingAction) {
 				_informationCollectingAction();
@@ -16166,7 +16472,7 @@ private:
 
 		// Search for identifier.
 		if (!found) {
-			const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+			const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(COMPILER_SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
 			const RamLocation* ramLocation = ctx.findPageAndGlobal(name_, fuzzyName);
 			const Context::Array::Dimensions* dimensions = ctx.array->find(name_);
 			if (scriptMemoryRamLocation && ramLocation) {
@@ -16299,11 +16605,15 @@ public:
 
 			// Consume the tokens.
 			Token::Ptr tk1st = firstTokenInThisOrChildren();
-			if (tk1st) state.inCode = SourceLocation(tk1st->begin().page);
+			if (tk1st) state.inCode = TextLocation(tk1st->begin().page);
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "start")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -16510,8 +16820,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "join")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -16647,8 +16961,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "kill")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -16747,8 +17065,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "wait")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -16838,8 +17160,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "lock")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -16902,8 +17228,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "unlock")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -16959,8 +17289,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "arg")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -17051,8 +17385,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 
 			// Check the children.
@@ -17108,8 +17446,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 
 			// Check the children.
@@ -17175,8 +17517,12 @@ public:
 		std::string id;
 		if (ctx.expect.lnno) {
 			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 			})) { THROW_INVALID_SYNTAX(onError); }
+		} else {
+			current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+			});
 		}
 		if (!consume(Token::Types::KEYWORD, "def")) { THROW_INVALID_SYNTAX(onError); }
 		if (!consume([&] (Token::Ptr tk) -> void {
@@ -17241,8 +17587,12 @@ public:
 		std::string id;
 		if (ctx.expect.lnno) {
 			if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 			})) { THROW_INVALID_SYNTAX(onError); }
+		} else {
+			current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+			});
 		}
 		if (!consume(Token::Types::KEYWORD, "def")) { THROW_INVALID_SYNTAX(onError); }
 		if (!consume(Token::Types::KEYWORD, "fn")) { /* Do nothing. */ }
@@ -17309,8 +17659,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -17502,8 +17856,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "locate")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -17583,8 +17941,12 @@ public:
 			bool newLine = true;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "print")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -17653,8 +18015,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "cls")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -17731,8 +18097,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "peek")) { THROW_INVALID_SYNTAX(onError); }
 			if (_withInt && !consume(Token::Types::KEYWORD, "int")) { THROW_INVALID_SYNTAX(onError); }
@@ -17859,8 +18229,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "poke")) { THROW_INVALID_SYNTAX(onError); }
 			if (_withInt && !consume(Token::Types::KEYWORD, "int")) { THROW_INVALID_SYNTAX(onError); }
@@ -17953,8 +18327,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "reserve")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -18032,8 +18410,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "push")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -18123,8 +18505,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "pop")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -18226,8 +18612,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "top")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -18304,8 +18694,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "stack")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -18398,8 +18792,12 @@ public:
 			const std::string key = "stack" + Text::toString(_index);
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::OPERATOR, key)) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) { THROW_INVALID_SYNTAX(onError); }
@@ -18487,8 +18885,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "pack")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -18623,8 +19025,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "unpack")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -18772,8 +19178,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "swap")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -18950,8 +19360,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "inc")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -19070,8 +19484,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "dec")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -19194,8 +19612,12 @@ public:
 		// Consume the tokens.
 		if (ctx.expect.lnno) {
 			if (!consume([&] (Token::Ptr tk) -> void {
-				state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+				state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 			})) { THROW_INVALID_SYNTAX(onError); }
+		} else {
+			current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+				state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+			});
 		}
 		if (consume(Token::Types::KEYWORD, "repeat")) { /* Do nothing. */ }
 
@@ -19240,8 +19662,12 @@ public:
 			Token::IntegerTypes int_ = Token::IntegerTypes::UNSPECIFIED;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "read")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::KEYWORD, "int")) { int_ = Token::IntegerTypes::INT; }
@@ -19446,8 +19872,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "restore")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -19491,7 +19921,7 @@ public:
 						break;
 					}
 
-					const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+					const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(COMPILER_SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
 					const RamLocation* ramLocation = ctx.findPageAndGlobal(name);
 					const Context::Array::Dimensions* dimensions = ctx.array->find(name);
 					if (scriptMemoryRamLocation && ramLocation) {
@@ -19584,8 +20014,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -19701,8 +20135,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -19821,8 +20259,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "palette")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -20012,8 +20454,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "rgb")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -20125,8 +20571,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "hsv")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -20242,8 +20692,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -20329,8 +20783,12 @@ public:
 			bool newLine = true;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "text")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -20439,8 +20897,12 @@ public:
 			std::string name;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "image")) { THROW_INVALID_SYNTAX(onError); }
 			if (!consume(Token::Types::OPERATOR, "(")) { THROW_INVALID_SYNTAX(onError); }
@@ -21121,8 +21583,12 @@ public:
 			std::string name;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -21414,8 +21880,12 @@ public:
 			std::string name;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -21954,8 +22424,12 @@ public:
 			std::string name;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -22483,8 +22957,12 @@ public:
 			std::string name;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -22737,8 +23215,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "play")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -22908,8 +23390,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "sound")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -23150,8 +23636,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "beep")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -23240,8 +23730,12 @@ public:
 			EventTypes type = EventTypes::NONE;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (consume(Token::Types::KEYWORD, "touch")) { type = EventTypes::TOUCH; }
 			else if (consume(Token::Types::KEYWORD, "touchd")) { type = EventTypes::TOUCH_DOWN; }
@@ -23485,8 +23979,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "serial")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -23570,8 +24068,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "filler")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -23656,8 +24158,12 @@ public:
 			std::string name;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "memcpy")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -24125,8 +24631,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "memset")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -24198,8 +24708,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "memadd")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -24278,8 +24792,12 @@ public:
 			std::string id;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "new")) { THROW_INVALID_SYNTAX(onError); }
 			if (!consume([&] (Token::Ptr tk) -> void {
@@ -24339,8 +24857,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "width")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -24532,8 +25054,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "height")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -24728,8 +25254,12 @@ public:
 			int type = 0;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "is")) { THROW_INVALID_SYNTAX(onError); }
 			if (!(tktype = consume(Token::Types::KEYWORD, ANYTHING))) {
@@ -24817,8 +25347,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "viewport")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -25003,8 +25537,12 @@ public:
 			std::string name;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -25624,11 +26162,15 @@ public:
 			bool byName_ = false;
 			std::string name;
 			Token::Ptr tk1st = firstTokenInThisOrChildren();
-			if (tk1st) state.inCode = SourceLocation(tk1st->begin().page);
+			if (tk1st) state.inCode = TextLocation(tk1st->begin().page);
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -27064,8 +27606,12 @@ public:
 			std::string name;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "emote")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -27401,8 +27947,12 @@ public:
 			std::string name;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -28528,8 +29078,12 @@ public:
 			int arge = 0;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -28809,8 +29363,12 @@ public:
 			int argn = 0;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -28929,8 +29487,12 @@ public:
 			bool newLine = true;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -29435,8 +29997,12 @@ public:
 			int argn = 0;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -29690,8 +30256,12 @@ public:
 			int argn = 0;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -30280,8 +30850,12 @@ public:
 			bool newLine = true;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume([&] (Token::Ptr tk) -> void {
 				idtk = tk;
@@ -30600,8 +31174,12 @@ public:
 			std::string name;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "scroll")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -30716,8 +31294,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "fx")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -31015,8 +31597,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::OPERATOR, "hits")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -31184,8 +31770,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "update")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -31255,8 +31845,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "screen")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -31442,8 +32036,12 @@ public:
 			bool on = true;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "auto")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::KEYWORD, "update")) { type = OperationTypes::UPDATE; }
@@ -31540,8 +32138,12 @@ public:
 			bool on = true;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (consume(Token::Types::KEYWORD, "screen")) { type = OperationTypes::SCREEN; }
 			else if (consume(Token::Types::KEYWORD, "map")) { type = OperationTypes::MAP; }
@@ -31645,8 +32247,12 @@ public:
 			bool isEos = false;
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "stream")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -31734,8 +32340,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "shell")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -31812,8 +32422,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "sleep")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -31890,8 +32504,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "raise")) { THROW_INVALID_SYNTAX(onError); }
 			if (consume(Token::Types::OPERATOR, "(")) {
@@ -31989,8 +32607,12 @@ public:
 			// Consume the tokens.
 			if (ctx.expect.lnno) {
 				if (!consume(Token::Types::INTEGER, ANYTHING, [&] (Token::Ptr tk) -> void {
-					state.inCode = SourceLocation(tk->begin().page, (int)tk->data());
+					state.inCode = TextLocation(tk->begin().page, (int)tk->data(), tk->begin().column);
 				})) { THROW_INVALID_SYNTAX(onError); }
+			} else {
+				current(Token::Types::ANY, ANYTHING, [&] (Token::Ptr tk) -> void {
+					state.inCode = TextLocation(tk->begin().page, tk->begin().row, tk->begin().column);
+				});
 			}
 			if (!consume(Token::Types::KEYWORD, "reset")) { THROW_INVALID_SYNTAX(onError); }
 
@@ -43360,6 +43982,7 @@ public:
 		RamLocation::Dictionary* allocations,
 		Text::Array* dataSequenceInformation,
 		Text::Array* assembledInformation,
+		TracePoint::Array* tracePoints,
 		FeatureUsages* featureUsages,
 		BorderFrameResources &borderFrameResources, SuperPaletteResources &superPaletteResources,
 		int* compiledSize,
@@ -43398,6 +44021,7 @@ public:
 			_namedAssemblyBlocks,
 			dataSequenceInformation,
 			assembledInformation,
+			tracePoints,
 			_assets,
 			pipeline,
 			allocations,
@@ -43443,6 +44067,7 @@ private:
 		SymbolTable &namedAssemblyBlocks,
 		Text::Array* dataSequenceInformation,
 		Text::Array* assembledInformation,
+		TracePoint::Array* tracePoints,
 		AssetsBundle::Ptr assets,
 		Pipeline::Ptr pipeline,
 		RamLocation::Dictionary* allocations,
@@ -43489,11 +44114,13 @@ private:
 		context.top().nonbankedAssemblyBlocks         =  nonbankedAssemblyBlocks;
 		context.top().namedAssemblyBlocks             = &namedAssemblyBlocks;
 		context.top().assembledInformation            =  assembledInformation;
+		context.top().tracePoints                     =  tracePoints;
 		context.top().borderFrameResources            =  borderFrameResources;
 		context.top().superPaletteResources           =  superPaletteResources;
 		context.top().assets                          =  assets;
 		context.top().pipeline                        =  pipeline;
 
+		// Compile.
 		if (options.passes <= GBBASIC::Options::Passes::GENERATE) {
 			ast->generate(bytes, context, onError); // Generate code.
 			*compiledSize = (int)bytes->count();
@@ -43560,6 +44187,16 @@ private:
 		GBBASIC_ASSERT(context.size() == 1 && "Corrupt stack.");
 
 		// Finish.
+		if (tracePoints) {
+			tracePoints->shrink_to_fit();
+			std::sort(
+				tracePoints->begin(), tracePoints->end(),
+				[] (const TracePoint &l, const TracePoint &r) -> bool {
+					return l.compare(r) < 0;
+				}
+			);
+		}
+
 		*allocations = context.top().allocations();
 		*featureUsages = context.top().featureUsages();
 
@@ -45311,6 +45948,7 @@ bool compile(Program &program, const Options &options) {
 		RamLocation::Dictionary allocations;
 		Text::Array dataSequenceInformation;
 		Text::Array assembledInformation;
+		TracePoint::Array tracePoints;
 		FeatureUsages featureUsages;
 		BorderFrameResources borderFrameResources(superFeatures.enabled, superFeatures.border);
 		SuperPaletteResources superPaletteResources(superFeatures.enabled, superFeatures.palettes);
@@ -45321,6 +45959,7 @@ bool compile(Program &program, const Options &options) {
 				&allocations,
 				&dataSequenceInformation,
 				&assembledInformation,
+				&tracePoints,
 				&featureUsages,
 				borderFrameResources, superPaletteResources,
 				&compiledSize,
@@ -45328,6 +45967,7 @@ bool compile(Program &program, const Options &options) {
 			)
 		) {
 			std::swap(program.compiled.allocations, allocations);
+			std::swap(program.compiled.tracePoints, tracePoints);
 			std::swap(program.compiled.featureUsages, featureUsages);
 
 			onError_("Failed to compile the source code.", false, -1, -1, -1);
@@ -45338,6 +45978,7 @@ bool compile(Program &program, const Options &options) {
 		const int fontSize = pipeline->effectiveSize().font();
 		const int codeSize = compiledSize - fontSize; // Minus font size because it also counts in the `bytes`.
 		std::swap(program.compiled.allocations, allocations);
+		std::swap(program.compiled.tracePoints, tracePoints);
 		std::swap(program.compiled.featureUsages, featureUsages);
 		program.compiled.effectiveSize.addCode(codeSize);
 		program.compiled.effectiveSize += pipeline->effectiveSize();
@@ -45412,6 +46053,9 @@ bool compile(Program &program, const Options &options) {
 
 			break;
 		}
+
+		program.compiled.symbols.merge(compiler.symbols());
+		program.compiled.symbols.merge(compiler.namedAssemblyBlocks());
 
 		program.compiled.bytes = programmer.bytes();
 		onPrint("Succeeded to program the ROM.");

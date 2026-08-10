@@ -5955,6 +5955,10 @@ void Workspace::upgrade(
 	}
 }
 
+void Workspace::clearCompiledData(void) {
+	_compilingOutput = GBBASIC::Program::Compiled();
+}
+
 void Workspace::joinCompiling(void) {
 #if GBBASIC_MULTITHREAD_ENABLED
 	if (_thread.joinable())
@@ -6442,7 +6446,7 @@ void Workspace::compile(
 
 			self->_compilingParameters = CompilingParameters();
 
-			self->_compilingOutput = codeIsOk && resIsOk ? program.compiled.bytes : nullptr;
+			self->_compilingOutput = codeIsOk && resIsOk ? program.compiled : GBBASIC::Program::Compiled();
 		} while (false);
 
 		self->_state = States::COMPILED;
@@ -6548,7 +6552,7 @@ void Workspace::compile(
 
 		_compilingErrors = CompilingErrors::Ptr(new CompilingErrors());
 
-		_compilingOutput = nullptr;
+		_compilingOutput = GBBASIC::Program::Compiled();
 	} while (false);
 
 	// Compile it.
@@ -7468,13 +7472,13 @@ void Workspace::finish(Window* wnd, Renderer* rnd) {
 				}
 				_compilingErrors = nullptr;
 			} while (false);
-			if (_compilingOutput) {
+			if (_compilingOutput.bytes) {
 				if (toRun()) {
-					Bytes::Ptr rom = _compilingOutput;
+					Bytes::Ptr rom = _compilingOutput.bytes;
 					runProject(wnd, rnd, rom);
 					toRun(false);
 				} else if (toExport() >= 0) {
-					Bytes::Ptr rom = _compilingOutput;
+					Bytes::Ptr rom = _compilingOutput.bytes;
 					Exporter::Ptr ex = exporters()[toExport()];
 					Operations::projectBuild(wnd, rnd, this, rom, ex)
 						.always(
@@ -7484,7 +7488,6 @@ void Workspace::finish(Window* wnd, Renderer* rnd) {
 						);
 					toExport(-1);
 				}
-				_compilingOutput = nullptr;
 			}
 
 			_state = States::IDLE;

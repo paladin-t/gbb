@@ -178,6 +178,25 @@
 #	define COMPILER_STACK_ARGUMENT_MAX_COUNT 64
 #endif /* COMPILER_STACK_ARGUMENT_MAX_COUNT */
 
+#ifndef COMPILER_VM_STEP_ENTRY_NAME
+#	define COMPILER_VM_STEP_ENTRY_NAME "VM_STEP" // DOC: ROM SCHEMA.
+#endif /* COMPILER_VM_STEP_ENTRY_NAME */
+#ifndef COMPILER_SCRIPT_MEMORY_ENTRY_NAME
+#	define COMPILER_SCRIPT_MEMORY_ENTRY_NAME "script_memory" // DOC: RAM SCHEMA.
+#endif /* COMPILER_SCRIPT_MEMORY_ENTRY_NAME */
+#ifndef COMPILERCONTEXTS_ENTRY_NAME
+#	define COMPILERCONTEXTS_ENTRY_NAME "CTXS" // DOC: RAM SCHEMA.
+#endif /* COMPILERCONTEXTS_ENTRY_NAME */
+#ifndef COMPILERFIRST_CONTEXT_ENTRY_NAME
+#	define COMPILERFIRST_CONTEXT_ENTRY_NAME "first_ctx" // DOC: RAM SCHEMA.
+#endif /* COMPILERFIRST_CONTEXT_ENTRY_NAME */
+#ifndef COMPILERFREE_CONTEXT_ENTRY_NAME
+#	define COMPILERFREE_CONTEXT_ENTRY_NAME "free_ctxs" // DOC: RAM SCHEMA.
+#endif /* COMPILERFREE_CONTEXT_ENTRY_NAME */
+#ifndef COMPILER_VM_LOCK_STATE_ENTRY_NAME
+#	define COMPILER_VM_LOCK_STATE_ENTRY_NAME "vm_lock_state" // DOC: RAM SCHEMA.
+#endif /* COMPILER_VM_LOCK_STATE_ENTRY_NAME */
+
 namespace GBBASIC {
 
 /**
@@ -217,7 +236,7 @@ template<typename Enum> inline Enum &operator &= (Enum &left, Enum right) {
 
 /*
 ** {===========================================================================
-** Utilities
+** Structure of allocations
 */
 
 namespace GBBASIC {
@@ -231,10 +250,12 @@ struct TextLocation {
 	int page = 0;
 	int row = 0;
 	int column = 0;
+	std::string label;
 
 	TextLocation();
 	TextLocation(int p);
 	TextLocation(int p, int r, int c);
+	TextLocation(int p, int r, int c, const std::string &lbl);
 
 	bool operator == (const TextLocation &other) const;
 	bool operator != (const TextLocation &other) const;
@@ -248,6 +269,25 @@ struct TextLocation {
 	bool invalid(void) const;
 
 	static TextLocation INVALID(void);
+};
+
+/**
+ * @brief Location for ROM allocations.
+ */
+struct RomLocation {
+	enum class Types {
+		BASIC,
+		ASM
+	};
+
+	int bank = 0;
+	int address = 0;
+	int size = 0;
+	Types type = Types::BASIC;
+
+	RomLocation();
+	RomLocation(int b, int a);
+	RomLocation(int b, int a, int s);
 };
 
 /**
@@ -281,6 +321,124 @@ struct RamLocation {
 	RamLocation();
 	RamLocation(Types y, int a, int s, Usages u, const TextLocation &txtLoc);
 };
+
+/**
+ * @brief Symbol table.
+ */
+struct SymbolTable {
+private:
+	typedef std::map<std::string, RomLocation> Dictionary;
+
+private:
+	Dictionary _dictionary;
+
+public:
+	SymbolTable();
+
+	bool parseSymbols(const std::string &symbols);
+	bool parseAliases(const std::string &aliases);
+	bool add(const std::string &key, const RomLocation &val);
+	bool add(const std::string &key, int bank, int address);
+	bool add(const std::string &key, int bank, int address, RomLocation::Types y);
+	int merge(const SymbolTable &other);
+	const RomLocation* find(const std::string &key) const;
+	const RomLocation* fuzzy(const std::string &key, std::string &gotKey) const;
+};
+
+/**
+ * @brief Trace point that maps from ROM location to source location.
+ */
+struct TracePoint {
+	typedef std::vector<TracePoint> Array;
+
+	RomLocation inRom;
+	TextLocation inCode;
+
+	TracePoint();
+	TracePoint(const RomLocation &rom, const TextLocation &code);
+
+	int compare(const TracePoint &other) const;
+};
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of instructions and operators
+*/
+
+namespace GBBASIC {
+
+struct Op {
+	typedef UInt8 Opcode;
+
+	enum class Types : Byte {
+		STOP,
+		INT8,
+		INT16,
+		REF,
+		EQ,
+		LT,
+		LE,
+		GT,
+		GE,
+		NE,
+		AND,
+		OR,
+		NOT,
+		ADD,
+		SUB,
+		MUL,
+		DIV,
+		MOD,
+		BITWISE_AND,
+		BITWISE_OR,
+		BITWISE_XOR,
+		BITWISE_LSHIFT,
+		BITWISE_RSHIFT,
+		BITWISE_NOT,
+		NEG,
+		SGN,
+		ABS,
+		SQR,
+		SQRT,
+		SIN,
+		COS,
+		ATAN2,
+		POWI,
+		MIN,
+		MAX,
+
+		COUNT
+	};
+	typedef std::array<Op, (size_t)Types::COUNT> Operators;
+
+	static Operators OPERATORS;
+
+	Opcode opcode = 0x00;
+	int size = 0;                // Size of the parameter list in bytes.
+	int oprands = 0;             // Count of oprands.
+	int associativity = 0;       // -1 for left, 1 for right.
+	int precedence = 0;          // The greater, the higher.
+	bool isFunctionLike = false; // Whether the operator is function-like;
+
+	Op(Opcode oc, int s, int r, int a, int p, bool f);
+
+	static Types typeOf(const std::string &str);
+};
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of syntax
+*/
+
+namespace GBBASIC {
 
 /**
  * @brief Information of macros.
@@ -382,6 +540,17 @@ struct AsmBlock {
 	void clear(void);
 };
 
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of features
+*/
+
+namespace GBBASIC {
+
 /**
  * @brief Feature usages.
  */
@@ -393,75 +562,6 @@ struct FeatureUsages {
 	Dictionary extensionFeatureUsages;
 
 	FeatureUsages();
-};
-
-}
-
-/* ===========================================================================} */
-
-/*
-** {===========================================================================
-** Structure of operations
-*/
-
-namespace GBBASIC {
-
-struct Op {
-	typedef UInt8 Opcode;
-
-	enum class Types : Byte {
-		STOP,
-		INT8,
-		INT16,
-		REF,
-		EQ,
-		LT,
-		LE,
-		GT,
-		GE,
-		NE,
-		AND,
-		OR,
-		NOT,
-		ADD,
-		SUB,
-		MUL,
-		DIV,
-		MOD,
-		BITWISE_AND,
-		BITWISE_OR,
-		BITWISE_XOR,
-		BITWISE_LSHIFT,
-		BITWISE_RSHIFT,
-		BITWISE_NOT,
-		NEG,
-		SGN,
-		ABS,
-		SQR,
-		SQRT,
-		SIN,
-		COS,
-		ATAN2,
-		POWI,
-		MIN,
-		MAX,
-
-		COUNT
-	};
-	typedef std::array<Op, (size_t)Types::COUNT> Operators;
-
-	static Operators OPERATORS;
-
-	Opcode opcode = 0x00;
-	int size = 0;                // Size of the parameter list in bytes.
-	int oprands = 0;             // Count of oprands.
-	int associativity = 0;       // -1 for left, 1 for right.
-	int precedence = 0;          // The greater, the higher.
-	bool isFunctionLike = false; // Whether the operator is function-like;
-
-	Op(Opcode oc, int s, int r, int a, int p, bool f);
-
-	static Types typeOf(const std::string &str);
 };
 
 }
@@ -563,7 +663,7 @@ public:
 
 /*
 ** {===========================================================================
-** Node interface
+** Node interfaces
 */
 
 namespace GBBASIC {
@@ -836,6 +936,14 @@ struct Program {
 		 */
 		RamLocation::Dictionary allocations;
 		/**
+		 * @brief Symbol table.
+		 */
+		SymbolTable symbols;
+		/**
+		 * @brief ROM allocation points.
+		 */
+		TracePoint::Array tracePoints;
+		/**
 		 * @brief Feature usages. Filled by compiler.
 		 */
 		FeatureUsages featureUsages;
@@ -847,6 +955,8 @@ struct Program {
 		 * @brief The effective data size.
 		 */
 		Pipeline::Size effectiveSize;
+
+		Compiled() = default;
 	};
 
 	/**< Input. */
