@@ -538,6 +538,8 @@ public:
 		for (ObjBuffer &obj : _objs)
 			obj.reset();
 
+		_opened = false;
+
 		return true;
 	}
 

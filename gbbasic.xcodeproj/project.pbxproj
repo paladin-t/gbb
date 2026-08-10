@@ -182,6 +182,7 @@
 		689DD5F92E2F3F18001D2B86 /* workspace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD5CA2E2F3F18001D2B86 /* workspace.cpp */; settings = {COMPILER_FLAGS = "-Wno-unused-function"; }; };
 		689DD5FC2E2F3F8E001D2B86 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 689DD5FB2E2F3F8E001D2B86 /* AppDelegate.m */; };
 		689DD6042E2F3FA2001D2B86 /* inline_resource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 689DD5FF2E2F3FA1001D2B86 /* inline_resource.cpp */; };
+		68A80DC53029F9FB00F68796 /* debugger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68A80DC43029F9FB00F68796 /* debugger.cpp */; };
 		68CF99D32F8BCEA6004E1FBC /* evaluator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68CF99D12F8BCEA5004E1FBC /* evaluator.cpp */; };
 		68F4AD552F20DA52008EF32D /* vram_debugger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68F4AD542F20DA51008EF32D /* vram_debugger.cpp */; };
 		68F810F72E2F496500A859D1 /* image_.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 68F810F62E2F494700A859D1 /* image_.cpp */; };
@@ -766,6 +767,8 @@
 		689DD6012E2F3FA1001D2B86 /* inline_toast.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inline_toast.h; path = src/app/resource/inline_toast.h; sourceTree = "<group>"; };
 		689DD6022E2F3FA1001D2B86 /* inline_font.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inline_font.h; path = src/app/resource/inline_font.h; sourceTree = "<group>"; };
 		689DD6032E2F3FA2001D2B86 /* inline_text.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = inline_text.h; path = src/app/resource/inline_text.h; sourceTree = "<group>"; };
+		68A80DC33029F9FB00F68796 /* debugger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = debugger.h; path = src/app/debugger.h; sourceTree = "<group>"; };
+		68A80DC43029F9FB00F68796 /* debugger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = debugger.cpp; path = src/app/debugger.cpp; sourceTree = "<group>"; };
 		68C4B4312E93ACA300AC1D3F /* inline_code.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = inline_code.h; path = src/app/resource/inline_code.h; sourceTree = "<group>"; };
 		68CF99D12F8BCEA5004E1FBC /* evaluator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = evaluator.cpp; path = src/compiler/evaluator.cpp; sourceTree = "<group>"; };
 		68CF99D22F8BCEA6004E1FBC /* evaluator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = evaluator.h; path = src/compiler/evaluator.h; sourceTree = "<group>"; };
@@ -1302,6 +1305,8 @@
 				689DD5BC2E2F3F16001D2B86 /* activities.h */,
 				689DD5792E2F3F0F001D2B86 /* application.cpp */,
 				689DD58B2E2F3F11001D2B86 /* application.h */,
+				68A80DC43029F9FB00F68796 /* debugger.cpp */,
+				68A80DC33029F9FB00F68796 /* debugger.h */,
 				689DD4082E2F395E001D2B86 /* device */,
 				689DD5872E2F3F11001D2B86 /* device.cpp */,
 				689DD58D2E2F3F11001D2B86 /* device.h */,
@@ -2079,6 +2084,7 @@
 				68786E143001203D007E9626 /* PsdParseImageResourcesSection.cpp in Sources */,
 				689DD5E32E2F3F18001D2B86 /* command.cpp in Sources */,
 				038E77662582133D00A94374 /* gzlib.c in Sources */,
+				68A80DC53029F9FB00F68796 /* debugger.cpp in Sources */,
 				689DD5CD2E2F3F18001D2B86 /* commands_paintable2d.cpp in Sources */,
 				689DD5F82E2F3F18001D2B86 /* editor_console.cpp in Sources */,
 				68786E013001203D007E9626 /* PsdExport.cpp in Sources */,

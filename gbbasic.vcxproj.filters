@@ -629,6 +629,9 @@
     <ClCompile Include="src\compiler\disassembler.cpp">
       <Filter>compiler</Filter>
     </ClCompile>
+    <ClCompile Include="src\app\debugger.cpp">
+      <Filter>app</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="utils">
@@ -1899,6 +1902,9 @@
     </ClInclude>
     <ClInclude Include="src\compiler\disassembler.h">
       <Filter>compiler</Filter>
+    </ClInclude>
+    <ClInclude Include="src\app\debugger.h">
+      <Filter>app</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

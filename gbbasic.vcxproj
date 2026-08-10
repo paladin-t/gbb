@@ -695,6 +695,7 @@
     <ClCompile Include="src\app\commands_sfx.cpp" />
     <ClCompile Include="src\app\commands_tiles.cpp" />
     <ClCompile Include="src\app\commands_font.cpp" />
+    <ClCompile Include="src\app\debugger.cpp" />
     <ClCompile Include="src\app\device.cpp" />
     <ClCompile Include="src\app\device_binjgb.cpp" />
     <ClCompile Include="src\app\document.cpp" />
@@ -1142,6 +1143,7 @@
     <ClInclude Include="src\app\commands_sfx.h" />
     <ClInclude Include="src\app\commands_tiles.h" />
     <ClInclude Include="src\app\commands_font.h" />
+    <ClInclude Include="src\app\debugger.h" />
     <ClInclude Include="src\app\device.h" />
     <ClInclude Include="src\app\device_binjgb.h" />
     <ClInclude Include="src\app\document.h" />

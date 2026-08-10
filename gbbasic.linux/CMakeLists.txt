@@ -271,6 +271,7 @@ list(
   "../src/app/resource/inline_resource.cpp"
   "../src/app/activities.cpp"
   "../src/app/application.cpp"
+  "../src/app/debugger.cpp"
   "../src/app/device.cpp"
   "../src/app/document.cpp"
   "../src/app/emulator.cpp"
