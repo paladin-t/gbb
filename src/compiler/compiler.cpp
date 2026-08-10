@@ -295,10 +295,6 @@ namespace GBBASIC {
 #	define BANK0FINAL_ENTRY_NAME "BANK0FINAL" // DOC: ROM SCHEMA.
 #endif /* BANK0FINAL_ENTRY_NAME */
 
-#ifndef SCRIPT_MEMORY_ENTRY_NAME
-#	define SCRIPT_MEMORY_ENTRY_NAME "script_memory" // DOC: RAM SCHEMA.
-#endif /* SCRIPT_MEMORY_ENTRY_NAME */
-
 // ISRs.
 #ifndef ON_VBL_ENTRY_NAME
 #	define ON_VBL_ENTRY_NAME "on vbl"
@@ -10767,7 +10763,7 @@ public:
 
 					// Search for identifier.
 					if (!found) {
-						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(COMPILER_SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
 						const RamLocation* ramLocation = ctx.findPageAndGlobal(name);
 						const Context::Array::Dimensions* dimensions = ctx.array->find(name);
 						if (scriptMemoryRamLocation && ramLocation) {
@@ -11767,7 +11763,7 @@ public:
 
 					// Search for identifier.
 					if (!found) {
-						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(COMPILER_SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
 						const RamLocation* ramLocation = ctx.findPageAndGlobal(name);
 						const Context::Array::Dimensions* dimensions = ctx.array->find(name);
 						if (scriptMemoryRamLocation && ramLocation) {
@@ -15859,7 +15855,7 @@ public:
 
 					// Search for identifier.
 					if (!found) {
-						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+						const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(COMPILER_SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
 						const RamLocation* ramLocation = ctx.findPageAndGlobal(name);
 						const Context::Array::Dimensions* dimensions = ctx.array->find(name);
 						if (scriptMemoryRamLocation && ramLocation) {
@@ -16476,7 +16472,7 @@ private:
 
 		// Search for identifier.
 		if (!found) {
-			const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+			const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(COMPILER_SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
 			const RamLocation* ramLocation = ctx.findPageAndGlobal(name_, fuzzyName);
 			const Context::Array::Dimensions* dimensions = ctx.array->find(name_);
 			if (scriptMemoryRamLocation && ramLocation) {
@@ -19925,7 +19921,7 @@ public:
 						break;
 					}
 
-					const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
+					const RomLocation* scriptMemoryRamLocation = ctx.symbols ? ctx.symbols->find(COMPILER_SCRIPT_MEMORY_ENTRY_NAME) : nullptr; // It's defined in the ROM symbols, although it's RAM location but not ROM.
 					const RamLocation* ramLocation = ctx.findPageAndGlobal(name);
 					const Context::Array::Dimensions* dimensions = ctx.array->find(name);
 					if (scriptMemoryRamLocation && ramLocation) {
