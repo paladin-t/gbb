@@ -217,7 +217,7 @@ template<typename Enum> inline Enum &operator &= (Enum &left, Enum right) {
 
 /*
 ** {===========================================================================
-** Utilities
+** Structure of allocations
 */
 
 namespace GBBASIC {
@@ -251,6 +251,19 @@ struct TextLocation {
 };
 
 /**
+ * @brief Location for ROM allocations.
+ */
+struct RomLocation {
+	int bank = 0;
+	int address = 0;
+	int size = 0;
+
+	RomLocation();
+	RomLocation(int b, int a);
+	RomLocation(int b, int a, int s);
+};
+
+/**
  * @brief Location for RAM allocations.
  */
 struct RamLocation {
@@ -281,6 +294,99 @@ struct RamLocation {
 	RamLocation();
 	RamLocation(Types y, int a, int s, Usages u, const TextLocation &txtLoc);
 };
+
+/**
+ * @brief Trace point that maps from ROM location to source location.
+ */
+struct TracePoint {
+	typedef std::vector<TracePoint> Array;
+
+	RomLocation inRom;
+	TextLocation inCode;
+
+	TracePoint();
+	TracePoint(const RomLocation &rom, const TextLocation &code);
+};
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of instructions and operators
+*/
+
+namespace GBBASIC {
+
+struct Op {
+	typedef UInt8 Opcode;
+
+	enum class Types : Byte {
+		STOP,
+		INT8,
+		INT16,
+		REF,
+		EQ,
+		LT,
+		LE,
+		GT,
+		GE,
+		NE,
+		AND,
+		OR,
+		NOT,
+		ADD,
+		SUB,
+		MUL,
+		DIV,
+		MOD,
+		BITWISE_AND,
+		BITWISE_OR,
+		BITWISE_XOR,
+		BITWISE_LSHIFT,
+		BITWISE_RSHIFT,
+		BITWISE_NOT,
+		NEG,
+		SGN,
+		ABS,
+		SQR,
+		SQRT,
+		SIN,
+		COS,
+		ATAN2,
+		POWI,
+		MIN,
+		MAX,
+
+		COUNT
+	};
+	typedef std::array<Op, (size_t)Types::COUNT> Operators;
+
+	static Operators OPERATORS;
+
+	Opcode opcode = 0x00;
+	int size = 0;                // Size of the parameter list in bytes.
+	int oprands = 0;             // Count of oprands.
+	int associativity = 0;       // -1 for left, 1 for right.
+	int precedence = 0;          // The greater, the higher.
+	bool isFunctionLike = false; // Whether the operator is function-like;
+
+	Op(Opcode oc, int s, int r, int a, int p, bool f);
+
+	static Types typeOf(const std::string &str);
+};
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of syntax
+*/
+
+namespace GBBASIC {
 
 /**
  * @brief Information of macros.
@@ -382,6 +488,17 @@ struct AsmBlock {
 	void clear(void);
 };
 
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of features
+*/
+
+namespace GBBASIC {
+
 /**
  * @brief Feature usages.
  */
@@ -393,75 +510,6 @@ struct FeatureUsages {
 	Dictionary extensionFeatureUsages;
 
 	FeatureUsages();
-};
-
-}
-
-/* ===========================================================================} */
-
-/*
-** {===========================================================================
-** Structure of operations
-*/
-
-namespace GBBASIC {
-
-struct Op {
-	typedef UInt8 Opcode;
-
-	enum class Types : Byte {
-		STOP,
-		INT8,
-		INT16,
-		REF,
-		EQ,
-		LT,
-		LE,
-		GT,
-		GE,
-		NE,
-		AND,
-		OR,
-		NOT,
-		ADD,
-		SUB,
-		MUL,
-		DIV,
-		MOD,
-		BITWISE_AND,
-		BITWISE_OR,
-		BITWISE_XOR,
-		BITWISE_LSHIFT,
-		BITWISE_RSHIFT,
-		BITWISE_NOT,
-		NEG,
-		SGN,
-		ABS,
-		SQR,
-		SQRT,
-		SIN,
-		COS,
-		ATAN2,
-		POWI,
-		MIN,
-		MAX,
-
-		COUNT
-	};
-	typedef std::array<Op, (size_t)Types::COUNT> Operators;
-
-	static Operators OPERATORS;
-
-	Opcode opcode = 0x00;
-	int size = 0;                // Size of the parameter list in bytes.
-	int oprands = 0;             // Count of oprands.
-	int associativity = 0;       // -1 for left, 1 for right.
-	int precedence = 0;          // The greater, the higher.
-	bool isFunctionLike = false; // Whether the operator is function-like;
-
-	Op(Opcode oc, int s, int r, int a, int p, bool f);
-
-	static Types typeOf(const std::string &str);
 };
 
 }
@@ -563,7 +611,7 @@ public:
 
 /*
 ** {===========================================================================
-** Node interface
+** Node interfaces
 */
 
 namespace GBBASIC {

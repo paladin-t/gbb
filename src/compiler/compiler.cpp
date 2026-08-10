@@ -1164,118 +1164,16 @@ static bool analyzeString(std::string str, Font::Codepoints &codepoints, Font::C
 	return hasEsc;
 }
 
-struct Counter {
-	typedef std::shared_ptr<Counter> Ptr;
-
-	int value = 0;
-	int max = 0;
-
-	Counter() {
-	}
-	Counter(int val) : value(val), max(val) {
-	}
-	Counter(const Counter &other) : value(other.value), max(other.max) {
-	}
-
-	Counter &operator = (const Counter &other) {
-		value = other.value;
-		max = other.max;
-
-		return *this;
-	}
-
-	bool operator == (const Counter &other) const {
-		return
-			value == other.value &&
-			max == other.max;
-	}
-	bool operator != (const Counter &other) const {
-		return
-			value != other.value ||
-			max != other.max;
-	}
-
-	Counter operator + (const Counter &other) const {
-		return Counter(value + other.value);
-	}
-	Counter operator + (int other) const {
-		return Counter(value + other);
-	}
-	Counter operator - (const Counter &other) const {
-		return Counter(value - other.value);
-	}
-	Counter operator - (int other) const {
-		return Counter(value - other);
-	}
-	Counter &operator += (const Counter &other) {
-		value += other.value;
-		if (value > max)
-			max = value;
-
-		return *this;
-	}
-	Counter &operator += (int other) {
-		value += other;
-		if (value > max)
-			max = value;
-
-		return *this;
-	}
-	Counter &operator -= (const Counter &other) {
-		value -= other.value;
-
-		return *this;
-	}
-	Counter &operator -= (int other) {
-		value -= other;
-
-		return *this;
-	}
-
-	operator int (void) const {
-		return value;
-	}
-};
-static Counter &operator ++ (Counter &val) {
-	val += 1;
-
-	return val;
-}
-static Counter &operator -- (Counter &val) {
-	val -= 1;
-
-	return val;
-}
-static Counter operator ++ (Counter &val, int) {
-	const Counter old(val);
-	val += 1;
-
-	return old;
-}
-static Counter operator -- (Counter &val, int) {
-	const Counter old(val);
-	val -= 1;
-
-	return old;
 }
 
-#ifndef COUNTER_GUARD
-#	define COUNTER_GUARD(CTX, VAR) Counter GBBASIC_UNIQUE_NAME(__COUNTERGUARD__); Counter &(VAR) = ((CTX).stackFootprint ? *(CTX).stackFootprint : GBBASIC_UNIQUE_NAME(__COUNTERGUARD__))
-#endif /* COUNTER_GUARD */
-#ifndef CHECK_COUNTER
-#	define CHECK_COUNTER(CTX, ON_ERROR) \
-		do { \
-			if ((CTX).stackFootprint && (CTX).stackFootprint->max > (CTX).stackSize) { \
-				THROW_STACK_OVERFLOW((ON_ERROR), !(CTX).strictOn); \
-			} \
-		} while (false)
-#endif /* CHECK_COUNTER */
-#ifndef INC_COUNTER
-#	define INC_COUNTER(COUNTER, AMOUNT) do { if ((AMOUNT) > 0) { (COUNTER) += (AMOUNT); } } while (false);
-#endif /* INC_COUNTER */
-#ifndef DEC_COUNTER
-#	define DEC_COUNTER(COUNTER, AMOUNT) do { if ((AMOUNT) > 0) { GBBASIC_ASSERT((COUNTER) - (AMOUNT) >= 0 && "Wrong data."); (COUNTER) -= (AMOUNT); } } while (false);
-#endif /* DEC_COUNTER */
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of allocations
+*/
+
+namespace GBBASIC {
 
 TextLocation::TextLocation() {
 }
@@ -1337,65 +1235,31 @@ TextLocation TextLocation::INVALID(void) {
 	return TextLocation(-1, -1, -1);
 }
 
-struct Prompt {
-	typedef std::function<void(const Prompt &, const std::string &, const TextLocation* /* nullable */)> Handler;
+RomLocation::RomLocation() {
+}
 
-	typedef std::initializer_list<std::string> Arguments;
+RomLocation::RomLocation(int b, int a) : bank(b), address(a) {
+}
 
-	std::string message;
+RomLocation::RomLocation(int b, int a, int s) : bank(b), address(a), size(s) {
+}
 
-	Prompt() {
-	}
-	Prompt(const std::string &msg) :
-		message(msg)
-	{
-	}
+RamLocation::RamLocation() {
+}
 
-	std::string format(void) const {
-		return message;
-	}
-	std::string format(const Arguments &args) const {
-		Text::Array args_ = args;
-		for (std::string &arg : args_) {
-			if (arg == "\n")
-				arg = "<EOL>";
-		}
-		const std::string result = Text::format(message, args_);
+RamLocation::RamLocation(Types y, int a, int s, Usages u, const TextLocation &txtLoc) :
+	type(y), address(a), size(s),
+	usage(u), textLocation(txtLoc)
+{
+}
 
-		return result;
-	}
-};
+TracePoint::TracePoint() {
+}
 
-struct Error {
-	typedef std::function<void(const Error &, const std::string &, const TextLocation &)> Handler;
-
-	typedef std::initializer_list<std::string> Arguments;
-
-	std::string message;
-	bool isWarning = false;
-
-	Error() {
-	}
-	Error(const std::string &msg, bool isWarning) :
-		message(msg),
-		isWarning(isWarning)
-	{
-	}
-
-	std::string format(void) const {
-		return message;
-	}
-	std::string format(const Arguments &args) const {
-		Text::Array args_ = args;
-		for (std::string &arg : args_) {
-			if (arg == "\n")
-				arg = "<EOL>";
-		}
-		const std::string result = Text::format(message, args_);
-
-		return result;
-	}
-};
+TracePoint::TracePoint(const RomLocation &rom, const TextLocation &code) :
+	inRom(rom), inCode(code)
+{
+}
 
 struct SourceLocation {
 	int page = 0;
@@ -1460,265 +1324,6 @@ struct SourceLocation {
 		return result;
 	}
 };
-
-struct RomLocation {
-	int bank = 0;
-	int address = 0;
-	int size = 0;
-
-	RomLocation() {
-	}
-	RomLocation(int b, int a) : bank(b), address(a) {
-	}
-	RomLocation(int b, int a, int s) : bank(b), address(a), size(s) {
-	}
-};
-
-RamLocation::RamLocation() {
-}
-
-RamLocation::RamLocation(Types y, int a, int s, Usages u, const TextLocation &txtLoc) :
-	type(y), address(a), size(s),
-	usage(u), textLocation(txtLoc)
-{
-}
-
-Macro::Macro() {
-	scopeLocationRange.first = TextLocation::INVALID();
-	scopeLocationRange.second = TextLocation::INVALID();
-}
-
-Macro::Macro(const std::string &name_, Types y, const Variant &d) :
-	name(name_),
-	type(y),
-	data(d)
-{
-	scopeLocationRange.first = TextLocation::INVALID();
-	scopeLocationRange.second = TextLocation::INVALID();
-}
-
-Macro::Macro(const std::string &name_, Types y, const Variant &d, const TextLocation &begin) :
-	name(name_),
-	type(y),
-	data(d)
-{
-	scopeLocationRange.first = begin;
-	scopeLocationRange.second = TextLocation::INVALID();
-}
-
-bool Macro::operator == (const Macro &other) const {
-	return compare(other) == 0;
-}
-
-bool Macro::operator != (const Macro &other) const {
-	return compare(other) != 0;
-}
-
-bool Macro::operator < (const Macro &other) const {
-	return compare(other) < 0;
-}
-
-bool Macro::operator <= (const Macro &other) const {
-	return compare(other) <= 0;
-}
-
-bool Macro::operator > (const Macro &other) const {
-	return compare(other) > 0;
-}
-
-bool Macro::operator >= (const Macro &other) const {
-	return compare(other) >= 0;
-}
-
-int Macro::compare(const Macro &other) const {
-	if (name < other.name)
-		return -1;
-	else if (name > other.name)
-		return 1;
-
-	if (type < other.type)
-		return -1;
-	else if (type > other.type)
-		return 1;
-
-	const int cd = data.compare(other.data);
-	if (cd != 0)
-		return cd;
-
-	if (scopeLocationRange < other.scopeLocationRange)
-		return -1;
-	else if (scopeLocationRange > other.scopeLocationRange)
-		return 1;
-
-	return 0;
-}
-
-PreprocessorBranch::PreprocessorBranch() {
-}
-
-PreprocessorBranch::PreprocessorBranch(bool alive, int pg, int begin, int end, int cond) :
-	isAlive(alive),
-	page(pg), beginLine(begin), endLine(end),
-	conditionLine(cond)
-{
-}
-
-bool PreprocessorBranch::operator == (const PreprocessorBranch &other) const {
-	return compare(other) == 0;
-}
-
-bool PreprocessorBranch::operator != (const PreprocessorBranch &other) const {
-	return compare(other) != 0;
-}
-
-bool PreprocessorBranch::operator < (const PreprocessorBranch &other) const {
-	return compare(other) < 0;
-}
-
-bool PreprocessorBranch::operator <= (const PreprocessorBranch &other) const {
-	return compare(other) <= 0;
-}
-
-bool PreprocessorBranch::operator > (const PreprocessorBranch &other) const {
-	return compare(other) > 0;
-}
-
-bool PreprocessorBranch::operator >= (const PreprocessorBranch &other) const {
-	return compare(other) >= 0;
-}
-
-int PreprocessorBranch::compare(const PreprocessorBranch &other) const {
-	if (!isAlive && other.isAlive)
-		return -1;
-	else if (isAlive && !other.isAlive)
-		return 1;
-
-	if (page < other.page)
-		return -1;
-	else if (page > other.page)
-		return 1;
-
-	if (beginLine < other.beginLine)
-		return -1;
-	else if (beginLine > other.beginLine)
-		return 1;
-
-	if (endLine < other.endLine)
-		return -1;
-	else if (endLine > other.endLine)
-		return 1;
-
-	if (conditionLine < other.conditionLine)
-		return -1;
-	else if (conditionLine > other.conditionLine)
-		return 1;
-
-	return 0;
-}
-
-bool PreprocessorBranch::valid(void) const {
-	if (page == -1 || beginLine == -1 || endLine == -1 || conditionLine == -1)
-		return false;
-
-	return true;
-}
-
-void PreprocessorBranch::clear(void) {
-	isAlive = true;
-	page = -1;
-	beginLine = -1;
-	endLine = -1;
-	conditionLine = -1;
-}
-
-AsmBlock::AsmBlock() {
-}
-
-AsmBlock::AsmBlock(
-	int pg, int ln, int col, const std::string &name_,
-	int begin, int end,
-	int b,
-	int addr
-) :
-	page(pg), row(ln), column(col), name(name_),
-	beginLine(begin), endLine(end),
-	bank(b), address(addr)
-{
-}
-
-bool AsmBlock::operator == (const AsmBlock &other) const {
-	return compare(other) == 0;
-}
-
-bool AsmBlock::operator != (const AsmBlock &other) const {
-	return compare(other) != 0;
-}
-
-bool AsmBlock::operator < (const AsmBlock &other) const {
-	return compare(other) <  0;
-}
-
-bool AsmBlock::operator <= (const AsmBlock &other) const {
-	return compare(other) <= 0;
-}
-
-bool AsmBlock::operator > (const AsmBlock &other) const {
-	return compare(other) >  0;
-}
-
-bool AsmBlock::operator >= (const AsmBlock &other) const {
-	return compare(other) >= 0;
-}
-
-int AsmBlock::compare(const AsmBlock &other) const {
-	if (page < other.page)
-		return -1;
-	else if (page > other.page)
-		return 1;
-
-	if (row < other.row)
-		return -1;
-	else if (row > other.row)
-		return 1;
-
-	if (column < other.column)
-		return -1;
-	else if (column > other.column)
-		return 1;
-
-	if (name < other.name)
-		return -1;
-	else if (name > other.name)
-		return 1;
-
-	if (beginLine < other.beginLine)
-		return -1;
-	else if (beginLine > other.beginLine)
-		return 1;
-
-	if (endLine < other.endLine)
-		return -1;
-	else if (endLine > other.endLine)
-		return 1;
-
-	return 0;
-}
-
-bool AsmBlock::valid(void) const {
-	if (page == -1 || beginLine == -1 || endLine == -1)
-		return false;
-
-	return true;
-}
-
-void AsmBlock::clear(void) {
-	page = -1;
-	beginLine = -1;
-	endLine = -1;
-}
-
-FeatureUsages::FeatureUsages() {
-}
 
 struct SymbolTable {
 private:
@@ -1882,41 +1487,16 @@ public:
 	}
 };
 
-struct BorderFrameResources {
-	bool enabled = false;
-	bool serialized = false;
-	Image::Ptr image = nullptr;
-	UInt8 paletteBank = 0;
-	UInt16 paletteAddress = 0;
-	UInt16 paletteSize = 0;
-	UInt8 tilesBank = 0;
-	UInt16 tilesAddress = 0;
-	UInt16 tilesSize = 0;
-	UInt8 mapBank = 0;
-	UInt16 mapAddress = 0;
-	UInt16 mapSize = 0;
-	long long interval = 0;
+}
 
-	BorderFrameResources() {
-	}
-	BorderFrameResources(bool e, const Image::Ptr &img) : enabled(e), image(img) {
-	}
-};
+/* ===========================================================================} */
 
-struct SuperPaletteResources {
-	bool enabled = false;
-	bool serialized = false;
-	Options::SuperFeatures::Palettes palettes;
-	UInt8 palettesBank;
-	UInt16 palettesAddress;
-	UInt16 palettesSize = 0;
-	long long interval = 0;
+/*
+** {===========================================================================
+** Structure of instructions and operators
+*/
 
-	SuperPaletteResources() {
-	}
-	SuperPaletteResources(bool e, const Options::SuperFeatures::Palettes &plt) : enabled(e), palettes(plt) {
-	}
-};
+namespace GBBASIC {
 
 struct Asm {
 	typedef Byte Opcode;
@@ -2649,96 +2229,250 @@ Op::Operators Op::OPERATORS = array(
 	Op(31,    0,       2,            -1,           2,        true)  // MAX.
 );
 
-enum class EventTypes {
-	NONE              =  0,
-	CONDITIONAL       =  1 << 0,
-	BUTTON_INPUT      = (1 << 1) | (1 << 2) | (1 << 3),
-		BUTTON        =  1 << 1,
-		BUTTON_DOWN   =  1 << 2,
-		BUTTON_UP     =  1 << 3,
-	TOUCH_INPUT       = (1 << 4) | (1 << 5) | (1 << 6),
-		TOUCH         =  1 << 4,
-		TOUCH_DOWN    =  1 << 5,
-		TOUCH_UP      =  1 << 6,
-	HITS              =  1 << 7,
-	MOVE              =  1 << 8
-};
-
-enum class EventTargets {
-	GOTO,
-	GOSUB,
-	START
-};
-
-enum class ResourceManipulations : unsigned {
-	// None.
-	NONE,
-	// Define dimension.
-	DIM,
-	// Filling, defining and loading.
-	FILL,
-	DEF,
-	LOAD,
-	// Constructing and deconstructing.
-	NEW,
-	DEL,
-	// Getting and setting.
-	GET,
-	SET,
-	LEN,
-	GET_WIDTH,
-	GET_HEIGHT,
-	// Controlling.
-	FIND,
-	PUT,
-	STOP,
-	CONTROL,
-	// Playing.
-	PLAY,
-	// Threading.
-	START,
-	JOIN,
-	KILL,
-	WAIT,
-	// Toggling.
-	ON,
-	OFF
-};
-static bool expectAssign(ResourceManipulations y) {
-	return
-		y == ResourceManipulations::FILL ||
-		y == ResourceManipulations::DEF  ||
-		y == ResourceManipulations::LOAD ||
-		y == ResourceManipulations::SET;
 }
-static bool expectAssign(const std::string &y) {
-	return
-		y == "fill" ||
-		y == "def"  ||
-		y == "load" ||
-		y == "set";
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of syntax
+*/
+
+namespace GBBASIC {
+
+Macro::Macro() {
+	scopeLocationRange.first = TextLocation::INVALID();
+	scopeLocationRange.second = TextLocation::INVALID();
 }
-static bool expectBrackets(ResourceManipulations y) {
-	switch (y) {
-	case ResourceManipulations::FILL:       // Fall through.
-	case ResourceManipulations::DEF:        // Fall through.
-	case ResourceManipulations::LOAD:       // Fall through.
-	case ResourceManipulations::GET:        // Fall through.
-	case ResourceManipulations::SET:        // Fall through.
-	case ResourceManipulations::LEN:        // Fall through.
-	case ResourceManipulations::GET_WIDTH:  // Fall through.
-	case ResourceManipulations::GET_HEIGHT:
-		return true;
-	default:
+
+Macro::Macro(const std::string &name_, Types y, const Variant &d) :
+	name(name_),
+	type(y),
+	data(d)
+{
+	scopeLocationRange.first = TextLocation::INVALID();
+	scopeLocationRange.second = TextLocation::INVALID();
+}
+
+Macro::Macro(const std::string &name_, Types y, const Variant &d, const TextLocation &begin) :
+	name(name_),
+	type(y),
+	data(d)
+{
+	scopeLocationRange.first = begin;
+	scopeLocationRange.second = TextLocation::INVALID();
+}
+
+bool Macro::operator == (const Macro &other) const {
+	return compare(other) == 0;
+}
+
+bool Macro::operator != (const Macro &other) const {
+	return compare(other) != 0;
+}
+
+bool Macro::operator < (const Macro &other) const {
+	return compare(other) < 0;
+}
+
+bool Macro::operator <= (const Macro &other) const {
+	return compare(other) <= 0;
+}
+
+bool Macro::operator > (const Macro &other) const {
+	return compare(other) > 0;
+}
+
+bool Macro::operator >= (const Macro &other) const {
+	return compare(other) >= 0;
+}
+
+int Macro::compare(const Macro &other) const {
+	if (name < other.name)
+		return -1;
+	else if (name > other.name)
+		return 1;
+
+	if (type < other.type)
+		return -1;
+	else if (type > other.type)
+		return 1;
+
+	const int cd = data.compare(other.data);
+	if (cd != 0)
+		return cd;
+
+	if (scopeLocationRange < other.scopeLocationRange)
+		return -1;
+	else if (scopeLocationRange > other.scopeLocationRange)
+		return 1;
+
+	return 0;
+}
+
+PreprocessorBranch::PreprocessorBranch() {
+}
+
+PreprocessorBranch::PreprocessorBranch(bool alive, int pg, int begin, int end, int cond) :
+	isAlive(alive),
+	page(pg), beginLine(begin), endLine(end),
+	conditionLine(cond)
+{
+}
+
+bool PreprocessorBranch::operator == (const PreprocessorBranch &other) const {
+	return compare(other) == 0;
+}
+
+bool PreprocessorBranch::operator != (const PreprocessorBranch &other) const {
+	return compare(other) != 0;
+}
+
+bool PreprocessorBranch::operator < (const PreprocessorBranch &other) const {
+	return compare(other) < 0;
+}
+
+bool PreprocessorBranch::operator <= (const PreprocessorBranch &other) const {
+	return compare(other) <= 0;
+}
+
+bool PreprocessorBranch::operator > (const PreprocessorBranch &other) const {
+	return compare(other) > 0;
+}
+
+bool PreprocessorBranch::operator >= (const PreprocessorBranch &other) const {
+	return compare(other) >= 0;
+}
+
+int PreprocessorBranch::compare(const PreprocessorBranch &other) const {
+	if (!isAlive && other.isAlive)
+		return -1;
+	else if (isAlive && !other.isAlive)
+		return 1;
+
+	if (page < other.page)
+		return -1;
+	else if (page > other.page)
+		return 1;
+
+	if (beginLine < other.beginLine)
+		return -1;
+	else if (beginLine > other.beginLine)
+		return 1;
+
+	if (endLine < other.endLine)
+		return -1;
+	else if (endLine > other.endLine)
+		return 1;
+
+	if (conditionLine < other.conditionLine)
+		return -1;
+	else if (conditionLine > other.conditionLine)
+		return 1;
+
+	return 0;
+}
+
+bool PreprocessorBranch::valid(void) const {
+	if (page == -1 || beginLine == -1 || endLine == -1 || conditionLine == -1)
 		return false;
-	}
+
+	return true;
 }
 
-enum class SerialManipulations : unsigned {
-	NONE,
-	ASYNC,
-	SYNC
-};
+void PreprocessorBranch::clear(void) {
+	isAlive = true;
+	page = -1;
+	beginLine = -1;
+	endLine = -1;
+	conditionLine = -1;
+}
+
+AsmBlock::AsmBlock() {
+}
+
+AsmBlock::AsmBlock(
+	int pg, int ln, int col, const std::string &name_,
+	int begin, int end,
+	int b,
+	int addr
+) :
+	page(pg), row(ln), column(col), name(name_),
+	beginLine(begin), endLine(end),
+	bank(b), address(addr)
+{
+}
+
+bool AsmBlock::operator == (const AsmBlock &other) const {
+	return compare(other) == 0;
+}
+
+bool AsmBlock::operator != (const AsmBlock &other) const {
+	return compare(other) != 0;
+}
+
+bool AsmBlock::operator < (const AsmBlock &other) const {
+	return compare(other) <  0;
+}
+
+bool AsmBlock::operator <= (const AsmBlock &other) const {
+	return compare(other) <= 0;
+}
+
+bool AsmBlock::operator > (const AsmBlock &other) const {
+	return compare(other) >  0;
+}
+
+bool AsmBlock::operator >= (const AsmBlock &other) const {
+	return compare(other) >= 0;
+}
+
+int AsmBlock::compare(const AsmBlock &other) const {
+	if (page < other.page)
+		return -1;
+	else if (page > other.page)
+		return 1;
+
+	if (row < other.row)
+		return -1;
+	else if (row > other.row)
+		return 1;
+
+	if (column < other.column)
+		return -1;
+	else if (column > other.column)
+		return 1;
+
+	if (name < other.name)
+		return -1;
+	else if (name > other.name)
+		return 1;
+
+	if (beginLine < other.beginLine)
+		return -1;
+	else if (beginLine > other.beginLine)
+		return 1;
+
+	if (endLine < other.endLine)
+		return -1;
+	else if (endLine > other.endLine)
+		return 1;
+
+	return 0;
+}
+
+bool AsmBlock::valid(void) const {
+	if (page == -1 || beginLine == -1 || endLine == -1)
+		return false;
+
+	return true;
+}
+
+void AsmBlock::clear(void) {
+	page = -1;
+	beginLine = -1;
+	endLine = -1;
+}
 
 struct DefaultTable {
 public:
@@ -3049,6 +2783,218 @@ private:
 			return false;
 
 		return true;
+	}
+};
+
+struct Prompt {
+	typedef std::function<void(const Prompt &, const std::string &, const TextLocation* /* nullable */)> Handler;
+
+	typedef std::initializer_list<std::string> Arguments;
+
+	std::string message;
+
+	Prompt() {
+	}
+	Prompt(const std::string &msg) :
+		message(msg)
+	{
+	}
+
+	std::string format(void) const {
+		return message;
+	}
+	std::string format(const Arguments &args) const {
+		Text::Array args_ = args;
+		for (std::string &arg : args_) {
+			if (arg == "\n")
+				arg = "<EOL>";
+		}
+		const std::string result = Text::format(message, args_);
+
+		return result;
+	}
+};
+
+struct Error {
+	typedef std::function<void(const Error &, const std::string &, const TextLocation &)> Handler;
+
+	typedef std::initializer_list<std::string> Arguments;
+
+	std::string message;
+	bool isWarning = false;
+
+	Error() {
+	}
+	Error(const std::string &msg, bool isWarning) :
+		message(msg),
+		isWarning(isWarning)
+	{
+	}
+
+	std::string format(void) const {
+		return message;
+	}
+	std::string format(const Arguments &args) const {
+		Text::Array args_ = args;
+		for (std::string &arg : args_) {
+			if (arg == "\n")
+				arg = "<EOL>";
+		}
+		const std::string result = Text::format(message, args_);
+
+		return result;
+	}
+};
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of nodes
+*/
+
+namespace GBBASIC {
+
+enum class EventTypes {
+	NONE              =  0,
+	CONDITIONAL       =  1 << 0,
+	BUTTON_INPUT      = (1 << 1) | (1 << 2) | (1 << 3),
+		BUTTON        =  1 << 1,
+		BUTTON_DOWN   =  1 << 2,
+		BUTTON_UP     =  1 << 3,
+	TOUCH_INPUT       = (1 << 4) | (1 << 5) | (1 << 6),
+		TOUCH         =  1 << 4,
+		TOUCH_DOWN    =  1 << 5,
+		TOUCH_UP      =  1 << 6,
+	HITS              =  1 << 7,
+	MOVE              =  1 << 8
+};
+
+enum class EventTargets {
+	GOTO,
+	GOSUB,
+	START
+};
+
+enum class ResourceManipulations : unsigned {
+	// None.
+	NONE,
+	// Define dimension.
+	DIM,
+	// Filling, defining and loading.
+	FILL,
+	DEF,
+	LOAD,
+	// Constructing and deconstructing.
+	NEW,
+	DEL,
+	// Getting and setting.
+	GET,
+	SET,
+	LEN,
+	GET_WIDTH,
+	GET_HEIGHT,
+	// Controlling.
+	FIND,
+	PUT,
+	STOP,
+	CONTROL,
+	// Playing.
+	PLAY,
+	// Threading.
+	START,
+	JOIN,
+	KILL,
+	WAIT,
+	// Toggling.
+	ON,
+	OFF
+};
+static bool expectAssign(ResourceManipulations y) {
+	return
+		y == ResourceManipulations::FILL ||
+		y == ResourceManipulations::DEF  ||
+		y == ResourceManipulations::LOAD ||
+		y == ResourceManipulations::SET;
+}
+static bool expectAssign(const std::string &y) {
+	return
+		y == "fill" ||
+		y == "def"  ||
+		y == "load" ||
+		y == "set";
+}
+static bool expectBrackets(ResourceManipulations y) {
+	switch (y) {
+	case ResourceManipulations::FILL:       // Fall through.
+	case ResourceManipulations::DEF:        // Fall through.
+	case ResourceManipulations::LOAD:       // Fall through.
+	case ResourceManipulations::GET:        // Fall through.
+	case ResourceManipulations::SET:        // Fall through.
+	case ResourceManipulations::LEN:        // Fall through.
+	case ResourceManipulations::GET_WIDTH:  // Fall through.
+	case ResourceManipulations::GET_HEIGHT:
+		return true;
+	default:
+		return false;
+	}
+}
+
+enum class SerialManipulations : unsigned {
+	NONE,
+	ASYNC,
+	SYNC
+};
+
+}
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
+** Structure of features
+*/
+
+namespace GBBASIC {
+
+FeatureUsages::FeatureUsages() {
+}
+
+struct BorderFrameResources {
+	bool enabled = false;
+	bool serialized = false;
+	Image::Ptr image = nullptr;
+	UInt8 paletteBank = 0;
+	UInt16 paletteAddress = 0;
+	UInt16 paletteSize = 0;
+	UInt8 tilesBank = 0;
+	UInt16 tilesAddress = 0;
+	UInt16 tilesSize = 0;
+	UInt8 mapBank = 0;
+	UInt16 mapAddress = 0;
+	UInt16 mapSize = 0;
+	long long interval = 0;
+
+	BorderFrameResources() {
+	}
+	BorderFrameResources(bool e, const Image::Ptr &img) : enabled(e), image(img) {
+	}
+};
+
+struct SuperPaletteResources {
+	bool enabled = false;
+	bool serialized = false;
+	Options::SuperFeatures::Palettes palettes;
+	UInt8 palettesBank;
+	UInt16 palettesAddress;
+	UInt16 palettesSize = 0;
+	long long interval = 0;
+
+	SuperPaletteResources() {
+	}
+	SuperPaletteResources(bool e, const Options::SuperFeatures::Palettes &plt) : enabled(e), palettes(plt) {
 	}
 };
 
@@ -3423,7 +3369,7 @@ void IToken::destroy(IToken* ptr) {
 
 /*
 ** {===========================================================================
-** Node interface
+** Node interfaces
 */
 
 namespace GBBASIC {
@@ -3738,6 +3684,119 @@ Select &Select::fail(void) {
 */
 
 namespace GBBASIC {
+
+struct Counter {
+	typedef std::shared_ptr<Counter> Ptr;
+
+	int value = 0;
+	int max = 0;
+
+	Counter() {
+	}
+	Counter(int val) : value(val), max(val) {
+	}
+	Counter(const Counter &other) : value(other.value), max(other.max) {
+	}
+
+	Counter &operator = (const Counter &other) {
+		value = other.value;
+		max = other.max;
+
+		return *this;
+	}
+
+	bool operator == (const Counter &other) const {
+		return
+			value == other.value &&
+			max == other.max;
+	}
+	bool operator != (const Counter &other) const {
+		return
+			value != other.value ||
+			max != other.max;
+	}
+
+	Counter operator + (const Counter &other) const {
+		return Counter(value + other.value);
+	}
+	Counter operator + (int other) const {
+		return Counter(value + other);
+	}
+	Counter operator - (const Counter &other) const {
+		return Counter(value - other.value);
+	}
+	Counter operator - (int other) const {
+		return Counter(value - other);
+	}
+	Counter &operator += (const Counter &other) {
+		value += other.value;
+		if (value > max)
+			max = value;
+
+		return *this;
+	}
+	Counter &operator += (int other) {
+		value += other;
+		if (value > max)
+			max = value;
+
+		return *this;
+	}
+	Counter &operator -= (const Counter &other) {
+		value -= other.value;
+
+		return *this;
+	}
+	Counter &operator -= (int other) {
+		value -= other;
+
+		return *this;
+	}
+
+	operator int (void) const {
+		return value;
+	}
+};
+static Counter &operator ++ (Counter &val) {
+	val += 1;
+
+	return val;
+}
+static Counter &operator -- (Counter &val) {
+	val -= 1;
+
+	return val;
+}
+static Counter operator ++ (Counter &val, int) {
+	const Counter old(val);
+	val += 1;
+
+	return old;
+}
+static Counter operator -- (Counter &val, int) {
+	const Counter old(val);
+	val -= 1;
+
+	return old;
+}
+
+#ifndef COUNTER_GUARD
+#	define COUNTER_GUARD(CTX, VAR) Counter GBBASIC_UNIQUE_NAME(__COUNTERGUARD__); Counter &(VAR) = ((CTX).stackFootprint ? *(CTX).stackFootprint : GBBASIC_UNIQUE_NAME(__COUNTERGUARD__))
+#endif /* COUNTER_GUARD */
+#ifndef CHECK_COUNTER
+#	define CHECK_COUNTER(CTX, ON_ERROR) \
+		do { \
+			if ((CTX).stackFootprint && (CTX).stackFootprint->max > (CTX).stackSize) { \
+				THROW_STACK_OVERFLOW((ON_ERROR), !(CTX).strictOn); \
+			} \
+		} while (false)
+#endif /* CHECK_COUNTER */
+#ifndef INC_COUNTER
+#	define INC_COUNTER(COUNTER, AMOUNT) do { if ((AMOUNT) > 0) { (COUNTER) += (AMOUNT); } } while (false);
+#endif /* INC_COUNTER */
+#ifndef DEC_COUNTER
+#	define DEC_COUNTER(COUNTER, AMOUNT) do { if ((AMOUNT) > 0) { GBBASIC_ASSERT((COUNTER) - (AMOUNT) >= 0 && "Wrong data."); (COUNTER) -= (AMOUNT); } } while (false);
+#endif /* DEC_COUNTER */
 
 #if true
 #ifndef THROW_AMBIGUOUS_PROGRAM_POINT
