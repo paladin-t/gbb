@@ -666,7 +666,7 @@ private:
 	bool _toCompile = false;
 	CompilingParameters _compilingParameters;
 	CompilingErrors::Ptr _compilingErrors = nullptr;
-	Bytes::Ptr _compilingOutput = nullptr;
+	GBBASIC::Program::Compiled _compilingOutput;
 
 #if defined GBBASIC_OS_HTML
 	bool _hadUnsavedChanges = false;
@@ -1037,6 +1037,7 @@ public:
 		const Text::Dictionary &arguments
 	);
 
+	void clearCompiledData(void);
 	void joinCompiling(void);
 	/**
 	 * @brief Compiles for running and exporting.

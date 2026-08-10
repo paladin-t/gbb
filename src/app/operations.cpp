@@ -4767,6 +4767,8 @@ promise::Promise Operations::projectRun(Window* wnd, Renderer* rnd, Workspace* w
 				ws->canvasDevice()->close(nullptr);
 				ws->canvasDevice(nullptr);
 
+				ws->clearCompiledData();
+
 				ws->category(Workspace::Categories::CONSOLE);
 
 				df.reject();
@@ -4877,6 +4879,8 @@ promise::Promise Operations::projectStop(Window*, Renderer*, Workspace* ws) {
 				ws->canvasTexture(nullptr);
 			if (ws->canvasTextureForBorderFrame())
 				ws->canvasTextureForBorderFrame(nullptr);
+
+			ws->clearCompiledData();
 
 			if (!traceless)
 				ws->print("End running.");

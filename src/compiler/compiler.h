@@ -936,6 +936,8 @@ struct Program {
 		 * @brief The effective data size.
 		 */
 		Pipeline::Size effectiveSize;
+
+		Compiled() = default;
 	};
 
 	/**< Input. */
