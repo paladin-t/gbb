@@ -1269,6 +1269,30 @@ TracePoint::TracePoint(const RomLocation &rom, const TextLocation &code) :
 {
 }
 
+int TracePoint::compare(const TracePoint &other) const {
+	if (inRom.bank < other.inRom.bank)
+		return -1;
+	else if (inRom.bank > other.inRom.bank)
+		return 1;
+
+	if (inRom.address < other.inRom.address)
+		return -1;
+	else if (inRom.address > other.inRom.address)
+		return 1;
+
+	if ((unsigned)inRom.type < (unsigned)other.inRom.type)
+		return -1;
+	else if ((unsigned)inRom.type > (unsigned)other.inRom.type)
+		return 1;
+
+	if (inRom.size < other.inRom.size)
+		return -1;
+	else if (inRom.size > other.inRom.size)
+		return 1;
+
+	return 0;
+}
+
 struct SourceLocation {
 	int page = 0;
 	int sub = 0;
@@ -44130,8 +44154,15 @@ private:
 		GBBASIC_ASSERT(context.size() == 1 && "Corrupt stack.");
 
 		// Finish.
-		if (tracePoints)
+		if (tracePoints) {
 			tracePoints->shrink_to_fit();
+			std::sort(
+				tracePoints->begin(), tracePoints->end(),
+				[] (const TracePoint &l, const TracePoint &r) -> bool {
+					return l.compare(r) < 0;
+				}
+			);
+		}
 
 		*allocations = context.top().allocations();
 		*featureUsages = context.top().featureUsages();

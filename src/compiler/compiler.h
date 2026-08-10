@@ -256,9 +256,15 @@ struct TextLocation {
  * @brief Location for ROM allocations.
  */
 struct RomLocation {
+	enum class Types {
+		BASIC,
+		ASM
+	};
+
 	int bank = 0;
 	int address = 0;
 	int size = 0;
+	Types type = Types::BASIC;
 
 	RomLocation();
 	RomLocation(int b, int a);
@@ -308,6 +314,8 @@ struct TracePoint {
 
 	TracePoint();
 	TracePoint(const RomLocation &rom, const TextLocation &code);
+
+	int compare(const TracePoint &other) const;
 };
 
 }
