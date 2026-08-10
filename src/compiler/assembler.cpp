@@ -398,12 +398,20 @@ public:
 				}
 			}
 
+			const IToken::Ptr &lntk = tokens[lnBegin];
+			const TextLocation lnSrc(lntk->begin().page, (int)lntk->data(), lntk->begin().column);
+			const int lnStart = context.addressCursor;
+
 			bool isRet = false;
 			bool isInst = false;
 			if (!assembleLine(bytes, context, tokens, lnBegin, lnEnd, isRet, isInst, options))
 				return false;
 			if (!context.hasRet && isRet)
 				context.hasRet = true;
+
+			const int lnEmitted = context.addressCursor - lnStart;
+			if (lnEmitted > 0)
+				context.instructionTraces.push_back(Context::InstructionTrace(lnStart, lnEmitted, lnSrc));
 		}
 
 		// Finish.
@@ -1166,6 +1174,16 @@ Assembler::Context::LabelRef::LabelRef(int tkidx, const std::string &lbl, int of
 	label(lbl),
 	offset(off),
 	type(y)
+{
+}
+
+Assembler::Context::InstructionTrace::InstructionTrace() {
+}
+
+Assembler::Context::InstructionTrace::InstructionTrace(int off, int sz, const TextLocation &src) :
+	offset(off),
+	size(sz),
+	source(src)
 {
 }
 

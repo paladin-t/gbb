@@ -15999,6 +15999,7 @@ private:
 	TextLocation _inCode;
 	RomLocation _inRom;
 	DeferAction _namingAction = nullptr;
+	DeferAction _tracingAction = nullptr;
 	DeferAction _informationCollectingAction = nullptr;
 
 public:
@@ -16092,6 +16093,7 @@ public:
 			_asmCtx = Assembler::Context();
 			_nonbanked = false;
 			_namingAction = nullptr;
+			_tracingAction = nullptr;
 			_informationCollectingAction = nullptr;
 
 			// Consume the tokens.
@@ -16206,6 +16208,19 @@ public:
 				THROW_ASM_NO_RET_INSTRUCTION_FOUND_IN_ASM_BLOCK(onError);
 			}
 			const int n = (int)asmBytes->count();
+
+			// Fill trace points for inline assembly.
+			if (context.top().tracePoints) {
+				_tracingAction = [this, &context, bank, address] (void) -> void {
+					Context &ctx = context.top();
+
+					for (const Assembler::Context::InstructionTrace &trace : _asmCtx.instructionTraces) {
+						RomLocation rom(bank, address + trace.offset, trace.size);
+						rom.type = RomLocation::Types::ASM;
+						ctx.tracePoints->push_back(TracePoint(rom, trace.source));
+					}
+				};
+			}
 
 			// Emit the VM instructions.
 			if (isOnVbl) { // Specialized for "ON VBL".
@@ -16322,6 +16337,10 @@ public:
 			if (_namingAction) {
 				_namingAction();
 				_namingAction = nullptr;
+			}
+			if (_tracingAction) {
+				_tracingAction();
+				_tracingAction = nullptr;
 			}
 			if (_informationCollectingAction) {
 				_informationCollectingAction();

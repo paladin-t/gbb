@@ -75,11 +75,22 @@ public:
 			LabelRef();
 			LabelRef(int tkidx, const std::string &lbl, int off, Types y);
 		};
+		struct InstructionTrace {
+			typedef std::vector<InstructionTrace> Array;
+
+			int offset = 0; // Offset within the assembly block.
+			int size = 0; // Emitted size in bytes.
+			TextLocation source; // Source location of the instruction.
+
+			InstructionTrace();
+			InstructionTrace(int off, int sz, const TextLocation &src);
+		};
 
 		int size = 0; // Current emitted size.
 		int addressCursor = 0; // Current emitting address.
 		LabeledDestination::Dictionary labels;
 		LabelRef::Array labelRefs;
+		InstructionTrace::Array instructionTraces;
 		bool hasRet = false;
 
 		Context();
