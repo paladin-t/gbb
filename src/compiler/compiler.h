@@ -304,6 +304,29 @@ struct RamLocation {
 };
 
 /**
+ * @brief Symbol table.
+ */
+struct SymbolTable {
+private:
+	typedef std::map<std::string, RomLocation> Dictionary;
+
+private:
+	Dictionary _dictionary;
+
+public:
+	SymbolTable();
+
+	bool parseSymbols(const std::string &symbols);
+	bool parseAliases(const std::string &aliases);
+	bool add(const std::string &key, const RomLocation &val);
+	bool add(const std::string &key, int bank, int address);
+	bool add(const std::string &key, int bank, int address, RomLocation::Types y);
+	int merge(const SymbolTable &other);
+	const RomLocation* find(const std::string &key) const;
+	const RomLocation* fuzzy(const std::string &key, std::string &gotKey) const;
+};
+
+/**
  * @brief Trace point that maps from ROM location to source location.
  */
 struct TracePoint {
@@ -893,6 +916,10 @@ struct Program {
 		 * @brief The RAM allocations on the heap.
 		 */
 		RamLocation::Dictionary allocations;
+		/**
+		 * @brief Symbol table.
+		 */
+		SymbolTable symbols;
 		/**
 		 * @brief ROM allocation points.
 		 */

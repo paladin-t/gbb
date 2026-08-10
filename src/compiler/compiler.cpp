@@ -1261,6 +1261,186 @@ RamLocation::RamLocation(Types y, int a, int s, Usages u, const TextLocation &tx
 {
 }
 
+SymbolTable::SymbolTable() {
+}
+
+bool SymbolTable::parseSymbols(const std::string &symbols) {
+	// Prepare.
+	std::string symbols_ = symbols;
+
+	// Uniform new line characters to '\n'.
+	symbols_ = Text::replace(symbols_, "\r\n", "\n");
+	symbols_ = Text::replace(symbols_, "\r", "\n");
+
+	// Split the symbol data into lines.
+	Text::Array lines;
+	const Text::Array lines_ = Text::split(symbols_, "\n");
+	for (std::string ln : lines_) {
+		const size_t idx = Text::indexOf(ln, ";");
+		if (idx != std::string::npos)
+			ln = ln.substr(0, idx);
+
+		ln = Text::trim(ln);
+
+		if (ln.empty())
+			continue;
+
+		lines.push_back(ln);
+	}
+
+	// Parse the symbol lines.
+	for (const std::string &ln : lines) {
+		const Text::Array parts = Text::split(ln, " ");
+		if (parts.size() != 2)
+			continue;
+
+		const std::string &address_ = parts.front();
+		std::string name = parts.back();
+		const Text::Array addressParts = Text::split(address_, ":");
+		if (addressParts.size() != 2)
+			continue;
+
+		const std::string &bank = addressParts.front();
+		const std::string &address = addressParts.back();
+
+		if (Text::startsWith(name, "_", true))
+			name = name.substr(1 /* after "_" */);
+		const int nbank = std::stoi(bank, 0, 16);
+		const int naddress = std::stoi(address, 0, 16);
+		const RomLocation romLocation(nbank, naddress);
+		_dictionary.insert(std::make_pair(name, romLocation));
+	}
+
+	// Finish.
+	return true;
+}
+
+bool SymbolTable::parseAliases(const std::string &aliases) {
+	rapidjson::Document doc;
+	if (!Json::fromString(doc, aliases.c_str()))
+		return false;
+	if (!doc.IsObject())
+		return false;
+
+	for (rapidjson::Value::ConstMemberIterator it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
+		const rapidjson::Value &jkey = it->name;
+		const rapidjson::Value &jval = it->value;
+
+		const std::string name = jkey.GetString();
+		if (!jval.IsObject()) {
+			fprintf(stderr, "Object expected for the alias of the \"%s\" symbol.\n", name.c_str());
+
+			continue;
+		}
+
+		std::string ref;
+		int offset = 0;
+		if (!Jpath::get(jval, ref, "ref")) {
+			fprintf(stderr, "Cannot read the \"ref\" field of the alias of the \"%s\" symbol.\n", name.c_str());
+
+			continue;
+		}
+		if (!Jpath::get(jval, offset, "offset")) {
+			fprintf(stderr, "Cannot read the \"offset\" field of the alias of the \"%s\" symbol.\n", name.c_str());
+
+			continue;
+		}
+
+		const RomLocation* refLocation = find(ref);
+		if (!refLocation) {
+			fprintf(stderr, "Cannot find the \"%s\" ref alias of the \"%s\" symbol.\n", ref.c_str(), name.c_str());
+
+			continue;
+		}
+
+		const int nbank = refLocation->bank;
+		const int naddress = refLocation->address + offset;
+		const RomLocation romLocation(nbank, naddress);
+		_dictionary.insert(std::make_pair(name, romLocation));
+	}
+
+	return true;
+}
+
+bool SymbolTable::add(const std::string &key, const RomLocation &val) {
+	auto ret = _dictionary.insert(std::make_pair(key, val));
+
+	return ret.second;
+}
+
+bool SymbolTable::add(const std::string &key, int bank, int address) {
+	const RomLocation romLocation(bank, address);
+
+	return add(key, romLocation);
+}
+
+bool SymbolTable::add(const std::string &key, int bank, int address, RomLocation::Types y) {
+	RomLocation romLocation(bank, address);
+	romLocation.type = y;
+
+	return add(key, romLocation);
+}
+
+int SymbolTable::merge(const SymbolTable &other) {
+	int result = 0;
+	for (Dictionary::const_iterator it = other._dictionary.begin(); it != other._dictionary.end(); ++it) {
+		if (_dictionary.find(it->first) != _dictionary.end()) {
+			GBBASIC_ASSERT(false && "Wrong data.");
+
+			continue;
+		}
+		_dictionary.insert(*it);
+		++result;
+	}
+
+	return result;
+}
+
+const RomLocation* SymbolTable::find(const std::string &key) const {
+	Dictionary::const_iterator it = _dictionary.find(key);
+	if (it == _dictionary.end())
+		return nullptr;
+
+	return &it->second;
+}
+
+const RomLocation* SymbolTable::fuzzy(const std::string &key, std::string &gotKey) const {
+	gotKey.clear();
+
+	if (_dictionary.empty())
+		return nullptr;
+
+	double fuzzyScore = 0.0;
+	Dictionary::const_iterator fuzzyIt = _dictionary.end();
+	for (Dictionary::const_iterator it = _dictionary.begin(); it != _dictionary.end(); ++it) {
+		const std::string &name = it->first;
+		if (name == key) {
+			gotKey = name;
+
+			return &it->second;
+		}
+
+		if (name.empty())
+			continue;
+
+		const double score = rapidfuzz::fuzz::ratio(name, key);
+		if (score < FUZZY_MATCHING_SCORE_THRESHOLD)
+			continue;
+		if (score > fuzzyScore) {
+			fuzzyScore = score;
+			fuzzyIt = it;
+		}
+	}
+
+	if (fuzzyIt != _dictionary.end()) {
+		gotKey = fuzzyIt->first;
+
+		return &fuzzyIt->second;
+	}
+
+	return nullptr;
+}
+
 TracePoint::TracePoint() {
 }
 
@@ -1354,168 +1534,6 @@ struct SourceLocation {
 		}
 
 		return result;
-	}
-};
-
-struct SymbolTable {
-private:
-	typedef std::map<std::string, RomLocation> Dictionary;
-
-private:
-	Dictionary _dictionary;
-
-public:
-	SymbolTable() {
-	}
-
-	bool parseSymbols(const std::string &symbols) {
-		// Prepare.
-		std::string symbols_ = symbols;
-
-		// Uniform new line characters to '\n'.
-		symbols_ = Text::replace(symbols_, "\r\n", "\n");
-		symbols_ = Text::replace(symbols_, "\r", "\n");
-
-		// Split the symbol data into lines.
-		Text::Array lines;
-		const Text::Array lines_ = Text::split(symbols_, "\n");
-		for (std::string ln : lines_) {
-			const size_t idx = Text::indexOf(ln, ";");
-			if (idx != std::string::npos)
-				ln = ln.substr(0, idx);
-
-			ln = Text::trim(ln);
-
-			if (ln.empty())
-				continue;
-
-			lines.push_back(ln);
-		}
-
-		// Parse the symbol lines.
-		for (const std::string &ln : lines) {
-			const Text::Array parts = Text::split(ln, " ");
-			if (parts.size() != 2)
-				continue;
-
-			const std::string &address_ = parts.front();
-			std::string name = parts.back();
-			const Text::Array addressParts = Text::split(address_, ":");
-			if (addressParts.size() != 2)
-				continue;
-
-			const std::string &bank = addressParts.front();
-			const std::string &address = addressParts.back();
-
-			if (Text::startsWith(name, "_", true))
-				name = name.substr(1 /* after "_" */);
-			const int nbank = std::stoi(bank, 0, 16);
-			const int naddress = std::stoi(address, 0, 16);
-			const RomLocation romLocation(nbank, naddress);
-			_dictionary.insert(std::make_pair(name, romLocation));
-		}
-
-		// Finish.
-		return true;
-	}
-	bool parseAliases(const std::string &aliases) {
-		rapidjson::Document doc;
-		if (!Json::fromString(doc, aliases.c_str()))
-			return false;
-		if (!doc.IsObject())
-			return false;
-
-		for (rapidjson::Value::ConstMemberIterator it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
-			const rapidjson::Value &jkey = it->name;
-			const rapidjson::Value &jval = it->value;
-
-			const std::string name = jkey.GetString();
-			if (!jval.IsObject()) {
-				fprintf(stderr, "Object expected for the alias of the \"%s\" symbol.\n", name.c_str());
-
-				continue;
-			}
-
-			std::string ref;
-			int offset = 0;
-			if (!Jpath::get(jval, ref, "ref")) {
-				fprintf(stderr, "Cannot read the \"ref\" field of the alias of the \"%s\" symbol.\n", name.c_str());
-
-				continue;
-			}
-			if (!Jpath::get(jval, offset, "offset")) {
-				fprintf(stderr, "Cannot read the \"offset\" field of the alias of the \"%s\" symbol.\n", name.c_str());
-
-				continue;
-			}
-
-			const RomLocation* refLocation = find(ref);
-			if (!refLocation) {
-				fprintf(stderr, "Cannot find the \"%s\" ref alias of the \"%s\" symbol.\n", ref.c_str(), name.c_str());
-
-				continue;
-			}
-
-			const int nbank = refLocation->bank;
-			const int naddress = refLocation->address + offset;
-			const RomLocation romLocation(nbank, naddress);
-			_dictionary.insert(std::make_pair(name, romLocation));
-		}
-
-		return true;
-	}
-	bool add(const std::string &key, const RomLocation &val) {
-		auto ret = _dictionary.insert(std::make_pair(key, val));
-
-		return ret.second;
-	}
-	bool add(const std::string &key, int bank, int address) {
-		const RomLocation romLocation(bank, address);
-
-		return add(key, romLocation);
-	}
-	const RomLocation* find(const std::string &key) const {
-		Dictionary::const_iterator it = _dictionary.find(key);
-		if (it == _dictionary.end())
-			return nullptr;
-
-		return &it->second;
-	}
-	const RomLocation* fuzzy(const std::string &key, std::string &gotKey) const {
-		gotKey.clear();
-
-		if (_dictionary.empty())
-			return nullptr;
-
-		double fuzzyScore = 0.0;
-		Dictionary::const_iterator fuzzyIt = _dictionary.end();
-		for (Dictionary::const_iterator it = _dictionary.begin(); it != _dictionary.end(); ++it) {
-			const std::string &name = it->first;
-			if (name == key) {
-				gotKey = name;
-
-				return &it->second;
-			}
-
-			if (name.empty())
-				continue;
-
-			const double score = rapidfuzz::fuzz::ratio(name, key);
-			if (score < FUZZY_MATCHING_SCORE_THRESHOLD)
-				continue;
-			if (score > fuzzyScore) {
-				fuzzyScore = score;
-				fuzzyIt = it;
-			}
-		}
-
-		if (fuzzyIt != _dictionary.end()) {
-			gotKey = fuzzyIt->first;
-
-			return &fuzzyIt->second;
-		}
-
-		return nullptr;
 	}
 };
 
@@ -16173,7 +16191,7 @@ public:
 				_namingAction = [&context, name, bank, address] (void) -> void {
 					Context &ctx = context.top();
 
-					ctx.namedAssemblyBlocks->add(name, bank, address);
+					ctx.namedAssemblyBlocks->add(name, bank, address, RomLocation::Types::ASM);
 				};
 			}
 
@@ -45934,6 +45952,7 @@ bool compile(Program &program, const Options &options) {
 		RamLocation::Dictionary allocations;
 		Text::Array dataSequenceInformation;
 		Text::Array assembledInformation;
+		TracePoint::Array tracePoints;
 		FeatureUsages featureUsages;
 		BorderFrameResources borderFrameResources(superFeatures.enabled, superFeatures.border);
 		SuperPaletteResources superPaletteResources(superFeatures.enabled, superFeatures.palettes);
@@ -45944,7 +45963,7 @@ bool compile(Program &program, const Options &options) {
 				&allocations,
 				&dataSequenceInformation,
 				&assembledInformation,
-				&program.compiled.tracePoints,
+				&tracePoints,
 				&featureUsages,
 				borderFrameResources, superPaletteResources,
 				&compiledSize,
@@ -45952,6 +45971,7 @@ bool compile(Program &program, const Options &options) {
 			)
 		) {
 			std::swap(program.compiled.allocations, allocations);
+			std::swap(program.compiled.tracePoints, tracePoints);
 			std::swap(program.compiled.featureUsages, featureUsages);
 
 			onError_("Failed to compile the source code.", false, -1, -1, -1);
@@ -45962,6 +45982,7 @@ bool compile(Program &program, const Options &options) {
 		const int fontSize = pipeline->effectiveSize().font();
 		const int codeSize = compiledSize - fontSize; // Minus font size because it also counts in the `bytes`.
 		std::swap(program.compiled.allocations, allocations);
+		std::swap(program.compiled.tracePoints, tracePoints);
 		std::swap(program.compiled.featureUsages, featureUsages);
 		program.compiled.effectiveSize.addCode(codeSize);
 		program.compiled.effectiveSize += pipeline->effectiveSize();
@@ -46036,6 +46057,9 @@ bool compile(Program &program, const Options &options) {
 
 			break;
 		}
+
+		program.compiled.symbols.merge(compiler.symbols());
+		program.compiled.symbols.merge(compiler.namedAssemblyBlocks());
 
 		program.compiled.bytes = programmer.bytes();
 		onPrint("Succeeded to program the ROM.");
