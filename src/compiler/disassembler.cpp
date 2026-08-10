@@ -78,7 +78,7 @@ public:
 		};
 
 		// Disassemble.
-		const int size = bytes->count();
+		const int size = (int)bytes->count();
 		const int base = (options.bank == 0) ? 0 : options.startAddress;
 		int bank = options.bank;
 		int address = base + options.addressCursor;
