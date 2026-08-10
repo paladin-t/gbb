@@ -231,10 +231,12 @@ struct TextLocation {
 	int page = 0;
 	int row = 0;
 	int column = 0;
+	std::string label;
 
 	TextLocation();
 	TextLocation(int p);
 	TextLocation(int p, int r, int c);
+	TextLocation(int p, int r, int c, const std::string &lbl);
 
 	bool operator == (const TextLocation &other) const;
 	bool operator != (const TextLocation &other) const;
@@ -883,6 +885,10 @@ struct Program {
 		 * @brief The RAM allocations on the heap.
 		 */
 		RamLocation::Dictionary allocations;
+		/**
+		 * @brief ROM allocation points.
+		 */
+		TracePoint::Array tracePoints;
 		/**
 		 * @brief Feature usages. Filled by compiler.
 		 */
