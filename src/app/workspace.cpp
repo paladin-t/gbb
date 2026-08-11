@@ -2142,7 +2142,7 @@ class Debugger* Workspace::initializeCodeDebugger(class Window* /* wnd */, class
 		return codeDebugger();
 
 	codeDebugger(Debugger::create());
-	codeDebugger()->open(rnd, theme(), canvasDevice().get());
+	codeDebugger()->open(rnd, this, theme(), canvasDevice().get());
 
 	codeDebugger()->clearBreakpoints();
 	const Project::Ptr &prj = currentProject();
@@ -2167,11 +2167,6 @@ class Debugger* Workspace::initializeCodeDebugger(class Window* /* wnd */, class
 				codeDebugger()->setBreakpoint(i, line + 1, enabled); // 1-based.
 			}
 
-			// TODO: DBG.
-			//const GBBASIC::RamLocation::Dictionary &allocations = _compilingOutput.allocations;
-			//const GBBASIC::SymbolTable &symbols = _compilingOutput.symbols;
-			//const GBBASIC::TracePoint::Array &tracePoints = _compilingOutput.tracePoints;
-			//const Bytes::Ptr &bytes = _compilingOutput.bytes;
 			codeDebugger()->start();
 		}
 	}
@@ -6042,6 +6037,10 @@ void Workspace::upgrade(
 		evt.type = SDL_QUIT;
 		SDL_PushEvent(&evt);
 	}
+}
+
+const GBBASIC::Program::Compiled &Workspace::getCompiledData(void) const {
+	return _compilingOutput;
 }
 
 void Workspace::clearCompiledData(void) {

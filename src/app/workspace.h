@@ -1044,6 +1044,7 @@ public:
 		const Text::Dictionary &arguments
 	);
 
+	const GBBASIC::Program::Compiled &getCompiledData(void) const;
 	void clearCompiledData(void);
 	void joinCompiling(void);
 	/**

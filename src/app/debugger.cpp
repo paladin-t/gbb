@@ -9,6 +9,7 @@
 #include "debugger.h"
 #include "theme.h"
 #include "widgets.h"
+#include "workspace.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "../../lib/imgui/imgui_internal.h"
 
@@ -24,6 +25,7 @@ private:
 		float startY = 0;
 		int safeHeight = 0;
 	} _options;
+	Workspace* _workspace = nullptr; // Foreign.
 	Device* _device = nullptr; // Foreign.
 
 	bool _started = false;
@@ -38,11 +40,12 @@ public:
 		close();
 	}
 
-	virtual bool open(class Renderer* rnd, class Theme* /* theme */, class Device* device) override {
+	virtual bool open(class Renderer* rnd, class Workspace* ws, class Theme* /* theme */, class Device* device) override {
 		if (_opened)
 			return true;
 
 		(void)rnd;
+		_workspace = ws;
 		_device = device;
 
 		_opened = true;
@@ -85,6 +88,13 @@ public:
 
 	virtual void start(void) override {
 		_started = true;
+
+		// TODO: DBG.
+		//const GBBASIC::Program::Compiled &compiled = _workspace->getCompiledData();
+		//const GBBASIC::RamLocation::Dictionary &allocations = compiled.allocations;
+		//const GBBASIC::SymbolTable &symbols = compiled.symbols;
+		//const GBBASIC::TracePoint::Array &tracePoints = compiled.tracePoints;
+		//const Bytes::Ptr &bytes = compiled.bytes;
 	}
 	virtual void stop(void) override {
 		_started = false;
