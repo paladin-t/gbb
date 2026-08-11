@@ -5187,6 +5187,8 @@ void PreferencesPopupBox::update(Workspace*) {
 
 				TextUnformatted(_theme->windowPreferences_Debug_Debugger());
 
+				Checkbox(_theme->windowPreferences_Debug_EnableCodeDebugger(), &_settingsShadow.debugCodeInspectorEnabled);
+
 				Checkbox(_theme->windowPreferences_Debug_EnableVramDebugger(), &_settingsShadow.debugVramInspectorEnabled);
 
 				Separator();

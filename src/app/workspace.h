@@ -448,6 +448,7 @@ public:
 		TO_LOCATION,
 		COMPILE,
 		RUN,
+		TOGGLE_CODE_DEBUGGER,
 		TOGGLE_VRAM_DEBUGGER,
 		COUNT
 	};
@@ -646,7 +647,7 @@ public:
 
 	GBBASIC_PROPERTY(DebuggerMessages, onscreenDebuggerMessages)
 	GBBASIC_FIELD(Mutex, onscreenDebuggerLock)
-	GBBASIC_PROPERTY_READONLY_PTR(class Debugger, debugger)
+	GBBASIC_PROPERTY_READONLY_PTR(class Debugger, codeDebugger)
 	GBBASIC_PROPERTY_READONLY_PTR(class VramDebugger, vramDebugger)
 	GBBASIC_PROPERTY(bool, vramDebuggerPreviewPaletteBits)
 	GBBASIC_PROPERTY(bool, vramDebuggerShowGrids)
@@ -749,8 +750,8 @@ public:
 	virtual void stop(class Window* wnd, class Renderer* rnd) override;
 
 	virtual void breakpointHit(void) override;
-	class Debugger* initializeDebugger(class Window* wnd, class Renderer* rnd);
-	void disposeDebugger(void);
+	class Debugger* initializeCodeDebugger(class Window* wnd, class Renderer* rnd);
+	void disposeCodeDebugger(void);
 
 	class VramDebugger* initializeVramDebugger(class Window* wnd, class Renderer* rnd);
 	void disposeVramDebugger(void);

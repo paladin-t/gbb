@@ -580,8 +580,8 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 	searchResultHeight(0.0f);
 	searchResultResizing(false);
 
-	// Initialize the debugger states.
-	debugger(nullptr);
+	// Initialize the debuggers.
+	codeDebugger(nullptr);
 
 	vramDebugger(nullptr);
 	vramDebuggerPreviewPaletteBits(true);
@@ -2135,23 +2135,23 @@ void Workspace::breakpointHit(void) {
 	// TODO: DBG.
 }
 
-class Debugger* Workspace::initializeDebugger(class Window* /* wnd */, class Renderer* rnd) {
-	if (debugger())
-		return debugger();
+class Debugger* Workspace::initializeCodeDebugger(class Window* /* wnd */, class Renderer* rnd) {
+	if (codeDebugger())
+		return codeDebugger();
 
-	debugger(Debugger::create());
-	debugger()->open(rnd, theme());
+	codeDebugger(Debugger::create());
+	codeDebugger()->open(rnd, theme());
 
-	return debugger();
+	return codeDebugger();
 }
 
-void Workspace::disposeDebugger(void) {
-	if (!debugger())
+void Workspace::disposeCodeDebugger(void) {
+	if (!codeDebugger())
 		return;
 
-	debugger()->close();
-	Debugger::destroy(debugger());
-	debugger(nullptr);
+	codeDebugger()->close();
+	Debugger::destroy(codeDebugger());
+	codeDebugger(nullptr);
 }
 
 class VramDebugger* Workspace::initializeVramDebugger(class Window* /* wnd */, class Renderer* rnd) {
@@ -2966,6 +2966,15 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 			}
 
 			toRun(wnd, rnd);
+		}
+
+		break;
+	case ExternalEventTypes::TOGGLE_CODE_DEBUGGER: {
+			fprintf(stdout, "SDL: TOGGLE_CODE_DEBUGGER.\n");
+
+			const bool on = !!(int)(intptr_t)evt->user.data1;
+
+			settings().debugCodeInspectorEnabled = on;
 		}
 
 		break;
@@ -6808,6 +6817,7 @@ bool Workspace::loadConfig(Window*, Renderer*, const rapidjson::Document &doc) {
 
 	Jpath::get(doc, settings().debugShowAstEnabled, "debug", "show_ast", "enabled");
 	Jpath::get(doc, settings().debugOnscreenShellEnabled, "debug", "onscreen_shell", "enabled");
+	Jpath::get(doc, settings().debugCodeInspectorEnabled, "debug", "code_inspector", "enabled");
 	Jpath::get(doc, settings().debugVramInspectorEnabled, "debug", "vram_inspector", "enabled");
 	Jpath::get(doc, settings().debugLogEnabled, "debug", "log", "enabled");
 	if (!Jpath::get(doc, settings().debugLogPath, "debug", "log", "path")) {
@@ -6910,6 +6920,7 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 
 	Jpath::set(doc, doc, settings().debugShowAstEnabled, "debug", "show_ast", "enabled");
 	Jpath::set(doc, doc, settings().debugOnscreenShellEnabled, "debug", "onscreen_shell", "enabled");
+	Jpath::set(doc, doc, settings().debugCodeInspectorEnabled, "debug", "code_inspector", "enabled");
 	Jpath::set(doc, doc, settings().debugVramInspectorEnabled, "debug", "vram_inspector", "enabled");
 	Jpath::set(doc, doc, settings().debugLogEnabled, "debug", "log", "enabled");
 	Jpath::set(doc, doc, settings().debugLogPath, "debug", "log", "path");
@@ -12454,7 +12465,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
 			settings().debugOnscreenShellEnabled,
-			debugger(),
+			codeDebugger(), settings().debugCodeInspectorEnabled,
 			vramDebugger(), settings().debugVramInspectorEnabled, vramDebuggerPreviewPaletteBits(), vramDebuggerShowGrids(),
 			vramDebuggerPreviousOuterWidth(), vramDebuggerWidth(), vramDebuggerHeight(), vramDebuggerResizing(), vramDebuggerResetting(),
 			canvasCursorMode(),

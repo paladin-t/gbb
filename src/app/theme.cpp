@@ -358,6 +358,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Code("Code");
 	menu_CodeAsActor("Code (as Actor)");
 	menu_CodeAsProjectile("Code (as Projectile)");
+	menu_CodeDebugger("Code Debugger");
 	menu_CodeFile("Code File...");
 	menu_Compile("Compile");
 	menu_CompileAndRun("Compile & Run");
@@ -869,6 +870,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Debug_Compiler("Compiler:");
 	windowPreferences_Debug_Debugger("Debugger:");
 	windowPreferences_Debug_Emulation("Emulation:");
+	windowPreferences_Debug_EnableCodeDebugger("Enable code debugger");
 	windowPreferences_Debug_EnableLogging("Enable logging");
 	windowPreferences_Debug_EnableOnscreenDebug("Enable onscreen debug");
 	windowPreferences_Debug_EnableVramDebugger("Enable VRAM debugger");
