@@ -2142,7 +2142,7 @@ class Debugger* Workspace::initializeCodeDebugger(class Window* /* wnd */, class
 		return codeDebugger();
 
 	codeDebugger(Debugger::create());
-	codeDebugger()->open(rnd, theme());
+	codeDebugger()->open(rnd, theme(), canvasDevice().get());
 
 	codeDebugger()->clearBreakpoints();
 	const Project::Ptr &prj = currentProject();
@@ -2161,11 +2161,18 @@ class Debugger* Workspace::initializeCodeDebugger(class Window* /* wnd */, class
 			IList::Ptr lst = Object::as<IList::Ptr>(obj);
 
 			const int m = lst->count();
-			for (int j = 0; j < m; ++j) {
+			for (int j = 0; j < m; j += 2) {
 				const Variant::Int line = (Variant::Int)lst->at(j * 2);
 				const bool enabled = (bool)lst->at(j * 2 + 1);
-				codeDebugger()->setBreakpoint(i, line, enabled);
+				codeDebugger()->setBreakpoint(i, line + 1, enabled); // 1-based.
 			}
+
+			// TODO: DBG.
+			//const GBBASIC::RamLocation::Dictionary &allocations = _compilingOutput.allocations;
+			//const GBBASIC::SymbolTable &symbols = _compilingOutput.symbols;
+			//const GBBASIC::TracePoint::Array &tracePoints = _compilingOutput.tracePoints;
+			//const Bytes::Ptr &bytes = _compilingOutput.bytes;
+			codeDebugger()->start();
 		}
 	}
 
@@ -2175,6 +2182,8 @@ class Debugger* Workspace::initializeCodeDebugger(class Window* /* wnd */, class
 void Workspace::disposeCodeDebugger(void) {
 	if (!codeDebugger())
 		return;
+
+	codeDebugger()->stop();
 
 	codeDebugger()->close();
 	Debugger::destroy(codeDebugger());
@@ -2186,7 +2195,7 @@ class VramDebugger* Workspace::initializeVramDebugger(class Window* /* wnd */, c
 		return vramDebugger();
 
 	vramDebugger(VramDebugger::create());
-	vramDebugger()->open(rnd, theme());
+	vramDebugger()->open(rnd, theme(), canvasDevice().get());
 
 	return vramDebugger();
 }

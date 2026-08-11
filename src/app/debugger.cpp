@@ -24,22 +24,26 @@ private:
 		float startY = 0;
 		int safeHeight = 0;
 	} _options;
+	Device* _device = nullptr; // Foreign.
 
+	bool _started = false;
 	Breakpoint::Array _breakpoints;
 
 public:
 	DebuggerImpl() {
 	}
 	virtual ~DebuggerImpl() {
+		stop();
+
 		close();
 	}
 
-	virtual bool open(class Renderer* rnd, class Theme* /* theme */) override {
+	virtual bool open(class Renderer* rnd, class Theme* /* theme */, class Device* device) override {
 		if (_opened)
 			return true;
 
-		// TODO
 		(void)rnd;
+		_device = device;
 
 		_opened = true;
 
@@ -49,6 +53,7 @@ public:
 		if (!_opened)
 			return true;
 
+		_started = false;
 		_breakpoints.clear();
 
 		_opened = false;
@@ -61,16 +66,28 @@ public:
 	}
 
 	virtual void update(
-		class Renderer* rnd, class Theme* theme, class Device* device
+		class Renderer* rnd, class Theme* theme,
+		bool visible
 	) override {
+		debug();
+
+		if (!visible)
+			return;
+
 		begin(rnd, theme);
 		{
 			ImGui::TextUnformatted("DBG");
 
-			// TODO
-			(void)device;
+			// TODO: DBG.
 		}
 		end(rnd);
+	}
+
+	virtual void start(void) override {
+		_started = true;
+	}
+	virtual void stop(void) override {
+		_started = false;
 	}
 
 	virtual void clearBreakpoints(void) override {
@@ -78,9 +95,24 @@ public:
 	}
 	virtual void setBreakpoint(int page, int ln, bool brk) override {
 		_breakpoints.push_back(Breakpoint(brk, page, ln));
+
+		if (brk)
+			installBreakpoint(page, ln);
+		else
+			uninstallBreakpoint(page, ln);
 	}
 
 private:
+	void debug(void) {
+		// TODO: DBG.
+	}
+	void installBreakpoint(int page, int ln) {
+		// TODO: DBG.
+	}
+	void uninstallBreakpoint(int page, int ln) {
+		// TODO: DBG.
+	}
+
 	void begin(Renderer* /* rnd */, Theme* theme) {
 		_options.startY = ImGui::GetCursorPosY();
 

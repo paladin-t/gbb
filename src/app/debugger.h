@@ -24,21 +24,25 @@ public:
 
 		bool enabled = true;
 		int page = 0;
-		int line = 0;
+		int line = 0; // 1-based.
 
 		Breakpoint();
 		Breakpoint(bool enabled_, int pg, int ln);
 	};
 
 public:
-	virtual bool open(class Renderer* rnd, class Theme* theme) = 0;
+	virtual bool open(class Renderer* rnd, class Theme* theme, class Device* device) = 0;
 	virtual bool close(void) = 0;
 
 	virtual int safeHeight(void) const = 0;
 
 	virtual void update(
-		class Renderer* rnd, class Theme* theme, class Device* device
+		class Renderer* rnd, class Theme* theme,
+		bool visible
 	) = 0;
+
+	virtual void start(void) = 0;
+	virtual void stop(void) = 0;
 
 	virtual void clearBreakpoints(void) = 0;
 	virtual void setBreakpoint(int page, int ln, bool brk) = 0;
