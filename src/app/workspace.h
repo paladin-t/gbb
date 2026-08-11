@@ -646,6 +646,7 @@ public:
 
 	GBBASIC_PROPERTY(DebuggerMessages, onscreenDebuggerMessages)
 	GBBASIC_FIELD(Mutex, onscreenDebuggerLock)
+	GBBASIC_PROPERTY_READONLY_PTR(class Debugger, debugger)
 	GBBASIC_PROPERTY_READONLY_PTR(class VramDebugger, vramDebugger)
 	GBBASIC_PROPERTY(bool, vramDebuggerPreviewPaletteBits)
 	GBBASIC_PROPERTY(bool, vramDebuggerShowGrids)
@@ -748,6 +749,8 @@ public:
 	virtual void stop(class Window* wnd, class Renderer* rnd) override;
 
 	virtual void breakpointHit(void) override;
+	class Debugger* initializeDebugger(class Window* wnd, class Renderer* rnd);
+	void disposeDebugger(void);
 
 	class VramDebugger* initializeVramDebugger(class Window* wnd, class Renderer* rnd);
 	void disposeVramDebugger(void);

@@ -6,6 +6,7 @@
 ** For the latest info, see https://paladin-t.github.io/kits/gbb/
 */
 
+#include "debugger.h"
 #include "device_binjgb.h"
 #include "document.h"
 #include "editor_actor.h"
@@ -580,6 +581,8 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 	searchResultResizing(false);
 
 	// Initialize the debugger states.
+	debugger(nullptr);
+
 	vramDebugger(nullptr);
 	vramDebuggerPreviewPaletteBits(true);
 	vramDebuggerShowGrids(true);
@@ -2130,6 +2133,25 @@ void Workspace::stop(class Window* wnd, class Renderer* rnd) {
 
 void Workspace::breakpointHit(void) {
 	// TODO: DBG.
+}
+
+class Debugger* Workspace::initializeDebugger(class Window* /* wnd */, class Renderer* rnd) {
+	if (debugger())
+		return debugger();
+
+	debugger(Debugger::create());
+	debugger()->open(rnd, theme());
+
+	return debugger();
+}
+
+void Workspace::disposeDebugger(void) {
+	if (!debugger())
+		return;
+
+	debugger()->close();
+	Debugger::destroy(debugger());
+	debugger(nullptr);
 }
 
 class VramDebugger* Workspace::initializeVramDebugger(class Window* /* wnd */, class Renderer* rnd) {
@@ -12432,6 +12454,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
 			settings().debugOnscreenShellEnabled,
+			debugger(),
 			vramDebugger(), settings().debugVramInspectorEnabled, vramDebuggerPreviewPaletteBits(), vramDebuggerShowGrids(),
 			vramDebuggerPreviousOuterWidth(), vramDebuggerWidth(), vramDebuggerHeight(), vramDebuggerResizing(), vramDebuggerResetting(),
 			canvasCursorMode(),
