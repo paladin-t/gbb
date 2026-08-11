@@ -582,6 +582,7 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 
 	// Initialize the debuggers.
 	codeDebugger(nullptr);
+	bringCodeDebuggerToFront(false);
 
 	vramDebugger(nullptr);
 	vramDebuggerPreviewPaletteBits(true);
@@ -2142,6 +2143,31 @@ class Debugger* Workspace::initializeCodeDebugger(class Window* /* wnd */, class
 
 	codeDebugger(Debugger::create());
 	codeDebugger()->open(rnd, theme());
+
+	codeDebugger()->clearBreakpoints();
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			Object::Ptr obj = (Object::Ptr)editor->post(Editable::GET_BREAKPOINTS);
+			IList::Ptr lst = Object::as<IList::Ptr>(obj);
+
+			const int m = lst->count();
+			for (int j = 0; j < m; ++j) {
+				const Variant::Int line = (Variant::Int)lst->at(j * 2);
+				const bool enabled = (bool)lst->at(j * 2 + 1);
+				codeDebugger()->setBreakpoint(i, line, enabled);
+			}
+		}
+	}
 
 	return codeDebugger();
 }
@@ -5798,6 +5824,28 @@ const Text::Array &Workspace::getScenePageNames(void) {
 	}
 
 	return assetPageNames().scene;
+}
+
+void Workspace::toggleBreakpoint(int page, int ln) {
+	const Project::Ptr &prj = currentProject();
+	if (!prj)
+		return;
+
+	CodeAssets::Entry* entry = prj->getCode(page);
+	if (!entry)
+		return;
+
+	Editable* editor = entry->editor;
+	bool brk = false;
+	if (editor) {
+		if (ln < 0)
+			ln = (int)(Variant::Int)editor->post(Editable::GET_CURSOR);
+		brk = !(bool)editor->post(Editable::GET_BREAKPOINT, (Variant::Int)ln);
+		editor->post(Editable::SET_BREAKPOINT, (Variant::Int)ln, brk);
+	}
+
+	if (codeDebugger())
+		codeDebugger()->setBreakpoint(page, ln + 1, brk); // 1-based.
 }
 
 void Workspace::upgrade(
@@ -12466,7 +12514,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
 			settings().debugOnscreenShellEnabled,
-			codeDebugger(), settings().debugCodeInspectorEnabled,
+			codeDebugger(), settings().debugCodeInspectorEnabled, bringCodeDebuggerToFront(),
 			vramDebugger(), settings().debugVramInspectorEnabled, vramDebuggerPreviewPaletteBits(), vramDebuggerShowGrids(),
 			debuggerPreviousOuterWidth(), debuggerWidth(), debuggerHeight(), debuggerResizing(), debuggerResetting(),
 			canvasCursorMode(),

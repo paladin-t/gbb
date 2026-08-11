@@ -25,6 +25,8 @@ private:
 		int safeHeight = 0;
 	} _options;
 
+	Breakpoint::Array _breakpoints;
+
 public:
 	DebuggerImpl() {
 	}
@@ -47,7 +49,7 @@ public:
 		if (!_opened)
 			return true;
 
-		// TODO
+		_breakpoints.clear();
 
 		_opened = false;
 
@@ -71,6 +73,13 @@ public:
 		end(rnd);
 	}
 
+	virtual void clearBreakpoints(void) override {
+		_breakpoints.clear();
+	}
+	virtual void setBreakpoint(int page, int ln, bool brk) override {
+		_breakpoints.push_back(Breakpoint(brk, page, ln));
+	}
+
 private:
 	void begin(Renderer* /* rnd */, Theme* theme) {
 		_options.startY = ImGui::GetCursorPosY();
@@ -84,6 +93,14 @@ private:
 		_options.safeHeight = (int)(ImGui::GetCursorPosY() - _options.startY + 48);
 	}
 };
+
+Debugger::Breakpoint::Breakpoint() {
+}
+
+Debugger::Breakpoint::Breakpoint(bool enabled_, int pg, int ln) :
+	enabled(enabled_), page(pg), line(ln)
+{
+}
 
 Debugger* Debugger::create(void) {
 	DebuggerImpl* result = new DebuggerImpl();

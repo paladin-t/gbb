@@ -648,6 +648,7 @@ public:
 	GBBASIC_PROPERTY(DebuggerMessages, onscreenDebuggerMessages)
 	GBBASIC_FIELD(Mutex, onscreenDebuggerLock)
 	GBBASIC_PROPERTY_READONLY_PTR(class Debugger, codeDebugger)
+	GBBASIC_PROPERTY(bool, bringCodeDebuggerToFront)
 	GBBASIC_PROPERTY_READONLY_PTR(class VramDebugger, vramDebugger)
 	GBBASIC_PROPERTY(bool, vramDebuggerPreviewPaletteBits)
 	GBBASIC_PROPERTY(bool, vramDebuggerShowGrids)
@@ -1032,6 +1033,8 @@ public:
 	const Text::Array &getActorPageNames(void);
 	void clearScenePageNames(void);
 	const Text::Array &getScenePageNames(void);
+
+	void toggleBreakpoint(int page, int ln);
 
 	/**
 	 * @brief Upgrades project.

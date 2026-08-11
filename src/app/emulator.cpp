@@ -70,6 +70,7 @@ struct Context {
 	bool* onscreenDebugEnabled = nullptr;
 	Debugger* debugger = nullptr;
 	bool* codeDebugEnabled = nullptr;
+	bool* bringCodeDebuggerToFront = nullptr;
 	VramDebugger* vramDebugger = nullptr;
 	bool* vramDebugEnabled = nullptr;
 	bool* vramDebuggerPreviewPaletteBits = nullptr;
@@ -111,7 +112,7 @@ struct Context {
 		bool integerScale_, bool fixRatio_,
 		bool* onscreenGamepadEnabled_, bool onscreenGamepadSwapAB_, float onscreenGamepadScale_, const Math::Vec2<float> onscreenGamepadPadding_,
 		bool* onscreenDebugEnabled_,
-		Debugger* debugger_, bool* codeDebugEnabled_,
+		Debugger* debugger_, bool* codeDebugEnabled_, bool* bringCodeDebuggerToFront_,
 		VramDebugger* vramDebugger_, bool* vramDebugEnabled_, bool* vramDebuggerPreviewPaletteBits_, bool* vramDebuggerShowGrids_,
 		float* debuggerPreviousOuterWidth_, float* debuggerWidth_, float* debuggerHeight_,  bool* debuggerResizing_, bool* debuggerResetting_,
 		Device::CursorTypes cursor_,
@@ -129,7 +130,7 @@ struct Context {
 		integerScale(integerScale_), fixRatio(fixRatio_),
 		onscreenGamepadEnabled(onscreenGamepadEnabled_), onscreenGamepadSwapAB(onscreenGamepadSwapAB_), onscreenGamepadScale(onscreenGamepadScale_), onscreenGamepadPadding(onscreenGamepadPadding_),
 		onscreenDebugEnabled(onscreenDebugEnabled_),
-		debugger(debugger_), codeDebugEnabled(codeDebugEnabled_),
+		debugger(debugger_), codeDebugEnabled(codeDebugEnabled_), bringCodeDebuggerToFront(bringCodeDebuggerToFront_),
 		vramDebugger(vramDebugger_), vramDebugEnabled(vramDebugEnabled_), vramDebuggerPreviewPaletteBits(vramDebuggerPreviewPaletteBits_), vramDebuggerShowGrids(vramDebuggerShowGrids_),
 		debuggerPreviousOuterWidth(debuggerPreviousOuterWidth_), debuggerWidth(debuggerWidth_), debuggerHeight(debuggerHeight_),  debuggerResizing(debuggerResizing_), debuggerResetting(debuggerResetting_),
 		cursor(cursor_),
@@ -457,9 +458,16 @@ struct Context {
 		if (!codeDbg)
 			return;
 
+		const bool focus = *bringCodeDebuggerToFront;
+		if (focus)
+			*bringCodeDebuggerToFront = false;
+
 		// Draw the code debugger.
 		if (tabOpened) {
-			if (ImGui::BeginTabItem(theme->windowEmulator_Debugger_Code(), nullptr, ImGuiTabItemFlags_NoTooltip)) {
+			ImGuiTabItemFlags tabFlags = ImGuiTabItemFlags_NoTooltip;
+			if (focus)
+				tabFlags |= ImGuiTabItemFlags_SetSelected;
+			if (ImGui::BeginTabItem(theme->windowEmulator_Debugger_Code(), nullptr, tabFlags)) {
 				ImGui::SetCursorScreenPos(pos);
 
 				ImGui::BeginChild("#CDbg", ImVec2(size.x, size.y - 19.0f), true, flags);
@@ -919,7 +927,7 @@ void emulator(
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,
-	class Debugger* debugger, bool &codeDebugEnabled,
+	class Debugger* debugger, bool &codeDebugEnabled, bool &bringCodeDebuggerToFront,
 	class VramDebugger* vramDebugger, bool &vramDebugEnabled, bool &vramDebuggerPreviewPaletteBits, bool &vramDebuggerShowGrids,
 	float &debuggerPreviousOuterWidth, float &debuggerWidth, float &debuggerHeight, bool &debuggerResizing, bool &debuggerResetting,
 	Device::CursorTypes cursor,
@@ -930,6 +938,9 @@ void emulator(
 	DebugHandler debug
 ) {
 	// Prepare.
+	if (bringCodeDebuggerToFront)
+		codeDebugEnabled = true;
+
 	Context context(
 		wnd, rnd,
 		theme,
@@ -940,7 +951,7 @@ void emulator(
 		integerScale, fixRatio,
 		&onscreenGamepadEnabled, onscreenGamepadSwapAB, onscreenGamepadScale, onscreenGamepadPadding,
 		&onscreenDebugEnabled,
-		debugger, &codeDebugEnabled,
+		debugger, &codeDebugEnabled, &bringCodeDebuggerToFront,
 		vramDebugger, &vramDebugEnabled, &vramDebuggerPreviewPaletteBits, &vramDebuggerShowGrids,
 		&debuggerPreviousOuterWidth, &debuggerWidth, &debuggerHeight, &debuggerResizing, &debuggerResetting,
 		cursor,

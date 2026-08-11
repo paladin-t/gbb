@@ -892,6 +892,52 @@ public:
 			}
 
 			return Variant(true);
+		case GET_BREAKPOINT: {
+				const Variant::Int ln = unpack<Variant::Int>(argc, argv, 0, -1);
+				if (ln < 0 || ln >= GetTotalLines())
+					break;
+
+				Breakpoints::iterator it = Brks.find(ln);
+				if (it == Brks.end())
+					break;
+			}
+
+			return Variant(true);
+		case SET_BREAKPOINT: {
+				const Variant::Int ln = unpack<Variant::Int>(argc, argv, 0, -1);
+				const bool brk = unpack<bool>(argc, argv, 1, false);
+				const bool enabled = unpack<bool>(argc, argv, 2, true);
+				if (ln < 0 || ln >= GetTotalLines())
+					break;
+
+				Breakpoints::iterator it = Brks.find(ln);
+				if (brk) {
+					if (it != Brks.end())
+						Brks.erase(it);
+
+					Brks.insert(std::make_pair(ln, enabled));
+				} else {
+					if (it == Brks.end())
+						break;
+
+					Brks.erase(it);
+				}
+			}
+
+			return Variant(true);
+		case GET_BREAKPOINTS: {
+				IList::Ptr lst(List::create());
+				for (Breakpoints::value_type brk : Brks) {
+					lst->add((Variant::Int)brk.first);
+					lst->add(brk.second);
+				}
+
+				return Variant(lst);
+			}
+		case CLEAR_BREAKPOINTS:
+			Brks.clear();
+
+			return Variant(true);
 		default: // Do nothing.
 			break;
 		}
@@ -1625,11 +1671,14 @@ private:
 		if (newLine)
 			++ws->activities().wroteCodeLines;
 	}
-	void headClicked(Workspace* ws, int ln, bool /* doubleClicked */) {
+	void headClicked(Workspace* ws, int ln, bool doubleClicked) {
 		(void)ws;
-		(void)ln;
 
-		// Do nothing.
+		if (!doubleClicked) {
+			if (ln >= 0 && ln < GetTotalLines()) {
+				ws->toggleBreakpoint(_index, ln);
+			}
+		}
 	}
 
 	void searchGlobally(Window* wnd, Renderer* rnd, Workspace* ws) const {
