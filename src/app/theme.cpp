@@ -946,6 +946,9 @@ bool Theme::open(class Renderer* rnd) {
 
 	windowCode_SearchFor("Search for");
 
+	windowEmulator_Debugger_Code("Code");
+	windowEmulator_Debugger_Vram("VRAM");
+	windowEmulator_CodeDebugger("Code Debugger");
 	windowEmulator_VramDebugger("VRAM Debugger");
 	windowEmulator_VramDebugger_BgWinMap("BG/WIN map");
 	windowEmulator_VramDebugger_Layer("Layer");

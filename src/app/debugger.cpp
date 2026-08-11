@@ -7,6 +7,10 @@
 */
 
 #include "debugger.h"
+#include "theme.h"
+#include "widgets.h"
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "../../lib/imgui/imgui_internal.h"
 
 /*
 ** {===========================================================================
@@ -16,6 +20,10 @@
 class DebuggerImpl : public Debugger {
 private:
 	bool _opened = false;
+	struct {
+		float startY = 0;
+		int safeHeight = 0;
+	} _options;
 
 public:
 	DebuggerImpl() {
@@ -46,15 +54,35 @@ public:
 		return true;
 	}
 
+	virtual int safeHeight(void) const override {
+		return _options.safeHeight;
+	}
+
 	virtual void update(
 		class Renderer* rnd, class Theme* theme, class Device* device
 	) override {
-		// TODO
-		(void)rnd;
-		(void)theme;
-		(void)device;
+		begin(rnd, theme);
+		{
+			ImGui::TextUnformatted("DBG");
+
+			// TODO
+			(void)device;
+		}
+		end(rnd);
 	}
 
+private:
+	void begin(Renderer* /* rnd */, Theme* theme) {
+		_options.startY = ImGui::GetCursorPosY();
+
+		ImGui::AlignTextToFramePadding();
+		ImGui::Dummy(ImVec2(1, 0));
+		ImGui::SameLine();
+		ImGui::TextUnformatted(theme->windowEmulator_CodeDebugger());
+	}
+	void end(Renderer* /* rnd */) {
+		_options.safeHeight = (int)(ImGui::GetCursorPosY() - _options.startY + 48);
+	}
 };
 
 Debugger* Debugger::create(void) {

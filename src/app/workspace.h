@@ -651,11 +651,11 @@ public:
 	GBBASIC_PROPERTY_READONLY_PTR(class VramDebugger, vramDebugger)
 	GBBASIC_PROPERTY(bool, vramDebuggerPreviewPaletteBits)
 	GBBASIC_PROPERTY(bool, vramDebuggerShowGrids)
-	GBBASIC_PROPERTY(float, vramDebuggerPreviousOuterWidth)
-	GBBASIC_PROPERTY(float, vramDebuggerWidth)
-	GBBASIC_PROPERTY(float, vramDebuggerHeight)
-	GBBASIC_PROPERTY(bool, vramDebuggerResizing)
-	GBBASIC_PROPERTY(bool, vramDebuggerResetting)
+	GBBASIC_PROPERTY(float, debuggerPreviousOuterWidth)
+	GBBASIC_PROPERTY(float, debuggerWidth)
+	GBBASIC_PROPERTY(float, debuggerHeight)
+	GBBASIC_PROPERTY(bool, debuggerResizing)
+	GBBASIC_PROPERTY(bool, debuggerResetting)
 
 private:
 	bool _opened = false;

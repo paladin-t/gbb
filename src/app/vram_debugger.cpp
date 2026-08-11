@@ -575,7 +575,7 @@ public:
 	) override {
 		refresh(rnd, theme, device, previewPaletteBits, isNewFrame);
 
-		begin(rnd);
+		begin(rnd, theme);
 		{
 			tiles(rnd, theme, device, showGrids);
 			ImGui::NewLine(1);
@@ -1005,8 +1005,13 @@ private:
 		);
 	}
 
-	void begin(Renderer* /* rnd */) {
+	void begin(Renderer* /* rnd */, Theme* theme) {
 		_options.startY = ImGui::GetCursorPosY();
+
+		ImGui::AlignTextToFramePadding();
+		ImGui::Dummy(ImVec2(1, 0));
+		ImGui::SameLine();
+		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger());
 	}
 	void end(Renderer* /* rnd */) {
 		_options.safeHeight = (int)(ImGui::GetCursorPosY() - _options.startY + 48);
@@ -1022,11 +1027,6 @@ private:
 			regMax.x - regMin.x - borderSize * 2,
 			regMax.y - regMin.y - borderSize * 2
 		);
-
-		ImGui::AlignTextToFramePadding();
-		ImGui::Dummy(ImVec2(1, 0));
-		ImGui::SameLine();
-		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger());
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
 		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_Tiles().c_str(), regSize.x, flags))

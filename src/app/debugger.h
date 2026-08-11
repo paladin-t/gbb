@@ -21,6 +21,8 @@ public:
 	virtual bool open(class Renderer* rnd, class Theme* theme) = 0;
 	virtual bool close(void) = 0;
 
+	virtual int safeHeight(void) const = 0;
+
 	virtual void update(
 		class Renderer* rnd, class Theme* theme, class Device* device
 	) = 0;

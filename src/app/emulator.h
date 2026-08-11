@@ -34,7 +34,7 @@ void emulator(
 	bool &onscreenDebugEnabled,
 	class Debugger* debugger /* nullable */, bool &codeDebugEnabled,
 	class VramDebugger* vramDebugger /* nullable */, bool &vramDebugEnabled, bool &vramDebuggerPreviewPaletteBits, bool &vramDebuggerShowGrids,
-	float &vramDebuggerPreviousOuterWidth, float &vramDebuggerWidth, float &vramDebuggerHeight, bool &vramDebuggerResizing, bool &vramDebuggerResetting,
+	float &debuggerPreviousOuterWidth, float &debuggerWidth, float &debuggerHeight, bool &debuggerResizing, bool &debuggerResetting,
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,

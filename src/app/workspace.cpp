@@ -586,11 +586,12 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 	vramDebugger(nullptr);
 	vramDebuggerPreviewPaletteBits(true);
 	vramDebuggerShowGrids(true);
-	vramDebuggerPreviousOuterWidth(0.0f);
-	vramDebuggerWidth(0.0f);
-	vramDebuggerHeight(0.0f);
-	vramDebuggerResizing(false);
-	vramDebuggerResetting(false);
+
+	debuggerPreviousOuterWidth(0.0f);
+	debuggerWidth(0.0f);
+	debuggerHeight(0.0f);
+	debuggerResizing(false);
+	debuggerResetting(false);
 
 	// Config the recorder.
 #if defined GBBASIC_OS_WIN || defined GBBASIC_OS_MAC || defined GBBASIC_OS_LINUX
@@ -12467,7 +12468,7 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			settings().debugOnscreenShellEnabled,
 			codeDebugger(), settings().debugCodeInspectorEnabled,
 			vramDebugger(), settings().debugVramInspectorEnabled, vramDebuggerPreviewPaletteBits(), vramDebuggerShowGrids(),
-			vramDebuggerPreviousOuterWidth(), vramDebuggerWidth(), vramDebuggerHeight(), vramDebuggerResizing(), vramDebuggerResetting(),
+			debuggerPreviousOuterWidth(), debuggerWidth(), debuggerHeight(), debuggerResizing(), debuggerResetting(),
 			canvasCursorMode(),
 			!!popupBox(),
 			fps,

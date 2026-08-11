@@ -711,6 +711,9 @@ public:
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowCode_SearchFor)
 
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_Debugger_Code)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_Debugger_Vram)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_BgWinMap)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_Layer)
