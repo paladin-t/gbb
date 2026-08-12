@@ -665,6 +665,7 @@ Device::Breakpoint DeviceBinjgb::getBreakpointByAddress(UInt8 bank, UInt16 addr)
 int DeviceBinjgb::addBreakpoint(UInt8 bank, UInt16 addr) {
 	const int idx = emulator_add_empty_breakpoint();
 	emulator_set_breakpoint_address_and_bank(_emulator, idx, addr, bank);
+	emulator_enable_breakpoint(idx, TRUE);
 
 	return idx;
 }
@@ -1307,10 +1308,10 @@ bool DeviceBinjgb::update(
 	}
 
 	if (event & EMULATOR_EVENT_BREAKPOINT) {
-		pause();
-
-		if (_debugListener)
-			_debugListener->breakpointHit();
+		if (_debugListener) {
+			if (_debugListener->breakpointHit())
+				pause();
+		}
 	}
 
 	// Tick the RTC.

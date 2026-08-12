@@ -233,7 +233,7 @@ public:
 		virtual void pause(class Window* wnd, class Renderer* rnd) = 0;
 		virtual void stop(class Window* wnd, class Renderer* rnd) = 0;
 
-		virtual void breakpointHit(void) = 0;
+		virtual bool breakpointHit(void) = 0;
 	};
 
 	/**< Handlers. */

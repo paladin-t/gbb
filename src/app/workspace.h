@@ -750,7 +750,7 @@ public:
 	virtual void pause(class Window* wnd, class Renderer* rnd) override;
 	virtual void stop(class Window* wnd, class Renderer* rnd) override;
 
-	virtual void breakpointHit(void) override;
+	virtual bool breakpointHit(void) override;
 	class Debugger* initializeCodeDebugger(class Window* wnd, class Renderer* rnd);
 	void disposeCodeDebugger(void);
 

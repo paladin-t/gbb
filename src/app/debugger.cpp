@@ -30,25 +30,69 @@
 
 /*
 ** {===========================================================================
+** Utilities
+*/
+
+/**< Shared between the VM and the compiler. */
+
+#pragma pack(push, 1)
+
+typedef UInt8 Boolean;
+typedef UInt16 Pointer;
+typedef Pointer UInt8Ptr;
+typedef Pointer UInt16Ptr;
+typedef Pointer CtxPtr;
+
+struct SCRIPT_CTX {
+	// Program pointer.
+	const UInt8Ptr PC = NULL;
+	UInt8 bank = 0;
+	// Linked list of contexts for cooperative multitasking.
+	CtxPtr next = NULL;
+	// VM stack pointer.
+	UInt16Ptr stack_ptr = NULL;
+	UInt16Ptr base_addr = NULL;
+	// Thread control.
+	UInt8 ID = 0;
+	UInt16Ptr hthread = NULL;
+	Boolean terminated = 0;
+	// Waitable state.
+	Boolean waitable = 0;
+	// Lock state.
+	UInt8 lock_count = 0;
+	// Update function.
+	Pointer update_fn = NULL;
+	UInt8 update_fn_bank = 0;
+
+	SCRIPT_CTX() {
+	}
+};
+
+#pragma pack(pop)
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Debugger
 */
 
 class DebuggerImpl : public Debugger {
 private:
-	struct SrcLocation {
+	struct SourceRef {
 		int page = 0;
 		int row = 0;
 
-		SrcLocation() {
+		SourceRef() {
 		}
-		SrcLocation(int pg, int ln) : page(pg), row(ln) {
+		SourceRef(int pg, int ln) : page(pg), row(ln) {
 		}
 
-		bool operator < (const SrcLocation &other) const {
+		bool operator < (const SourceRef &other) const {
 			return compare(other) < 0;
 		}
 
-		int compare(const SrcLocation &other) const {
+		int compare(const SourceRef &other) const {
 			if (page < other.page)
 				return -1;
 			else if (page > other.page)
@@ -62,7 +106,7 @@ private:
 			return 0;
 		}
 	};
-	typedef std::map<SrcLocation, int> SrcToTracePointDictionary;
+	typedef std::map<SourceRef, int> SourceRefToTracePointDictionary;
 
 private:
 	bool _opened = false;
@@ -76,9 +120,12 @@ private:
 	const GBBASIC::Program::Compiled* _compiled = nullptr; // Foreign.
 	bool _started = false;
 	Breakpoint::Array _breakpoints;
-	int _vmStepBreakpointCount = 0;
+	mutable SourceRefToTracePointDictionary _srcToTracePoint;
+	FarPtr _rRom0Pointer;
+	FarPtr _currentBankPointer;
+	int _vmStepBreakpointRefCount = 0;
 	int _vmStepBreakpointId = -1;
-	mutable SrcToTracePointDictionary _srcToTracePoint;
+	FarPtr _vmStepPointer;
 
 public:
 	DebuggerImpl() {
@@ -110,9 +157,12 @@ public:
 		_compiled = nullptr;
 		_started = false;
 		_breakpoints.clear();
-		_vmStepBreakpointCount = 0;
-		_vmStepBreakpointId = -1;
 		_srcToTracePoint.clear();
+		_rRom0Pointer = FarPtr();
+		_currentBankPointer = FarPtr();
+		_vmStepBreakpointRefCount = 0;
+		_vmStepBreakpointId = -1;
+		_vmStepPointer = FarPtr();
 
 		_workspace = nullptr;
 		_device = nullptr;
@@ -145,12 +195,37 @@ public:
 	}
 
 	virtual void start(void) override {
+		// Prepare.
+		if (_started)
+			return;
+
 		_started = true;
 
 		_compiled = &_workspace->getCompiledData();
 
+		// Resolve the ROM entries.
+		const GBBASIC::RomLocation* rRom0InRom = getRomLocationBySymbolName(COMPILERFREE_RROM0_ENTRY_NAME);
+		if (rRom0InRom) {
+			_rRom0Pointer.bank = rRom0InRom->bank;
+			_rRom0Pointer.address = rRom0InRom->address;
+		}
+
+		const GBBASIC::RomLocation* currentBankInRom = getRomLocationBySymbolName(COMPILERFREE_CURRENT_BANK_ENTRY_NAME);
+		if (currentBankInRom) {
+			_currentBankPointer.bank = currentBankInRom->bank;
+			_currentBankPointer.address = currentBankInRom->address;
+		}
+
+		const GBBASIC::RomLocation* vmStepInRom = getRomLocationBySymbolName(COMPILER_VM_STEP_ENTRY_NAME);
+		if (vmStepInRom) {
+			_vmStepPointer.bank = vmStepInRom->bank;
+			_vmStepPointer.address = vmStepInRom->address;
+		}
+
+		// Refresh the breakpoints.
 		refreshBreakpoints();
 
+		// Install all enabled breakpoints.
 		for (Breakpoint &breakpoint : _breakpoints) {
 			if (!breakpoint.enabled)
 				continue;
@@ -159,13 +234,20 @@ public:
 		}
 	}
 	virtual void stop(void) override {
-		_device->clearBreakpoints();
+		if (!_started)
+			return;
+
+		if (_device)
+			_device->clearBreakpoints();
 
 		_compiled = nullptr;
 		_breakpoints.clear();
-		_vmStepBreakpointCount = 0;
-		_vmStepBreakpointId = -1;
 		_srcToTracePoint.clear();
+		_rRom0Pointer = FarPtr();
+		_currentBankPointer = FarPtr();
+		_vmStepBreakpointRefCount = 0;
+		_vmStepBreakpointId = -1;
+		_vmStepPointer = FarPtr();
 
 		_started = false;
 	}
@@ -210,11 +292,55 @@ public:
 		}
 	}
 
-	virtual void breakpointHit(void) override {
+	virtual bool breakpointHit(void) override {
 		const Device::Registers regs = _device->readRegisters();
-		(void)regs;
+		const UInt16 pc = regs.PC;
+		UInt8 bank = 0;
+		bool gotBank = false;
+		if (!_currentBankPointer.invalid()) {
+			if (_device->readRam((UInt16)_currentBankPointer.address, &bank))
+				gotBank = true;
+		}
+		if (!gotBank && !_rRom0Pointer.invalid()) {
+			if (_device->readRam((UInt16)_rRom0Pointer.address, &bank))
+				gotBank = true;
+		}
+		if (!gotBank)
+			return false;
 
-		// TODO: DBG.
+		const bool isBasic = _vmStepPointer.equals(bank, pc);
+		UInt16 ctxPc = 0;
+		UInt8 ctxBank = 0;
+		if (isBasic) {
+			const UInt16 currCtx = regs.DE; // `DE` is the pointer to the current `SCRIPT_CTX`.
+			constexpr const int pcOffset = GBBASIC_OFFSETOF(SCRIPT_CTX, PC);
+			constexpr const int bankOffset = GBBASIC_OFFSETOF(SCRIPT_CTX, bank);
+			const int currCtxPcAddress = currCtx + pcOffset;
+			const int currCtxBankAddress = currCtx + bankOffset;
+			if (!_device->readRam((UInt16)currCtxPcAddress, &ctxPc))
+				return false;
+			if (!_device->readRam((UInt16)currCtxBankAddress, &ctxBank))
+				return false;
+		}
+
+		int hitCount = 0;
+		for (int i = 0; i < (int)_breakpoints.size(); ++i) {
+			const Breakpoint &breakpoint = _breakpoints[i];
+			if (!breakpoint.hitPointer.equals(bank, pc))
+				continue;
+
+			if (isBasic) {
+				if (breakpoint.vmPointer.equals(ctxBank, ctxPc)) {
+					triggerBreakpoint(breakpoint);
+					++hitCount;
+				}
+			} else {
+				triggerBreakpoint(breakpoint);
+				++hitCount;
+			}
+		}
+
+		return hitCount > 0;
 	}
 
 private:
@@ -260,13 +386,13 @@ private:
 		if (_srcToTracePoint.empty()) {
 			for (int i = 0; i < (int)tracePoints->size(); ++i) {
 				const GBBASIC::TracePoint &tp = (*tracePoints)[i];
-				const SrcLocation key(tp.inCode.page, tp.inCode.row);
+				const SourceRef key(tp.inCode.page, tp.inCode.row);
 				_srcToTracePoint[key] = i;
 			}
 		}
 
-		const SrcLocation key(page, ln);
-		SrcToTracePointDictionary::const_iterator it = _srcToTracePoint.find(key);
+		const SourceRef key(page, ln);
+		SourceRefToTracePointDictionary::const_iterator it = _srcToTracePoint.find(key);
 		if (it == _srcToTracePoint.end())
 			return nullptr;
 
@@ -299,7 +425,7 @@ private:
 			if (breakpoint.type != Breakpoint::Types::NONE)
 				continue;
 
-			const GBBASIC::TracePoint* tp = getTracePointBySourceLocation(breakpoint.page, breakpoint.line);
+			const GBBASIC::TracePoint* tp = getTracePointBySourceLocation(breakpoint.page, breakpoint.row);
 			if (!tp)
 				continue;
 
@@ -314,30 +440,33 @@ private:
 			return false;
 		}
 
-		if (breakpoint.type == Breakpoint::Types::ASM) {
-			const GBBASIC::TracePoint* tp = getTracePointBySourceLocation(breakpoint.page, breakpoint.line);
-			if (!tp)
-				return false;
+		const GBBASIC::TracePoint* tp = getTracePointBySourceLocation(breakpoint.page, breakpoint.row);
+		if (!tp)
+			return false;
 
+		if (breakpoint.type == Breakpoint::Types::ASM) {
 			const UInt8 bank = (UInt8)tp->inRom.bank;
 			const UInt16 address = (UInt16)tp->inRom.address;
 			const int id = _device->addBreakpoint(bank, address);
 			breakpoint.id = id;
+			breakpoint.hitPointer = FarPtr(bank, address);
+			breakpoint.vmPointer = FarPtr();
 
 			return true;
 		}
 
-		const GBBASIC::RomLocation* vmStepInRom = getRomLocationBySymbolName(COMPILER_VM_STEP_ENTRY_NAME);
-		if (!vmStepInRom)
+		if (_vmStepPointer.invalid())
 			return false;
 
-		if (_vmStepBreakpointCount++ == 0) {
-			const UInt8 bank = (UInt8)vmStepInRom->bank;
-			const UInt16 address = (UInt16)vmStepInRom->address;
+		if (_vmStepBreakpointRefCount++ == 0) {
+			const UInt8 bank = (UInt8)_vmStepPointer.bank;
+			const UInt16 address = (UInt16)_vmStepPointer.address;
 			const int id = _device->addBreakpoint(bank, address);
 			_vmStepBreakpointId = id;
 		}
 		breakpoint.id = _vmStepBreakpointId;
+		breakpoint.hitPointer = _vmStepPointer;
+		breakpoint.vmPointer = FarPtr(tp->inRom.bank, tp->inRom.address);
 
 		return true;
 	}
@@ -349,21 +478,29 @@ private:
 		if (breakpoint.type == Breakpoint::Types::ASM) {
 			_device->removeBreakpoint(breakpoint.id);
 			breakpoint.id = -1;
+			breakpoint.hitPointer = FarPtr();
+			breakpoint.vmPointer = FarPtr();
 
 			return true;
 		}
 
-		const GBBASIC::RomLocation* vmStepInRom = getRomLocationBySymbolName(COMPILER_VM_STEP_ENTRY_NAME);
-		if (!vmStepInRom)
+		if (_vmStepPointer.invalid())
 			return false;
 
-		if (--_vmStepBreakpointCount == 0) {
+		if (--_vmStepBreakpointRefCount == 0) {
 			_device->removeBreakpoint(_vmStepBreakpointId);
 			_vmStepBreakpointId = -1;
 			breakpoint.id = -1;
+			breakpoint.hitPointer = FarPtr();
+			breakpoint.vmPointer = FarPtr();
 		}
 
 		return true;
+	}
+	void triggerBreakpoint(const Breakpoint &breakpoint) const {
+		(void)breakpoint;
+
+		// TODO: DBG.
 	}
 	void debug(void) {
 		// TODO: DBG.
@@ -382,16 +519,30 @@ private:
 	}
 };
 
+Debugger::FarPtr::FarPtr() {
+}
+
+Debugger::FarPtr::FarPtr(int b, int addr) : bank(b), address(addr) {
+}
+
+bool Debugger::FarPtr::equals(int b, int addr) const {
+	return (bank == 0 || bank == b) && address == addr;
+}
+
+bool Debugger::FarPtr::invalid(void) const {
+	return bank == -1 || address == -1;
+}
+
 Debugger::Breakpoint::Breakpoint() {
 }
 
 Debugger::Breakpoint::Breakpoint(int pg, int ln) :
-	page(pg), line(ln)
+	page(pg), row(ln)
 {
 }
 
 Debugger::Breakpoint::Breakpoint(int pg, int ln, bool enabled_) :
-	page(pg), line(ln),
+	page(pg), row(ln),
 	enabled(enabled_)
 {
 }
@@ -406,13 +557,16 @@ int Debugger::Breakpoint::compare(const Breakpoint &other) const {
 	else if (page > other.page)
 		return 1;
 
-	if (line < other.line)
+	if (row < other.row)
 		return -1;
-	else if (line > other.line)
+	else if (row > other.row)
 		return 1;
 
 	// `enabled` doesn't count.
 	// `type` doesn't count.
+	// `id` doesn't count.
+	// `bank` doesn't count.
+	// `address` doesn't count.
 
 	return 0;
 }

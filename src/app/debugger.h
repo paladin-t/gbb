@@ -19,6 +19,17 @@
 
 class Debugger {
 public:
+	struct FarPtr {
+		int bank = -1;
+		int address = -1;
+
+		FarPtr();
+		FarPtr(int b, int addr);
+
+		bool equals(int b, int addr) const;
+		bool invalid(void) const;
+	};
+
 	struct Breakpoint {
 		typedef std::vector<Breakpoint> Array;
 
@@ -29,11 +40,13 @@ public:
 		};
 
 		int page = 0;
-		int line = 0; // 1-based.
+		int row = 0; // 1-based.
 
 		bool enabled = true;
 		Types type = Types::NONE;
 		int id = -1;
+		FarPtr hitPointer;
+		FarPtr vmPointer;
 
 		Breakpoint();
 		Breakpoint(int pg, int ln);
@@ -62,7 +75,7 @@ public:
 	virtual void setBreakpoint(int page, int ln, bool brk) = 0;
 	virtual void removeBreakpoint(int page, int ln) = 0;
 
-	virtual void breakpointHit(void) = 0;
+	virtual bool breakpointHit(void) = 0;
 
 	static Debugger* create(void);
 	static void destroy(Debugger* ptr);

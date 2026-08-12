@@ -2133,14 +2133,14 @@ void Workspace::stop(class Window* wnd, class Renderer* rnd) {
 		);
 }
 
-void Workspace::breakpointHit(void) {
+bool Workspace::breakpointHit(void) {
 	if (!canvasDevice())
-		return;
+		return false;
 
 	if (!codeDebugger())
-		return;
+		return false;
 
-	codeDebugger()->breakpointHit();
+	return codeDebugger()->breakpointHit();
 }
 
 class Debugger* Workspace::initializeCodeDebugger(class Window* /* wnd */, class Renderer* rnd) {

@@ -6524,8 +6524,12 @@ public:
 
 		// Trace ROM allocation points.
 		if (context.top().tracePoints) {
+			const Context &ctx = context.top();
 			const State &state = top();
-			context.top().tracePoints->push_back(TracePoint(state.inRom, state.inCode));
+
+			RomLocation inRom = state.inRom;
+			inRom.address += ctx.startAddress;
+			context.top().tracePoints->push_back(TracePoint(inRom, state.inCode));
 		}
 
 		// Active the top context and state.
