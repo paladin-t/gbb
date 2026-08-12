@@ -1419,7 +1419,11 @@ const RomLocation* SymbolTable::fuzzy(const std::string &key, std::string &gotKe
 		if (name.empty())
 			continue;
 
-		const double score = rapidfuzz::fuzz::ratio(name, key);
+		std::string name_ = name;
+		std::string key_ = key;
+		Text::toLowerCase(name_);
+		Text::toLowerCase(key_);
+		const double score = rapidfuzz::fuzz::ratio(name_, key_);
 		if (score < FUZZY_MATCHING_SCORE_THRESHOLD)
 			continue;
 		if (score > fuzzyScore) {
