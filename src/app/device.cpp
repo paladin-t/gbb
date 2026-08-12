@@ -25,6 +25,13 @@ Device::KeyboardModifiers::KeyboardModifiers(bool ctrl_, bool shift_, bool alt_,
 {
 }
 
+Device::Registers::Registers() {
+	A = 0; F.Val = 0;
+	BC = 0;
+	DE = 0;
+	HL = 0;
+}
+
 Device::Breakpoint::Breakpoint() {
 }
 

@@ -673,6 +673,12 @@ void DeviceBinjgb::removeBreakpoint(int idx) {
 	emulator_remove_breakpoint(idx);
 }
 
+void DeviceBinjgb::clearBreakpoints(void) {
+	const int n = emulator_get_max_breakpoint_id();
+	for (int i = n - 1; i >= 0; --i)
+		emulator_remove_breakpoint(i);
+}
+
 void DeviceBinjgb::setBreakpointEnabled(int idx, bool enabled) {
 	emulator_enable_breakpoint(idx, enabled ? TRUE : FALSE);
 }
@@ -1347,6 +1353,39 @@ void DeviceBinjgb::pause(void) {
 
 void DeviceBinjgb::resume(void) {
 	_emulatorPaused = false;
+}
+
+Device::Registers DeviceBinjgb::readRegisters(void) {
+	const ::Registers regs = emulator_get_registers(_emulator);
+	Registers result;
+	result.A = regs.A;
+	result.F.Z = regs.F.Z ? 1 : 0;
+	result.F.N = regs.F.N ? 1 : 0;
+	result.F.H = regs.F.H ? 1 : 0;
+	result.F.C = regs.F.C ? 1 : 0;
+	result.BC = regs.BC;
+	result.DE = regs.DE;
+	result.HL = regs.HL;
+	result.SP = regs.SP;
+	result.PC = regs.PC;
+
+	return result;
+}
+
+void DeviceBinjgb::writeRegisters(const Registers &regs) {
+	::Registers regs_;
+	regs_.A = regs.A;
+	regs_.F.Z = regs.F.Z ? TRUE : FALSE;
+	regs_.F.N = regs.F.N ? TRUE : FALSE;
+	regs_.F.H = regs.F.H ? TRUE : FALSE;
+	regs_.F.C = regs.F.C ? TRUE : FALSE;
+	regs_.BC = regs.BC;
+	regs_.DE = regs.DE;
+	regs_.HL = regs.HL;
+	regs_.SP = regs.SP;
+	regs_.PC = regs.PC;
+
+	emulator_set_registers(_emulator, &regs_);
 }
 
 bool DeviceBinjgb::readRam(UInt16 address, UInt8* data) {

@@ -22,12 +22,26 @@ public:
 	struct Breakpoint {
 		typedef std::vector<Breakpoint> Array;
 
-		bool enabled = true;
+		enum class Types {
+			NONE,
+			BASIC,
+			ASM
+		};
+
 		int page = 0;
 		int line = 0; // 1-based.
 
+		bool enabled = true;
+		Types type = Types::NONE;
+		int id = -1;
+
 		Breakpoint();
-		Breakpoint(bool enabled_, int pg, int ln);
+		Breakpoint(int pg, int ln);
+		Breakpoint(int pg, int ln, bool enabled_);
+
+		bool operator < (const Breakpoint &other) const;
+
+		int compare(const Breakpoint &other) const;
 	};
 
 public:
@@ -46,6 +60,9 @@ public:
 
 	virtual void clearBreakpoints(void) = 0;
 	virtual void setBreakpoint(int page, int ln, bool brk) = 0;
+	virtual void removeBreakpoint(int page, int ln) = 0;
+
+	virtual void breakpointHit(void) = 0;
 
 	static Debugger* create(void);
 	static void destroy(Debugger* ptr);

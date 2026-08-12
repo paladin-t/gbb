@@ -2134,7 +2134,13 @@ void Workspace::stop(class Window* wnd, class Renderer* rnd) {
 }
 
 void Workspace::breakpointHit(void) {
-	// TODO: DBG.
+	if (!canvasDevice())
+		return;
+
+	if (!codeDebugger())
+		return;
+
+	codeDebugger()->breakpointHit();
 }
 
 class Debugger* Workspace::initializeCodeDebugger(class Window* /* wnd */, class Renderer* rnd) {
@@ -2162,13 +2168,13 @@ class Debugger* Workspace::initializeCodeDebugger(class Window* /* wnd */, class
 
 			const int m = lst->count();
 			for (int j = 0; j < m; j += 2) {
-				const Variant::Int line = (Variant::Int)lst->at(j * 2);
-				const bool enabled = (bool)lst->at(j * 2 + 1);
+				const Variant::Int line = (Variant::Int)lst->at(j);
+				const bool enabled = (bool)lst->at(j + 1);
 				codeDebugger()->setBreakpoint(i, line + 1, enabled); // 1-based.
 			}
-
-			codeDebugger()->start();
 		}
+
+		codeDebugger()->start();
 	}
 
 	return codeDebugger();

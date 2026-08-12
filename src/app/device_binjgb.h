@@ -128,6 +128,7 @@ public:
 	virtual Breakpoint getBreakpointByAddress(UInt8 bank, UInt16 addr) const override;
 	virtual int addBreakpoint(UInt8 bank, UInt16 addr) override;
 	virtual void removeBreakpoint(int idx) override;
+	virtual void clearBreakpoints(void) override;
 	virtual void setBreakpointEnabled(int idx, bool enabled) override;
 
 	virtual TileSourceTypes getTileSourceType(void) const override;
@@ -168,6 +169,9 @@ public:
 	virtual bool paused(void) const override;
 	virtual void pause(void) override;
 	virtual void resume(void) override;
+
+	virtual Registers readRegisters(void) override;
+	virtual void writeRegisters(const Registers &regs) override;
 
 	virtual bool readRam(UInt16 address, UInt8* data) override;
 	virtual bool readRam(UInt16 address, UInt16* data) override;
