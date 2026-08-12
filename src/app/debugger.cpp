@@ -117,15 +117,17 @@ private:
 	Workspace* _workspace = nullptr; // Foreign.
 	Device* _device = nullptr; // Foreign.
 
-	const GBBASIC::Program::Compiled* _compiled = nullptr; // Foreign.
 	bool _started = false;
+	const GBBASIC::Program::Compiled* _compiled = nullptr; // Foreign.
 	Breakpoint::Array _breakpoints;
-	mutable SourceRefToTracePointDictionary _srcToTracePoint;
+	mutable SourceRefToTracePointDictionary _srcToTracePoint; // Reversed mapping from trace points.
 	FarPtr _rRom0Pointer;
 	FarPtr _currentBankPointer;
 	int _vmStepBreakpointRefCount = 0;
 	int _vmStepBreakpointId = -1;
 	FarPtr _vmStepPointer;
+
+	bool _bringCodeDebuggerToFront = false;
 
 public:
 	DebuggerImpl() {
@@ -154,8 +156,10 @@ public:
 
 		_device->clearBreakpoints();
 
-		_compiled = nullptr;
+		_bringCodeDebuggerToFront = false;
+
 		_started = false;
+		_compiled = nullptr;
 		_breakpoints.clear();
 		_srcToTracePoint.clear();
 		_rRom0Pointer = FarPtr();
@@ -180,7 +184,7 @@ public:
 		class Renderer* rnd, class Theme* theme,
 		bool visible
 	) override {
-		debug();
+		debug(visible);
 
 		if (!visible)
 			return;
@@ -239,6 +243,8 @@ public:
 
 		if (_device)
 			_device->clearBreakpoints();
+
+		_bringCodeDebuggerToFront = false;
 
 		_compiled = nullptr;
 		_breakpoints.clear();
@@ -497,12 +503,19 @@ private:
 
 		return true;
 	}
-	void triggerBreakpoint(const Breakpoint &breakpoint) const {
-		(void)breakpoint;
+	void triggerBreakpoint(const Breakpoint &breakpoint) {
+		_bringCodeDebuggerToFront = true;
 
 		// TODO: DBG.
+		(void)breakpoint;
 	}
-	void debug(void) {
+	void debug(bool visible) {
+		if (_bringCodeDebuggerToFront) {
+			_bringCodeDebuggerToFront = false;
+			if (!visible)
+				_workspace->bringCodeDebuggerToFront(true);
+		}
+
 		// TODO: DBG.
 	}
 
