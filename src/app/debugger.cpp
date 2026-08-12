@@ -16,6 +16,20 @@
 
 /*
 ** {===========================================================================
+** Macros and constants
+*/
+
+#ifndef DEBUGGER_BANK_SIZE
+#	define DEBUGGER_BANK_SIZE 0x4000
+#endif /* DEBUGGER_BANK_SIZE */
+#ifndef DEBUGGER_START_ADDRESS
+#	define DEBUGGER_START_ADDRESS 0x4000
+#endif /* DEBUGGER_START_ADDRESS */
+
+/* ===========================================================================} */
+
+/*
+** {===========================================================================
 ** Debugger
 */
 
@@ -197,7 +211,10 @@ public:
 	}
 
 	virtual void breakpointHit(void) override {
-		// TODO
+		const Device::Registers regs = _device->readRegisters();
+		(void)regs;
+
+		// TODO: DBG.
 	}
 
 private:
@@ -258,6 +275,19 @@ private:
 			return nullptr;
 
 		return &(*tracePoints)[idx];
+	}
+	GBBASIC::Disassembler::Mnemonic::Array getDisassembledMnemonics(void) const {
+		GBBASIC::Disassembler::Mnemonic::Array result;
+		GBBASIC::Disassembler::Ptr dasm(GBBASIC::Disassembler::create());
+
+		GBBASIC::Disassembler::DisassemblingOptions options;
+		options.bankSize = DEBUGGER_BANK_SIZE;
+		options.startAddress = DEBUGGER_START_ADDRESS;
+		options.bank = 0;
+		options.addressCursor = 0;
+		dasm->disassemble(result, compiledBytes(), options);
+
+		return result;
 	}
 
 	void refreshBreakpoints(void) {
