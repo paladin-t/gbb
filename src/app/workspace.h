@@ -669,6 +669,7 @@ private:
 	bool _toCompile = false;
 	CompilingParameters _compilingParameters;
 	CompilingErrors::Ptr _compilingErrors = nullptr;
+	std::string _compilingConfig;
 	GBBASIC::Program::Compiled _compilingOutput;
 
 #if defined GBBASIC_OS_HTML
@@ -1044,7 +1045,10 @@ public:
 		const Text::Dictionary &arguments
 	);
 
-	const GBBASIC::Program::Compiled &getCompiledData(void) const;
+	/**
+	 * @param[out] config
+	 */
+	const GBBASIC::Program::Compiled &getCompiledData(std::string* config /* nullable */) const;
 	void clearCompiledData(void);
 	void joinCompiling(void);
 	/**

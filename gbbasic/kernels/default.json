@@ -26,6 +26,8 @@
   },
   "objects": {
     "max_actor_count": 21,
+    "max_projectile_def_count": 5,
+    "max_projectile_count": 5,
     "max_trigger_count": 31
   },
   "snippets": [

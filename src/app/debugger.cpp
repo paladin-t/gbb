@@ -13,6 +13,7 @@
 #include "../compiler/disassembler.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "../../lib/imgui/imgui_internal.h"
+#include "../../lib/jpath/jpath.hpp"
 
 /*
 ** {===========================================================================
@@ -42,6 +43,25 @@
 
 /**< Shared between the VM and the compiler. */
 
+namespace VM {
+
+template<typename T> struct Reference {
+	typedef T ValueType;
+
+	ValueType data;
+	Debugger::FarPtr pointer;
+
+	Reference() {
+	}
+	Reference(const ValueType &d, const Debugger::FarPtr &ptr) :
+		data(d),
+		pointer(ptr)
+	{
+	}
+};
+
+}
+
 #pragma pack(push, 1)
 
 namespace VM {
@@ -53,28 +73,33 @@ typedef Pointer UInt16Ptr;
 typedef Pointer CtxPtr;
 typedef Pointer MetaSpriteRef;
 
+typedef std::vector<Byte> Buffer;
+
 struct SCRIPT_CTX {
+	typedef Reference<SCRIPT_CTX> Ref;
+	typedef std::vector<Ref> Array;
 	typedef Pointer Ptr;
 
-	UInt8Ptr PC;
-	UInt8 bank;
-	Ptr next;
-	UInt16Ptr stack_ptr;
-	UInt16Ptr base_addr;
-	UInt8 ID;
-	UInt16Ptr hthread;
-	Boolean terminated;
-	Boolean waitable;
-	UInt8 lock_count;
-	Pointer update_fn;
-	UInt8 update_fn_bank;
+	UInt8Ptr PC = NULL;
+	UInt8 bank = 0;
+	Ptr next = NULL;
+	UInt16Ptr stack_ptr = NULL;
+	UInt16Ptr base_addr = NULL;
+	UInt8 ID = 0;
+	UInt16Ptr hthread = NULL;
+	Boolean terminated = 0;
+	Boolean waitable = 0;
+	UInt8 lock_count = 0;
+	Pointer update_fn = NULL;
+	UInt8 update_fn_bank = 0;
 
 	SCRIPT_CTX() {
-		memset(this, 0, sizeof(SCRIPT_CTX));
 	}
 };
 
 struct actor_t {
+	typedef Reference<actor_t> Ref;
+	typedef std::vector<Ref> Array;
 	typedef Pointer Ptr;
 
 	Boolean instantiated         : 1;
@@ -85,21 +110,21 @@ struct actor_t {
 	Boolean persistent           : 1;
 	Boolean animation_loop       : 1;
 	Boolean movement_interrupt   : 1;
-	UInt8 template_;
+	UInt8 template_ = 0;
 	upoint16_t position;
-	UInt8 direction;
+	UInt8 direction = 0;
 	boundingbox_t bounds;
-	UInt8 base_tile;
-	UInt8 sprite_bank;
-	MetaSpriteRef sprite_frames;
-	UInt8 animation;
-	UInt8 animation_interval;
+	UInt8 base_tile = 0;
+	UInt8 sprite_bank = 0;
+	MetaSpriteRef sprite_frames = NULL;
+	UInt8 animation = 0;
+	UInt8 animation_interval = 0;
 	animation_t animations[DEBUGGER_ACTOR_MAX_ANIMATIONS];
-	UInt8 frame;
-	UInt8 motion;
-	UInt8 move_speed;
+	UInt8 frame = 0;
+	UInt8 motion = 0;
+	UInt8 move_speed = 0;
 	union {
-		UINT32 movement;
+		UInt32 movement;
 		upoint16_t absolute_movement;
 		struct {
 			point8_t relative_movement;
@@ -107,39 +132,53 @@ struct actor_t {
 			UInt8 max_move_speed;
 		};
 	};
-	UInt8 behaviour;
-	UInt8 collision_group;
-	UInt16 behave_thread_id;
-	UInt8 behave_handler_bank;
-	UInt8Ptr behave_handler_address;
-	UInt16 hit_thread_id;
-	UInt8 hit_handler_bank;
-	UInt8Ptr hit_handler_address;
-	Ptr next;
-	Ptr prev;
+	UInt8 behaviour = 0;
+	UInt8 collision_group = 0;
+	UInt16 behave_thread_id = 0;
+	UInt8 behave_handler_bank = 0;
+	UInt8Ptr behave_handler_address = NULL;
+	UInt16 hit_thread_id = 0;
+	UInt8 hit_handler_bank = 0;
+	UInt8Ptr hit_handler_address = NULL;
+	Ptr next = NULL;
+	Ptr prev = NULL;
 
-	actor_t() {
-		memset(this, 0, sizeof(actor_t));
+	actor_t() :
+		instantiated(0),
+		active(0),
+		enabled(0),
+		hidden(0),
+		pinned(0),
+		persistent(0),
+		animation_loop(0),
+		movement_interrupt(0),
+		movement(0)
+	{
 	}
 };
 
 struct projectile_def_t {
+	typedef Reference<projectile_def_t> Ref;
+	typedef std::vector<Ref> Array;
+
 	boundingbox_t bounds;
-	UInt8 base_tile;
-	UInt8 sprite_bank;
-	MetaSpriteRef sprite_frames;
-	UInt8 animation_interval;
+	UInt8 base_tile = 0;
+	UInt8 sprite_bank = 0;
+	MetaSpriteRef sprite_frames = NULL;
+	UInt8 animation_interval = 0;
 	animation_t animations[DEBUGGER_PROJECTILE_MAX_ANIMATIONS];
-	UInt8 life_time;
-	UInt8 move_speed;
-	UInt16 initial_offset;
-	UInt8 collision_group;
+	UInt8 life_time = 0;
+	UInt8 move_speed = 0;
+	UInt16 initial_offset = 0;
+	UInt8 collision_group = 0;
 
 	projectile_def_t() {
 	}
 };
 
 struct projectile_t {
+	typedef Reference<projectile_t> Ref;
+	typedef std::vector<Ref> Array;
 	typedef Pointer Ptr;
 
 	Boolean animation_no_loop   : 1;
@@ -152,63 +191,83 @@ struct projectile_t {
 	Boolean reserved6           : 1;
 	upoint16_t position;
 	point16_t movement;
-	UInt8 frame;
-	UInt8 animation;
+	UInt8 frame = 0;
+	UInt8 animation = 0;
 	projectile_def_t def;
-	Ptr next;
+	Ptr next = NULL;
 
-	projectile_t() {
-		memset(this, 0, sizeof(projectile_t));
+	projectile_t() :
+		animation_no_loop(0),
+		strong(0),
+		reserved1(0),
+		reserved2(0),
+		reserved3(0),
+		reserved4(0),
+		reserved5(0),
+		reserved6(0)
+	{
 	}
 };
 
 struct trigger_t {
-	UInt8 x;
-	UInt8 y;
-	UInt8 width;
-	UInt8 height;
-	UInt8 hit_handler_flags;
-	UInt8 hit_handler_bank;
-	UInt8Ptr hit_handler_address;
+	typedef Reference<trigger_t> Ref;
+	typedef std::vector<Ref> Array;
+
+	UInt8 x = 0;
+	UInt8 y = 0;
+	UInt8 width = 0;
+	UInt8 height = 0;
+	UInt8 hit_handler_flags = 0;
+	UInt8 hit_handler_bank = 0;
+	UInt8Ptr hit_handler_address = NULL;
 
 	trigger_t() {
-		memset(this, 0, sizeof(trigger_t));
 	}
 };
 
 struct scene_t {
-	Boolean is_16x16_grid         : 1;
-	Boolean is_16x16_player       : 1;
-	Boolean clamp_camera          : 1;
-	Boolean player_on_ladder      : 1;
-	Boolean reserved1             : 1;
-	Boolean reserved2             : 1;
-	Boolean reserved3             : 1;
-	Boolean reserved4             : 1;
-	UInt8 gravity;
-	UInt8 jump_gravity;
-	UInt8 jump_max_count;
-	UInt8 jump_max_ticks;
-	UInt8 climb_velocity;
-	UInt8 player_can_jump;
-	UInt8 player_jump_ticks;
-	Int16 player_velocity_y;
-	UInt8 width;
-	UInt8 height;
-	UInt8 base_tile;
-	UInt8 map_bank;
-	UInt8Ptr map_address;
-	UInt8 attr_bank;
-	UInt8Ptr attr_address;
-	UInt8 prop_bank;
-	UInt8Ptr prop_address;
-	UInt8 actor_bank;
-	UInt8Ptr actor_address;
-	UInt8 trigger_bank;
-	UInt8Ptr trigger_address;
+	typedef Reference<scene_t> Ref;
 
-	scene_t() {
-		memset(this, 0, sizeof(scene_t));
+	Boolean is_16x16_grid      : 1;
+	Boolean is_16x16_player    : 1;
+	Boolean clamp_camera       : 1;
+	Boolean player_on_ladder   : 1;
+	Boolean reserved1          : 1;
+	Boolean reserved2          : 1;
+	Boolean reserved3          : 1;
+	Boolean reserved4          : 1;
+	UInt8 gravity = 0;
+	UInt8 jump_gravity = 0;
+	UInt8 jump_max_count = 0;
+	UInt8 jump_max_ticks = 0;
+	UInt8 climb_velocity = 0;
+	UInt8 player_can_jump = 0;
+	UInt8 player_jump_ticks = 0;
+	Int16 player_velocity_y = 0;
+	UInt8 width = 0;
+	UInt8 height = 0;
+	UInt8 base_tile = 0;
+	UInt8 map_bank = 0;
+	UInt8Ptr map_address = NULL;
+	UInt8 attr_bank = 0;
+	UInt8Ptr attr_address = NULL;
+	UInt8 prop_bank = 0;
+	UInt8Ptr prop_address = NULL;
+	UInt8 actor_bank = 0;
+	UInt8Ptr actor_address = NULL;
+	UInt8 trigger_bank = 0;
+	UInt8Ptr trigger_address = NULL;
+
+	scene_t() :
+		is_16x16_grid(0),
+		is_16x16_player(0),
+		clamp_camera(0),
+		player_on_ladder(0),
+		reserved1(0),
+		reserved2(0),
+		reserved3(0),
+		reserved4(0)
+	{
 	}
 };
 
@@ -254,6 +313,19 @@ private:
 	};
 	typedef std::map<SourceRef, int> SourceRefToTracePointDictionary;
 
+	struct RuntimeConfig {
+		int heapSize = 0; // In words.
+		int stackSize = 0; // In words.
+
+		int actorMaxCount = 0;
+		int projectileDefMaxCount = 0;
+		int projectileMaxCount = 0;
+		int triggerMaxCount = 0;
+
+		RuntimeConfig() {
+		}
+	};
+
 private:
 	bool _opened = false;
 	struct {
@@ -265,6 +337,7 @@ private:
 
 	bool _started = false;
 	const GBBASIC::Program::Compiled* _compiled = nullptr; // Foreign.
+	RuntimeConfig _runtimeConfig;
 	Breakpoint::Array _breakpoints;
 	mutable SourceRefToTracePointDictionary _srcToTracePoint; // Reversed mapping from trace points.
 	FarPtr _currentBankPointer;
@@ -305,6 +378,7 @@ public:
 
 		_started = false;
 		_compiled = nullptr;
+		_runtimeConfig = RuntimeConfig();
 		_breakpoints.clear();
 		_srcToTracePoint.clear();
 		_currentBankPointer = FarPtr();
@@ -349,20 +423,20 @@ public:
 
 		_started = true;
 
-		_compiled = &_workspace->getCompiledData();
+		std::string config;
+		_compiled = &_workspace->getCompiledData(&config);
+		rapidjson::Document doc;
+		Json::fromString(doc, config.c_str());
+		Jpath::get(doc, _runtimeConfig.heapSize, "memory", "heap_size");
+		Jpath::get(doc, _runtimeConfig.stackSize, "memory", "stack_size");
+		Jpath::get(doc, _runtimeConfig.actorMaxCount, "objects", "max_actor_count");
+		Jpath::get(doc, _runtimeConfig.projectileDefMaxCount, "objects", "max_projectile_def_count");
+		Jpath::get(doc, _runtimeConfig.projectileMaxCount, "objects", "max_projectile_count");
+		Jpath::get(doc, _runtimeConfig.triggerMaxCount, "objects", "max_trigger_count");
 
 		// Resolve the ROM entries.
-		const GBBASIC::RomLocation* currentBankInRom = getRomLocationBySymbolName(COMPILERFREE_CURRENT_BANK_ENTRY_NAME);
-		if (currentBankInRom) {
-			_currentBankPointer.bank = currentBankInRom->bank;
-			_currentBankPointer.address = currentBankInRom->address;
-		}
-
-		const GBBASIC::RomLocation* vmStepInRom = getRomLocationBySymbolName(COMPILER_VM_STEP_ENTRY_NAME);
-		if (vmStepInRom) {
-			_vmStepPointer.bank = vmStepInRom->bank;
-			_vmStepPointer.address = vmStepInRom->address;
-		}
+		getFarPointerBySymbolName(COMPILERFREE_CURRENT_BANK_ENTRY_NAME, _currentBankPointer);
+		getFarPointerBySymbolName(COMPILER_VM_STEP_ENTRY_NAME, _vmStepPointer);
 
 		// Refresh the breakpoints.
 		refreshBreakpoints();
@@ -385,6 +459,7 @@ public:
 		_bringCodeDebuggerToFront = false;
 
 		_compiled = nullptr;
+		_runtimeConfig = RuntimeConfig();
 		_breakpoints.clear();
 		_srcToTracePoint.clear();
 		_currentBankPointer = FarPtr();
@@ -433,6 +508,10 @@ public:
 
 			_breakpoints.erase(it);
 		}
+	}
+
+	virtual void step(void) override {
+		// TODO: DBG.
 	}
 
 	virtual bool breakpointHit(void) override {
@@ -518,6 +597,21 @@ private:
 
 		return result;
 	}
+	bool getFarPointerBySymbolName(const char* name, FarPtr &out) const {
+		out = FarPtr();
+
+		if (!name)
+			return false;
+
+		const GBBASIC::RomLocation* romLocation = getRomLocationBySymbolName(name);
+		if (!romLocation)
+			return false;
+
+		out.bank = romLocation->bank;
+		out.address = romLocation->address;
+
+		return true;
+	}
 	const GBBASIC::TracePoint* getTracePointBySourceLocation(int page, int ln) const {
 		const GBBASIC::TracePoint::Array* tracePoints = compiledTracePoints();
 		if (!tracePoints)
@@ -556,7 +650,7 @@ private:
 		return result;
 	}
 
-	bool probeThreadProgramCounter(UInt16 address, UInt8 &bank, UInt16 &pc) const {
+	bool probeThreadProgramCounter(UInt16 threadAddr, UInt8 &bank, UInt16 &pc) const {
 		bank = 0;
 		pc = 0;
 
@@ -564,8 +658,8 @@ private:
 		UInt8 ctxBank = 0;
 		constexpr const int pcOffset = GBBASIC_OFFSETOF(VM::SCRIPT_CTX, PC);
 		constexpr const int bankOffset = GBBASIC_OFFSETOF(VM::SCRIPT_CTX, bank);
-		const int ctxPcAddress = address + pcOffset;
-		const int ctxBankAddress = address + bankOffset;
+		const int ctxPcAddress = threadAddr + pcOffset;
+		const int ctxBankAddress = threadAddr + bankOffset;
 		if (!_device->readRam((UInt16)ctxPcAddress, &ctxPc))
 			return false;
 		if (!_device->readRam((UInt16)ctxBankAddress, &ctxBank))
@@ -573,6 +667,209 @@ private:
 
 		bank = ctxBank;
 		pc = ctxPc;
+
+		return true;
+	}
+	bool probeThreads(VM::SCRIPT_CTX::Array &out) const {
+		out.clear();
+
+		FarPtr farPtr;
+		if (!getFarPointerBySymbolName(COMPILER_FIRST_CONTEXT_ENTRY_NAME, farPtr))
+			return false;
+		UInt16 threadAddr = 0;
+		if (!_device->readRam((UInt16)farPtr.address, &threadAddr) || threadAddr == 0)
+			return false;
+
+		do {
+			VM::SCRIPT_CTX ctx;
+			if (!probeThread(threadAddr, ctx))
+				return false;
+
+			out.push_back(VM::SCRIPT_CTX::Ref(ctx, FarPtr(0, threadAddr)));
+
+			constexpr const int nextOffset = GBBASIC_OFFSETOF(VM::SCRIPT_CTX, next);
+			const int nextAddress = threadAddr + nextOffset;
+			if (!_device->readRam((UInt16)nextAddress, &threadAddr))
+				return false;
+		} while (threadAddr != 0);
+
+		return true;
+	}
+	bool probeThread(UInt16 threadAddr, VM::SCRIPT_CTX &out) const {
+		out = VM::SCRIPT_CTX();
+
+		if (!_device->readRam(threadAddr, (Byte*)&out, sizeof(VM::SCRIPT_CTX)))
+			return false;
+
+		return true;
+	}
+	bool probeThreadStack(UInt16 threadAddr, VM::Buffer &out, int &count) const {
+		out.clear();
+		count = 0;
+
+		UInt16 baseAddr = 0;
+		constexpr const int baseAddrOffset = GBBASIC_OFFSETOF(VM::SCRIPT_CTX, base_addr);
+		const int baseAddrAddress = threadAddr + baseAddrOffset;
+		if (!_device->readRam((UInt16)baseAddrAddress, &baseAddr))
+			return false;
+
+		UInt16 stackPtr = 0;
+		constexpr const int stackPtrOffset = GBBASIC_OFFSETOF(VM::SCRIPT_CTX, stack_ptr);
+		const int stackPtrAddress = threadAddr + stackPtrOffset;
+		if (!_device->readRam((UInt16)stackPtrAddress, &stackPtr))
+			return false;
+
+		for (size_t i = 0; i < _runtimeConfig.stackSize * sizeof(UInt16); ++i) {
+			UInt8 data = 0;
+			if (!_device->readRam((UInt16)(baseAddr + i), &data))
+				data = 0;
+			out.push_back(data);
+		}
+
+		count = (stackPtr - baseAddr) / sizeof(UInt16);
+
+		return true;
+	}
+	bool probeHeap(VM::Buffer &out) const {
+		out.clear();
+
+		FarPtr farPtr;
+		if (!getFarPointerBySymbolName(COMPILER_SCRIPT_MEMORY_ENTRY_NAME, farPtr))
+			return false;
+		UInt16 heapAddr = 0;
+		if (!_device->readRam((UInt16)farPtr.address, &heapAddr) || heapAddr == 0)
+			return false;
+
+		for (size_t i = 0; i < _runtimeConfig.heapSize * sizeof(UInt16); ++i) {
+			UInt8 data = 0;
+			if (!_device->readRam((UInt16)(heapAddr + i), &data))
+				data = 0;
+			out.push_back(data);
+		}
+
+		return true;
+	}
+	bool probeActors(VM::actor_t::Array &out) const {
+		out.clear();
+
+		FarPtr farPtr;
+		if (!getFarPointerBySymbolName(COMPILER_ACTOR_ACTIVE_HEAD_ENTRY_NAME, farPtr))
+			return false;
+		UInt16 actorAddr = 0;
+		if (!_device->readRam((UInt16)farPtr.address, &actorAddr) || actorAddr == 0)
+			return false;
+
+		do {
+			VM::actor_t actor;
+			if (!_device->readRam(actorAddr, (Byte*)&actor, sizeof(VM::actor_t)))
+				return false;
+
+			out.push_back(VM::actor_t::Ref(actor, FarPtr(0, actorAddr)));
+
+			constexpr const int nextOffset = GBBASIC_OFFSETOF(VM::actor_t, next);
+			const int nextAddress = actorAddr + nextOffset;
+			if (!_device->readRam((UInt16)nextAddress, &actorAddr))
+				return false;
+		} while (actorAddr != 0);
+
+		GBBASIC_ASSERT((int)out.size() <= _runtimeConfig.actorMaxCount && "Wrong data.");
+
+		return true;
+	}
+	bool probeProjectileDefs(VM::projectile_def_t::Array &out) const {
+		out.clear();
+
+		FarPtr farPtr;
+		if (!getFarPointerBySymbolName(COMPILER_PROJECTILE_DEFS_ENTRY_NAME, farPtr))
+			return false;
+		UInt16 projectileDefAddr = 0;
+		if (!_device->readRam((UInt16)farPtr.address, &projectileDefAddr) || projectileDefAddr == 0)
+			return false;
+
+		for (size_t i = 0; i < (size_t)_runtimeConfig.projectileDefMaxCount; ++i) {
+			VM::projectile_def_t projectileDef;
+			if (!_device->readRam((UInt16)projectileDefAddr, (Byte*)&projectileDef, sizeof(VM::projectile_def_t)))
+				projectileDef = VM::projectile_def_t();
+			out.push_back(VM::projectile_def_t::Ref(projectileDef, FarPtr(0, projectileDefAddr)));
+			projectileDefAddr += sizeof(VM::projectile_def_t);
+		}
+
+		return true;
+	}
+	bool probeProjectiles(VM::projectile_t::Array &out) const {
+		out.clear();
+
+		FarPtr farPtr;
+		if (!getFarPointerBySymbolName(COMPILER_PROJECTILE_ACTIVE_HEAD_ENTRY_NAME, farPtr))
+			return false;
+		UInt16 projectileAddr = 0;
+		if (!_device->readRam((UInt16)farPtr.address, &projectileAddr) || projectileAddr == 0)
+			return false;
+
+		do {
+			VM::projectile_t projectile;
+			if (!_device->readRam(projectileAddr, (Byte*)&projectile, sizeof(VM::projectile_t)))
+				return false;
+
+			out.push_back(VM::projectile_t::Ref(projectile, FarPtr(0, projectileAddr)));
+
+			constexpr const int nextOffset = GBBASIC_OFFSETOF(VM::projectile_t, next);
+			const int nextAddress = projectileAddr + nextOffset;
+			if (!_device->readRam((UInt16)nextAddress, &projectileAddr))
+				return false;
+		} while (projectileAddr != 0);
+
+		GBBASIC_ASSERT((int)out.size() <= _runtimeConfig.projectileMaxCount && "Wrong data.");
+
+		return true;
+	}
+	bool probeTriggers(VM::trigger_t::Array &out) const {
+		out.clear();
+
+		FarPtr farPtr_;
+		if (!getFarPointerBySymbolName(COMPILER_TRIGGER_COUNT_ENTRY_NAME, farPtr_))
+			return false;
+		UInt16 triggerCountAddr = 0;
+		if (!_device->readRam((UInt16)farPtr_.address, &triggerCountAddr) || triggerCountAddr == 0)
+			return false;
+
+		UInt8 triggerCount = 0;
+		if (!_device->readRam((UInt16)triggerCountAddr, &triggerCount))
+			return false;
+
+		FarPtr farPtr;
+		if (!getFarPointerBySymbolName(COMPILER_PROJECTILE_DEFS_ENTRY_NAME, farPtr))
+			return false;
+		UInt16 triggerAddr = 0;
+		if (!_device->readRam((UInt16)farPtr.address, &triggerAddr) || triggerAddr == 0)
+			return false;
+
+		for (size_t i = 0; i < triggerCount; ++i) {
+			VM::trigger_t trigger;
+			if (!_device->readRam((UInt16)triggerAddr, (Byte*)&trigger, sizeof(VM::trigger_t)))
+				trigger = VM::trigger_t();
+			out.push_back(VM::trigger_t::Ref(trigger, FarPtr(0, triggerAddr)));
+			triggerAddr += sizeof(VM::trigger_t);
+		}
+
+		GBBASIC_ASSERT((int)out.size() <= _runtimeConfig.triggerMaxCount && "Wrong data.");
+
+		return true;
+	}
+	bool probeScene(VM::scene_t &out) const {
+		out = VM::scene_t();
+
+		FarPtr farPtr;
+		if (!getFarPointerBySymbolName(COMPILER_SCENE_ENTRY_NAME, farPtr))
+			return false;
+		UInt16 sceneAddr = 0;
+		if (!_device->readRam((UInt16)farPtr.address, &sceneAddr) || sceneAddr == 0)
+			return false;
+
+		VM::scene_t scene;
+		if (!_device->readRam((UInt16)sceneAddr, (Byte*)&scene, sizeof(VM::scene_t)))
+			scene = VM::scene_t();
+		out = scene;
 
 		return true;
 	}

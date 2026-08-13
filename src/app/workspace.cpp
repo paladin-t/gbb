@@ -6045,11 +6045,15 @@ void Workspace::upgrade(
 	}
 }
 
-const GBBASIC::Program::Compiled &Workspace::getCompiledData(void) const {
+const GBBASIC::Program::Compiled &Workspace::getCompiledData(std::string* config) const {
+	if (config)
+		*config = _compilingConfig;
+
 	return _compilingOutput;
 }
 
 void Workspace::clearCompiledData(void) {
+	_compilingConfig.clear();
 	_compilingOutput = GBBASIC::Program::Compiled();
 }
 
@@ -6540,7 +6544,12 @@ void Workspace::compile(
 
 			self->_compilingParameters = CompilingParameters();
 
-			self->_compilingOutput = codeIsOk && resIsOk ? program.compiled : GBBASIC::Program::Compiled();
+			self->_compilingConfig.clear();
+			self->_compilingOutput = GBBASIC::Program::Compiled();
+			if (codeIsOk && resIsOk) {
+				self->_compilingConfig = program.config;
+				self->_compilingOutput = program.compiled;
+			}
 		} while (false);
 
 		self->_state = States::COMPILED;
@@ -6646,6 +6655,7 @@ void Workspace::compile(
 
 		_compilingErrors = CompilingErrors::Ptr(new CompilingErrors());
 
+		_compilingConfig.clear();
 		_compilingOutput = GBBASIC::Program::Compiled();
 	} while (false);
 
@@ -8302,6 +8312,10 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 				toggleBreakpoint(currentAssetPage(), -1);
 		}
 		if (f10 && !modifier && !io.KeyShift && !io.KeyAlt) {
+			if (category() == Categories::EMULATOR) {
+				if (codeDebugger())
+					codeDebugger()->step();
+			}
 		}
 	}
 
