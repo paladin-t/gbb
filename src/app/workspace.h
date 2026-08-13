@@ -749,9 +749,13 @@ public:
 	void run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom, bool traceless);
 	virtual bool running(void) const override;
 	virtual void pause(class Window* wnd, class Renderer* rnd) override;
+	void resume(class Window* wnd, class Renderer* rnd);
 	virtual void stop(class Window* wnd, class Renderer* rnd) override;
 
 	virtual bool breakpointHit(void) override;
+	void enableBreakpoints(void);
+	void disableBreakpoints(void);
+	void clearBreakpoints(void);
 	class Debugger* initializeCodeDebugger(class Window* wnd, class Renderer* rnd);
 	void disposeCodeDebugger(void);
 

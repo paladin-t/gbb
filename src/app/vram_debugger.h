@@ -32,7 +32,8 @@ public:
 	virtual void update(
 		class Renderer* rnd, class Theme* theme,
 		bool previewPaletteBits, bool showGrids,
-		bool isNewFrame
+		bool isNewFrame,
+		bool showTitle
 	) = 0;
 
 	static VramDebugger* create(void);

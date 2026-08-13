@@ -472,7 +472,7 @@ struct Context {
 
 				ImGui::BeginChild("#CDbg", ImVec2(size.x, size.y - 19.0f), true, flags);
 				{
-					debugger->update(renderer, theme, true);
+					debugger->update(renderer, theme, true, !tabOpened);
 				}
 				ImGui::EndChild();
 
@@ -480,12 +480,12 @@ struct Context {
 
 				ImGui::EndTabItem();
 			} else {
-				debugger->update(renderer, theme, false);
+				debugger->update(renderer, theme, false, !tabOpened);
 			}
 		} else {
 			ImGui::BeginChild("#CDbg", size, true, flags);
 			{
-				debugger->update(renderer, theme, true);
+				debugger->update(renderer, theme, true, !tabOpened);
 			}
 			ImGui::EndChild();
 		}
@@ -505,7 +505,8 @@ struct Context {
 					vramDebugger->update(
 						renderer, theme,
 						*vramDebuggerPreviewPaletteBits, *vramDebuggerShowGrids,
-						isNewFrame
+						isNewFrame,
+						!tabOpened
 					);
 				}
 				ImGui::EndChild();
@@ -520,7 +521,8 @@ struct Context {
 				vramDebugger->update(
 					renderer, theme,
 					*vramDebuggerPreviewPaletteBits, *vramDebuggerShowGrids,
-					isNewFrame
+					isNewFrame,
+					!tabOpened
 				);
 			}
 			ImGui::EndChild();

@@ -13,6 +13,7 @@
 #include "../compiler/disassembler.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "../../lib/imgui/imgui_internal.h"
+#include "../../lib/imgui_code_editor/imgui_code_editor.h"
 #include "../../lib/jpath/jpath.hpp"
 
 /*
@@ -74,6 +75,17 @@ typedef Pointer CtxPtr;
 typedef Pointer MetaSpriteRef;
 
 typedef std::vector<Byte> Buffer;
+
+struct ThreadStack {
+	typedef Reference<ThreadStack> Ref;
+	typedef std::vector<Ref> Array;
+
+	VM::Buffer buffer;
+	int count = 0;
+
+	ThreadStack() {
+	}
+};
 
 struct SCRIPT_CTX {
 	typedef Reference<SCRIPT_CTX> Ref;
@@ -326,6 +338,31 @@ private:
 		}
 	};
 
+	struct Snapshot {
+		VM::SCRIPT_CTX::Array threads; // Active only.
+		VM::ThreadStack::Array threadStacks; // Active only.
+		VM::Buffer heap;
+		VM::actor_t::Array actors; // Active only.
+		VM::projectile_def_t::Array projectileDefs;
+		VM::projectile_t::Array projectiles;
+		VM::trigger_t::Array triggers;
+		VM::scene_t scene;
+
+		Snapshot() {
+		}
+
+		void reset(void) {
+			threads.clear();
+			threadStacks.clear();
+			heap.clear();
+			actors.clear();
+			projectileDefs.clear();
+			projectiles.clear();
+			triggers.clear();
+			scene = VM::scene_t();
+		}
+	};
+
 private:
 	bool _opened = false;
 	struct {
@@ -346,6 +383,11 @@ private:
 	FarPtr _vmStepPointer;
 
 	bool _bringCodeDebuggerToFront = false;
+	ImGui::CodeEditor* _codeEditor = nullptr;
+	bool _inspecting = false;
+	Snapshot _snapshot;
+	Device::Registers _registers;
+	GBBASIC::Disassembler::Mnemonic::Array _mnemonics;
 
 public:
 	DebuggerImpl() {
@@ -356,11 +398,16 @@ public:
 		close();
 	}
 
-	virtual bool open(class Renderer* rnd, class Workspace* ws, class Theme* /* theme */, class Device* device) override {
+	virtual bool open(class Renderer* /* rnd */, class Workspace* ws, class Theme* /* theme */, class Device* device) override {
 		if (_opened)
 			return true;
 
-		(void)rnd;
+		_codeEditor = new ImGui::CodeEditor();
+		_inspecting = false;
+		_snapshot.reset();
+		_registers = Device::Registers();
+		_mnemonics.clear();
+
 		_workspace = ws;
 		_device = device;
 
@@ -375,6 +422,12 @@ public:
 		_device->clearBreakpoints();
 
 		_bringCodeDebuggerToFront = false;
+		delete _codeEditor;
+		_codeEditor = nullptr;
+		_inspecting = false;
+		_snapshot.reset();
+		_registers = Device::Registers();
+		_mnemonics.clear();
 
 		_started = false;
 		_compiled = nullptr;
@@ -400,18 +453,27 @@ public:
 
 	virtual void update(
 		class Renderer* rnd, class Theme* theme,
-		bool visible
+		bool visible,
+		bool showTitle
 	) override {
 		debug(visible);
 
 		if (!visible)
 			return;
 
-		begin(rnd, theme);
-		{
-			ImGui::TextUnformatted("DBG");
+		begin(rnd, theme, showTitle);
+		if (inspecting()) {
+			code(rnd, theme);
+			ImGui::NewLine(1);
+			ImGui::Separator();
 
-			// TODO: DBG.
+			kernelMemory(rnd, theme);
+			ImGui::NewLine(1);
+			ImGui::Separator();
+
+			deviceMemory(rnd, theme);
+		} else {
+			running(rnd, theme);
 		}
 		end(rnd);
 	}
@@ -457,6 +519,10 @@ public:
 			_device->clearBreakpoints();
 
 		_bringCodeDebuggerToFront = false;
+		_inspecting = false;
+		_snapshot.reset();
+		_registers = Device::Registers();
+		_mnemonics.clear();
 
 		_compiled = nullptr;
 		_runtimeConfig = RuntimeConfig();
@@ -468,6 +534,23 @@ public:
 		_vmStepPointer = FarPtr();
 
 		_started = false;
+	}
+
+	virtual void pause(void) override {
+		_bringCodeDebuggerToFront = true;
+
+		_inspecting = true;
+
+		inspect(nullptr);
+	}
+	virtual void resume(void) override {
+		_inspecting = false;
+
+		_snapshot.reset();
+		_registers = Device::Registers();
+	}
+	bool inspecting(void) const {
+		return _inspecting;
 	}
 
 	virtual void clearBreakpoints(void) override {
@@ -511,6 +594,11 @@ public:
 	}
 
 	virtual void step(void) override {
+		_inspecting = false;
+
+		_snapshot.reset();
+		_registers = Device::Registers();
+
 		// TODO: DBG.
 	}
 
@@ -703,9 +791,8 @@ private:
 
 		return true;
 	}
-	bool probeThreadStack(UInt16 threadAddr, VM::Buffer &out, int &count) const {
-		out.clear();
-		count = 0;
+	bool probeThreadStack(UInt16 threadAddr, VM::ThreadStack &out) const {
+		out = VM::ThreadStack();
 
 		UInt16 baseAddr = 0;
 		constexpr const int baseAddrOffset = GBBASIC_OFFSETOF(VM::SCRIPT_CTX, base_addr);
@@ -723,10 +810,10 @@ private:
 			UInt8 data = 0;
 			if (!_device->readRam((UInt16)(baseAddr + i), &data))
 				data = 0;
-			out.push_back(data);
+			out.buffer.push_back(data);
 		}
 
-		count = (stackPtr - baseAddr) / sizeof(UInt16);
+		out.count = (stackPtr - baseAddr) / sizeof(UInt16);
 
 		return true;
 	}
@@ -958,8 +1045,9 @@ private:
 	void hitBreakpoint(const Breakpoint &breakpoint) {
 		_bringCodeDebuggerToFront = true;
 
-		// TODO: DBG.
-		(void)breakpoint;
+		_inspecting = true;
+
+		inspect(&breakpoint);
 	}
 	void debug(bool visible) {
 		if (_bringCodeDebuggerToFront) {
@@ -967,20 +1055,205 @@ private:
 			if (!visible)
 				_workspace->bringCodeDebuggerToFront(true);
 		}
-
+	}
+	void inspect(const Breakpoint* breakpoint /* nullable */) {
 		// TODO: DBG.
+		(void)breakpoint;
 	}
 
-	void begin(Renderer* /* rnd */, Theme* theme) {
+	void begin(Renderer* /* rnd */, Theme* theme, bool showTitle) {
 		_options.startY = ImGui::GetCursorPosY();
 
-		ImGui::AlignTextToFramePadding();
-		ImGui::Dummy(ImVec2(1, 0));
-		ImGui::SameLine();
-		ImGui::TextUnformatted(theme->windowEmulator_CodeDebugger());
+		if (showTitle) {
+			ImGui::AlignTextToFramePadding();
+			ImGui::Dummy(ImVec2(1, 0));
+			ImGui::SameLine();
+			ImGui::TextUnformatted(theme->windowEmulator_CodeDebugger());
+		}
 	}
 	void end(Renderer* /* rnd */) {
 		_options.safeHeight = (int)(ImGui::GetCursorPosY() - _options.startY + 48);
+	}
+
+	void running(Renderer* rnd, Theme* theme) {
+		ImGuiIO &io = ImGui::GetIO();
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		const float borderSize = style.ChildBorderSize;
+		const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
+		const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
+		const ImVec2 regSize(
+			regMax.x - regMin.x - borderSize * 2,
+			regMax.y - regMin.y - borderSize * 2
+		);
+
+		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+		if (!ImGui::CollapsingHeader(theme->windowEmulator_CodeDebugger_Running().c_str(), regSize.x, flags))
+			return;
+		ImGui::NewLine(1);
+
+		const ImVec2 buttonSize(13 * io.FontGlobalScale, 13 * io.FontGlobalScale);
+		if (ImGui::ImageButton(theme->iconPause()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+			_workspace->pause(nullptr, rnd);
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_Pause());
+		}
+		ImGui::SameLine();
+		ImGui::Dummy(ImVec2(2, 0));
+		ImGui::SameLine();
+
+		if (ImGui::ImageButton(theme->iconStep()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconDisabledColor))) {
+			// Do nothing.
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_Step());
+		}
+		ImGui::SameLine();
+		ImGui::Dummy(ImVec2(2, 0));
+		ImGui::SameLine();
+
+		if (ImGui::ImageButton(theme->iconBreakDisable()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+			_workspace->disableBreakpoints();
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_DisableBreakpoints());
+		}
+		ImGui::SameLine();
+
+		if (ImGui::ImageButton(theme->iconBreakEnable()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+			_workspace->enableBreakpoints();
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_EnableBreakpoints());
+		}
+		ImGui::SameLine();
+
+		if (ImGui::ImageButton(theme->iconBreakClear()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+			_workspace->clearBreakpoints();
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_ClearBreakpoints());
+		}
+	}
+	void code(Renderer* rnd, Theme* theme) {
+		ImGuiIO &io = ImGui::GetIO();
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		const float borderSize = style.ChildBorderSize;
+		const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
+		const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
+		const ImVec2 regSize(
+			regMax.x - regMin.x - borderSize * 2,
+			regMax.y - regMin.y - borderSize * 2
+		);
+
+		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+		if (!ImGui::CollapsingHeader(theme->windowEmulator_CodeDebugger_Inspector().c_str(), regSize.x, flags))
+			return;
+		ImGui::NewLine(1);
+
+		const ImVec2 buttonSize(13 * io.FontGlobalScale, 13 * io.FontGlobalScale);
+		if (ImGui::ImageButton(theme->iconPlay()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+			_workspace->resume(nullptr, rnd);
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_Pause());
+		}
+		ImGui::SameLine();
+		ImGui::Dummy(ImVec2(2, 0));
+		ImGui::SameLine();
+
+		if (ImGui::ImageButton(theme->iconStep()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+			step();
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_Step());
+		}
+		ImGui::SameLine();
+		ImGui::Dummy(ImVec2(2, 0));
+		ImGui::SameLine();
+
+		if (ImGui::ImageButton(theme->iconBreakDisable()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+			_workspace->disableBreakpoints();
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_DisableBreakpoints());
+		}
+		ImGui::SameLine();
+
+		if (ImGui::ImageButton(theme->iconBreakEnable()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+			_workspace->enableBreakpoints();
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_EnableBreakpoints());
+		}
+		ImGui::SameLine();
+
+		if (ImGui::ImageButton(theme->iconBreakClear()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+			_workspace->clearBreakpoints();
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_ClearBreakpoints());
+		}
+
+		// TODO: DBG.
+	}
+	void kernelMemory(Renderer* /* rnd */, Theme* theme) {
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		const float borderSize = style.ChildBorderSize;
+		const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
+		const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
+		const ImVec2 regSize(
+			regMax.x - regMin.x - borderSize * 2,
+			regMax.y - regMin.y - borderSize * 2
+		);
+
+		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+		if (!ImGui::CollapsingHeader(theme->windowEmulator_CodeDebugger_KernelMemory().c_str(), regSize.x, flags))
+			return;
+		ImGui::NewLine(1);
+
+		// TODO: DBG.
+	}
+	void deviceMemory(Renderer* /* rnd */, Theme* theme) {
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		const float borderSize = style.ChildBorderSize;
+		const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
+		const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
+		const ImVec2 regSize(
+			regMax.x - regMin.x - borderSize * 2,
+			regMax.y - regMin.y - borderSize * 2
+		);
+
+		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
+		if (!ImGui::CollapsingHeader(theme->windowEmulator_CodeDebugger_DeviceMemory().c_str(), regSize.x, flags))
+			return;
+		ImGui::NewLine(1);
+
+		// TODO: DBG.
 	}
 };
 

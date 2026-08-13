@@ -950,6 +950,10 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_Debugger_Code("Code");
 	windowEmulator_Debugger_Vram("VRAM");
 	windowEmulator_CodeDebugger("Code Debugger");
+	windowEmulator_CodeDebugger_DeviceMemory("Device memory");
+	windowEmulator_CodeDebugger_Inspector("Inspector");
+	windowEmulator_CodeDebugger_KernelMemory("Kernel memory");
+	windowEmulator_CodeDebugger_Running("Running...");
 	windowEmulator_VramDebugger("VRAM Debugger");
 	windowEmulator_VramDebugger_BgWinMap("BG/WIN map");
 	windowEmulator_VramDebugger_Layer("Layer");
@@ -1352,6 +1356,11 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipCode_InfoWords("words");
 
 	tooltipEmulator_AlternativeSpeed("Alternative speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
+	tooltipEmulator_CodeDebugger_ClearBreakpoints("Clear breakpoints");
+	tooltipEmulator_CodeDebugger_DisableBreakpoints("Disable breakpoints");
+	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
+	tooltipEmulator_CodeDebugger_Pause("Pause");
+	tooltipEmulator_CodeDebugger_Step("Step (F10)");
 	tooltipEmulator_NormalSpeed("Normal speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
 	tooltipEmulator_StatusNote(
 		"Cartridge flag   : {0}\n"

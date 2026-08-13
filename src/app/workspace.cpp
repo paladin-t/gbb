@@ -2117,6 +2117,17 @@ bool Workspace::running(void) const {
 void Workspace::pause(class Window*, class Renderer*) {
 	if (canvasDevice())
 		canvasDevice()->pause();
+
+	if (codeDebugger())
+		codeDebugger()->pause();
+}
+
+void Workspace::resume(class Window*, class Renderer*) {
+	if (canvasDevice())
+		canvasDevice()->resume();
+
+	if (codeDebugger())
+		codeDebugger()->resume();
 }
 
 void Workspace::stop(class Window* wnd, class Renderer* rnd) {
@@ -2141,6 +2152,82 @@ bool Workspace::breakpointHit(void) {
 		return false;
 
 	return codeDebugger()->breakpointHit();
+}
+
+void Workspace::enableBreakpoints(void) {
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			Object::Ptr obj = (Object::Ptr)editor->post(Editable::GET_BREAKPOINTS);
+			IList::Ptr lst = Object::as<IList::Ptr>(obj);
+
+			const int m = lst->count();
+			for (int j = 0; j < m; j += 2) {
+				const Variant::Int line = (Variant::Int)lst->at(j);
+				const bool enabled = (bool)lst->at(j + 1);
+				(void)enabled;
+				editor->post(Editable::SET_BREAKPOINT, line, true, true);
+				codeDebugger()->setBreakpoint(i, line + 1, true); // 1-based.
+			}
+		}
+	}
+}
+
+void Workspace::disableBreakpoints(void) {
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			Object::Ptr obj = (Object::Ptr)editor->post(Editable::GET_BREAKPOINTS);
+			IList::Ptr lst = Object::as<IList::Ptr>(obj);
+
+			const int m = lst->count();
+			for (int j = 0; j < m; j += 2) {
+				const Variant::Int line = (Variant::Int)lst->at(j);
+				const bool enabled = (bool)lst->at(j + 1);
+				(void)enabled;
+				editor->post(Editable::SET_BREAKPOINT, line, true, false);
+				codeDebugger()->setBreakpoint(i, line + 1, false); // 1-based.
+			}
+		}
+	}
+}
+
+void Workspace::clearBreakpoints(void) {
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			editor->post(Editable::CLEAR_BREAKPOINTS);
+		}
+
+		codeDebugger()->clearBreakpoints();
+	}
 }
 
 class Debugger* Workspace::initializeCodeDebugger(class Window* /* wnd */, class Renderer* rnd) {
@@ -8271,8 +8358,12 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 			}
 		} else if ((f5 && !modifier && !io.KeyShift && !io.KeyAlt) || (r && modifier && !io.KeyShift && !io.KeyAlt)) {
 			if (canvasDevice()) {
-				if (canvasDevice()->paused())
+				if (canvasDevice()->paused()) {
 					canvasDevice()->resume();
+
+					if (codeDebugger())
+						codeDebugger()->resume();
+				}
 			} else {
 				launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 			}
@@ -10405,10 +10496,16 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 				if (canvasDevice()->paused()) {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Resume().c_str())) {
 						canvasDevice()->resume();
+
+						if (codeDebugger())
+							codeDebugger()->resume();
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPause()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_Pause().c_str())) {
 						canvasDevice()->pause();
+
+						if (codeDebugger())
+							codeDebugger()->pause();
 					}
 				}
 			}

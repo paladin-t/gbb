@@ -574,11 +574,12 @@ public:
 	virtual void update(
 		class Renderer* rnd, class Theme* theme,
 		bool previewPaletteBits, bool showGrids,
-		bool isNewFrame
+		bool isNewFrame,
+		bool showTitle
 	) override {
 		refresh(rnd, theme, previewPaletteBits, isNewFrame);
 
-		begin(rnd, theme);
+		begin(rnd, theme, showTitle);
 		{
 			tiles(rnd, theme, showGrids);
 			ImGui::NewLine(1);
@@ -1008,13 +1009,15 @@ private:
 		);
 	}
 
-	void begin(Renderer* /* rnd */, Theme* theme) {
+	void begin(Renderer* /* rnd */, Theme* theme, bool showTitle) {
 		_options.startY = ImGui::GetCursorPosY();
 
-		ImGui::AlignTextToFramePadding();
-		ImGui::Dummy(ImVec2(1, 0));
-		ImGui::SameLine();
-		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger());
+		if (showTitle) {
+			ImGui::AlignTextToFramePadding();
+			ImGui::Dummy(ImVec2(1, 0));
+			ImGui::SameLine();
+			ImGui::TextUnformatted(theme->windowEmulator_VramDebugger());
+		}
 	}
 	void end(Renderer* /* rnd */) {
 		_options.safeHeight = (int)(ImGui::GetCursorPosY() - _options.startY + 48);

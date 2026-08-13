@@ -65,11 +65,15 @@ public:
 
 	virtual void update(
 		class Renderer* rnd, class Theme* theme,
-		bool visible
+		bool visible,
+		bool showTitle
 	) = 0;
 
 	virtual void start(void) = 0;
 	virtual void stop(void) = 0;
+
+	virtual void pause(void) = 0;
+	virtual void resume(void) = 0;
 
 	virtual void clearBreakpoints(void) = 0;
 	virtual void setBreakpoint(int page, int ln, bool brk) = 0;
