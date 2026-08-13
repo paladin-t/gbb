@@ -751,6 +751,7 @@ public:
 	virtual void pause(class Window* wnd, class Renderer* rnd) override;
 	void resume(class Window* wnd, class Renderer* rnd);
 	virtual void stop(class Window* wnd, class Renderer* rnd) override;
+	void step(class Window* wnd, class Renderer* rnd);
 
 	virtual bool breakpointHit(void) override;
 	void enableBreakpoints(void);

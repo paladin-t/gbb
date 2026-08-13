@@ -310,6 +310,7 @@ public:
 	virtual void removeBreakpoint(int idx) = 0;
 	virtual void clearBreakpoints(void) = 0;
 	virtual void setBreakpointEnabled(int idx, bool enabled) = 0;
+	virtual void breakAtNextInstruction(void) = 0;
 
 	/**< VRAM debugging operations. */
 

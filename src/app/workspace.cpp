@@ -2144,6 +2144,11 @@ void Workspace::stop(class Window* wnd, class Renderer* rnd) {
 		);
 }
 
+void Workspace::step(class Window*, class Renderer*) {
+	if (canvasDevice())
+		canvasDevice()->breakAtNextInstruction();
+}
+
 bool Workspace::breakpointHit(void) {
 	if (!canvasDevice())
 		return false;
@@ -8402,10 +8407,10 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 			if (category() == Categories::CODE)
 				toggleBreakpoint(currentAssetPage(), -1);
 		}
-		if (f10 && !modifier && !io.KeyShift && !io.KeyAlt) {
+		if (f10 && !io.KeyShift && !io.KeyAlt) {
 			if (category() == Categories::EMULATOR) {
 				if (codeDebugger())
-					codeDebugger()->step();
+					codeDebugger()->step(modifier);
 			}
 		}
 	}

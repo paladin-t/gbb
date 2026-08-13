@@ -1361,6 +1361,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
 	tooltipEmulator_CodeDebugger_Pause("Pause");
 	tooltipEmulator_CodeDebugger_Step("Step (F10)");
+	tooltipEmulator_CodeDebugger_StepAsm("Step ASM (" GBBASIC_MODIFIER_KEY_NAME "+F10)");
 	tooltipEmulator_NormalSpeed("Normal speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
 	tooltipEmulator_StatusNote(
 		"Cartridge flag   : {0}\n"
@@ -1741,8 +1742,7 @@ bool Theme::open(class Renderer* rnd) {
 	iconBreakDisable(createTexture(rnd, RES_ICON_BREAK_DISABLE, GBBASIC_COUNTOF(RES_ICON_BREAK_DISABLE), nullptr));
 	iconBreakClear(createTexture(rnd, RES_ICON_BREAK_CLEAR, GBBASIC_COUNTOF(RES_ICON_BREAK_CLEAR), nullptr));
 	iconStep(createTexture(rnd, RES_ICON_BREAK_STEP, GBBASIC_COUNTOF(RES_ICON_BREAK_STEP), nullptr));
-	iconStepInto(createTexture(rnd, RES_ICON_BREAK_STEP_INTO, GBBASIC_COUNTOF(RES_ICON_BREAK_STEP_INTO), nullptr));
-	iconStepOut(createTexture(rnd, RES_ICON_BREAK_STEP_OUT, GBBASIC_COUNTOF(RES_ICON_BREAK_STEP_OUT), nullptr));
+	iconStepAsm(createTexture(rnd, RES_ICON_BREAK_STEP_ASM, GBBASIC_COUNTOF(RES_ICON_BREAK_STEP_ASM), nullptr));
 
 	iconNumber0(createTexture(rnd, RES_ICON_NUMBER_0, GBBASIC_COUNTOF(RES_ICON_NUMBER_0), nullptr));
 	iconNumber1(createTexture(rnd, RES_ICON_NUMBER_1, GBBASIC_COUNTOF(RES_ICON_NUMBER_1), nullptr));
@@ -1919,8 +1919,7 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconBreakDisable(), nullptr);
 	destroyTexture(rnd, iconBreakClear(), nullptr);
 	destroyTexture(rnd, iconStep(), nullptr);
-	destroyTexture(rnd, iconStepInto(), nullptr);
-	destroyTexture(rnd, iconStepOut(), nullptr);
+	destroyTexture(rnd, iconStepAsm(), nullptr);
 
 	destroyTexture(rnd, iconNumber0(), nullptr);
 	destroyTexture(rnd, iconNumber1(), nullptr);

@@ -43,6 +43,7 @@ private:
 	Colour _classicPalette[4];
 	Emulator* _emulator = nullptr;
 	bool _emulatorPaused = false;
+	bool _breakAtNextInstruction = false;
 	double _rtcTicks = 0;
 	Bytes::Ptr _streamingBuffer = nullptr;
 	RGBA _sgbBorderVideoBuffer[SGB_SCREEN_WIDTH * SGB_SCREEN_HEIGHT];
@@ -130,6 +131,7 @@ public:
 	virtual void removeBreakpoint(int idx) override;
 	virtual void clearBreakpoints(void) override;
 	virtual void setBreakpointEnabled(int idx, bool enabled) override;
+	virtual void breakAtNextInstruction(void) override;
 
 	virtual TileSourceTypes getTileSourceType(void) const override;
 	virtual MapSourceTypes getMapSourceType(LayerTypes layer) const override;

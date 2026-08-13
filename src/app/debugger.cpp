@@ -376,6 +376,7 @@ private:
 	const GBBASIC::Program::Compiled* _compiled = nullptr; // Foreign.
 	RuntimeConfig _runtimeConfig;
 	Breakpoint::Array _breakpoints;
+	Breakpoint _breakAtStep = Breakpoint(-1, -1, false);
 	mutable SourceRefToTracePointDictionary _srcToTracePoint; // Reversed mapping from trace points.
 	FarPtr _currentBankPointer;
 	int _vmStepBreakpointRefCount = 0;
@@ -433,6 +434,7 @@ public:
 		_compiled = nullptr;
 		_runtimeConfig = RuntimeConfig();
 		_breakpoints.clear();
+		_breakAtStep = Breakpoint(-1, -1, false);
 		_srcToTracePoint.clear();
 		_currentBankPointer = FarPtr();
 		_vmStepBreakpointRefCount = 0;
@@ -527,6 +529,7 @@ public:
 		_compiled = nullptr;
 		_runtimeConfig = RuntimeConfig();
 		_breakpoints.clear();
+		_breakAtStep = Breakpoint(-1, -1, false);
 		_srcToTracePoint.clear();
 		_currentBankPointer = FarPtr();
 		_vmStepBreakpointRefCount = 0;
@@ -593,13 +596,34 @@ public:
 		}
 	}
 
-	virtual void step(void) override {
+	virtual void step(bool toNextAsmInst) override {
 		_inspecting = false;
 
 		_snapshot.reset();
 		_registers = Device::Registers();
 
 		// TODO: DBG.
+		// bring basic/asm tabs to front.
+
+		if (toNextAsmInst) {
+			_breakAtStep.enabled = true;
+			_breakAtStep.type = Breakpoint::Types::ASM;
+
+			_workspace->step(nullptr, nullptr);
+
+			_workspace->resume(nullptr, nullptr);
+
+			return;
+		}
+
+		if (!_breakAtStep.enabled) {
+			_breakAtStep.enabled = true;
+			_breakAtStep.type = Breakpoint::Types::BASIC;
+
+			installVmStepBreakpoint();
+
+			_workspace->resume(nullptr, nullptr);
+		}
 	}
 
 	virtual bool breakpointHit(void) override {
@@ -627,6 +651,51 @@ public:
 			const UInt16 currCtx = regs.DE; // `DE` is the pointer to the current `VM::SCRIPT_CTX`.
 			if (!probeThreadProgramCounter(currCtx, ctxBank, ctxPc))
 				return false;
+		}
+
+		// Handle stepping.
+		if (_breakAtStep.enabled) {
+			_breakAtStep.enabled = false;
+
+			if (_breakAtStep.type == Breakpoint::Types::BASIC) {
+				const GBBASIC::TracePoint* tp = getTracePointByRomLocation(ctxBank, ctxPc, GBBASIC::RomLocation::Types::BASIC);
+				if (tp) {
+					const int page = tp->inCode.page;
+					const int row = tp->inCode.row;
+
+					Breakpoint breakpoint(page, row, false);
+					breakpoint.type = Breakpoint::Types::BASIC;
+					breakpoint.id = _vmStepBreakpointId;
+					breakpoint.hitPointer = FarPtr(bank, pc);
+					breakpoint.vmPointer = FarPtr(ctxBank, ctxPc);
+					hitBreakpoint(breakpoint);
+
+					uninstallVmStepBreakpoint();
+
+					return 1;
+				}
+
+				uninstallVmStepBreakpoint();
+
+				return 0;
+			} else if (_breakAtStep.type == Breakpoint::Types::ASM) {
+				const GBBASIC::TracePoint* tp = getTracePointByRomLocation(bank, pc, GBBASIC::RomLocation::Types::ASM);
+				int page = -1;
+				int row = -1;
+				if (tp) {
+					page = tp->inCode.page;
+					row = tp->inCode.row;
+				}
+
+				Breakpoint breakpoint(page, row, false);
+				breakpoint.type = Breakpoint::Types::ASM;
+				breakpoint.id = -1;
+				breakpoint.hitPointer = FarPtr(bank, pc);
+				breakpoint.vmPointer = FarPtr(0, 0);
+				hitBreakpoint(breakpoint);
+
+				return 1;
+			}
 		}
 
 		// Traverse and check all breakpoints.
@@ -723,6 +792,22 @@ private:
 			return nullptr;
 
 		return &(*tracePoints)[idx];
+	}
+	const GBBASIC::TracePoint* getTracePointByRomLocation(int bank, int address, GBBASIC::RomLocation::Types type) const {
+		const GBBASIC::TracePoint::Array* tracePoints = compiledTracePoints();
+		if (!tracePoints)
+			return nullptr;
+
+		for (int i = 0; i < (int)tracePoints->size(); ++i) {
+			const GBBASIC::TracePoint &tp = (*tracePoints)[i];
+			if (tp.inRom.type != type)
+				continue;
+
+			if (tp.inRom.bank == bank && tp.inRom.address == address)
+				return &tp;
+		}
+
+		return nullptr;
 	}
 	GBBASIC::Disassembler::Mnemonic::Array getDisassembledMnemonics(void) const {
 		GBBASIC::Disassembler::Mnemonic::Array result;
@@ -1003,12 +1088,7 @@ private:
 		if (_vmStepPointer.invalid())
 			return false;
 
-		if (_vmStepBreakpointRefCount++ == 0) {
-			const UInt8 bank = (UInt8)_vmStepPointer.bank;
-			const UInt16 address = (UInt16)_vmStepPointer.address;
-			const int id = _device->addBreakpoint(bank, address);
-			_vmStepBreakpointId = id;
-		}
+		installVmStepBreakpoint();
 		breakpoint.id = _vmStepBreakpointId;
 		breakpoint.hitPointer = _vmStepPointer;
 		breakpoint.vmPointer = FarPtr(tp->inRom.bank, tp->inRom.address);
@@ -1032,15 +1112,26 @@ private:
 		if (_vmStepPointer.invalid())
 			return false;
 
+		uninstallVmStepBreakpoint();
+		breakpoint.id = -1;
+		breakpoint.hitPointer = FarPtr();
+		breakpoint.vmPointer = FarPtr();
+
+		return true;
+	}
+	void installVmStepBreakpoint(void) {
+		if (_vmStepBreakpointRefCount++ == 0) {
+			const UInt8 bank = (UInt8)_vmStepPointer.bank;
+			const UInt16 address = (UInt16)_vmStepPointer.address;
+			const int id = _device->addBreakpoint(bank, address);
+			_vmStepBreakpointId = id;
+		}
+	}
+	void uninstallVmStepBreakpoint(void) {
 		if (--_vmStepBreakpointRefCount == 0) {
 			_device->removeBreakpoint(_vmStepBreakpointId);
 			_vmStepBreakpointId = -1;
-			breakpoint.id = -1;
-			breakpoint.hitPointer = FarPtr();
-			breakpoint.vmPointer = FarPtr();
 		}
-
-		return true;
 	}
 	void hitBreakpoint(const Breakpoint &breakpoint) {
 		_bringCodeDebuggerToFront = true;
@@ -1114,6 +1205,15 @@ private:
 			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_Step());
 		}
 		ImGui::SameLine();
+		if (ImGui::ImageButton(theme->iconStepAsm()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconDisabledColor))) {
+			// Do nothing.
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_StepAsm());
+		}
+		ImGui::SameLine();
 		ImGui::Dummy(ImVec2(2, 0));
 		ImGui::SameLine();
 
@@ -1177,12 +1277,21 @@ private:
 		ImGui::SameLine();
 
 		if (ImGui::ImageButton(theme->iconStep()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
-			step();
+			step(false);
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_Step());
+		}
+		ImGui::SameLine();
+		if (ImGui::ImageButton(theme->iconStepAsm()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+			step(true);
+		}
+		if (ImGui::IsItemHovered()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_StepAsm());
 		}
 		ImGui::SameLine();
 		ImGui::Dummy(ImVec2(2, 0));

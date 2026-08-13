@@ -684,6 +684,10 @@ void DeviceBinjgb::setBreakpointEnabled(int idx, bool enabled) {
 	emulator_enable_breakpoint(idx, enabled ? TRUE : FALSE);
 }
 
+void DeviceBinjgb::breakAtNextInstruction(void) {
+	_breakAtNextInstruction = true;
+}
+
 Device::TileSourceTypes DeviceBinjgb::getTileSourceType(void) const {
 	if (!_emulator)
 		return TileSourceTypes::INVALID;
@@ -1225,7 +1229,7 @@ bool DeviceBinjgb::update(
 		return true;
 	}
 
-	// Tick a frame.
+	// Tick.
 	bool timeout = false;
 	long long start = 0;
 	if (_timeoutThreshold > 0)
@@ -1247,7 +1251,10 @@ bool DeviceBinjgb::update(
 	}
 	do {
 		// Tick.
-		event = emulator_run_until(_emulator, untilTicks);
+		if (_breakAtNextInstruction)
+			event = emulator_step(_emulator); // Tick one instruction.
+		else
+			event = emulator_run_until(_emulator, untilTicks); // Tick for the specific interval.
 
 		// Update the video system.
 		if (event & EMULATOR_EVENT_NEW_FRAME) {
@@ -1301,18 +1308,21 @@ bool DeviceBinjgb::update(
 				break;
 			}
 		}
-	} while (!(event & (EMULATOR_EVENT_UNTIL_TICKS | EMULATOR_EVENT_BREAKPOINT | EMULATOR_EVENT_INVALID_OPCODE)));
+	} while (!(event & (EMULATOR_EVENT_UNTIL_TICKS | EMULATOR_EVENT_BREAKPOINT | EMULATOR_EVENT_INVALID_OPCODE)) && !_breakAtNextInstruction);
 
 	if (disabledInput) {
 		_inputEnabled = true;
 	}
 
-	if (event & EMULATOR_EVENT_BREAKPOINT) {
+	if (event & EMULATOR_EVENT_BREAKPOINT || _breakAtNextInstruction) {
 		if (_debugListener) {
 			if (_debugListener->breakpointHit())
 				pause();
 		}
 	}
+
+	if (_breakAtNextInstruction)
+		_breakAtNextInstruction = false;
 
 	// Tick the RTC.
 	if (cartridgeHasRtc()) {
