@@ -26,6 +26,13 @@
 #	define DEBUGGER_START_ADDRESS 0x4000
 #endif /* DEBUGGER_START_ADDRESS */
 
+#ifndef DEBUGGER_ACTOR_MAX_ANIMATIONS
+#	define DEBUGGER_ACTOR_MAX_ANIMATIONS 8
+#endif /* DEBUGGER_ACTOR_MAX_ANIMATIONS */
+#ifndef DEBUGGER_PROJECTILE_MAX_ANIMATIONS
+#	define DEBUGGER_PROJECTILE_MAX_ANIMATIONS 4
+#endif /* DEBUGGER_PROJECTILE_MAX_ANIMATIONS */
+
 /* ===========================================================================} */
 
 /*
@@ -37,36 +44,175 @@
 
 #pragma pack(push, 1)
 
+namespace VM {
+
 typedef UInt8 Boolean;
 typedef UInt16 Pointer;
 typedef Pointer UInt8Ptr;
 typedef Pointer UInt16Ptr;
 typedef Pointer CtxPtr;
+typedef Pointer MetaSpriteRef;
 
 struct SCRIPT_CTX {
-	// Program pointer.
-	const UInt8Ptr PC = NULL;
-	UInt8 bank = 0;
-	// Linked list of contexts for cooperative multitasking.
-	CtxPtr next = NULL;
-	// VM stack pointer.
-	UInt16Ptr stack_ptr = NULL;
-	UInt16Ptr base_addr = NULL;
-	// Thread control.
-	UInt8 ID = 0;
-	UInt16Ptr hthread = NULL;
-	Boolean terminated = 0;
-	// Waitable state.
-	Boolean waitable = 0;
-	// Lock state.
-	UInt8 lock_count = 0;
-	// Update function.
-	Pointer update_fn = NULL;
-	UInt8 update_fn_bank = 0;
+	typedef Pointer Ptr;
+
+	UInt8Ptr PC;
+	UInt8 bank;
+	Ptr next;
+	UInt16Ptr stack_ptr;
+	UInt16Ptr base_addr;
+	UInt8 ID;
+	UInt16Ptr hthread;
+	Boolean terminated;
+	Boolean waitable;
+	UInt8 lock_count;
+	Pointer update_fn;
+	UInt8 update_fn_bank;
 
 	SCRIPT_CTX() {
+		memset(this, 0, sizeof(SCRIPT_CTX));
 	}
 };
+
+struct actor_t {
+	typedef Pointer Ptr;
+
+	Boolean instantiated         : 1;
+	Boolean active               : 1;
+	Boolean enabled              : 1;
+	Boolean hidden               : 1;
+	Boolean pinned               : 1;
+	Boolean persistent           : 1;
+	Boolean animation_loop       : 1;
+	Boolean movement_interrupt   : 1;
+	UInt8 template_;
+	upoint16_t position;
+	UInt8 direction;
+	boundingbox_t bounds;
+	UInt8 base_tile;
+	UInt8 sprite_bank;
+	MetaSpriteRef sprite_frames;
+	UInt8 animation;
+	UInt8 animation_interval;
+	animation_t animations[DEBUGGER_ACTOR_MAX_ANIMATIONS];
+	UInt8 frame;
+	UInt8 motion;
+	UInt8 move_speed;
+	union {
+		UINT32 movement;
+		upoint16_t absolute_movement;
+		struct {
+			point8_t relative_movement;
+			UInt8 original_move_speed;
+			UInt8 max_move_speed;
+		};
+	};
+	UInt8 behaviour;
+	UInt8 collision_group;
+	UInt16 behave_thread_id;
+	UInt8 behave_handler_bank;
+	UInt8Ptr behave_handler_address;
+	UInt16 hit_thread_id;
+	UInt8 hit_handler_bank;
+	UInt8Ptr hit_handler_address;
+	Ptr next;
+	Ptr prev;
+
+	actor_t() {
+		memset(this, 0, sizeof(actor_t));
+	}
+};
+
+struct projectile_def_t {
+	boundingbox_t bounds;
+	UInt8 base_tile;
+	UInt8 sprite_bank;
+	MetaSpriteRef sprite_frames;
+	UInt8 animation_interval;
+	animation_t animations[DEBUGGER_PROJECTILE_MAX_ANIMATIONS];
+	UInt8 life_time;
+	UInt8 move_speed;
+	UInt16 initial_offset;
+	UInt8 collision_group;
+
+	projectile_def_t() {
+	}
+};
+
+struct projectile_t {
+	typedef Pointer Ptr;
+
+	Boolean animation_no_loop   : 1;
+	Boolean strong              : 1;
+	Boolean reserved1           : 1;
+	Boolean reserved2           : 1;
+	Boolean reserved3           : 1;
+	Boolean reserved4           : 1;
+	Boolean reserved5           : 1;
+	Boolean reserved6           : 1;
+	upoint16_t position;
+	point16_t movement;
+	UInt8 frame;
+	UInt8 animation;
+	projectile_def_t def;
+	Ptr next;
+
+	projectile_t() {
+		memset(this, 0, sizeof(projectile_t));
+	}
+};
+
+struct trigger_t {
+	UInt8 x;
+	UInt8 y;
+	UInt8 width;
+	UInt8 height;
+	UInt8 hit_handler_flags;
+	UInt8 hit_handler_bank;
+	UInt8Ptr hit_handler_address;
+
+	trigger_t() {
+		memset(this, 0, sizeof(trigger_t));
+	}
+};
+
+struct scene_t {
+	Boolean is_16x16_grid         : 1;
+	Boolean is_16x16_player       : 1;
+	Boolean clamp_camera          : 1;
+	Boolean player_on_ladder      : 1;
+	Boolean reserved1             : 1;
+	Boolean reserved2             : 1;
+	Boolean reserved3             : 1;
+	Boolean reserved4             : 1;
+	UInt8 gravity;
+	UInt8 jump_gravity;
+	UInt8 jump_max_count;
+	UInt8 jump_max_ticks;
+	UInt8 climb_velocity;
+	UInt8 player_can_jump;
+	UInt8 player_jump_ticks;
+	Int16 player_velocity_y;
+	UInt8 width;
+	UInt8 height;
+	UInt8 base_tile;
+	UInt8 map_bank;
+	UInt8Ptr map_address;
+	UInt8 attr_bank;
+	UInt8Ptr attr_address;
+	UInt8 prop_bank;
+	UInt8Ptr prop_address;
+	UInt8 actor_bank;
+	UInt8Ptr actor_address;
+	UInt8 trigger_bank;
+	UInt8Ptr trigger_address;
+
+	scene_t() {
+		memset(this, 0, sizeof(scene_t));
+	}
+};
+
+}
 
 #pragma pack(pop)
 
@@ -121,7 +267,6 @@ private:
 	const GBBASIC::Program::Compiled* _compiled = nullptr; // Foreign.
 	Breakpoint::Array _breakpoints;
 	mutable SourceRefToTracePointDictionary _srcToTracePoint; // Reversed mapping from trace points.
-	FarPtr _rRom0Pointer;
 	FarPtr _currentBankPointer;
 	int _vmStepBreakpointRefCount = 0;
 	int _vmStepBreakpointId = -1;
@@ -162,7 +307,6 @@ public:
 		_compiled = nullptr;
 		_breakpoints.clear();
 		_srcToTracePoint.clear();
-		_rRom0Pointer = FarPtr();
 		_currentBankPointer = FarPtr();
 		_vmStepBreakpointRefCount = 0;
 		_vmStepBreakpointId = -1;
@@ -208,12 +352,6 @@ public:
 		_compiled = &_workspace->getCompiledData();
 
 		// Resolve the ROM entries.
-		const GBBASIC::RomLocation* rRom0InRom = getRomLocationBySymbolName(COMPILERFREE_RROM0_ENTRY_NAME);
-		if (rRom0InRom) {
-			_rRom0Pointer.bank = rRom0InRom->bank;
-			_rRom0Pointer.address = rRom0InRom->address;
-		}
-
 		const GBBASIC::RomLocation* currentBankInRom = getRomLocationBySymbolName(COMPILERFREE_CURRENT_BANK_ENTRY_NAME);
 		if (currentBankInRom) {
 			_currentBankPointer.bank = currentBankInRom->bank;
@@ -249,7 +387,6 @@ public:
 		_compiled = nullptr;
 		_breakpoints.clear();
 		_srcToTracePoint.clear();
-		_rRom0Pointer = FarPtr();
 		_currentBankPointer = FarPtr();
 		_vmStepBreakpointRefCount = 0;
 		_vmStepBreakpointId = -1;
@@ -299,6 +436,7 @@ public:
 	}
 
 	virtual bool breakpointHit(void) override {
+		// Resolve the CPU bank and PC.
 		const Device::Registers regs = _device->readRegisters();
 		const UInt16 pc = regs.PC;
 		UInt8 bank = 0;
@@ -307,28 +445,24 @@ public:
 			if (_device->readRam((UInt16)_currentBankPointer.address, &bank))
 				gotBank = true;
 		}
-		if (!gotBank && !_rRom0Pointer.invalid()) {
-			if (_device->readRam((UInt16)_rRom0Pointer.address, &bank))
-				gotBank = true;
+		if (!gotBank) {
+			bank = (UInt8)_device->currentBank();
+			gotBank = true;
 		}
 		if (!gotBank)
 			return false;
 
+		// Resolve the VM bank and PC if necessary.
 		const bool isBasic = _vmStepPointer.equals(bank, pc);
 		UInt16 ctxPc = 0;
 		UInt8 ctxBank = 0;
 		if (isBasic) {
-			const UInt16 currCtx = regs.DE; // `DE` is the pointer to the current `SCRIPT_CTX`.
-			constexpr const int pcOffset = GBBASIC_OFFSETOF(SCRIPT_CTX, PC);
-			constexpr const int bankOffset = GBBASIC_OFFSETOF(SCRIPT_CTX, bank);
-			const int currCtxPcAddress = currCtx + pcOffset;
-			const int currCtxBankAddress = currCtx + bankOffset;
-			if (!_device->readRam((UInt16)currCtxPcAddress, &ctxPc))
-				return false;
-			if (!_device->readRam((UInt16)currCtxBankAddress, &ctxBank))
+			const UInt16 currCtx = regs.DE; // `DE` is the pointer to the current `VM::SCRIPT_CTX`.
+			if (!probeThreadProgramCounter(currCtx, ctxBank, ctxPc))
 				return false;
 		}
 
+		// Traverse and check all breakpoints.
 		int hitCount = 0;
 		for (int i = 0; i < (int)_breakpoints.size(); ++i) {
 			const Breakpoint &breakpoint = _breakpoints[i];
@@ -337,11 +471,11 @@ public:
 
 			if (isBasic) {
 				if (breakpoint.vmPointer.equals(ctxBank, ctxPc)) {
-					triggerBreakpoint(breakpoint);
+					hitBreakpoint(breakpoint);
 					++hitCount;
 				}
 			} else {
-				triggerBreakpoint(breakpoint);
+				hitBreakpoint(breakpoint);
 				++hitCount;
 			}
 		}
@@ -420,6 +554,27 @@ private:
 		dasm->disassemble(result, compiledBytes(), options);
 
 		return result;
+	}
+
+	bool probeThreadProgramCounter(UInt16 address, UInt8 &bank, UInt16 &pc) const {
+		bank = 0;
+		pc = 0;
+
+		UInt16 ctxPc = 0;
+		UInt8 ctxBank = 0;
+		constexpr const int pcOffset = GBBASIC_OFFSETOF(VM::SCRIPT_CTX, PC);
+		constexpr const int bankOffset = GBBASIC_OFFSETOF(VM::SCRIPT_CTX, bank);
+		const int ctxPcAddress = address + pcOffset;
+		const int ctxBankAddress = address + bankOffset;
+		if (!_device->readRam((UInt16)ctxPcAddress, &ctxPc))
+			return false;
+		if (!_device->readRam((UInt16)ctxBankAddress, &ctxBank))
+			return false;
+
+		bank = ctxBank;
+		pc = ctxPc;
+
+		return true;
 	}
 
 	void refreshBreakpoints(void) {
@@ -503,7 +658,7 @@ private:
 
 		return true;
 	}
-	void triggerBreakpoint(const Breakpoint &breakpoint) {
+	void hitBreakpoint(const Breakpoint &breakpoint) {
 		_bringCodeDebuggerToFront = true;
 
 		// TODO: DBG.

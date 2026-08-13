@@ -1201,6 +1201,10 @@ private:
 			const GBBASIC::Kernel::Ptr &krnl = ws->activeKernel();
 			const GBBASIC::Kernel::Snippet::Array* snippets = krnl ? &krnl->snippets() : nullptr;
 
+			if (ImGui::MenuItem(ws->theme()->menu_ToggleBreakpoint())) {
+				ws->toggleBreakpoint(_index, -1);
+			}
+			ImGui::Separator();
 			if (!snippets->empty()) {
 				if (ImGui::BeginMenu(ws->theme()->menu_InsertSnippet())) {
 					for (int i = 0; i < (int)snippets->size(); ++i) {

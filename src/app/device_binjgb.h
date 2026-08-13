@@ -170,16 +170,20 @@ public:
 	virtual void pause(void) override;
 	virtual void resume(void) override;
 
-	virtual Registers readRegisters(void) override;
+	virtual Registers readRegisters(void) const override;
 	virtual void writeRegisters(const Registers &regs) override;
 
-	virtual bool readRam(UInt16 address, UInt8* data) override;
-	virtual bool readRam(UInt16 address, UInt16* data) override;
+	virtual bool readRam(UInt16 address, UInt8* data) const override;
+	virtual bool readRam(UInt16 address, UInt16* data) const override;
+	virtual size_t readRam(UInt16 address, Byte* data, size_t len) const override;
 	virtual bool writeRam(UInt16 address, UInt8 data) override;
 	virtual bool writeRam(UInt16 address, UInt16 data) override;
+	virtual size_t writeRam(UInt16 address, const Byte* data, size_t len) override;
 
-	virtual bool readSram(const Bytes* bytes) override;
+	virtual bool readSram(const Bytes* bytes) const override;
 	virtual bool writeSram(Bytes* bytes) override;
+
+	virtual int currentBank(void) const override;
 
 private:
 	void setBwPalette(PaletteType type, u32 white, u32 light_gray, u32 dark_gray, u32 black);

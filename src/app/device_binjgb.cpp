@@ -1356,7 +1356,7 @@ void DeviceBinjgb::resume(void) {
 	_emulatorPaused = false;
 }
 
-Device::Registers DeviceBinjgb::readRegisters(void) {
+Device::Registers DeviceBinjgb::readRegisters(void) const {
 	const ::Registers regs = emulator_get_registers(_emulator);
 	Registers result;
 	result.A = regs.A;
@@ -1389,7 +1389,7 @@ void DeviceBinjgb::writeRegisters(const Registers &regs) {
 	emulator_set_registers(_emulator, &regs_);
 }
 
-bool DeviceBinjgb::readRam(UInt16 address, UInt8* data) {
+bool DeviceBinjgb::readRam(UInt16 address, UInt8* data) const {
 	if (!_emulator)
 		return false;
 
@@ -1399,7 +1399,7 @@ bool DeviceBinjgb::readRam(UInt16 address, UInt8* data) {
 	return true;
 }
 
-bool DeviceBinjgb::readRam(UInt16 address, UInt16* data) {
+bool DeviceBinjgb::readRam(UInt16 address, UInt16* data) const {
 	if (!_emulator)
 		return false;
 
@@ -1414,6 +1414,20 @@ bool DeviceBinjgb::readRam(UInt16 address, UInt16* data) {
 	*data = u.data;
 
 	return true;
+}
+
+size_t DeviceBinjgb::readRam(UInt16 address, Byte* data, size_t len) const {
+	size_t result = 0;
+	if (!_emulator)
+		return result;
+
+	for (size_t i = 0; i < len; ++i) {
+		const u8 ret = emulator_read_u8_raw(_emulator, (Address)(address + i));
+		data[i] = ret;
+		++result;
+	}
+
+	return result;
 }
 
 bool DeviceBinjgb::writeRam(UInt16 address, UInt8 data) {
@@ -1442,7 +1456,20 @@ bool DeviceBinjgb::writeRam(UInt16 address, UInt16 data) {
 	return true;
 }
 
-bool DeviceBinjgb::readSram(const Bytes* bytes) {
+size_t DeviceBinjgb::writeRam(UInt16 address, const Byte* data, size_t len) {
+	size_t result = 0;
+	if (!_emulator)
+		return result;
+
+	for (size_t i = 0; i < len; ++i) {
+		emulator_write_u8_raw(_emulator, (Address)(address + i), data[i]);
+		++result;
+	}
+
+	return result;
+}
+
+bool DeviceBinjgb::readSram(const Bytes* bytes) const {
 	if (!bytes)
 		return false;
 	if (bytes->empty())
@@ -1467,6 +1494,13 @@ bool DeviceBinjgb::writeSram(Bytes* bytes) {
 	bytes->resize(size);
 
 	return ret == OK;
+}
+
+int DeviceBinjgb::currentBank(void) const {
+	if (!_emulator)
+		return 0;
+
+	return emulator_get_current_rom_bank(_emulator);
 }
 
 void DeviceBinjgb::setBwPalette(PaletteType type, u32 white, u32 light_gray, u32 dark_gray, u32 black) {

@@ -202,6 +202,23 @@ struct upoint8_t {
 	bool fromJson(const rapidjson::Value &val);
 };
 
+struct point8_t {
+	Int8 x = 0;
+	Int8 y = 0;
+
+	point8_t();
+
+	bool operator == (const point8_t &other) const;
+	bool operator != (const point8_t &other) const;
+	bool operator < (const point8_t &other) const;
+	bool operator > (const point8_t &other) const;
+
+	int compare(const point8_t &other) const;
+
+	bool toJson(rapidjson::Value &val, rapidjson::Document &doc) const;
+	bool fromJson(const rapidjson::Value &val);
+};
+
 struct point16_t {
 	Int16 x = 0;
 	Int16 y = 0;

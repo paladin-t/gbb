@@ -7688,6 +7688,8 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 	const bool f8         = ImGui::IsKeyPressed(SDL_SCANCODE_F8);
 	const bool f11        = ImGui::IsKeyPressed(SDL_SCANCODE_F11);
 #endif /* Platform macro. */
+	const bool f9         = ImGui::IsKeyPressed(SDL_SCANCODE_F9);
+	const bool f10        = ImGui::IsKeyPressed(SDL_SCANCODE_F10);
 
 	const bool num1       = ImGui::IsKeyPressed(SDL_SCANCODE_1);
 	const bool num2       = ImGui::IsKeyPressed(SDL_SCANCODE_2);
@@ -8290,6 +8292,16 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 				}
 			}
 			exportProject(wnd, rnd, toExport_);
+		}
+	}
+
+	// Debug operations.
+	if (opened) {
+		if (f9 && !modifier && !io.KeyShift && !io.KeyAlt) {
+			if (category() == Categories::CODE)
+				toggleBreakpoint(currentAssetPage(), -1);
+		}
+		if (f10 && !modifier && !io.KeyShift && !io.KeyAlt) {
 		}
 	}
 
@@ -9397,6 +9409,10 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 						}
 						if (ImGui::MenuItem(theme()->menu_Remove())) {
 							Operations::codeRemovePage(wnd, rnd, this);
+						}
+						ImGui::Separator();
+						if (ImGui::MenuItem(theme()->menu_ToggleBreakpoint(), "F9")) {
+							toggleBreakpoint(currentAssetPage(), -1);
 						}
 						ImGui::Separator();
 						if (ImGui::MenuItem(theme()->menu_Find(), GBBASIC_MODIFIER_KEY_NAME "+F")) {

@@ -147,6 +147,55 @@ bool upoint8_t::fromJson(const rapidjson::Value &val) {
 	return true;
 }
 
+point8_t::point8_t() {
+}
+
+bool point8_t::operator == (const point8_t &other) const {
+	return compare(other) == 0;
+}
+
+bool point8_t::operator != (const point8_t &other) const {
+	return compare(other) != 0;
+}
+
+bool point8_t::operator < (const point8_t &other) const {
+	return compare(other) < 0;
+}
+
+bool point8_t::operator > (const point8_t &other) const {
+	return compare(other) > 0;
+}
+
+int point8_t::compare(const point8_t &other) const {
+	if (x < other.x)
+		return -1;
+	else if (x > other.x)
+		return 1;
+
+	if (y < other.y)
+		return -1;
+	else if (y > other.y)
+		return 1;
+
+	return 0;
+}
+
+bool point8_t::toJson(rapidjson::Value &val, rapidjson::Document &doc) const {
+	Jpath::set(doc, val, x, "x");
+
+	Jpath::set(doc, val, y, "y");
+
+	return true;
+}
+
+bool point8_t::fromJson(const rapidjson::Value &val) {
+	Jpath::get(val, x, "x");
+
+	Jpath::get(val, y, "y");
+
+	return true;
+}
+
 point16_t::point16_t() {
 }
 

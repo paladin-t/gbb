@@ -456,6 +456,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_StopRunning("Stop Running");
 	menu_SwapOrder("Swap Order");
 	menu_Tiles("Tiles");
+	menu_ToggleBreakpoint("Toggle Breakpoint");
 	menu_ToggleComment("Toggle Comment");
 	menu_ToLowerCase("To Lower Case");
 	menu_ToUpperCase("To Upper Case");
@@ -1727,6 +1728,12 @@ bool Theme::open(class Renderer* rnd) {
 	iconStop(createTexture(rnd, RES_ICON_STOP, GBBASIC_COUNTOF(RES_ICON_STOP), nullptr));
 	iconStopPreview(createTexture(rnd, RES_ICON_STOP_AUDIO, GBBASIC_COUNTOF(RES_ICON_STOP_AUDIO), nullptr));
 	iconPause(createTexture(rnd, RES_ICON_PAUSE, GBBASIC_COUNTOF(RES_ICON_PAUSE), nullptr));
+	iconBreakEnable(createTexture(rnd, RES_ICON_BREAK_ENABLE, GBBASIC_COUNTOF(RES_ICON_BREAK_ENABLE), nullptr));
+	iconBreakDisable(createTexture(rnd, RES_ICON_BREAK_DISABLE, GBBASIC_COUNTOF(RES_ICON_BREAK_DISABLE), nullptr));
+	iconBreakClear(createTexture(rnd, RES_ICON_BREAK_CLEAR, GBBASIC_COUNTOF(RES_ICON_BREAK_CLEAR), nullptr));
+	iconStep(createTexture(rnd, RES_ICON_BREAK_STEP, GBBASIC_COUNTOF(RES_ICON_BREAK_STEP), nullptr));
+	iconStepInto(createTexture(rnd, RES_ICON_BREAK_STEP_INTO, GBBASIC_COUNTOF(RES_ICON_BREAK_STEP_INTO), nullptr));
+	iconStepOut(createTexture(rnd, RES_ICON_BREAK_STEP_OUT, GBBASIC_COUNTOF(RES_ICON_BREAK_STEP_OUT), nullptr));
 
 	iconNumber0(createTexture(rnd, RES_ICON_NUMBER_0, GBBASIC_COUNTOF(RES_ICON_NUMBER_0), nullptr));
 	iconNumber1(createTexture(rnd, RES_ICON_NUMBER_1, GBBASIC_COUNTOF(RES_ICON_NUMBER_1), nullptr));
@@ -1899,6 +1906,12 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconStop(), nullptr);
 	destroyTexture(rnd, iconStopPreview(), nullptr);
 	destroyTexture(rnd, iconPause(), nullptr);
+	destroyTexture(rnd, iconBreakEnable(), nullptr);
+	destroyTexture(rnd, iconBreakDisable(), nullptr);
+	destroyTexture(rnd, iconBreakClear(), nullptr);
+	destroyTexture(rnd, iconStep(), nullptr);
+	destroyTexture(rnd, iconStepInto(), nullptr);
+	destroyTexture(rnd, iconStepOut(), nullptr);
 
 	destroyTexture(rnd, iconNumber0(), nullptr);
 	destroyTexture(rnd, iconNumber1(), nullptr);

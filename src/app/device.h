@@ -363,16 +363,20 @@ public:
 
 	/**< Memory bus operations. */
 
-	virtual Registers readRegisters(void) = 0;
+	virtual Registers readRegisters(void) const = 0;
 	virtual void writeRegisters(const Registers &regs) = 0;
 
-	virtual bool readRam(UInt16 address, UInt8* data) = 0;
-	virtual bool readRam(UInt16 address, UInt16* data) = 0;
+	virtual bool readRam(UInt16 address, UInt8* data) const = 0;
+	virtual bool readRam(UInt16 address, UInt16* data) const = 0;
+	virtual size_t readRam(UInt16 address, Byte* data, size_t len) const = 0;
 	virtual bool writeRam(UInt16 address, UInt8 data) = 0;
 	virtual bool writeRam(UInt16 address, UInt16 data) = 0;
+	virtual size_t writeRam(UInt16 address, const Byte* data, size_t len) = 0;
 
-	virtual bool readSram(const Bytes* bytes) = 0;
+	virtual bool readSram(const Bytes* bytes) const = 0;
 	virtual bool writeSram(Bytes* bytes) = 0;
+
+	virtual int currentBank(void) const = 0;
 
 	/**< Creating and destroying. */
 
