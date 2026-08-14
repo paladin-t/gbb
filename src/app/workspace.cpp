@@ -8814,6 +8814,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 						stopProject(wnd, rnd, false);
 					}
 					if (ImGui::MenuItem(theme()->menu_Restart())) {
+						stopProject(wnd, rnd, false);
 						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
@@ -8829,6 +8830,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 						stopProject(wnd, rnd, false);
 					}
 					if (ImGui::MenuItem(theme()->menu_Restart())) {
+						stopProject(wnd, rnd, false);
 						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}

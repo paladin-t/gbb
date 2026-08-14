@@ -839,9 +839,11 @@ private:
 				return tp.compare(val) < 0;
 			}
 		);
-		const GBBASIC::TracePoint &tp = *it;
-		if (it != tracePoints->end() && tp.compare(key) <= 0)
-			return &tp;
+		if (it != tracePoints->end()) {
+			const GBBASIC::TracePoint &tp = *it;
+			if (tp.compare(key) <= 0)
+				return &tp;
+		}
 
 		return nullptr;
 	}
