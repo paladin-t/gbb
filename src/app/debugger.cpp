@@ -656,6 +656,7 @@ public:
 			bank = (UInt8)_device->currentBank();
 			gotBank = true;
 		}
+
 		if (!gotBank)
 			return false;
 
@@ -670,32 +671,15 @@ public:
 				return false;
 		}
 
-		// Traverse and check all breakpoints.
-		for (int i = 0; i < (int)_breakpoints.size(); ++i) {
-			const Breakpoint &breakpoint = _breakpoints[i];
-			if (!breakpoint.hitPointer.equals(bank, pc))
-				continue;
-
-			if (isBasic) {
-				if (breakpoint.vmPointer.equals(ctxBank, ctxPc)) {
-					hitBreakpoint(breakpoint);
-					++hitCount;
-				}
-			} else {
-				hitBreakpoint(breakpoint);
-				++hitCount;
-			}
-		}
-
 		// Handle stepping.
 		if (_breakAtStep.enabled && hitCount == 0) {
 			_breakAtStep.enabled = false;
 
 			if (_breakAtStep.type == Categories::BASIC) {
-				_breakTimeout = 0;
-
 				const GBBASIC::TracePoint* tp = getTracePointByRomLocation(ctxBank, ctxPc, GBBASIC::RomLocation::Types::BASIC);
 				if (tp) {
+					_breakTimeout = 0;
+
 					const int page = tp->inCode.page;
 					const int row = tp->inCode.row;
 
@@ -710,7 +694,21 @@ public:
 
 					hitCount = 1;
 				} else {
-					uninstallVmStepBreakpoint();
+					for (int i = 0; i < (int)_breakpoints.size(); ++i) {
+						const Breakpoint &breakpoint = _breakpoints[i];
+						if (!breakpoint.hitPointer.equals(bank, pc))
+							continue;
+
+						if (!isBasic) {
+							hitBreakpoint(breakpoint);
+							++hitCount;
+						}
+					}
+
+					if (hitCount == 0)
+						_breakAtStep.enabled = true;
+
+					return hitCount > 0;
 				}
 			} else if (_breakAtStep.type == Categories::ASM) {
 				const GBBASIC::TracePoint* tp = getTracePointByRomLocation(bank, pc, GBBASIC::RomLocation::Types::ASM);
@@ -729,6 +727,25 @@ public:
 				hitBreakpoint(breakpoint);
 
 				hitCount = 1;
+			}
+		}
+
+		// Traverse and check all breakpoints.
+		if (hitCount == 0) {
+			for (int i = 0; i < (int)_breakpoints.size(); ++i) {
+				const Breakpoint &breakpoint = _breakpoints[i];
+				if (!breakpoint.hitPointer.equals(bank, pc))
+					continue;
+
+				if (isBasic) {
+					if (breakpoint.vmPointer.equals(ctxBank, ctxPc)) {
+						hitBreakpoint(breakpoint);
+						++hitCount;
+					}
+				} else {
+					hitBreakpoint(breakpoint);
+					++hitCount;
+				}
 			}
 		}
 
