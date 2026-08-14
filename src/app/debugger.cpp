@@ -1485,8 +1485,11 @@ private:
 				if (!editor)
 					break;
 
-				if (_bringProgramCursorToFront)
+				if (_bringProgramCursorToFront) {
+					_bringProgramCursorToFront = false;
+
 					editor->ensureCursorVisible();
+				}
 
 				if (_bringCategoryToFront == Categories::BASIC)
 					flags |= ImGuiTabItemFlags_SetSelected;
@@ -1514,7 +1517,7 @@ private:
 			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Asm(), nullptr, flags)) {
 				const float width = ImGui::GetContentRegionAvail().x;
 				const float height = 200.0f;
-				const ImGuiWindowFlags flags_ = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav;
+				const ImGuiWindowFlags flags_ = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav;
 				ImGui::BeginChild("@Notepad", ImVec2(width, height), false, flags_);
 				{
 					mnemonics();
@@ -1588,7 +1591,76 @@ private:
 			return;
 		}
 
-		// TODO: DBG.
+		const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
+		if (lineHeight <= Math::EPSILON<float>()) return;
+		const float panelHeight = ImGui::GetContentRegionAvail().y;
+		const int visibleMnemonicCount = (int)std::ceil(panelHeight / lineHeight);
+		const int totalMnemonicCount = (int)mnemonics->size();
+		const float totalHeight = lineHeight * totalMnemonicCount;
+
+		float scrollY = ImGui::GetScrollY();
+		if (ImGui::IsWindowHovered()) {
+			const float wheel = ImGui::GetIO().MouseWheel;
+			if (wheel != 0.0f)
+				scrollY -= wheel * lineHeight * 3.0f;
+		}
+		const float maxScrollY = Math::max(0.0f, totalHeight - panelHeight);
+		scrollY = Math::clamp(scrollY, 0.0f, maxScrollY);
+		ImGui::SetScrollY(scrollY);
+
+		int startIndex = (int)(scrollY / lineHeight);
+		int endIndex = startIndex + (int)std::ceil(panelHeight / lineHeight) + 1;
+		startIndex = ImClamp(startIndex, 0, totalMnemonicCount);
+		endIndex = ImClamp(endIndex, startIndex, totalMnemonicCount);
+		if (startIndex > 0) 
+			ImGui::Dummy(ImVec2(0.0f, startIndex * lineHeight));
+
+		for (int i = startIndex; i < endIndex; ++i) {
+			const GBBASIC::Disassembler::Mnemonic &mnemonic = (*mnemonics)[i];
+			ImGui::Text("%02X:%04X %s", mnemonic.bank, mnemonic.address, mnemonic.text.c_str());
+		}
+
+		if (endIndex < totalMnemonicCount)
+			ImGui::Dummy(ImVec2(0.0f, (totalMnemonicCount - endIndex) * lineHeight));
+
+		if (totalHeight > panelHeight) {
+			const float scrollbarWidth = 12.0f;
+			const ImVec2 windowPos = ImGui::GetWindowPos();
+			const ImVec2 windowSize = ImGui::GetWindowSize();
+        
+			const ImVec2 barTrackMin = ImVec2(windowPos.x + windowSize.x - scrollbarWidth, windowPos.y);
+			const ImVec2 barTrackMax = ImVec2(windowPos.x + windowSize.x, windowPos.y + panelHeight);
+
+			const float grabHeight = ImMax(20.0f, panelHeight * (panelHeight / totalHeight));
+			const float scrollRatio = scrollY / maxScrollY;
+			const float grabMinY = barTrackMin.y + scrollRatio * (panelHeight - grabHeight);
+
+			const ImVec2 barGrabMin = ImVec2(barTrackMin.x + 2.0f, grabMinY);
+			const ImVec2 barGrabMax = ImVec2(barTrackMax.x - 2.0f, grabMinY + grabHeight);
+
+			ImGui::SetCursorScreenPos(barTrackMin);
+			ImGui::InvisibleButton("##DasmScrollbar", ImVec2(scrollbarWidth, panelHeight));
+
+			const bool isHovered = ImGui::IsItemHovered();
+			const bool isActive = ImGui::IsItemActive();
+
+			if (isActive) {
+				float mouseLocalY = ImGui::GetIO().MousePos.y - barTrackMin.y;
+				float newScrollRatio = (mouseLocalY - grabHeight * 0.5f) / (panelHeight - grabHeight);
+				newScrollRatio = ImClamp(newScrollRatio, 0.0f, 1.0f);
+				scrollY = newScrollRatio * maxScrollY;
+				ImGui::SetScrollY(scrollY);
+			}
+
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+			const ImU32 trackColor = ImGui::GetColorU32(ImGuiCol_ScrollbarBg);
+			drawList->AddRectFilled(barTrackMin, barTrackMax, trackColor);
+
+			const ImGuiCol grabCol = isActive ? ImGuiCol_ScrollbarGrabActive : (isHovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
+			const ImU32 grabColor = ImGui::GetColorU32(grabCol);
+			drawList->AddRectFilled(barGrabMin, barGrabMax, grabColor);
+		}
 	}
 };
 

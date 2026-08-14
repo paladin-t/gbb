@@ -140,9 +140,10 @@ public:
 
 			offset += instSize;
 			address += instSize;
-			if (address >= options.bankSize) {
+			const bool exceeded = (bank == 0 && address >= options.bankSize) || (bank > 0 && address >= options.startAddress + options.bankSize);
+			if (exceeded) {
 				const std::div_t div = std::div(address, options.bankSize);
-				bank += div.quot;
+				++bank;
 				address = div.rem;
 				if (bank > 0)
 					address += options.startAddress;
