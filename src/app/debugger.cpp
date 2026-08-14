@@ -384,13 +384,16 @@ private:
 	const GBBASIC::Program::Compiled* _compiled = nullptr; // Foreign.
 	RuntimeConfig _runtimeConfig;
 	Breakpoint::Array _breakpoints;
-	Breakpoint _breakAtStep = Breakpoint(-1, -1, false);
+	Breakpoint _breakAtNextStep = Breakpoint(-1, -1, false);
+	bool _breakAtNextStepInstalledForBasic = false;
+	FarPtr _ignoreForBreakingAtNextStep;
 	long long _breakTimeout = 0;
 	mutable SourceRefToTracePointDictionary _srcToTracePoint; // Reversed mapping from trace points.
 	FarPtr _currentBankPointer;
+	FarPtr _vmStepPointer;
 	int _vmStepBreakpointRefCount = 0;
 	int _vmStepBreakpointId = -1;
-	FarPtr _vmStepPointer;
+	FarPtr _latestVmStepInstructionAddress;
 
 	bool _bringCodeDebuggerToFront = false;
 	Categories _bringCategoryToFront = Categories::NONE;
@@ -452,13 +455,16 @@ public:
 		_compiled = nullptr;
 		_runtimeConfig = RuntimeConfig();
 		_breakpoints.clear();
-		_breakAtStep = Breakpoint(-1, -1, false);
+		_breakAtNextStep = Breakpoint(-1, -1, false);
+		_breakAtNextStepInstalledForBasic = false;
+		_ignoreForBreakingAtNextStep = FarPtr();
 		_breakTimeout = 0;
 		_srcToTracePoint.clear();
 		_currentBankPointer = FarPtr();
+		_vmStepPointer = FarPtr();
 		_vmStepBreakpointRefCount = 0;
 		_vmStepBreakpointId = -1;
-		_vmStepPointer = FarPtr();
+		_latestVmStepInstructionAddress = FarPtr();
 
 		_window = nullptr;
 		_renderer = nullptr;
@@ -551,13 +557,16 @@ public:
 		_compiled = nullptr;
 		_runtimeConfig = RuntimeConfig();
 		_breakpoints.clear();
-		_breakAtStep = Breakpoint(-1, -1, false);
+		_breakAtNextStep = Breakpoint(-1, -1, false);
+		_breakAtNextStepInstalledForBasic = false;
+		_ignoreForBreakingAtNextStep = FarPtr();
 		_breakTimeout = 0;
 		_srcToTracePoint.clear();
 		_currentBankPointer = FarPtr();
+		_vmStepPointer = FarPtr();
 		_vmStepBreakpointRefCount = 0;
 		_vmStepBreakpointId = -1;
-		_vmStepPointer = FarPtr();
+		_latestVmStepInstructionAddress = FarPtr();
 
 		_started = false;
 	}
@@ -628,8 +637,8 @@ public:
 		_bringCategoryToFront = toNextAsmInst ? Categories::ASM : Categories::BASIC;
 
 		if (toNextAsmInst) {
-			_breakAtStep.enabled = true;
-			_breakAtStep.type = Categories::ASM;
+			_breakAtNextStep.enabled = true;
+			_breakAtNextStep.type = Categories::ASM;
 
 			_workspace->step(_window, _renderer);
 
@@ -638,11 +647,17 @@ public:
 			return;
 		}
 
-		if (!_breakAtStep.enabled) {
-			_breakAtStep.enabled = true;
-			_breakAtStep.type = Categories::BASIC;
+		if (!_breakAtNextStep.enabled) {
+			_breakAtNextStep.enabled = true;
+			_breakAtNextStep.type = Categories::BASIC;
 
-			installVmStepBreakpoint();
+			if (!_breakAtNextStepInstalledForBasic) {
+				_breakAtNextStepInstalledForBasic = true;
+
+				_ignoreForBreakingAtNextStep = _latestVmStepInstructionAddress;
+
+				installVmStepBreakpoint();
+			}
 
 			_workspace->resume(_window, _renderer);
 		}
@@ -676,15 +691,26 @@ public:
 			const UInt16 currCtx = regs.DE; // `DE` is the pointer to the current `VM::SCRIPT_CTX`.
 			if (!probeThreadProgramCounter(currCtx, ctxBank, ctxPc))
 				return false;
+
+			_latestVmStepInstructionAddress = FarPtr(ctxBank, ctxPc);
 		}
 
 		// Handle stepping.
-		if (_breakAtStep.enabled && hitCount == 0) {
-			_breakAtStep.enabled = false;
+		if (_breakAtNextStep.enabled && hitCount == 0) {
+			_breakAtNextStep.enabled = false;
 
-			if (_breakAtStep.type == Categories::BASIC) {
+			if (_breakAtNextStep.type == Categories::BASIC) {
 				const GBBASIC::TracePoint* tp = getTracePointByRomLocation(ctxBank, ctxPc, GBBASIC::RomLocation::Types::BASIC);
 				if (tp) {
+					if (_ignoreForBreakingAtNextStep.equals(ctxBank, ctxPc)) {
+						_ignoreForBreakingAtNextStep = FarPtr();
+
+						if (hitCount == 0)
+							_breakAtNextStep.enabled = true;
+
+						return hitCount > 0;
+					}
+
 					_breakTimeout = 0;
 
 					const int page = tp->inCode.page;
@@ -698,6 +724,9 @@ public:
 					hitBreakpoint(breakpoint);
 
 					uninstallVmStepBreakpoint();
+
+					if (_breakAtNextStepInstalledForBasic)
+						_breakAtNextStepInstalledForBasic = false;
 
 					hitCount = 1;
 				} else {
@@ -713,11 +742,11 @@ public:
 					}
 
 					if (hitCount == 0)
-						_breakAtStep.enabled = true;
+						_breakAtNextStep.enabled = true;
 
 					return hitCount > 0;
 				}
-			} else if (_breakAtStep.type == Categories::ASM) {
+			} else if (_breakAtNextStep.type == Categories::ASM) {
 				const GBBASIC::TracePoint* tp = getTracePointByRomLocation(bank, pc, GBBASIC::RomLocation::Types::ASM);
 				int page = -1;
 				int row = -1;
@@ -756,6 +785,7 @@ public:
 			}
 		}
 
+		// Finish.
 		return hitCount > 0;
 	}
 
@@ -1196,6 +1226,11 @@ private:
 		return _vmStepBreakpointRefCount;
 	}
 	int uninstallVmStepBreakpoint(void) {
+		GBBASIC_ASSERT(_vmStepBreakpointRefCount > 0);
+
+		if (_vmStepBreakpointRefCount == 0)
+			return 0;
+
 		if (--_vmStepBreakpointRefCount == 0) {
 			_device->removeBreakpoint(_vmStepBreakpointId);
 			_vmStepBreakpointId = -1;
