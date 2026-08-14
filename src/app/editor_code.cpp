@@ -821,6 +821,8 @@ public:
 				}
 
 				SetProgramPointer(ln);
+				SetCursorPosition(Coordinates(ln, 0));
+				EnsureCursorVisible();
 			}
 
 			return Variant(true);
@@ -1086,6 +1088,10 @@ public:
 #else /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 		renderStatus(wnd, rnd, ws, width, statusBarHeight);
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
+	}
+
+	void ensureCursorVisible(void) override {
+		EnsureCursorVisible();
 	}
 
 	virtual bool isToolBarVisible(void) const override {

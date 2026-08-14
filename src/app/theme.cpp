@@ -1360,6 +1360,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_AlternativeSpeed("Alternative speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
 	tooltipEmulator_CodeDebugger_ClearBreakpoints("Clear breakpoints");
 	tooltipEmulator_CodeDebugger_DisableBreakpoints("Disable breakpoints");
+	tooltipEmulator_CodeDebugger_Disassembling("Disassembling...");
 	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
 	tooltipEmulator_CodeDebugger_Pause("Pause");
 	tooltipEmulator_CodeDebugger_Resume("Resume");

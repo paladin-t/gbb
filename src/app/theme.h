@@ -988,6 +988,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_AlternativeSpeed)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_ClearBreakpoints)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_DisableBreakpoints)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Disassembling)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_EnableBreakpoints)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Pause)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Resume)

@@ -394,11 +394,13 @@ private:
 
 	bool _bringCodeDebuggerToFront = false;
 	Categories _bringCategoryToFront = Categories::NONE;
+	bool _bringProgramCursorToFront = false;
 	bool _inspecting = false;
 	int _activeCodePage = -1;
 	Snapshot _snapshot;
 	Device::Registers _registers;
 	GBBASIC::Disassembler::Mnemonic::Array _mnemonics;
+	int _mnemonicsInit = 0;
 
 public:
 	DebuggerImpl() {
@@ -418,6 +420,7 @@ public:
 		_snapshot.reset();
 		_registers = Device::Registers();
 		_mnemonics.clear();
+		_mnemonicsInit = 0;
 
 		_window = wnd;
 		_renderer = rnd;
@@ -437,11 +440,13 @@ public:
 
 		_bringCodeDebuggerToFront = false;
 		_bringCategoryToFront = Categories::NONE;
+		_bringProgramCursorToFront = false;
 		_inspecting = false;
 		_activeCodePage = -1;
 		_snapshot.reset();
 		_registers = Device::Registers();
 		_mnemonics.clear();
+		_mnemonicsInit = 0;
 
 		_started = false;
 		_compiled = nullptr;
@@ -535,11 +540,13 @@ public:
 
 		_bringCodeDebuggerToFront = false;
 		_bringCategoryToFront = Categories::NONE;
+		_bringProgramCursorToFront = false;
 		_inspecting = false;
 		_activeCodePage = -1;
 		_snapshot.reset();
 		_registers = Device::Registers();
 		_mnemonics.clear();
+		_mnemonicsInit = 0;
 
 		_compiled = nullptr;
 		_runtimeConfig = RuntimeConfig();
@@ -1178,19 +1185,23 @@ private:
 
 		return true;
 	}
-	void installVmStepBreakpoint(void) {
+	int installVmStepBreakpoint(void) {
 		if (_vmStepBreakpointRefCount++ == 0) {
 			const UInt8 bank = (UInt8)_vmStepPointer.bank;
 			const UInt16 address = (UInt16)_vmStepPointer.address;
 			const int id = _device->addBreakpoint(bank, address);
 			_vmStepBreakpointId = id;
 		}
+
+		return _vmStepBreakpointRefCount;
 	}
-	void uninstallVmStepBreakpoint(void) {
+	int uninstallVmStepBreakpoint(void) {
 		if (--_vmStepBreakpointRefCount == 0) {
 			_device->removeBreakpoint(_vmStepBreakpointId);
 			_vmStepBreakpointId = -1;
 		}
+
+		return _vmStepBreakpointRefCount;
 	}
 	void hitBreakpoint(const Breakpoint &breakpoint) {
 		_bringCodeDebuggerToFront = true;
@@ -1230,14 +1241,23 @@ private:
 			Project::Ptr &prj = _workspace->currentProject();
 			if (!prj)
 				break;
+
 			CodeAssets::Entry* entry = prj->getCode(_activeCodePage);
 			if (!entry)
 				break;
+
 			EditorCode* editor = (EditorCode*)entry->editor;
+			if (!editor)
+				editor = _workspace->touchCodeEditor(_window, _renderer, prj.get(), _activeCodePage, true, entry);
+
 			if (!editor)
 				break;
 
 			editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)(breakpoint->row - 1)); // 1-based.
+
+			_bringCategoryToFront = Categories::BASIC;
+
+			_bringProgramCursorToFront = true;
 		} while (false);
 
 		// TODO: DBG.
@@ -1430,6 +1450,9 @@ private:
 				if (!editor)
 					break;
 
+				if (_bringProgramCursorToFront)
+					editor->ensureCursorVisible();
+
 				if (_bringCategoryToFront == Categories::BASIC)
 					flags |= ImGuiTabItemFlags_SetSelected;
 				if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Basic(), nullptr, flags)) {
@@ -1454,7 +1477,14 @@ private:
 			if (_bringCategoryToFront == Categories::ASM)
 				flags |= ImGuiTabItemFlags_SetSelected;
 			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Asm(), nullptr, flags)) {
-				// TODO: DBG.
+				const float width = ImGui::GetContentRegionAvail().x;
+				const float height = 200.0f;
+				const ImGuiWindowFlags flags_ = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoNav;
+				ImGui::BeginChild("@Notepad", ImVec2(width, height), false, flags_);
+				{
+					mnemonics();
+				}
+				ImGui::EndChild();
 
 				ImGui::EndTabItem();
 			}
@@ -1498,6 +1528,30 @@ private:
 		if (!ImGui::CollapsingHeader(_theme->windowEmulator_CodeDebugger_DeviceMemory().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
+
+		// TODO: DBG.
+	}
+
+	void mnemonics(void) {
+		const GBBASIC::Disassembler::Mnemonic::Array* mnemonics = nullptr;
+
+		if (_mnemonicsInit == 0) { // A simple FSM for lazy mnemonics initialization.
+			++_mnemonicsInit;
+		} else if (_mnemonicsInit == 1) {
+			++_mnemonicsInit;
+		} else if (_mnemonicsInit == 2) {
+			++_mnemonicsInit;
+
+			touchMnemonics();
+		} else {
+			mnemonics = &touchMnemonics();
+		}
+
+		if (!mnemonics) {
+			ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Disassembling());
+
+			return;
+		}
 
 		// TODO: DBG.
 	}
