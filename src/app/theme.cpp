@@ -950,6 +950,8 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_Debugger_Code("Code");
 	windowEmulator_Debugger_Vram("VRAM");
 	windowEmulator_CodeDebugger("Code Debugger");
+	windowEmulator_CodeDebugger_Asm("ASM");
+	windowEmulator_CodeDebugger_Basic("BASIC");
 	windowEmulator_CodeDebugger_DeviceMemory("Device memory");
 	windowEmulator_CodeDebugger_Inspector("Inspector");
 	windowEmulator_CodeDebugger_KernelMemory("Kernel memory");
@@ -1360,8 +1362,8 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_CodeDebugger_DisableBreakpoints("Disable breakpoints");
 	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
 	tooltipEmulator_CodeDebugger_Pause("Pause");
-	tooltipEmulator_CodeDebugger_Step("Step (F10)");
 	tooltipEmulator_CodeDebugger_StepAsm("Step ASM (" GBBASIC_MODIFIER_KEY_NAME "+F10)");
+	tooltipEmulator_CodeDebugger_StepBasic("Step BASIC (F10)");
 	tooltipEmulator_NormalSpeed("Normal speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
 	tooltipEmulator_StatusNote(
 		"Cartridge flag   : {0}\n"
@@ -1741,7 +1743,7 @@ bool Theme::open(class Renderer* rnd) {
 	iconBreakEnable(createTexture(rnd, RES_ICON_BREAK_ENABLE, GBBASIC_COUNTOF(RES_ICON_BREAK_ENABLE), nullptr));
 	iconBreakDisable(createTexture(rnd, RES_ICON_BREAK_DISABLE, GBBASIC_COUNTOF(RES_ICON_BREAK_DISABLE), nullptr));
 	iconBreakClear(createTexture(rnd, RES_ICON_BREAK_CLEAR, GBBASIC_COUNTOF(RES_ICON_BREAK_CLEAR), nullptr));
-	iconStep(createTexture(rnd, RES_ICON_BREAK_STEP, GBBASIC_COUNTOF(RES_ICON_BREAK_STEP), nullptr));
+	iconStepBasic(createTexture(rnd, RES_ICON_BREAK_STEP_BASIC, GBBASIC_COUNTOF(RES_ICON_BREAK_STEP_BASIC), nullptr));
 	iconStepAsm(createTexture(rnd, RES_ICON_BREAK_STEP_ASM, GBBASIC_COUNTOF(RES_ICON_BREAK_STEP_ASM), nullptr));
 
 	iconNumber0(createTexture(rnd, RES_ICON_NUMBER_0, GBBASIC_COUNTOF(RES_ICON_NUMBER_0), nullptr));
@@ -1918,7 +1920,7 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconBreakEnable(), nullptr);
 	destroyTexture(rnd, iconBreakDisable(), nullptr);
 	destroyTexture(rnd, iconBreakClear(), nullptr);
-	destroyTexture(rnd, iconStep(), nullptr);
+	destroyTexture(rnd, iconStepBasic(), nullptr);
 	destroyTexture(rnd, iconStepAsm(), nullptr);
 
 	destroyTexture(rnd, iconNumber0(), nullptr);

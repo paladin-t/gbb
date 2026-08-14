@@ -309,6 +309,7 @@ struct RomLocation {
 	RomLocation();
 	RomLocation(int b, int a);
 	RomLocation(int b, int a, int s);
+	RomLocation(int b, int a, int s, Types y);
 };
 
 /**
@@ -379,6 +380,7 @@ struct TracePoint {
 	TracePoint(const RomLocation &rom, const TextLocation &code);
 
 	int compare(const TracePoint &other) const;
+	int compare(const RomLocation &other) const;
 };
 
 }

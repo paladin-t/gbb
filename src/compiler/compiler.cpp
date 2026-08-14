@@ -1248,6 +1248,9 @@ RomLocation::RomLocation(int b, int a) : bank(b), address(a) {
 RomLocation::RomLocation(int b, int a, int s) : bank(b), address(a), size(s) {
 }
 
+RomLocation::RomLocation(int b, int a, int s, Types y) : bank(b), address(a), size(s), type(y) {
+}
+
 RamLocation::RamLocation() {
 }
 
@@ -1465,10 +1468,30 @@ int TracePoint::compare(const TracePoint &other) const {
 	else if ((unsigned)inRom.type > (unsigned)other.inRom.type)
 		return 1;
 
-	if (inRom.size < other.inRom.size)
+	// `inRom.size` doesn't count.
+
+	// `inCode` doesn't count.
+
+	return 0;
+}
+
+int TracePoint::compare(const RomLocation &other) const {
+	if (inRom.bank < other.bank)
 		return -1;
-	else if (inRom.size > other.inRom.size)
+	else if (inRom.bank > other.bank)
 		return 1;
+
+	if (inRom.address < other.address)
+		return -1;
+	else if (inRom.address > other.address)
+		return 1;
+
+	if ((unsigned)inRom.type < (unsigned)other.type)
+		return -1;
+	else if ((unsigned)inRom.type > (unsigned)other.type)
+		return 1;
+
+	// `size` doesn't count.
 
 	return 0;
 }
@@ -16237,8 +16260,7 @@ public:
 					Context &ctx = context.top();
 
 					for (const Assembler::Context::InstructionTrace &trace : _asmCtx.instructionTraces) {
-						RomLocation rom(bank, address + trace.offset, trace.size);
-						rom.type = RomLocation::Types::ASM;
+						const RomLocation rom(bank, address + trace.offset, trace.size, RomLocation::Types::ASM);
 						ctx.tracePoints->push_back(TracePoint(rom, trace.source));
 					}
 				};

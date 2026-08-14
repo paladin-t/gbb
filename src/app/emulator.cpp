@@ -75,6 +75,7 @@ struct Context {
 	bool* vramDebugEnabled = nullptr;
 	bool* vramDebuggerPreviewPaletteBits = nullptr;
 	bool* vramDebuggerShowGrids = nullptr;
+	bool* isVramDebuggerActive = nullptr;
 	float* debuggerPreviousOuterWidth = nullptr;
 	float* debuggerWidth = nullptr;
 	float* debuggerHeight = nullptr;
@@ -100,7 +101,6 @@ struct Context {
 	bool canShowVramDebugger = false;
 	bool codeDebuggerGotSafeHeight = false;
 	bool vramDebuggerGotSafeHeight = false;
-	bool isVramDebuggerActive = true;
 
 	Context(
 		Window* window_, Renderer* renderer_,
@@ -113,7 +113,7 @@ struct Context {
 		bool* onscreenGamepadEnabled_, bool onscreenGamepadSwapAB_, float onscreenGamepadScale_, const Math::Vec2<float> onscreenGamepadPadding_,
 		bool* onscreenDebugEnabled_,
 		Debugger* debugger_, bool* codeDebugEnabled_, bool* bringCodeDebuggerToFront_,
-		VramDebugger* vramDebugger_, bool* vramDebugEnabled_, bool* vramDebuggerPreviewPaletteBits_, bool* vramDebuggerShowGrids_,
+		VramDebugger* vramDebugger_, bool* vramDebugEnabled_, bool* vramDebuggerPreviewPaletteBits_, bool* vramDebuggerShowGrids_, bool* isVramDebuggerActive_,
 		float* debuggerPreviousOuterWidth_, float* debuggerWidth_, float* debuggerHeight_,  bool* debuggerResizing_, bool* debuggerResetting_,
 		Device::CursorTypes cursor_,
 		bool hasPopup_,
@@ -131,7 +131,7 @@ struct Context {
 		onscreenGamepadEnabled(onscreenGamepadEnabled_), onscreenGamepadSwapAB(onscreenGamepadSwapAB_), onscreenGamepadScale(onscreenGamepadScale_), onscreenGamepadPadding(onscreenGamepadPadding_),
 		onscreenDebugEnabled(onscreenDebugEnabled_),
 		debugger(debugger_), codeDebugEnabled(codeDebugEnabled_), bringCodeDebuggerToFront(bringCodeDebuggerToFront_),
-		vramDebugger(vramDebugger_), vramDebugEnabled(vramDebugEnabled_), vramDebuggerPreviewPaletteBits(vramDebuggerPreviewPaletteBits_), vramDebuggerShowGrids(vramDebuggerShowGrids_),
+		vramDebugger(vramDebugger_), vramDebugEnabled(vramDebugEnabled_), vramDebuggerPreviewPaletteBits(vramDebuggerPreviewPaletteBits_), vramDebuggerShowGrids(vramDebuggerShowGrids_), isVramDebuggerActive(isVramDebuggerActive_),
 		debuggerPreviousOuterWidth(debuggerPreviousOuterWidth_), debuggerWidth(debuggerWidth_), debuggerHeight(debuggerHeight_),  debuggerResizing(debuggerResizing_), debuggerResetting(debuggerResetting_),
 		cursor(cursor_),
 		hasPopup(hasPopup_),
@@ -174,7 +174,7 @@ struct Context {
 			vramDebuggerGotSafeHeight = vramDebugger->safeHeight() > 0 && height >= vramDebugger->safeHeight();
 
 			float preferedWidth;
-			if (isVramDebuggerActive) {
+			if (*isVramDebuggerActive) {
 				preferedWidth = vramDebuggerGotSafeHeight ?
 					(EMULATOR_DEBUGGER_MAX_WIDTH + 2) :
 					(EMULATOR_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
@@ -345,7 +345,7 @@ struct Context {
 		int safeHeight;
 		bool debuggerGotSafeHeight;
 		if (codeDbg && vramDbg) {
-			if (isVramDebuggerActive) {
+			if (*isVramDebuggerActive) {
 				safeHeight = vramDebugger->safeHeight();
 				debuggerGotSafeHeight = vramDebuggerGotSafeHeight;
 			} else {
@@ -476,7 +476,7 @@ struct Context {
 				}
 				ImGui::EndChild();
 
-				isVramDebuggerActive = false;
+				*isVramDebuggerActive = false;
 
 				ImGui::EndTabItem();
 			} else {
@@ -511,7 +511,7 @@ struct Context {
 				}
 				ImGui::EndChild();
 
-				isVramDebuggerActive = true;
+				*isVramDebuggerActive = true;
 
 				ImGui::EndTabItem();
 			}
@@ -534,7 +534,7 @@ private:
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		float maxWidth;
-		if (isVramDebuggerActive) {
+		if (*isVramDebuggerActive) {
 			maxWidth = vramDebuggerGotSafeHeight ?
 				(EMULATOR_DEBUGGER_MAX_WIDTH + 2) :
 				(EMULATOR_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
@@ -932,7 +932,7 @@ void emulator(
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,
 	class Debugger* debugger, bool &codeDebugEnabled, bool &bringCodeDebuggerToFront,
-	class VramDebugger* vramDebugger, bool &vramDebugEnabled, bool &vramDebuggerPreviewPaletteBits, bool &vramDebuggerShowGrids,
+	class VramDebugger* vramDebugger, bool &vramDebugEnabled, bool &vramDebuggerPreviewPaletteBits, bool &vramDebuggerShowGrids, bool &isVramDebuggerActive,
 	float &debuggerPreviousOuterWidth, float &debuggerWidth, float &debuggerHeight, bool &debuggerResizing, bool &debuggerResetting,
 	Device::CursorTypes cursor,
 	bool hasPopup,
@@ -956,7 +956,7 @@ void emulator(
 		&onscreenGamepadEnabled, onscreenGamepadSwapAB, onscreenGamepadScale, onscreenGamepadPadding,
 		&onscreenDebugEnabled,
 		debugger, &codeDebugEnabled, &bringCodeDebuggerToFront,
-		vramDebugger, &vramDebugEnabled, &vramDebuggerPreviewPaletteBits, &vramDebuggerShowGrids,
+		vramDebugger, &vramDebugEnabled, &vramDebuggerPreviewPaletteBits, &vramDebuggerShowGrids, &isVramDebuggerActive,
 		&debuggerPreviousOuterWidth, &debuggerWidth, &debuggerHeight, &debuggerResizing, &debuggerResetting,
 		cursor,
 		hasPopup,

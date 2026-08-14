@@ -652,6 +652,7 @@ public:
 	GBBASIC_PROPERTY_READONLY_PTR(class VramDebugger, vramDebugger)
 	GBBASIC_PROPERTY(bool, vramDebuggerPreviewPaletteBits)
 	GBBASIC_PROPERTY(bool, vramDebuggerShowGrids)
+	GBBASIC_PROPERTY(bool, isVramDebuggerActive)
 	GBBASIC_PROPERTY(float, debuggerPreviousOuterWidth)
 	GBBASIC_PROPERTY(float, debuggerWidth)
 	GBBASIC_PROPERTY(float, debuggerHeight)

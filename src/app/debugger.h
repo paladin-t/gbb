@@ -30,20 +30,20 @@ public:
 		bool invalid(void) const;
 	};
 
+	enum class Categories {
+		NONE,
+		BASIC,
+		ASM
+	};
+
 	struct Breakpoint {
 		typedef std::vector<Breakpoint> Array;
-
-		enum class Types {
-			NONE,
-			BASIC,
-			ASM
-		};
 
 		int page = 0;
 		int row = 0; // 1-based.
 
 		bool enabled = true;
-		Types type = Types::NONE;
+		Categories type = Categories::NONE;
 		int id = -1;
 		FarPtr hitPointer;
 		FarPtr vmPointer;

@@ -11,6 +11,7 @@
 #include "widgets.h"
 #include "workspace.h"
 #include "../compiler/disassembler.h"
+#include "../utils/datetime.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "../../lib/imgui/imgui_internal.h"
 #include "../../lib/imgui_code_editor/imgui_code_editor.h"
@@ -34,6 +35,10 @@
 #ifndef DEBUGGER_PROJECTILE_MAX_ANIMATIONS
 #	define DEBUGGER_PROJECTILE_MAX_ANIMATIONS 4
 #endif /* DEBUGGER_PROJECTILE_MAX_ANIMATIONS */
+
+#ifndef DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT
+#	define DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT DateTime::fromSeconds(0.333333);
+#endif /* DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT */
 
 /* ===========================================================================} */
 
@@ -377,6 +382,7 @@ private:
 	RuntimeConfig _runtimeConfig;
 	Breakpoint::Array _breakpoints;
 	Breakpoint _breakAtStep = Breakpoint(-1, -1, false);
+	long long _breakTimeout = 0;
 	mutable SourceRefToTracePointDictionary _srcToTracePoint; // Reversed mapping from trace points.
 	FarPtr _currentBankPointer;
 	int _vmStepBreakpointRefCount = 0;
@@ -384,6 +390,7 @@ private:
 	FarPtr _vmStepPointer;
 
 	bool _bringCodeDebuggerToFront = false;
+	Categories _bringCategoryToFront = Categories::NONE;
 	ImGui::CodeEditor* _codeEditor = nullptr;
 	bool _inspecting = false;
 	Snapshot _snapshot;
@@ -423,6 +430,7 @@ public:
 		_device->clearBreakpoints();
 
 		_bringCodeDebuggerToFront = false;
+		_bringCategoryToFront = Categories::NONE;
 		delete _codeEditor;
 		_codeEditor = nullptr;
 		_inspecting = false;
@@ -435,6 +443,7 @@ public:
 		_runtimeConfig = RuntimeConfig();
 		_breakpoints.clear();
 		_breakAtStep = Breakpoint(-1, -1, false);
+		_breakTimeout = 0;
 		_srcToTracePoint.clear();
 		_currentBankPointer = FarPtr();
 		_vmStepBreakpointRefCount = 0;
@@ -521,6 +530,7 @@ public:
 			_device->clearBreakpoints();
 
 		_bringCodeDebuggerToFront = false;
+		_bringCategoryToFront = Categories::NONE;
 		_inspecting = false;
 		_snapshot.reset();
 		_registers = Device::Registers();
@@ -530,6 +540,7 @@ public:
 		_runtimeConfig = RuntimeConfig();
 		_breakpoints.clear();
 		_breakAtStep = Breakpoint(-1, -1, false);
+		_breakTimeout = 0;
 		_srcToTracePoint.clear();
 		_currentBankPointer = FarPtr();
 		_vmStepBreakpointRefCount = 0;
@@ -602,12 +613,11 @@ public:
 		_snapshot.reset();
 		_registers = Device::Registers();
 
-		// TODO: DBG.
-		// bring basic/asm tabs to front.
+		_bringCategoryToFront = toNextAsmInst ? Categories::ASM : Categories::BASIC;
 
 		if (toNextAsmInst) {
 			_breakAtStep.enabled = true;
-			_breakAtStep.type = Breakpoint::Types::ASM;
+			_breakAtStep.type = Categories::ASM;
 
 			_workspace->step(nullptr, nullptr);
 
@@ -618,12 +628,13 @@ public:
 
 		if (!_breakAtStep.enabled) {
 			_breakAtStep.enabled = true;
-			_breakAtStep.type = Breakpoint::Types::BASIC;
+			_breakAtStep.type = Categories::BASIC;
 
 			installVmStepBreakpoint();
 
 			_workspace->resume(nullptr, nullptr);
 		}
+		_breakTimeout = DateTime::ticks() + DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT;
 	}
 
 	virtual bool breakpointHit(void) override {
@@ -657,14 +668,16 @@ public:
 		if (_breakAtStep.enabled) {
 			_breakAtStep.enabled = false;
 
-			if (_breakAtStep.type == Breakpoint::Types::BASIC) {
+			if (_breakAtStep.type == Categories::BASIC) {
+				_breakTimeout = 0;
+
 				const GBBASIC::TracePoint* tp = getTracePointByRomLocation(ctxBank, ctxPc, GBBASIC::RomLocation::Types::BASIC);
 				if (tp) {
 					const int page = tp->inCode.page;
 					const int row = tp->inCode.row;
 
 					Breakpoint breakpoint(page, row, false);
-					breakpoint.type = Breakpoint::Types::BASIC;
+					breakpoint.type = Categories::BASIC;
 					breakpoint.id = _vmStepBreakpointId;
 					breakpoint.hitPointer = FarPtr(bank, pc);
 					breakpoint.vmPointer = FarPtr(ctxBank, ctxPc);
@@ -678,7 +691,7 @@ public:
 				uninstallVmStepBreakpoint();
 
 				return 0;
-			} else if (_breakAtStep.type == Breakpoint::Types::ASM) {
+			} else if (_breakAtStep.type == Categories::ASM) {
 				const GBBASIC::TracePoint* tp = getTracePointByRomLocation(bank, pc, GBBASIC::RomLocation::Types::ASM);
 				int page = -1;
 				int row = -1;
@@ -688,7 +701,7 @@ public:
 				}
 
 				Breakpoint breakpoint(page, row, false);
-				breakpoint.type = Breakpoint::Types::ASM;
+				breakpoint.type = Categories::ASM;
 				breakpoint.id = -1;
 				breakpoint.hitPointer = FarPtr(bank, pc);
 				breakpoint.vmPointer = FarPtr(0, 0);
@@ -798,14 +811,17 @@ private:
 		if (!tracePoints)
 			return nullptr;
 
-		for (int i = 0; i < (int)tracePoints->size(); ++i) {
-			const GBBASIC::TracePoint &tp = (*tracePoints)[i];
-			if (tp.inRom.type != type)
-				continue;
-
-			if (tp.inRom.bank == bank && tp.inRom.address == address)
-				return &tp;
-		}
+		const GBBASIC::RomLocation key(bank, address, 0, type);
+		const GBBASIC::TracePoint::Array::const_iterator it = std::lower_bound(
+			tracePoints->begin(), tracePoints->end(),
+			key,
+			[] (const GBBASIC::TracePoint &tp, const GBBASIC::RomLocation &val) -> bool {
+				return tp.compare(val) < 0;
+			}
+		);
+		const GBBASIC::TracePoint &tp = *it;
+		if (it != tracePoints->end() && tp.compare(key) <= 0)
+			return &tp;
 
 		return nullptr;
 	}
@@ -821,6 +837,13 @@ private:
 		dasm->disassemble(result, compiledBytes(), options);
 
 		return result;
+	}
+
+	const GBBASIC::Disassembler::Mnemonic::Array &touchMnemonics(void) {
+		if (_mnemonics.empty())
+			_mnemonics = getDisassembledMnemonics();
+
+		return _mnemonics;
 	}
 
 	bool probeThreadProgramCounter(UInt16 threadAddr, UInt8 &bank, UInt16 &pc) const {
@@ -840,6 +863,20 @@ private:
 
 		bank = ctxBank;
 		pc = ctxPc;
+
+		return true;
+	}
+	bool probeFirstThreadAddress(UInt16 &out) const {
+		out = 0;
+
+		FarPtr farPtr;
+		if (!getFarPointerBySymbolName(COMPILER_FIRST_CONTEXT_ENTRY_NAME, farPtr))
+			return false;
+		UInt16 threadAddr = 0;
+		if (!_device->readRam((UInt16)farPtr.address, &threadAddr) || threadAddr == 0)
+			return false;
+
+		out = threadAddr;
 
 		return true;
 	}
@@ -1052,7 +1089,7 @@ private:
 
 		// Re-assign breakpoints' type if needed.
 		for (Breakpoint &breakpoint : _breakpoints) {
-			if (breakpoint.type != Breakpoint::Types::NONE)
+			if (breakpoint.type != Categories::NONE)
 				continue;
 
 			const GBBASIC::TracePoint* tp = getTracePointBySourceLocation(breakpoint.page, breakpoint.row);
@@ -1060,13 +1097,13 @@ private:
 				continue;
 
 			if (tp->inRom.type == GBBASIC::RomLocation::Types::BASIC)
-				breakpoint.type = Breakpoint::Types::BASIC;
+				breakpoint.type = Categories::BASIC;
 			else
-				breakpoint.type = Breakpoint::Types::ASM;
+				breakpoint.type = Categories::ASM;
 		}
 	}
 	bool installBreakpoint(Breakpoint &breakpoint) {
-		if (breakpoint.type == Breakpoint::Types::NONE) {
+		if (breakpoint.type == Categories::NONE) {
 			return false;
 		}
 
@@ -1074,7 +1111,7 @@ private:
 		if (!tp)
 			return false;
 
-		if (breakpoint.type == Breakpoint::Types::ASM) {
+		if (breakpoint.type == Categories::ASM) {
 			const UInt8 bank = (UInt8)tp->inRom.bank;
 			const UInt16 address = (UInt16)tp->inRom.address;
 			const int id = _device->addBreakpoint(bank, address);
@@ -1096,11 +1133,11 @@ private:
 		return true;
 	}
 	bool uninstallBreakpoint(Breakpoint &breakpoint) {
-		if (breakpoint.type == Breakpoint::Types::NONE) {
+		if (breakpoint.type == Categories::NONE) {
 			return false;
 		}
 
-		if (breakpoint.type == Breakpoint::Types::ASM) {
+		if (breakpoint.type == Categories::ASM) {
 			_device->removeBreakpoint(breakpoint.id);
 			breakpoint.id = -1;
 			breakpoint.hitPointer = FarPtr();
@@ -1141,6 +1178,17 @@ private:
 		inspect(&breakpoint);
 	}
 	void debug(bool visible) {
+		// Handle stepping timeout.
+		if (_breakTimeout != 0 && DateTime::ticks() >= _breakTimeout) {
+			_breakTimeout = 0;
+			UInt16 firstThread = 0;
+			if (!probeFirstThreadAddress(firstThread) || firstThread == 0) {
+				// No point to step to if all threads are ended.
+				_workspace->resume(nullptr, nullptr);
+			}
+		}
+
+		// Handle debugger focusing.
 		if (_bringCodeDebuggerToFront) {
 			_bringCodeDebuggerToFront = false;
 			if (!visible)
@@ -1196,13 +1244,13 @@ private:
 		ImGui::Dummy(ImVec2(2, 0));
 		ImGui::SameLine();
 
-		if (ImGui::ImageButton(theme->iconStep()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconDisabledColor))) {
+		if (ImGui::ImageButton(theme->iconStepBasic()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconDisabledColor))) {
 			// Do nothing.
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_Step());
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_StepBasic());
 		}
 		ImGui::SameLine();
 		if (ImGui::ImageButton(theme->iconStepAsm()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconDisabledColor))) {
@@ -1276,13 +1324,13 @@ private:
 		ImGui::Dummy(ImVec2(2, 0));
 		ImGui::SameLine();
 
-		if (ImGui::ImageButton(theme->iconStep()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+		if (ImGui::ImageButton(theme->iconStepBasic()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
 			step(false);
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_Step());
+			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_StepBasic());
 		}
 		ImGui::SameLine();
 		if (ImGui::ImageButton(theme->iconStepAsm()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
@@ -1326,7 +1374,30 @@ private:
 			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_ClearBreakpoints());
 		}
 
-		// TODO: DBG.
+		if (ImGui::BeginTabBar("@Code")) {
+			ImGuiTabItemFlags flags = ImGuiTabItemFlags_NoTooltip;
+			if (_bringCategoryToFront == Categories::BASIC)
+				flags |= ImGuiTabItemFlags_SetSelected;
+			if (ImGui::BeginTabItem(theme->windowEmulator_CodeDebugger_Basic(), nullptr, flags)) {
+				// TODO: DBG.
+
+				ImGui::EndTabItem();
+			}
+
+			flags = ImGuiTabItemFlags_NoTooltip;
+			if (_bringCategoryToFront == Categories::ASM)
+				flags |= ImGuiTabItemFlags_SetSelected;
+			if (ImGui::BeginTabItem(theme->windowEmulator_CodeDebugger_Asm(), nullptr, flags)) {
+				// TODO: DBG.
+
+				ImGui::EndTabItem();
+			}
+
+			if (_bringCategoryToFront != Categories::NONE)
+				_bringCategoryToFront = Categories::NONE;
+
+			ImGui::EndTabBar();
+		}
 	}
 	void kernelMemory(Renderer* /* rnd */, Theme* theme) {
 		ImGuiStyle &style = ImGui::GetStyle();
