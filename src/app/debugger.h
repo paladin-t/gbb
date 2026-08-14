@@ -58,16 +58,12 @@ public:
 	};
 
 public:
-	virtual bool open(class Renderer* rnd, class Workspace* ws, class Theme* theme, class Device* device) = 0;
+	virtual bool open(class Window* wnd, class Renderer* rnd, class Workspace* ws, class Theme* theme, class Device* device) = 0;
 	virtual bool close(void) = 0;
 
 	virtual int safeHeight(void) const = 0;
 
-	virtual void update(
-		class Renderer* rnd, class Theme* theme,
-		bool visible,
-		bool showTitle
-	) = 0;
+	virtual void update(bool visible, bool showTitle) = 0;
 
 	virtual void start(void) = 0;
 	virtual void stop(void) = 0;

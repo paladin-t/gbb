@@ -18,7 +18,7 @@
 
 class VramDebugger {
 public:
-	virtual bool open(class Renderer* rnd, class Theme* theme, class Device* device) = 0;
+	virtual bool open(class Window* wnd, class Renderer* rnd, class Workspace* ws, class Theme* theme, class Device* device) = 0;
 	virtual bool close(void) = 0;
 
 	virtual int safeHeight(void) const = 0;
@@ -30,7 +30,6 @@ public:
 	virtual bool getHighlight(int index, Math::Recti* area /* nullable */) const = 0;
 
 	virtual void update(
-		class Renderer* rnd, class Theme* theme,
 		bool previewPaletteBits, bool showGrids,
 		bool isNewFrame,
 		bool showTitle

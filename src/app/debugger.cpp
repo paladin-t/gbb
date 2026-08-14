@@ -7,6 +7,7 @@
 */
 
 #include "debugger.h"
+#include "editor_code.h"
 #include "theme.h"
 #include "widgets.h"
 #include "workspace.h"
@@ -14,7 +15,6 @@
 #include "../utils/datetime.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "../../lib/imgui/imgui_internal.h"
-#include "../../lib/imgui_code_editor/imgui_code_editor.h"
 #include "../../lib/jpath/jpath.hpp"
 
 /*
@@ -374,7 +374,10 @@ private:
 		float startY = 0;
 		int safeHeight = 0;
 	} _options;
+	Window* _window = nullptr; // Foreign.
+	Renderer* _renderer = nullptr; // Foreign.
 	Workspace* _workspace = nullptr; // Foreign.
+	Theme* _theme = nullptr; // Foreign.
 	Device* _device = nullptr; // Foreign.
 
 	bool _started = false;
@@ -391,8 +394,8 @@ private:
 
 	bool _bringCodeDebuggerToFront = false;
 	Categories _bringCategoryToFront = Categories::NONE;
-	ImGui::CodeEditor* _codeEditor = nullptr;
 	bool _inspecting = false;
+	int _activeCodePage = -1;
 	Snapshot _snapshot;
 	Device::Registers _registers;
 	GBBASIC::Disassembler::Mnemonic::Array _mnemonics;
@@ -406,17 +409,20 @@ public:
 		close();
 	}
 
-	virtual bool open(class Renderer* /* rnd */, class Workspace* ws, class Theme* /* theme */, class Device* device) override {
+	virtual bool open(class Window* wnd, class Renderer* rnd, class Workspace* ws, class Theme* theme, class Device* device) override {
 		if (_opened)
 			return true;
 
-		_codeEditor = new ImGui::CodeEditor();
 		_inspecting = false;
+		_activeCodePage = -1;
 		_snapshot.reset();
 		_registers = Device::Registers();
 		_mnemonics.clear();
 
+		_window = wnd;
+		_renderer = rnd;
 		_workspace = ws;
+		_theme = theme;
 		_device = device;
 
 		_opened = true;
@@ -431,9 +437,8 @@ public:
 
 		_bringCodeDebuggerToFront = false;
 		_bringCategoryToFront = Categories::NONE;
-		delete _codeEditor;
-		_codeEditor = nullptr;
 		_inspecting = false;
+		_activeCodePage = -1;
 		_snapshot.reset();
 		_registers = Device::Registers();
 		_mnemonics.clear();
@@ -450,7 +455,10 @@ public:
 		_vmStepBreakpointId = -1;
 		_vmStepPointer = FarPtr();
 
+		_window = nullptr;
+		_renderer = nullptr;
 		_workspace = nullptr;
+		_theme = nullptr;
 		_device = nullptr;
 
 		_opened = false;
@@ -462,31 +470,27 @@ public:
 		return _options.safeHeight;
 	}
 
-	virtual void update(
-		class Renderer* rnd, class Theme* theme,
-		bool visible,
-		bool showTitle
-	) override {
+	virtual void update(bool visible, bool showTitle) override {
 		debug(visible);
 
 		if (!visible)
 			return;
 
-		begin(rnd, theme, showTitle);
+		begin(showTitle);
 		if (inspecting()) {
-			code(rnd, theme);
+			code();
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
-			kernelMemory(rnd, theme);
+			kernelMemory();
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
-			deviceMemory(rnd, theme);
+			deviceMemory();
 		} else {
-			running(rnd, theme);
+			running();
 		}
-		end(rnd);
+		end();
 	}
 
 	virtual void start(void) override {
@@ -532,6 +536,7 @@ public:
 		_bringCodeDebuggerToFront = false;
 		_bringCategoryToFront = Categories::NONE;
 		_inspecting = false;
+		_activeCodePage = -1;
 		_snapshot.reset();
 		_registers = Device::Registers();
 		_mnemonics.clear();
@@ -619,9 +624,9 @@ public:
 			_breakAtStep.enabled = true;
 			_breakAtStep.type = Categories::ASM;
 
-			_workspace->step(nullptr, nullptr);
+			_workspace->step(_window, _renderer);
 
-			_workspace->resume(nullptr, nullptr);
+			_workspace->resume(_window, _renderer);
 
 			return;
 		}
@@ -632,7 +637,7 @@ public:
 
 			installVmStepBreakpoint();
 
-			_workspace->resume(nullptr, nullptr);
+			_workspace->resume(_window, _renderer);
 		}
 		_breakTimeout = DateTime::ticks() + DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT;
 	}
@@ -655,6 +660,7 @@ public:
 			return false;
 
 		// Resolve the VM bank and PC if necessary.
+		int hitCount = 0;
 		const bool isBasic = _vmStepPointer.equals(bank, pc);
 		UInt16 ctxPc = 0;
 		UInt8 ctxBank = 0;
@@ -664,8 +670,25 @@ public:
 				return false;
 		}
 
+		// Traverse and check all breakpoints.
+		for (int i = 0; i < (int)_breakpoints.size(); ++i) {
+			const Breakpoint &breakpoint = _breakpoints[i];
+			if (!breakpoint.hitPointer.equals(bank, pc))
+				continue;
+
+			if (isBasic) {
+				if (breakpoint.vmPointer.equals(ctxBank, ctxPc)) {
+					hitBreakpoint(breakpoint);
+					++hitCount;
+				}
+			} else {
+				hitBreakpoint(breakpoint);
+				++hitCount;
+			}
+		}
+
 		// Handle stepping.
-		if (_breakAtStep.enabled) {
+		if (_breakAtStep.enabled && hitCount == 0) {
 			_breakAtStep.enabled = false;
 
 			if (_breakAtStep.type == Categories::BASIC) {
@@ -685,12 +708,10 @@ public:
 
 					uninstallVmStepBreakpoint();
 
-					return 1;
+					hitCount = 1;
+				} else {
+					uninstallVmStepBreakpoint();
 				}
-
-				uninstallVmStepBreakpoint();
-
-				return 0;
 			} else if (_breakAtStep.type == Categories::ASM) {
 				const GBBASIC::TracePoint* tp = getTracePointByRomLocation(bank, pc, GBBASIC::RomLocation::Types::ASM);
 				int page = -1;
@@ -707,25 +728,7 @@ public:
 				breakpoint.vmPointer = FarPtr(0, 0);
 				hitBreakpoint(breakpoint);
 
-				return 1;
-			}
-		}
-
-		// Traverse and check all breakpoints.
-		int hitCount = 0;
-		for (int i = 0; i < (int)_breakpoints.size(); ++i) {
-			const Breakpoint &breakpoint = _breakpoints[i];
-			if (!breakpoint.hitPointer.equals(bank, pc))
-				continue;
-
-			if (isBasic) {
-				if (breakpoint.vmPointer.equals(ctxBank, ctxPc)) {
-					hitBreakpoint(breakpoint);
-					++hitCount;
-				}
-			} else {
-				hitBreakpoint(breakpoint);
-				++hitCount;
+				hitCount = 1;
 			}
 		}
 
@@ -1184,7 +1187,7 @@ private:
 			UInt16 firstThread = 0;
 			if (!probeFirstThreadAddress(firstThread) || firstThread == 0) {
 				// No point to step to if all threads are ended.
-				_workspace->resume(nullptr, nullptr);
+				_workspace->resume(_window, _renderer);
 			}
 		}
 
@@ -1196,25 +1199,46 @@ private:
 		}
 	}
 	void inspect(const Breakpoint* breakpoint /* nullable */) {
+		// Assign the active code page.
+		if (breakpoint)
+			_activeCodePage = breakpoint->page;
+
+		// Set a program pointer.
+		do {
+			if (!breakpoint)
+				break;
+
+			Project::Ptr &prj = _workspace->currentProject();
+			if (!prj)
+				break;
+			CodeAssets::Entry* entry = prj->getCode(_activeCodePage);
+			if (!entry)
+				break;
+			EditorCode* editor = (EditorCode*)entry->editor;
+			if (!editor)
+				break;
+
+			editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)(breakpoint->row - 1)); // 1-based.
+		} while (false);
+
 		// TODO: DBG.
-		(void)breakpoint;
 	}
 
-	void begin(Renderer* /* rnd */, Theme* theme, bool showTitle) {
+	void begin(bool showTitle) {
 		_options.startY = ImGui::GetCursorPosY();
 
 		if (showTitle) {
 			ImGui::AlignTextToFramePadding();
 			ImGui::Dummy(ImVec2(1, 0));
 			ImGui::SameLine();
-			ImGui::TextUnformatted(theme->windowEmulator_CodeDebugger());
+			ImGui::TextUnformatted(_theme->windowEmulator_CodeDebugger());
 		}
 	}
-	void end(Renderer* /* rnd */) {
+	void end(void) {
 		_options.safeHeight = (int)(ImGui::GetCursorPosY() - _options.startY + 48);
 	}
 
-	void running(Renderer* rnd, Theme* theme) {
+	void running(void) {
 		ImGuiIO &io = ImGui::GetIO();
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -1227,74 +1251,74 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_CodeDebugger_Running().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_CodeDebugger_Running().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
 		const ImVec2 buttonSize(13 * io.FontGlobalScale, 13 * io.FontGlobalScale);
-		if (ImGui::ImageButton(theme->iconPause()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
-			_workspace->pause(nullptr, rnd);
+		if (ImGui::ImageButton(_theme->iconPause()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
+			_workspace->pause(_window, _renderer);
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_Pause());
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_Pause());
 		}
 		ImGui::SameLine();
 		ImGui::Dummy(ImVec2(2, 0));
 		ImGui::SameLine();
 
-		if (ImGui::ImageButton(theme->iconStepBasic()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconDisabledColor))) {
+		if (ImGui::ImageButton(_theme->iconStepBasic()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconDisabledColor))) {
 			// Do nothing.
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_StepBasic());
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_StepBasic());
 		}
 		ImGui::SameLine();
-		if (ImGui::ImageButton(theme->iconStepAsm()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconDisabledColor))) {
+		if (ImGui::ImageButton(_theme->iconStepAsm()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconDisabledColor))) {
 			// Do nothing.
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_StepAsm());
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_StepAsm());
 		}
 		ImGui::SameLine();
 		ImGui::Dummy(ImVec2(2, 0));
 		ImGui::SameLine();
 
-		if (ImGui::ImageButton(theme->iconBreakDisable()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+		if (ImGui::ImageButton(_theme->iconBreakDisable()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->disableBreakpoints();
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_DisableBreakpoints());
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_DisableBreakpoints());
 		}
 		ImGui::SameLine();
 
-		if (ImGui::ImageButton(theme->iconBreakEnable()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+		if (ImGui::ImageButton(_theme->iconBreakEnable()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->enableBreakpoints();
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_EnableBreakpoints());
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_EnableBreakpoints());
 		}
 		ImGui::SameLine();
 
-		if (ImGui::ImageButton(theme->iconBreakClear()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+		if (ImGui::ImageButton(_theme->iconBreakClear()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->clearBreakpoints();
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_ClearBreakpoints());
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_ClearBreakpoints());
 		}
 	}
-	void code(Renderer* rnd, Theme* theme) {
+	void code(void) {
 		ImGuiIO &io = ImGui::GetIO();
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -1307,87 +1331,110 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_CodeDebugger_Inspector().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_CodeDebugger_Inspector().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
 		const ImVec2 buttonSize(13 * io.FontGlobalScale, 13 * io.FontGlobalScale);
-		if (ImGui::ImageButton(theme->iconPlay()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
-			_workspace->resume(nullptr, rnd);
+		if (ImGui::ImageButton(_theme->iconPlay()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
+			_workspace->resume(_window, _renderer);
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_Pause());
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_Resume());
 		}
 		ImGui::SameLine();
 		ImGui::Dummy(ImVec2(2, 0));
 		ImGui::SameLine();
 
-		if (ImGui::ImageButton(theme->iconStepBasic()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+		if (ImGui::ImageButton(_theme->iconStepBasic()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			step(false);
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_StepBasic());
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_StepBasic());
 		}
 		ImGui::SameLine();
-		if (ImGui::ImageButton(theme->iconStepAsm()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+		if (ImGui::ImageButton(_theme->iconStepAsm()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			step(true);
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_StepAsm());
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_StepAsm());
 		}
 		ImGui::SameLine();
 		ImGui::Dummy(ImVec2(2, 0));
 		ImGui::SameLine();
 
-		if (ImGui::ImageButton(theme->iconBreakDisable()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+		if (ImGui::ImageButton(_theme->iconBreakDisable()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->disableBreakpoints();
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_DisableBreakpoints());
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_DisableBreakpoints());
 		}
 		ImGui::SameLine();
 
-		if (ImGui::ImageButton(theme->iconBreakEnable()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+		if (ImGui::ImageButton(_theme->iconBreakEnable()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->enableBreakpoints();
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_EnableBreakpoints());
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_EnableBreakpoints());
 		}
 		ImGui::SameLine();
 
-		if (ImGui::ImageButton(theme->iconBreakClear()->pointer(rnd), buttonSize, ImGui::ColorConvertU32ToFloat4(theme->style()->iconColor))) {
+		if (ImGui::ImageButton(_theme->iconBreakClear()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->clearBreakpoints();
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(theme->tooltipEmulator_CodeDebugger_ClearBreakpoints());
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_ClearBreakpoints());
 		}
 
 		if (ImGui::BeginTabBar("@Code")) {
 			ImGuiTabItemFlags flags = ImGuiTabItemFlags_NoTooltip;
-			if (_bringCategoryToFront == Categories::BASIC)
-				flags |= ImGuiTabItemFlags_SetSelected;
-			if (ImGui::BeginTabItem(theme->windowEmulator_CodeDebugger_Basic(), nullptr, flags)) {
-				// TODO: DBG.
+			do {
+				Project::Ptr &prj = _workspace->currentProject();
+				if (!prj)
+					break;
+				CodeAssets::Entry* entry = prj->getCode(_activeCodePage);
+				if (!entry)
+					break;
+				EditorCode* editor = (EditorCode*)entry->editor;
+				if (!editor)
+					break;
 
-				ImGui::EndTabItem();
-			}
+				if (_bringCategoryToFront == Categories::BASIC)
+					flags |= ImGuiTabItemFlags_SetSelected;
+				if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Basic(), nullptr, flags)) {
+					const float width = ImGui::GetContentRegionAvail().x;
+					const float height = 200.0f;
+					const bool ro = editor->readonly();
+					editor->readonly(true);
+					editor->update(
+						_window, _renderer,
+						_workspace,
+						prj->title().c_str(),
+						0, 0, width, height,
+						0.0
+					);
+					editor->readonly(ro);
+
+					ImGui::EndTabItem();
+				}
+			} while (false);
 
 			flags = ImGuiTabItemFlags_NoTooltip;
 			if (_bringCategoryToFront == Categories::ASM)
 				flags |= ImGuiTabItemFlags_SetSelected;
-			if (ImGui::BeginTabItem(theme->windowEmulator_CodeDebugger_Asm(), nullptr, flags)) {
+			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Asm(), nullptr, flags)) {
 				// TODO: DBG.
 
 				ImGui::EndTabItem();
@@ -1399,7 +1446,7 @@ private:
 			ImGui::EndTabBar();
 		}
 	}
-	void kernelMemory(Renderer* /* rnd */, Theme* theme) {
+	void kernelMemory(void) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		const float borderSize = style.ChildBorderSize;
@@ -1411,13 +1458,13 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_CodeDebugger_KernelMemory().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_CodeDebugger_KernelMemory().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
 		// TODO: DBG.
 	}
-	void deviceMemory(Renderer* /* rnd */, Theme* theme) {
+	void deviceMemory(void) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		const float borderSize = style.ChildBorderSize;
@@ -1429,7 +1476,7 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_CodeDebugger_DeviceMemory().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_CodeDebugger_DeviceMemory().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 

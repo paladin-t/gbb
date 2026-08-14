@@ -316,6 +316,10 @@ private:
 		float startY = 0;
 		int safeHeight = 0;
 	} _options;
+	Window* _window = nullptr; // Foreign.
+	Renderer* _renderer = nullptr; // Foreign.
+	Workspace* _workspace = nullptr; // Foreign.
+	Theme* _theme = nullptr; // Foreign.
 	Device* _device = nullptr; // Foreign.
 
 	Device::MapBuffer _bgMapBuf;
@@ -515,10 +519,14 @@ public:
 		close();
 	}
 
-	virtual bool open(class Renderer* rnd, class Theme* /* theme */, class Device* device) override {
+	virtual bool open(class Window* wnd, class Renderer* rnd, class Workspace* ws, class Theme* theme, class Device* device) override {
 		if (_opened)
 			return true;
 
+		_window = wnd;
+		_renderer = rnd;
+		_workspace = ws;
+		_theme = theme;
 		_device = device;
 
 		_tiles.touch(rnd);
@@ -540,6 +548,12 @@ public:
 		_winMap.reset();
 		for (ObjBuffer &obj : _objs)
 			obj.reset();
+
+		_window = nullptr;
+		_renderer = nullptr;
+		_workspace = nullptr;
+		_theme = nullptr;
+		_device = nullptr;
 
 		_opened = false;
 
@@ -572,38 +586,37 @@ public:
 	}
 
 	virtual void update(
-		class Renderer* rnd, class Theme* theme,
 		bool previewPaletteBits, bool showGrids,
 		bool isNewFrame,
 		bool showTitle
 	) override {
-		refresh(rnd, theme, previewPaletteBits, isNewFrame);
+		refresh(previewPaletteBits, isNewFrame);
 
-		begin(rnd, theme, showTitle);
+		begin(showTitle);
 		{
-			tiles(rnd, theme, showGrids);
+			tiles(showGrids);
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
-			map(rnd, theme, showGrids);
+			map(showGrids);
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
-			oam(rnd, theme, showGrids);
+			oam(showGrids);
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
-			palettes(rnd, theme);
+			palettes();
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
-			status(rnd, theme);
+			status();
 		}
-		end(rnd);
+		end();
 	}
 
 private:
-	void refresh(Renderer* /* rnd */, Theme* /* theme */, bool previewPaletteBits, bool /* isNewFrame */) {
+	void refresh(bool previewPaletteBits, bool /* isNewFrame */) {
 		// Retrieve data.
 		const bool isCgb = _device->isDeviceCgbCompatible();
 
@@ -1009,21 +1022,21 @@ private:
 		);
 	}
 
-	void begin(Renderer* /* rnd */, Theme* theme, bool showTitle) {
+	void begin(bool showTitle) {
 		_options.startY = ImGui::GetCursorPosY();
 
 		if (showTitle) {
 			ImGui::AlignTextToFramePadding();
 			ImGui::Dummy(ImVec2(1, 0));
 			ImGui::SameLine();
-			ImGui::TextUnformatted(theme->windowEmulator_VramDebugger());
+			ImGui::TextUnformatted(_theme->windowEmulator_VramDebugger());
 		}
 	}
-	void end(Renderer* /* rnd */) {
+	void end(void) {
 		_options.safeHeight = (int)(ImGui::GetCursorPosY() - _options.startY + 48);
 	}
 
-	void tiles(Renderer* rnd, Theme* theme, bool showGrids) {
+	void tiles(bool showGrids) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		const float borderSize = style.ChildBorderSize;
@@ -1035,7 +1048,7 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_Tiles().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_VramDebugger_Tiles().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
@@ -1100,7 +1113,7 @@ private:
 			{
 				const ImVec2 curPos = ImGui::GetCursorScreenPos();
 				ImGui::Image(
-					_tiles.buffer.texture->pointer(rnd),
+					_tiles.buffer.texture->pointer(_renderer),
 					dstSize,
 					ImVec2(0, 0), ImVec2(1, 1),
 					ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
@@ -1130,7 +1143,7 @@ private:
 		} else {
 			const ImVec2 curPos = ImGui::GetCursorScreenPos();
 			ImGui::Image(
-				_tiles.buffer.texture->pointer(rnd),
+				_tiles.buffer.texture->pointer(_renderer),
 				dstSize,
 				ImVec2(0, 0), ImVec2(1, 1),
 				ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
@@ -1180,7 +1193,7 @@ private:
 			if (hasInfoForOam)
 				refCount += oamRef.refCount;
 			_tileTips.refresh(
-				theme,
+				_theme,
 				tile,
 				(UInt8)infoBank, addr,
 				plt,
@@ -1208,7 +1221,7 @@ private:
 		_tiles.highlights[0] = Math::Vec2i(-1, -1);
 		_tiles.highlights[1] = Math::Vec2i(-1, -1);
 	}
-	void map(Renderer* rnd, Theme* theme, bool showGrids) {
+	void map(bool showGrids) {
 		UInt8 bgX, bgY;
 		_device->getBgScroll(&bgX, &bgY);
 		UInt8 wndX, wndY;
@@ -1225,7 +1238,7 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_BgWinMap().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_VramDebugger_BgWinMap().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
@@ -1233,7 +1246,7 @@ private:
 		ImGui::SameLine();
 		const float posX = ImGui::GetCursorPosX();
 		ImGui::AlignTextToFramePadding();
-		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_Layer());
+		ImGui::TextUnformatted(_theme->windowEmulator_VramDebugger_Layer());
 		ImGui::SameLine();
 		const float diff = ImGui::GetCursorPosX() - posX;
 		const float remain = regSize.x * 0.3f - diff;
@@ -1360,7 +1373,7 @@ private:
 			{
 				const ImVec2 curPos = ImGui::GetCursorScreenPos();
 				ImGui::Image(
-					mapBuf->buffer.texture->pointer(rnd),
+					mapBuf->buffer.texture->pointer(_renderer),
 					dstSize,
 					ImVec2(0, 0), ImVec2(1, 1),
 					ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
@@ -1391,7 +1404,7 @@ private:
 		} else {
 			const ImVec2 curPos = ImGui::GetCursorScreenPos();
 			ImGui::Image(
-				mapBuf->buffer.texture->pointer(rnd),
+				mapBuf->buffer.texture->pointer(_renderer),
 				dstSize,
 				ImVec2(0, 0), ImVec2(1, 1),
 				ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
@@ -1442,7 +1455,7 @@ private:
 				) * 16)
 			);
 			_mapTips.refresh(
-				theme,
+				_theme,
 				mapPos,
 				tile,
 				attrs,
@@ -1472,10 +1485,12 @@ private:
 		MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
 		highlights.clear();
 	}
-	void oam(Renderer* rnd, Theme* theme, bool showGrids) {
+	void oam(bool showGrids) {
 		constexpr const int OBJECT_COUNT_PER_LINE = 8;
 
 		ImGuiStyle &style = ImGui::GetStyle();
+
+		Renderer* rnd = _renderer;
 
 		const float borderSize = style.ChildBorderSize;
 		const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
@@ -1486,7 +1501,7 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_Oam().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_VramDebugger_Oam().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
@@ -1637,7 +1652,7 @@ private:
 			);
 
 			_oamTips.refresh(
-				theme,
+				_theme,
 				Math::Vec2i(x, y),
 				tile,
 				attrs,
@@ -1677,7 +1692,7 @@ private:
 			_inGameHighlight.area = Math::Recti::byXYWH(x_, y_, GBBASIC_TILE_SIZE, _is8x16Obj ? GBBASIC_TILE_SIZE * 2 : GBBASIC_TILE_SIZE);
 		}
 	}
-	void palettes(Renderer* /* rnd */, Theme* theme) {
+	void palettes(void) {
 		const bool isCgb = _device->isDeviceCgbCompatible();
 
 		ImGuiStyle &style = ImGui::GetStyle();
@@ -1691,7 +1706,7 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_Palettes().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_VramDebugger_Palettes().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
@@ -1834,22 +1849,22 @@ private:
 			}
 		}
 	}
-	void status(Renderer* /* rnd */, Theme* theme) {
+	void status(void) {
 		bool bgOn = _device->getBgDisplay();
 		bool winOn = _device->getWindowDisplay();
 		bool objOn = _device->getObjDisplay();
 
 		const Device::TileSourceTypes tileSrc = _device->getTileSourceType();
 		const UInt16 tileBase = tileSrc == Device::TileSourceTypes::FROM_8800_TO_97FF ? 0x8800 : 0x8000;
-		const std::string &tileTxt = _tileDataArea.refresh(theme->windowEmulator_VramDebugger_StatusReadonly_TileArea(), tileBase);
+		const std::string &tileTxt = _tileDataArea.refresh(_theme->windowEmulator_VramDebugger_StatusReadonly_TileArea(), tileBase);
 
 		const Device::MapSourceTypes mapSrc = _device->getMapSourceType(Device::LayerTypes::BG);
 		const UInt16 mapBase = mapSrc == Device::MapSourceTypes::FROM_9800_TO_9BFF ? 0x9800 : 0x9c00;
-		const std::string &mapTxt = _bgDataArea.refresh(theme->windowEmulator_VramDebugger_StatusReadonly_BgArea(), mapBase);
+		const std::string &mapTxt = _bgDataArea.refresh(_theme->windowEmulator_VramDebugger_StatusReadonly_BgArea(), mapBase);
 
 		const Device::MapSourceTypes winSrc = _device->getMapSourceType(Device::LayerTypes::WINDOW);
 		const UInt16 winBase = winSrc == Device::MapSourceTypes::FROM_9800_TO_9BFF ? 0x9800 : 0x9c00;
-		const std::string &winTxt = _winDataArea.refresh(theme->windowEmulator_VramDebugger_StatusReadonly_WinArea(), winBase);
+		const std::string &winTxt = _winDataArea.refresh(_theme->windowEmulator_VramDebugger_StatusReadonly_WinArea(), winBase);
 
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -1862,17 +1877,17 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_StatusReadonly().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_VramDebugger_StatusReadonly().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
-		if (ImGui::Checkbox(theme->windowEmulator_VramDebugger_StatusReadonly_BgOn(), &bgOn)) {
+		if (ImGui::Checkbox(_theme->windowEmulator_VramDebugger_StatusReadonly_BgOn(), &bgOn)) {
 			// Do nothing.
 		}
-		if (ImGui::Checkbox(theme->windowEmulator_VramDebugger_StatusReadonly_WinOn(), &winOn)) {
+		if (ImGui::Checkbox(_theme->windowEmulator_VramDebugger_StatusReadonly_WinOn(), &winOn)) {
 			// Do nothing.
 		}
-		if (ImGui::Checkbox(theme->windowEmulator_VramDebugger_StatusReadonly_ObjOn(), &objOn)) {
+		if (ImGui::Checkbox(_theme->windowEmulator_VramDebugger_StatusReadonly_ObjOn(), &objOn)) {
 			// Do nothing.
 		}
 

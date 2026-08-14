@@ -2129,6 +2129,22 @@ void Workspace::resume(class Window*, class Renderer*) {
 
 	if (codeDebugger())
 		codeDebugger()->resume();
+
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)-1);
+		}
+	}
 }
 
 void Workspace::stop(class Window* wnd, class Renderer* rnd) {
@@ -2236,12 +2252,12 @@ void Workspace::clearBreakpoints(void) {
 	}
 }
 
-class Debugger* Workspace::initializeCodeDebugger(class Window* /* wnd */, class Renderer* rnd) {
+class Debugger* Workspace::initializeCodeDebugger(class Window* wnd, class Renderer* rnd) {
 	if (codeDebugger())
 		return codeDebugger();
 
 	codeDebugger(Debugger::create());
-	codeDebugger()->open(rnd, this, theme(), canvasDevice().get());
+	codeDebugger()->open(wnd, rnd, this, theme(), canvasDevice().get());
 
 	codeDebugger()->clearBreakpoints();
 	const Project::Ptr &prj = currentProject();
@@ -2282,14 +2298,30 @@ void Workspace::disposeCodeDebugger(void) {
 	codeDebugger()->close();
 	Debugger::destroy(codeDebugger());
 	codeDebugger(nullptr);
+
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)-1);
+		}
+	}
 }
 
-class VramDebugger* Workspace::initializeVramDebugger(class Window* /* wnd */, class Renderer* rnd) {
+class VramDebugger* Workspace::initializeVramDebugger(class Window* wnd, class Renderer* rnd) {
 	if (vramDebugger())
 		return vramDebugger();
 
 	vramDebugger(VramDebugger::create());
-	vramDebugger()->open(rnd, theme(), canvasDevice().get());
+	vramDebugger()->open(wnd, rnd, this, theme(), canvasDevice().get());
 
 	return vramDebugger();
 }
