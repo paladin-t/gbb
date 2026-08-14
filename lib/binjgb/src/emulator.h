@@ -240,6 +240,8 @@ Result emulator_read_ext_ram_from_file(Emulator*, const char* filename);
 Result emulator_write_ext_ram_to_file(Emulator*, const char* filename);
 #endif
 
+u16 emulator_get_current_rom_bank(Emulator* e);
+
 EmulatorEvent emulator_step(Emulator*);
 EmulatorEvent emulator_run_until(Emulator*, Ticks until_ticks);
 
