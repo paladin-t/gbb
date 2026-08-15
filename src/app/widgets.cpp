@@ -4847,9 +4847,8 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 											_borderError.clear();
 										}
 									},
-									[this] (WorkTask* /* task */, uintptr_t ptr) -> void { // On main thread.
+									[] (WorkTask* /* task */, uintptr_t ptr) -> void { // On main thread.
 										Data* data = (Data*)ptr;
-
 										delete data;
 									}
 								);

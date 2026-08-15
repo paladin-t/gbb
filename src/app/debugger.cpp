@@ -418,7 +418,7 @@ private:
 	// States.
 	Snapshot _snapshot;
 	Device::Registers _registers;
-	int _mnemonicsInit = 0;
+	Semaphore _mnemonicsIsBeingGenerated;
 	GBBASIC::Disassembler::Mnemonic::Queue _mnemonics;
 	FarPtr _latestDisassembledMnemonicsAddress;
 
@@ -439,7 +439,6 @@ public:
 		_inspecting = false;
 		_snapshot.reset();
 		_registers = Device::Registers();
-		_mnemonicsInit = 0;
 		_mnemonics.clear();
 		_latestDisassembledMnemonicsAddress = FarPtr();
 
@@ -467,7 +466,7 @@ public:
 		_inspecting = false;
 		_snapshot.reset();
 		_registers = Device::Registers();
-		_mnemonicsInit = 0;
+		_mnemonicsIsBeingGenerated.wait();
 		_mnemonics.clear();
 		_latestDisassembledMnemonicsAddress = FarPtr();
 
@@ -573,7 +572,7 @@ public:
 		_inspecting = false;
 		_snapshot.reset();
 		_registers = Device::Registers();
-		_mnemonicsInit = 0;
+		_mnemonicsIsBeingGenerated.wait();
 		_mnemonics.clear();
 		_latestDisassembledMnemonicsAddress = FarPtr();
 
@@ -653,6 +652,9 @@ public:
 	}
 
 	virtual void step(bool toNextAsmInst) override {
+		if (!toNextAsmInst && !(compiledTracePoints() && !compiledTracePoints()->empty()))
+			return;
+
 		_inspecting = false;
 
 		_snapshot.reset();
@@ -670,6 +672,8 @@ public:
 
 			_workspace->resume(_window, _renderer);
 
+			_workspace->skipFrame(2);
+
 			return;
 		}
 
@@ -686,6 +690,8 @@ public:
 			}
 
 			_workspace->resume(_window, _renderer);
+
+			_workspace->skipFrame(5);
 		}
 		_breakTimeout = DateTime::ticks() + DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT;
 	}
@@ -919,81 +925,123 @@ private:
 
 		return nullptr;
 	}
-	GBBASIC::Disassembler::Mnemonic::Queue getDisassembledMnemonics(bool compactMode, bool gotBank, UInt8 bank) const {
-		GBBASIC::Disassembler::Mnemonic::Queue result;
-		GBBASIC::Disassembler::Ptr dasm(GBBASIC::Disassembler::create());
 
-		try {
-			if (compactMode) {
-				GBBASIC::Disassembler::DisassemblingOptions options(
-					DEBUGGER_BANK_SIZE,
-					DEBUGGER_START_ADDRESS,
-					0,
-					0,
-					0,
-					1
-				);
-				dasm->disassemble(result, compiledBytes(), options);
-				if (gotBank) {
-					if (bank == 0)
-						bank = 1;
-					options.bank = bank;
-					options.offset = DEBUGGER_BANK_SIZE * bank;
-					dasm->disassemble(result, compiledBytes(), options);
-				}
-			} else {
-				const GBBASIC::Disassembler::DisassemblingOptions options(
-					DEBUGGER_BANK_SIZE,
-					DEBUGGER_START_ADDRESS,
-					0,
-					0
-				);
-				dasm->disassemble(result, compiledBytes(), options);
-			}
-		} catch (const std::bad_alloc &e) {
-			result.clear();
-			result.push_back(GBBASIC::Disassembler::Mnemonic((UInt8)0, (UInt16)0, "cannot disassemble", false, nullptr));
-			result.push_back(GBBASIC::Disassembler::Mnemonic((UInt8)0, (UInt16)1, "rom too big", false, nullptr));
-
-			fprintf(stderr, "Cannot allocate memory for disassembling: %s.\n", e.what());
-		}
-
-		return result;
-	}
-
-	const GBBASIC::Disassembler::Mnemonic::Queue &touchMnemonics(void) {
+	const GBBASIC::Disassembler::Mnemonic::Queue* touchMnemonics(void) {
+		// Prepare.
 		FarPtr pc;
 		bool gotPc = false;
+		bool toRefreshPc = false;
 
+		// Validate for compact mode.
 		const bool compactMode = _options.disassemblerView == 0;
 		if (compactMode && !_mnemonics.empty()) {
 			gotPc = probeCurrentProgramCounter(pc);
-			if (gotPc && _latestDisassembledMnemonicsAddress.bank != pc.bank) {
-				_mnemonicsInit = 0;
-				_mnemonics.clear();
+			if (gotPc && _latestDisassembledMnemonicsAddress.bank != pc.bank) { // Bank changed.
+				_mnemonicsIsBeingGenerated = Semaphore();
+				_mnemonics.clear(); // Invalidate.
+			}
 
-				return _mnemonics;
-			}
-			if (!_latestDisassembledMnemonicsAddress.equals(pc.bank, pc.address)) {
-				_latestDisassembledMnemonicsAddress = pc;
-				_bringProgramCounterCursorToFront = true;
-			}
+			toRefreshPc = true;
 		}
 
-		if (_mnemonics.empty()) {
+		// Generate mnemonics if needed.
+		if (_mnemonics.empty() && !_mnemonicsIsBeingGenerated.working()) {
+			struct Data {
+				bool compactMode = false;
+				bool gotBank = false;
+				int bank = 0;
+				Bytes::Ptr rom = nullptr;
+				GBBASIC::Disassembler::Mnemonic::Queue mnemonics;
+
+				Data(bool compact, bool gotBank_, int bank_, const Bytes::Ptr &rom_) :
+					compactMode(compact),
+					gotBank(gotBank_),
+					bank(bank_)
+				{
+					rom = Bytes::Ptr(Bytes::create());
+					rom->writeBytes(rom_.get());
+					rom->poke(0);
+				}
+			};
+
 			if (!gotPc)
 				gotPc = probeCurrentProgramCounter(pc);
-			_mnemonics = getDisassembledMnemonics(compactMode, gotPc, (UInt8)pc.bank);
+
+			Data* data = new Data(compactMode, gotPc, pc.bank, compiledBytes());
+			_mnemonicsIsBeingGenerated = _workspace->async(
+				std::bind(
+					[] (WorkTask* /* task */, Data* data) -> uintptr_t { // On work thread.
+						const bool compactMode = data->compactMode;
+						const bool gotBank = data->gotBank;
+						int bank = data->bank;
+						const Bytes::Ptr &rom = data->rom;
+
+						GBBASIC::Disassembler::Ptr dasm(GBBASIC::Disassembler::create());
+						try {
+							if (compactMode) {
+								GBBASIC::Disassembler::DisassemblingOptions options(
+									DEBUGGER_BANK_SIZE,
+									DEBUGGER_START_ADDRESS,
+									0,
+									0,
+									0,
+									1
+								);
+								dasm->disassemble(data->mnemonics, rom, options);
+								if (gotBank) {
+									if (bank == 0)
+										bank = 1;
+									options.bank = bank;
+									options.offset = DEBUGGER_BANK_SIZE * bank;
+									dasm->disassemble(data->mnemonics, rom, options);
+								}
+							} else {
+								const GBBASIC::Disassembler::DisassemblingOptions options(
+									DEBUGGER_BANK_SIZE,
+									DEBUGGER_START_ADDRESS,
+									0,
+									0
+								);
+								dasm->disassemble(data->mnemonics, rom, options);
+							}
+						} catch (const std::bad_alloc &e) {
+							data->mnemonics.clear();
+							data->mnemonics.push_back(GBBASIC::Disassembler::Mnemonic((UInt8)0, (UInt16)0, "cannot disassemble", false, nullptr));
+							data->mnemonics.push_back(GBBASIC::Disassembler::Mnemonic((UInt8)0, (UInt16)1, "rom too big", false, nullptr));
+
+							fprintf(stderr, "Cannot allocate memory for disassembling: %s.\n", e.what());
+						}
+
+						return (uintptr_t)data;
+					},
+					std::placeholders::_1, data
+				),
+				[this] (WorkTask* /* task */, uintptr_t ptr) -> void { // On main thread.
+					Data* data = (Data*)ptr;
+					std::swap(_mnemonics, data->mnemonics);
+				},
+				[] (WorkTask* /* task */, uintptr_t ptr) -> void { // On main thread.
+					Data* data = (Data*)ptr;
+					delete data;
+				}
+			);
+
+			toRefreshPc = true;
+		}
+
+		// Refresh the program counter.
+		if (toRefreshPc) {
 			if (!_latestDisassembledMnemonicsAddress.equals(pc.bank, pc.address)) {
 				_latestDisassembledMnemonicsAddress = pc;
 				_bringProgramCounterCursorToFront = true;
 			}
 		}
 
-		return _mnemonics;
+		// Finish.
+		return _mnemonics.empty() ? nullptr : &_mnemonics;
 	}
 	void unloadMnemonics(void) {
-		_mnemonicsInit = 0;
+		_mnemonicsIsBeingGenerated = Semaphore();
 		_mnemonics.clear();
 		_latestDisassembledMnemonicsAddress = FarPtr();
 	}
@@ -1634,18 +1682,7 @@ private:
 			if (_bringCategoryToFront == Categories::ASM)
 				flags |= ImGuiTabItemFlags_SetSelected;
 			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Asm(), nullptr, flags)) {
-				const GBBASIC::Disassembler::Mnemonic::Queue* mnemonics_ = nullptr;
-				if (_mnemonicsInit == 0) { // A simple FSM for lazy mnemonics initialization.
-					++_mnemonicsInit;
-				} else if (_mnemonicsInit == 1) {
-					++_mnemonicsInit;
-				} else if (_mnemonicsInit == 2) {
-					++_mnemonicsInit;
-
-					touchMnemonics();
-				} else {
-					mnemonics_ = &touchMnemonics();
-				}
+				const GBBASIC::Disassembler::Mnemonic::Queue* mnemonics_ = touchMnemonics();
 
 				const ImU32 col = _theme->style()->debuggerHeadColor;
 				ImGui::PushStyleColor(ImGuiCol_Text, col);
