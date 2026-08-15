@@ -166,6 +166,8 @@ public:
 			}
 		}
 
+		mnemonics.shrink_to_fit();
+
 		// Finish.
 		return true;
 	}
@@ -187,9 +189,11 @@ Disassembler::Mnemonic::Mnemonic(UInt8 b, UInt16 addr, const std::string &txt, b
 		operands = text.substr(p + 1);
 	}
 
-	const int n = (int)Math::min(GBBASIC_COUNTOF(bytes.data), bytes_->count());
-	memcpy(bytes.data, bytes_->pointer(), n);
-	bytes.count = (UInt8)n;
+	if (bytes_) {
+		const int n = (int)Math::min(GBBASIC_COUNTOF(bytes.data), bytes_->count());
+		memcpy(bytes.data, bytes_->pointer(), n);
+		bytes.count = (UInt8)n;
+	}
 }
 
 Disassembler::DisassemblingOptions::DisassemblingOptions() {

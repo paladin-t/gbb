@@ -13899,6 +13899,9 @@ void Workspace::launchProject(
 		toRun(toRun_);
 		toExport(toExport_);
 
+		Bytes::Ptr rom = prj->rom();
+		_compilingOutput.bytes = rom;
+
 		_state = States::LAUNCHED;
 	}
 }
