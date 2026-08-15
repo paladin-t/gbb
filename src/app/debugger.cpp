@@ -408,12 +408,14 @@ private:
 
 	/**< Inspecting. */
 
+	// Basic.
 	bool _bringCodeDebuggerToFront = false;
 	Categories _bringCategoryToFront = Categories::NONE;
 	bool _bringSourceCodeCursorToFront = false;
 	bool _bringProgramCounterCursorToFront = false;
-	bool _inspecting = false;
 	int _activeCodePage = -1;
+	bool _inspecting = false;
+	// States.
 	Snapshot _snapshot;
 	Device::Registers _registers;
 	int _mnemonicsInit = 0;
@@ -433,8 +435,8 @@ public:
 		if (_opened)
 			return true;
 
-		_inspecting = false;
 		_activeCodePage = -1;
+		_inspecting = false;
 		_snapshot.reset();
 		_registers = Device::Registers();
 		_mnemonicsInit = 0;
@@ -461,8 +463,8 @@ public:
 		_bringCategoryToFront = Categories::NONE;
 		_bringSourceCodeCursorToFront = false;
 		_bringProgramCounterCursorToFront = false;
-		_inspecting = false;
 		_activeCodePage = -1;
+		_inspecting = false;
 		_snapshot.reset();
 		_registers = Device::Registers();
 		_mnemonicsInit = 0;
@@ -567,8 +569,8 @@ public:
 		_bringCategoryToFront = Categories::NONE;
 		_bringSourceCodeCursorToFront = false;
 		_bringProgramCounterCursorToFront = false;
-		_inspecting = false;
 		_activeCodePage = -1;
+		_inspecting = false;
 		_snapshot.reset();
 		_registers = Device::Registers();
 		_mnemonicsInit = 0;
@@ -1407,8 +1409,6 @@ private:
 
 			_bringSourceCodeCursorToFront = true;
 		} while (false);
-
-		// TODO: DBG.
 	}
 
 	void begin(bool showTitle) {
@@ -1725,7 +1725,9 @@ private:
 			return;
 		ImGui::NewLine(1);
 
-		// TODO: DBG.
+		variables();
+		threads();
+		objects();
 	}
 	void deviceMemory(void) {
 		ImGuiStyle &style = ImGui::GetStyle();
@@ -1743,7 +1745,44 @@ private:
 			return;
 		ImGui::NewLine(1);
 
-		// TODO: DBG.
+		do {
+			const ImU32 col = _theme->style()->debuggerHeadColor;
+			ImGui::PushStyleColor(ImGuiCol_Text, col);
+			ImGui::Dummy(ImVec2(1, 0));
+			ImGui::SameLine();
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Registers());
+			ImGui::PopStyleColor();
+
+			do {
+				VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+
+				registers();
+			} while (false);
+		} while (false);
+
+		do {
+			const ImU32 col = _theme->style()->debuggerHeadColor;
+			ImGui::PushStyleColor(ImGuiCol_Text, col);
+			ImGui::Dummy(ImVec2(1, 0));
+			ImGui::SameLine();
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_RamInfo());
+			ImGui::PopStyleColor();
+
+			do {
+				VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+
+				const float width = ImGui::GetContentRegionAvail().x;
+				const float height = 200.0f - ImGui::GetTextLineHeightWithSpacing();
+				const ImGuiWindowFlags flags_ = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav;
+				ImGui::BeginChild("@Ram", ImVec2(width, height), false, flags_);
+				{
+					ram();
+				}
+				ImGui::EndChild();
+			} while (false);
+		} while (false);
 	}
 
 	void mnemonics(const GBBASIC::Disassembler::Mnemonic::Queue* mnemonics_) {
@@ -1906,6 +1945,21 @@ private:
 			const ImU32 grabColor = ImGui::GetColorU32(grabCol);
 			drawList->AddRectFilled(barGrabMin, barGrabMax, grabColor);
 		}
+	}
+	void variables(void) {
+		// TODO: DBG.
+	}
+	void threads(void) {
+		// TODO: DBG.
+	}
+	void objects(void) {
+		// TODO: DBG.
+	}
+	void registers(void) {
+		// TODO: DBG.
+	}
+	void ram(void) {
+		// TODO: DBG.
 	}
 };
 

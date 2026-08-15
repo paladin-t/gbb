@@ -1000,6 +1000,8 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_DisassembyHeadInfo)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_EnableBreakpoints)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Pause)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_RamInfo)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Registers)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Resume)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_StepAsm)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_StepBasic)
