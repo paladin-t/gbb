@@ -369,6 +369,8 @@ private:
 	};
 
 private:
+	/**< General. */
+
 	bool _opened = false;
 	struct {
 		float startY = 0;
@@ -381,31 +383,42 @@ private:
 	Theme* _theme = nullptr; // Foreign.
 	Device* _device = nullptr; // Foreign.
 
+	/**< Debugging. */
+
+	// Basic.
 	bool _started = false;
-	const GBBASIC::Program::Compiled* _compiled = nullptr; // Foreign.
-	RuntimeConfig _runtimeConfig;
-	Breakpoint::Array _breakpoints;
-	Breakpoint _breakAtNextStep = Breakpoint(-1, -1, false);
-	bool _breakAtNextStepInstalledForBasic = false;
-	FarPtr _ignoreForBreakingAtNextStep;
-	long long _breakTimeout = 0;
+	const GBBASIC::Program::Compiled* _compiled = nullptr;    // Foreign.
+	// Config.
+	RuntimeConfig _runtimeConfig;                             // From kernel config.
+	FarPtr _currentBankPointer;                               // Stores the address of symbol `_current_bank`.
+	FarPtr _vmStepPointer;                                    // Stores the address of symbol `VM_STEP`.
 	mutable SourceRefToTracePointDictionary _srcToTracePoint; // Reversed mapping from trace points.
-	FarPtr _currentBankPointer;
-	FarPtr _vmStepPointer;
-	int _vmStepBreakpointRefCount = 0;
-	int _vmStepBreakpointId = -1;
-	FarPtr _latestVmStepInstructionAddress;
+	// Breakpoints.
+	Breakpoint::Array _breakpoints;
+	long long _breakTimeout = 0;                              // Timeout to prevent infinite waiting when all threads are dead.
+	// Stepping.
+	Breakpoint _breakAtNextStep = Breakpoint(-1, -1, false);  // Enabled when a user operated to move a step forward.
+	FarPtr _ignoreForBreakingAtNextStep;                      // The address to be ignored when stepping.
+	FarPtr _latestStepInstructionAddress;                     // The latest CPU instruction address when operating to step.
+	FarPtr _latestVmStepInstructionAddress;                   // The latest VM instruction address when operating to step.
+	// `VM_STEP` breakpoint.
+	bool _breakAtNextStepInstalledForBasic = false;           // Whether the `VM_STEP` breakpoint has been installed.
+	int _vmStepBreakpointRefCount = 0;                        // The count of installed `VM_STEP` breakpoints.
+	int _vmStepBreakpointId = -1;                             // The ID of installed `VM_STEP` breakpoints.
+
+	/**< Inspecting. */
 
 	bool _bringCodeDebuggerToFront = false;
 	Categories _bringCategoryToFront = Categories::NONE;
-	bool _bringProgramCursorToFront = false;
+	bool _bringSourceCodeCursorToFront = false;
+	bool _bringProgramCounterCursorToFront = false;
 	bool _inspecting = false;
 	int _activeCodePage = -1;
 	Snapshot _snapshot;
 	Device::Registers _registers;
-	GBBASIC::Disassembler::Mnemonic::Queue _mnemonics;
-	int _latestDisassembledMnemonicsBank = 0;
 	int _mnemonicsInit = 0;
+	GBBASIC::Disassembler::Mnemonic::Queue _mnemonics;
+	FarPtr _latestDisassembledMnemonicsAddress;
 
 public:
 	DebuggerImpl() {
@@ -424,9 +437,9 @@ public:
 		_activeCodePage = -1;
 		_snapshot.reset();
 		_registers = Device::Registers();
-		_mnemonics.clear();
-		_latestDisassembledMnemonicsBank = 0;
 		_mnemonicsInit = 0;
+		_mnemonics.clear();
+		_latestDisassembledMnemonicsAddress = FarPtr();
 
 		_window = wnd;
 		_renderer = rnd;
@@ -446,29 +459,31 @@ public:
 
 		_bringCodeDebuggerToFront = false;
 		_bringCategoryToFront = Categories::NONE;
-		_bringProgramCursorToFront = false;
+		_bringSourceCodeCursorToFront = false;
+		_bringProgramCounterCursorToFront = false;
 		_inspecting = false;
 		_activeCodePage = -1;
 		_snapshot.reset();
 		_registers = Device::Registers();
-		_mnemonics.clear();
-		_latestDisassembledMnemonicsBank = 0;
 		_mnemonicsInit = 0;
+		_mnemonics.clear();
+		_latestDisassembledMnemonicsAddress = FarPtr();
 
 		_started = false;
 		_compiled = nullptr;
 		_runtimeConfig = RuntimeConfig();
-		_breakpoints.clear();
-		_breakAtNextStep = Breakpoint(-1, -1, false);
-		_breakAtNextStepInstalledForBasic = false;
-		_ignoreForBreakingAtNextStep = FarPtr();
-		_breakTimeout = 0;
-		_srcToTracePoint.clear();
 		_currentBankPointer = FarPtr();
 		_vmStepPointer = FarPtr();
+		_srcToTracePoint.clear();
+		_breakpoints.clear();
+		_breakTimeout = 0;
+		_breakAtNextStep = Breakpoint(-1, -1, false);
+		_ignoreForBreakingAtNextStep = FarPtr();
+		_latestStepInstructionAddress = FarPtr();
+		_latestVmStepInstructionAddress = FarPtr();
+		_breakAtNextStepInstalledForBasic = false;
 		_vmStepBreakpointRefCount = 0;
 		_vmStepBreakpointId = -1;
-		_latestVmStepInstructionAddress = FarPtr();
 
 		_window = nullptr;
 		_renderer = nullptr;
@@ -550,28 +565,30 @@ public:
 
 		_bringCodeDebuggerToFront = false;
 		_bringCategoryToFront = Categories::NONE;
-		_bringProgramCursorToFront = false;
+		_bringSourceCodeCursorToFront = false;
+		_bringProgramCounterCursorToFront = false;
 		_inspecting = false;
 		_activeCodePage = -1;
 		_snapshot.reset();
 		_registers = Device::Registers();
-		_mnemonics.clear();
-		_latestDisassembledMnemonicsBank = 0;
 		_mnemonicsInit = 0;
+		_mnemonics.clear();
+		_latestDisassembledMnemonicsAddress = FarPtr();
 
 		_compiled = nullptr;
 		_runtimeConfig = RuntimeConfig();
-		_breakpoints.clear();
-		_breakAtNextStep = Breakpoint(-1, -1, false);
-		_breakAtNextStepInstalledForBasic = false;
-		_ignoreForBreakingAtNextStep = FarPtr();
-		_breakTimeout = 0;
-		_srcToTracePoint.clear();
 		_currentBankPointer = FarPtr();
 		_vmStepPointer = FarPtr();
+		_srcToTracePoint.clear();
+		_breakpoints.clear();
+		_breakTimeout = 0;
+		_breakAtNextStep = Breakpoint(-1, -1, false);
+		_ignoreForBreakingAtNextStep = FarPtr();
+		_latestStepInstructionAddress = FarPtr();
+		_latestVmStepInstructionAddress = FarPtr();
+		_breakAtNextStepInstalledForBasic = false;
 		_vmStepBreakpointRefCount = 0;
 		_vmStepBreakpointId = -1;
-		_latestVmStepInstructionAddress = FarPtr();
 
 		_started = false;
 	}
@@ -645,6 +662,8 @@ public:
 			_breakAtNextStep.enabled = true;
 			_breakAtNextStep.type = Categories::ASM;
 
+			_ignoreForBreakingAtNextStep = _latestStepInstructionAddress;
+
 			_workspace->step(_window, _renderer);
 
 			_workspace->resume(_window, _renderer);
@@ -674,15 +693,14 @@ public:
 		const Device::Registers regs = _device->readRegisters();
 
 		// Resolve the CPU bank and PC.
-		UInt8 bank = 0;
-		UInt16 pc = 0;
-		const bool gotBank = probeCurrentProgramCounter(bank, pc);
-		if (!gotBank)
+		FarPtr pc;
+		const bool gotPc = probeCurrentProgramCounter(pc);
+		if (!gotPc)
 			return false;
 
 		// Resolve the VM bank and PC if necessary.
 		int hitCount = 0;
-		const bool isBasic = _vmStepPointer.equals(bank, pc);
+		const bool isBasic = _vmStepPointer.equals(pc.bank, pc.address);
 		UInt16 ctxPc = 0;
 		UInt8 ctxBank = 0;
 		if (isBasic) {
@@ -692,6 +710,8 @@ public:
 
 			_latestVmStepInstructionAddress = FarPtr(ctxBank, ctxPc);
 		}
+
+		_latestStepInstructionAddress = FarPtr(pc.bank, pc.address);
 
 		// Handle stepping.
 		if (_breakAtNextStep.enabled && hitCount == 0) {
@@ -720,7 +740,7 @@ public:
 					Breakpoint breakpoint(page, row, false);
 					breakpoint.type = Categories::BASIC;
 					breakpoint.id = _vmStepBreakpointId;
-					breakpoint.hitPointer = FarPtr(bank, pc);
+					breakpoint.hitPointer = FarPtr(pc.bank, pc.address);
 					breakpoint.vmPointer = FarPtr(ctxBank, ctxPc);
 					hitBreakpoint(breakpoint);
 
@@ -733,7 +753,7 @@ public:
 				} else {
 					for (int i = 0; i < (int)_breakpoints.size(); ++i) {
 						const Breakpoint &breakpoint = _breakpoints[i];
-						if (!breakpoint.hitPointer.equals(bank, pc))
+						if (!breakpoint.hitPointer.equals(pc.bank, pc.address))
 							continue;
 
 						if (!isBasic) {
@@ -748,7 +768,19 @@ public:
 					return hitCount > 0;
 				}
 			} else if (_breakAtNextStep.type == Categories::ASM) {
-				const GBBASIC::TracePoint* tp = getTracePointByRomLocation(bank, pc, GBBASIC::RomLocation::Types::ASM);
+				if (_ignoreForBreakingAtNextStep.equals(pc.bank, pc.address)) {
+					_ignoreForBreakingAtNextStep = FarPtr();
+
+					if (hitCount == 0)
+						_breakAtNextStep.enabled = true;
+
+					return hitCount > 0;
+				}
+
+				if (!_ignoreForBreakingAtNextStep.invalid())
+					_ignoreForBreakingAtNextStep = FarPtr();
+
+				const GBBASIC::TracePoint* tp = getTracePointByRomLocation(pc.bank, pc.address, GBBASIC::RomLocation::Types::ASM);
 				int page = -1;
 				int row = -1;
 				if (tp) {
@@ -759,7 +791,7 @@ public:
 				Breakpoint breakpoint(page, row, false);
 				breakpoint.type = Categories::ASM;
 				breakpoint.id = -1;
-				breakpoint.hitPointer = FarPtr(bank, pc);
+				breakpoint.hitPointer = FarPtr(pc.bank, pc.address);
 				breakpoint.vmPointer = FarPtr(0, 0);
 				hitBreakpoint(breakpoint);
 
@@ -771,7 +803,7 @@ public:
 		if (hitCount == 0) {
 			for (int i = 0; i < (int)_breakpoints.size(); ++i) {
 				const Breakpoint &breakpoint = _breakpoints[i];
-				if (!breakpoint.hitPointer.equals(bank, pc))
+				if (!breakpoint.hitPointer.equals(pc.bank, pc.address))
 					continue;
 
 				if (isBasic) {
@@ -928,38 +960,47 @@ private:
 	}
 
 	const GBBASIC::Disassembler::Mnemonic::Queue &touchMnemonics(void) {
-		UInt8 bank = 0;
-		UInt16 pc = 0;
-		bool gotBank = false;
+		FarPtr pc;
+		bool gotPc = false;
 
 		const bool compactMode = _options.disassemblerView == 0;
 		if (compactMode && !_mnemonics.empty()) {
-			gotBank = probeCurrentProgramCounter(bank, pc);
-			if (gotBank && _latestDisassembledMnemonicsBank != bank) {
+			gotPc = probeCurrentProgramCounter(pc);
+			if (gotPc && _latestDisassembledMnemonicsAddress.bank != pc.bank) {
+				_mnemonicsInit = 0;
 				_mnemonics.clear();
-				_latestDisassembledMnemonicsBank = 0;
+
+				return _mnemonics;
+			}
+			if (!_latestDisassembledMnemonicsAddress.equals(pc.bank, pc.address)) {
+				_latestDisassembledMnemonicsAddress = pc;
+				_bringProgramCounterCursorToFront = true;
 			}
 		}
 
 		if (_mnemonics.empty()) {
-			if (!gotBank)
-				gotBank = probeCurrentProgramCounter(bank, pc);
-			_mnemonics = getDisassembledMnemonics(compactMode, gotBank, bank);
-			_latestDisassembledMnemonicsBank = bank;
+			if (!gotPc)
+				gotPc = probeCurrentProgramCounter(pc);
+			_mnemonics = getDisassembledMnemonics(compactMode, gotPc, (UInt8)pc.bank);
+			if (!_latestDisassembledMnemonicsAddress.equals(pc.bank, pc.address)) {
+				_latestDisassembledMnemonicsAddress = pc;
+				_bringProgramCounterCursorToFront = true;
+			}
 		}
 
 		return _mnemonics;
 	}
 	void unloadMnemonics(void) {
+		_mnemonicsInit = 0;
 		_mnemonics.clear();
-		_latestDisassembledMnemonicsBank = 0;
+		_latestDisassembledMnemonicsAddress = FarPtr();
 	}
 
-	bool probeCurrentProgramCounter(UInt8 &bank, UInt16 &pc) const {
+	bool probeCurrentProgramCounter(FarPtr &pc_) const {
 		bool result = false;
 		const Device::Registers regs = _device->readRegisters();
-		pc = regs.PC;
-		bank = 0;
+		const UInt16 pc = regs.PC;
+		UInt8 bank = 0;
 		if (!_currentBankPointer.invalid()) {
 			if (_device->readRam((UInt16)_currentBankPointer.address, &bank))
 				result = true;
@@ -968,6 +1009,9 @@ private:
 			bank = (UInt8)_device->currentBank();
 			result = true;
 		}
+
+		pc_.bank = bank;
+		pc_.address = pc;
 
 		if (!result)
 			return false;
@@ -1361,7 +1405,7 @@ private:
 
 			_bringCategoryToFront = Categories::BASIC;
 
-			_bringProgramCursorToFront = true;
+			_bringSourceCodeCursorToFront = true;
 		} while (false);
 
 		// TODO: DBG.
@@ -1491,8 +1535,14 @@ private:
 		ImGui::Dummy(ImVec2(2, 0));
 		ImGui::SameLine();
 
-		if (ImGui::ImageButton(_theme->iconStepBasic()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
-			step(false);
+		if (compiledTracePoints() && !compiledTracePoints()->empty()) {
+			if (ImGui::ImageButton(_theme->iconStepBasic()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
+				step(false);
+			}
+		} else {
+			if (ImGui::ImageButton(_theme->iconStepBasic()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconDisabledColor))) {
+				// Do nothing.
+			}
 		}
 		if (ImGui::IsItemHovered()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -1554,8 +1604,8 @@ private:
 				if (!editor)
 					break;
 
-				if (_bringProgramCursorToFront) {
-					_bringProgramCursorToFront = false;
+				if (_bringSourceCodeCursorToFront) {
+					_bringSourceCodeCursorToFront = false;
 
 					editor->ensureCursorVisible();
 				}
@@ -1599,6 +1649,8 @@ private:
 
 				const ImU32 col = _theme->style()->debuggerHeadColor;
 				ImGui::PushStyleColor(ImGuiCol_Text, col);
+				ImGui::Dummy(ImVec2(1, 0));
+				ImGui::SameLine();
 				ImGui::AlignTextToFramePadding();
 				if (mnemonics_)
 					ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_DisassembyHeadInfo());
@@ -1709,7 +1761,45 @@ private:
 		const int totalMnemonicCount = (int)mnemonics_->size();
 		const float totalHeight = lineHeight * totalMnemonicCount;
 
+		const float scrollbarWidth = 12.0f;
 		float scrollY = ImGui::GetScrollY();
+		if (_bringProgramCounterCursorToFront) {
+			_bringProgramCounterCursorToFront = false;
+
+			ImGui::SetScrollHereY();
+
+			FarPtr key = _latestDisassembledMnemonicsAddress;
+			if (key.address < DEBUGGER_BANK_SIZE)
+				key.bank = 0;
+			GBBASIC::Disassembler::Mnemonic::Queue::const_iterator it = std::lower_bound(
+				mnemonics_->begin(), mnemonics_->end(),
+				key,
+				[] (const GBBASIC::Disassembler::Mnemonic &mn, const FarPtr &val) -> bool {
+					const FarPtr fp(mn.bank, mn.address);
+
+					auto compare = [&] (void) -> int {
+						if (fp.bank < val.bank)
+							return -1;
+						else if (fp.bank > val.bank)
+							return 1;
+
+						if (fp.address < val.address)
+							return -1;
+						else if (fp.address > val.address)
+							return 1;
+
+						return 0;
+					};
+
+					return compare() < 0;
+				}
+			);
+			if (it != mnemonics_->end()) {
+				const int offset = Math::min((int)(it - mnemonics_->begin()) - 6, (int)mnemonics_->size());
+				const double scroll = totalHeight * ((double)offset / totalMnemonicCount);
+				scrollY = (float)scroll;
+			}
+		}
 
 		int startIndex = (int)(scrollY / lineHeight);
 		int endIndex = startIndex + (int)std::ceil(panelHeight / lineHeight) + 1;
@@ -1721,7 +1811,26 @@ private:
 		for (int i = startIndex; i < endIndex; ++i) {
 			const GBBASIC::Disassembler::Mnemonic &mnemonic = (*mnemonics_)[i];
 
+			bool indicate = false;
+			if (_latestDisassembledMnemonicsAddress.address < DEBUGGER_BANK_SIZE) {
+				indicate = 
+					0 == mnemonic.bank &&
+					_latestDisassembledMnemonicsAddress.address == mnemonic.address;
+			} else {
+				indicate = 
+					_latestDisassembledMnemonicsAddress.bank == mnemonic.bank &&
+					_latestDisassembledMnemonicsAddress.address == mnemonic.address;
+			}
+			if (indicate) {
+				const ImVec2 cursorStart = ImGui::GetCursorScreenPos() + ImVec2(1, 0);
+				const ImVec2 cursorEnd = cursorStart + ImVec2(ImGui::GetContentRegionAvail().x - scrollbarWidth - 1, lineHeight + 1);
+				drawList->AddRectFilled(cursorStart, cursorEnd, 0x40000000);
+				drawList->AddRect(cursorStart, cursorEnd, ImGui::GetColorU32(ImGuiCol_NavHighlight));
+			}
+
 			ImGui::AlignTextToFramePadding();
+			ImGui::Dummy(ImVec2(1, 0));
+			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerHeadColor);
 			ImGui::Text("%02X:%04X ", mnemonic.bank, mnemonic.address);
 			ImGui::SameLine();
@@ -1763,7 +1872,6 @@ private:
 		ImGui::SetScrollY(scrollY);
 
 		if (totalHeight > panelHeight) {
-			const float scrollbarWidth = 12.0f;
 			const ImVec2 windowPos = ImGui::GetWindowPos();
 			const ImVec2 windowSize = ImGui::GetWindowSize();
         
