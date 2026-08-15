@@ -26,12 +26,19 @@ public:
 	struct Mnemonic {
 		typedef std::vector<Mnemonic> Array;
 
-		std::string text;
 		UInt8 bank = 0;
 		UInt16 address = 0;
+		std::string text;
+		bool valid = false;
+		std::string opcode;
+		std::string operands;
+		struct {
+			Byte data[3];
+			UInt8 count = 0;
+		} bytes;
 
 		Mnemonic();
-		Mnemonic(const std::string &txt, UInt8 b, UInt16 addr);
+		Mnemonic(UInt8 b, UInt16 addr, const std::string &txt, bool valid, Bytes* bytes);
 	};
 
 	struct DisassemblingOptions {

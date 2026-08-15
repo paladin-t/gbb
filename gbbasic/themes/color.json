@@ -81,6 +81,10 @@
     "music_side":                     [ 43, 145, 175, 255 ],
     "music_note":                     [ 243, 128, 11, 255 ],
     "music_instrument":               [ 43, 122, 41, 255 ],
-    "music_effect":                   [ 0, 148, 255, 255 ]
+    "music_effect":                   [ 0, 148, 255, 255 ],
+    "debugger_head":                  [ 43, 145, 175, 255 ],
+    "debugger_major":                 [ 0, 148, 255, 255 ],
+    "debugger_minor":                 [ 243, 128, 11, 255 ],
+    "debugger_info":                  [ 43, 122, 41, 255 ]
   }
 }

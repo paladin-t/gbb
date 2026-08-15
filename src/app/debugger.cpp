@@ -711,6 +711,9 @@ public:
 						return hitCount > 0;
 					}
 
+					if (!_ignoreForBreakingAtNextStep.invalid())
+						_ignoreForBreakingAtNextStep = FarPtr();
+
 					_breakTimeout = 0;
 
 					const int page = tp->inCode.page;
@@ -1515,12 +1518,34 @@ private:
 			if (_bringCategoryToFront == Categories::ASM)
 				flags |= ImGuiTabItemFlags_SetSelected;
 			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Asm(), nullptr, flags)) {
+				const GBBASIC::Disassembler::Mnemonic::Array* mnemonics_ = nullptr;
+				if (_mnemonicsInit == 0) { // A simple FSM for lazy mnemonics initialization.
+					++_mnemonicsInit;
+				} else if (_mnemonicsInit == 1) {
+					++_mnemonicsInit;
+				} else if (_mnemonicsInit == 2) {
+					++_mnemonicsInit;
+
+					touchMnemonics();
+				} else {
+					mnemonics_ = &touchMnemonics();
+				}
+
+				const ImU32 col = _theme->style()->debuggerHeadColor;
+				ImGui::PushStyleColor(ImGuiCol_Text, col);
+				ImGui::AlignTextToFramePadding();
+				if (mnemonics_)
+					ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_DisassembyHeadInfo());
+				else
+					ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Disassembling());
+				ImGui::PopStyleColor();
+
 				const float width = ImGui::GetContentRegionAvail().x;
-				const float height = 200.0f;
+				const float height = 200.0f - ImGui::GetTextLineHeightWithSpacing();
 				const ImGuiWindowFlags flags_ = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav;
-				ImGui::BeginChild("@Notepad", ImVec2(width, height), false, flags_);
+				ImGui::BeginChild("@Dasm", ImVec2(width, height), false, flags_);
 				{
-					mnemonics();
+					mnemonics(mnemonics_);
 				}
 				ImGui::EndChild();
 
@@ -1570,32 +1595,15 @@ private:
 		// TODO: DBG.
 	}
 
-	void mnemonics(void) {
-		const GBBASIC::Disassembler::Mnemonic::Array* mnemonics = nullptr;
-
-		if (_mnemonicsInit == 0) { // A simple FSM for lazy mnemonics initialization.
-			++_mnemonicsInit;
-		} else if (_mnemonicsInit == 1) {
-			++_mnemonicsInit;
-		} else if (_mnemonicsInit == 2) {
-			++_mnemonicsInit;
-
-			touchMnemonics();
-		} else {
-			mnemonics = &touchMnemonics();
-		}
-
-		if (!mnemonics) {
-			ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Disassembling());
-
+	void mnemonics(const GBBASIC::Disassembler::Mnemonic::Array* mnemonics_) {
+		if (!mnemonics_)
 			return;
-		}
 
 		const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
 		if (lineHeight <= Math::EPSILON<float>()) return;
 		const float panelHeight = ImGui::GetContentRegionAvail().y;
 		const int visibleMnemonicCount = (int)std::ceil(panelHeight / lineHeight);
-		const int totalMnemonicCount = (int)mnemonics->size();
+		const int totalMnemonicCount = (int)mnemonics_->size();
 		const float totalHeight = lineHeight * totalMnemonicCount;
 
 		float scrollY = ImGui::GetScrollY();
@@ -1616,8 +1624,33 @@ private:
 			ImGui::Dummy(ImVec2(0.0f, startIndex * lineHeight));
 
 		for (int i = startIndex; i < endIndex; ++i) {
-			const GBBASIC::Disassembler::Mnemonic &mnemonic = (*mnemonics)[i];
-			ImGui::Text("%02X:%04X %s", mnemonic.bank, mnemonic.address, mnemonic.text.c_str());
+			const GBBASIC::Disassembler::Mnemonic &mnemonic = (*mnemonics_)[i];
+
+			ImGui::AlignTextToFramePadding();
+			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerHeadColor);
+			ImGui::Text("%02X:%04X ", mnemonic.bank, mnemonic.address);
+			ImGui::SameLine();
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+			if (mnemonic.bytes.count == 1)
+				ImGui::Text("%02X       ", mnemonic.bytes.data[0]);
+			else if (mnemonic.bytes.count == 2)
+				ImGui::Text("%02X %02X    ", mnemonic.bytes.data[0], mnemonic.bytes.data[1]);
+			else
+				ImGui::Text("%02X %02X %02X ", mnemonic.bytes.data[0], mnemonic.bytes.data[1], mnemonic.bytes.data[2]);
+			ImGui::SameLine();
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+			ImGui::Text("%s ", mnemonic.opcode.c_str());
+			ImGui::PopStyleColor();
+			if (!mnemonic.operands.empty()) {
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+				ImGui::Text("%s ", mnemonic.operands.c_str());
+				ImGui::PopStyleColor();
+			}
 		}
 
 		if (endIndex < totalMnemonicCount)

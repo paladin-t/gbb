@@ -288,6 +288,10 @@ bool Theme::open(class Renderer* rnd) {
 	styleDefault().musicNoteColor                           = ImGui::GetColorU32(ImVec4(0.95f, 0.50f, 0.04f, 1.00f));
 	styleDefault().musicInstrumentColor                     = ImGui::GetColorU32(ImVec4(0.17f, 0.48f, 0.16f, 1.00f));
 	styleDefault().musicEffectColor                         = ImGui::GetColorU32(ImVec4(0.00f, 0.58f, 1.00f, 1.00f));
+	styleDefault().debuggerHeadColor                        = ImGui::GetColorU32(ImVec4(0.17f, 0.57f, 0.69f, 1.00f));
+	styleDefault().debuggerMajorColor                       = ImGui::GetColorU32(ImVec4(0.00f, 0.58f, 1.00f, 1.00f));
+	styleDefault().debuggerMinorColor                       = ImGui::GetColorU32(ImVec4(0.95f, 0.50f, 0.04f, 1.00f));
+	styleDefault().debuggerInfoColor                        = ImGui::GetColorU32(ImVec4(0.17f, 0.48f, 0.16f, 1.00f));
 
 	generic_Apply("Apply");
 	generic_Browse("Browse...");
@@ -1361,6 +1365,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_CodeDebugger_ClearBreakpoints("Clear breakpoints");
 	tooltipEmulator_CodeDebugger_DisableBreakpoints("Disable breakpoints");
 	tooltipEmulator_CodeDebugger_Disassembling("Disassembling...");
+	tooltipEmulator_CodeDebugger_DisassembyHeadInfo("ROM     Bytes    Mnemonic");
 	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
 	tooltipEmulator_CodeDebugger_Pause("Pause");
 	tooltipEmulator_CodeDebugger_Resume("Resume");
@@ -2232,6 +2237,14 @@ void Theme::setColor(const std::string &idx, const ImColor &col) {
 		styleDefault().musicInstrumentColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "music_effect")
 		styleDefault().musicEffectColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "debugger_head")
+		styleDefault().debuggerHeadColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "debugger_major")
+		styleDefault().debuggerMajorColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "debugger_minor")
+		styleDefault().debuggerMinorColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "debugger_info")
+		styleDefault().debuggerInfoColor = ImGui::GetColorU32((ImVec4)col);
 }
 
 void Theme::fromFile(const char* path_) {
@@ -2425,6 +2438,14 @@ void Theme::fromFile(const char* path_) {
 				setColor("music_instrument", ImColor(col.r, col.g, col.b, col.a));
 			else if (theme == "music_effect")
 				setColor("music_effect", ImColor(col.r, col.g, col.b, col.a));
+			else if (theme == "debugger_head")
+				setColor("debugger_head", ImColor(col.r, col.g, col.b, col.a));
+			else if (theme == "debugger_major")
+				setColor("debugger_major", ImColor(col.r, col.g, col.b, col.a));
+			else if (theme == "debugger_minor")
+				setColor("debugger_minor", ImColor(col.r, col.g, col.b, col.a));
+			else if (theme == "debugger_info")
+				setColor("debugger_info", ImColor(col.r, col.g, col.b, col.a));
 		}
 	}
 

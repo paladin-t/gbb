@@ -81,6 +81,11 @@ public:
 		ImU32 musicNoteColor;
 		ImU32 musicInstrumentColor;
 		ImU32 musicEffectColor;
+
+		ImU32 debuggerHeadColor;
+		ImU32 debuggerMajorColor;
+		ImU32 debuggerMinorColor;
+		ImU32 debuggerInfoColor;
 	};
 
 	typedef std::vector<std::string> Strings;
@@ -989,6 +994,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_ClearBreakpoints)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_DisableBreakpoints)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Disassembling)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_DisassembyHeadInfo)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_EnableBreakpoints)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Pause)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Resume)

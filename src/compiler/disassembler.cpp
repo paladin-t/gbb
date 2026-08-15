@@ -43,33 +43,40 @@ public:
 			return true;
 
 		// Processors.
-		auto formatDataByte = [] (UInt8 value) -> std::string {
+		auto formatDataByte = [] (Bytes* buf, UInt8 value) -> std::string {
+			buf->writeUInt8(value);
+
 			return "db 0x" + Text::toHex(value, 2, '0', false);
 		};
-		auto substituteOperand = [] (const char* mnemonic, const Bytes* operands, int offset) -> std::string {
+		auto substituteOperand = [] (Bytes* buf, const char* mnemonic, const Bytes* operands, int offset) -> std::string {
 			std::string txt = mnemonic;
 			if (txt.find("n16") != std::string::npos) {
 				const UInt16 value = (UInt16)operands->get(offset) | ((UInt16)operands->get(offset + 1) << 8);
+				buf->writeUInt16(value);
 
 				return Text::replace(txt, "n16", "0x" + Text::toHex((UInt32)value, 4, '0', false));
 			}
 			if (txt.find("a16") != std::string::npos) {
 				const UInt16 value = (UInt16)operands->get(offset) | ((UInt16)operands->get(offset + 1) << 8);
+				buf->writeUInt16(value);
 
 				return Text::replace(txt, "a16", "0x" + Text::toHex((UInt32)value, 4, '0', false));
 			}
 			if (txt.find("n8") != std::string::npos) {
 				const UInt8 value = operands->get(offset);
+				buf->writeUInt8(value);
 
 				return Text::replace(txt, "n8", "0x" + Text::toHex((UInt32)value, 2, '0', false));
 			}
 			if (txt.find("a8") != std::string::npos) {
 				const UInt8 value = operands->get(offset);
+				buf->writeUInt8(value);
 
 				return Text::replace(txt, "a8", "0x" + Text::toHex((UInt32)value, 2, '0', false));
 			}
 			if (txt.find("e8") != std::string::npos) {
 				const UInt8 value = operands->get(offset);
+				buf->writeUInt8(value);
 
 				return Text::replace(txt, "e8", "0x" + Text::toHex((UInt32)value, 2, '0', false));
 			}
@@ -82,26 +89,31 @@ public:
 		const int base = (options.bank == 0) ? 0 : options.startAddress;
 		int bank = options.bank;
 		int address = base + options.addressCursor;
+		Bytes::Ptr buf(Bytes::create());
 
 		int offset = 0;
 		while (offset < size) {
 			const UInt8 opcode = bytes->get(offset);
+			buf->writeUInt8(opcode);
 
 			std::string text;
 			int instSize = 0;
 
+			bool valid = false;
 			if (opcode == ASSEMBLER_OPCODE_CB) {
 				// CB-prefixed instruction.
 				if (offset + 1 >= size) {
-					text = formatDataByte(opcode);
+					text = formatDataByte(buf.get(), opcode);
 					instSize = 1;
 				} else {
 					const UInt8 cbbyte = bytes->get(offset + 1);
+					buf->writeUInt8(cbbyte);
 					const char* mnemonic = ASSEMBLER_CB_OPCODE_MNEMONICS[cbbyte];
 					if (mnemonic) {
 						text = mnemonic;
+						valid = true;
 					} else {
-						text = formatDataByte(cbbyte);
+						text = formatDataByte(buf.get(), cbbyte);
 					}
 					instSize = 2;
 				}
@@ -109,7 +121,7 @@ public:
 				const char* mnemonic = ASSEMBLER_OPCODE_MNEMONICS[opcode];
 				if (!mnemonic) {
 					// Invalid opcode.
-					text = formatDataByte(opcode);
+					text = formatDataByte(buf.get(), opcode);
 					instSize = 1;
 				} else {
 					instSize = ASSEMBLER_OPCODE_SIZE[opcode];
@@ -118,25 +130,29 @@ public:
 						if (offset + instSize + 1 <= size) {
 							const UInt8 afterStop = bytes->get(offset + 1);
 							if (afterStop == ASSEMBLER_OPCODE_NOP) { // Handle 0x00 after "stop".
+								buf->writeUInt8(afterStop);
 								text = mnemonic;
 								instSize = 2;
 								serialized = true;
+								valid = true;
 							}
 						}
 					}
 					if (!serialized) {
 						if (offset + instSize > size) {
 							// Truncated instruction.
-							text = formatDataByte(opcode);
+							text = formatDataByte(buf.get(), opcode);
 							instSize = 1;
 						} else {
-							text = substituteOperand(mnemonic, bytes.get(), offset + 1);
+							text = substituteOperand(buf.get(), mnemonic, bytes.get(), offset + 1);
+							valid = true;
 						}
 					}
 				}
 			}
 
-			mnemonics.push_back(Mnemonic(text, (UInt8)bank, (UInt16)address));
+			mnemonics.push_back(Mnemonic((UInt8)bank, (UInt16)address, text, valid, buf.get()));
+			buf->clear();
 
 			offset += instSize;
 			address += instSize;
@@ -158,10 +174,22 @@ public:
 Disassembler::Mnemonic::Mnemonic() {
 }
 
-Disassembler::Mnemonic::Mnemonic(const std::string &txt, UInt8 b, UInt16 addr) :
+Disassembler::Mnemonic::Mnemonic(UInt8 b, UInt16 addr, const std::string &txt, bool valid_, Bytes* bytes_) :
+	bank(b), address(addr),
 	text(txt),
-	bank(b), address(addr)
+	valid(valid_)
 {
+	const size_t p = Text::indexOf(text, ' ');
+	if (p == std::string::npos) {
+		opcode = text;
+	} else {
+		opcode = text.substr(0, p);
+		operands = text.substr(p + 1);
+	}
+
+	const int n = (int)Math::min(GBBASIC_COUNTOF(bytes.data), bytes_->count());
+	memcpy(bytes.data, bytes_->pointer(), n);
+	bytes.count = (UInt8)n;
 }
 
 Disassembler::DisassemblingOptions::DisassemblingOptions() {

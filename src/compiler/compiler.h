@@ -442,7 +442,7 @@ struct Op {
 
 	Opcode opcode = 0x00;
 	int size = 0;                // Size of the parameter list in bytes.
-	int oprands = 0;             // Count of oprands.
+	int operands = 0;            // Count of operands.
 	int associativity = 0;       // -1 for left, 1 for right.
 	int precedence = 0;          // The greater, the higher.
 	bool isFunctionLike = false; // Whether the operator is function-like;

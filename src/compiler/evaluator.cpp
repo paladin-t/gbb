@@ -85,7 +85,7 @@ static int getArity(const IToken::Ptr &tk) {
 	const Op::Types y = Op::typeOf(str);
 	const Op &op = Op::OPERATORS[(size_t)y];
 
-	return op.oprands;
+	return op.operands;
 }
 
 static bool isFunctionLike(Op::Types y) {

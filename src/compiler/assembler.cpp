@@ -91,7 +91,7 @@ const char* const ASSEMBLER_CB_OPCODE_MNEMONICS[256] = {
 	/* Fx */ "set 6,b", "set 6,c", "set 6,d", "set 6,e", "set 6,h", "set 6,l", "set 6,(hl)", "set 6,a", "set 7,b", "set 7,c", "set 7,d", "set 7,e", "set 7,h", "set 7,l", "set 7,(hl)", "set 7,a"
 };
 
-static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_N8[] = {
+static const char* const ASSEMBLER_OPERAND_PATTERNS_FOR_N8[] = {
 	"ld b,n8",    "ld c,n8",
 	"ld d,n8",    "ld e,n8",
 	"ld h,n8",    "ld l,n8",
@@ -101,17 +101,17 @@ static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_N8[] = {
 	"and a,n8",   "xor a,n8",
 	"or a,n8",    "cp a,n8"
 };
-static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_N16[] = {
+static const char* const ASSEMBLER_OPERAND_PATTERNS_FOR_N16[] = {
 	"ld bc,n16",
 	"ld de,n16",
 	"ld hl,n16",
 	"ld sp,n16"
 };
-static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A8[] = {
+static const char* const ASSEMBLER_OPERAND_PATTERNS_FOR_A8[] = {
 	"ldh (a8),a",
 	"ldh a,(a8)"
 };
-static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A16[] = {
+static const char* const ASSEMBLER_OPERAND_PATTERNS_FOR_A16[] = {
 	"ld (a16),sp",
 	"jp a16",      "call a16",
 	"jp nz,a16",   "call nz,a16", "jp z,a16", "call z,a16",
@@ -119,7 +119,7 @@ static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_A16[] = {
 	"ld (a16),a",
 	"ld a,(a16)"
 };
-static const char* const ASSEMBLER_OPRAND_PATTERNS_FOR_E8[] = {
+static const char* const ASSEMBLER_OPERAND_PATTERNS_FOR_E8[] = {
 	"jr e8",
 	"jr nz,e8",   "jr z,e8",
 	"jr nc,e8",   "jr c,e8",
@@ -155,22 +155,22 @@ private:
 
 	typedef std::set<std::string> Set;
 
-	struct OprandPattern {
-		typedef std::vector<OprandPattern> Array;
+	struct OperandPattern {
+		typedef std::vector<OperandPattern> Array;
 
 		std::string pattern;
 		std::string type;
 
-		OprandPattern() {
+		OperandPattern() {
 		}
-		OprandPattern(const std::string &p, const std::string &y) : pattern(p), type(y) {
+		OperandPattern(const std::string &p, const std::string &y) : pattern(p), type(y) {
 		}
 	};
 
 private:
 	Dictionary _opcodeDictionary;
 	Dictionary _cbOpcodeDictionary;
-	OprandPattern::Array _oprandPatterns;
+	OperandPattern::Array _operandPatterns;
 	Text::Dictionary _mnemonicAliases;
 	Set _registers;
 
@@ -191,25 +191,25 @@ public:
 			_cbOpcodeDictionary.insert(std::make_pair(op, i));
 		}
 
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_N8); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_N8[i];
-			_oprandPatterns.push_back(OprandPattern(pattern, "n8"));
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPERAND_PATTERNS_FOR_N8); ++i) {
+			const char* pattern = ASSEMBLER_OPERAND_PATTERNS_FOR_N8[i];
+			_operandPatterns.push_back(OperandPattern(pattern, "n8"));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_N16); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_N16[i];
-			_oprandPatterns.push_back(OprandPattern(pattern, "n16"));
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPERAND_PATTERNS_FOR_N16); ++i) {
+			const char* pattern = ASSEMBLER_OPERAND_PATTERNS_FOR_N16[i];
+			_operandPatterns.push_back(OperandPattern(pattern, "n16"));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_A8); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_A8[i];
-			_oprandPatterns.push_back(OprandPattern(pattern, "a8"));
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPERAND_PATTERNS_FOR_A8); ++i) {
+			const char* pattern = ASSEMBLER_OPERAND_PATTERNS_FOR_A8[i];
+			_operandPatterns.push_back(OperandPattern(pattern, "a8"));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_A16); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_A16[i];
-			_oprandPatterns.push_back(OprandPattern(pattern, "a16"));
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPERAND_PATTERNS_FOR_A16); ++i) {
+			const char* pattern = ASSEMBLER_OPERAND_PATTERNS_FOR_A16[i];
+			_operandPatterns.push_back(OperandPattern(pattern, "a16"));
 		}
-		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPRAND_PATTERNS_FOR_E8); ++i) {
-			const char* pattern = ASSEMBLER_OPRAND_PATTERNS_FOR_E8[i];
-			_oprandPatterns.push_back(OprandPattern(pattern, "e8"));
+		for (int i = 0; i < GBBASIC_COUNTOF(ASSEMBLER_OPERAND_PATTERNS_FOR_E8); ++i) {
+			const char* pattern = ASSEMBLER_OPERAND_PATTERNS_FOR_E8[i];
+			_operandPatterns.push_back(OperandPattern(pattern, "e8"));
 		}
 
 		_mnemonicAliases = {
@@ -519,7 +519,7 @@ private:
 	 */
 	bool assembleLine(Bytes::Ptr &bytes, Context &context, const IToken::Array &tokens, int lnBegin, int lnEnd, bool &isRet, bool &isInst, const AssemblingOptions &options) const {
 		// Prepare.
-		typedef std::vector<int> Oprands;
+		typedef std::vector<int> Operands;
 
 		isRet = false;
 		isInst = false;
@@ -614,12 +614,12 @@ private:
 
 			return false;
 		};
-		auto throwTooManyOprands = [&] (int idx = -1) -> bool {
+		auto throwTooManyOperands = [&] (int idx = -1) -> bool {
 			if (idx == -1)
 				idx = cursor;
 			idx = Math::clamp(idx, 0, (int)tokens.size() - 1);
 			const IToken::Ptr tk = (idx >= 0 && idx < (int)tokens.size()) ? tokens[idx] : nullptr;
-			const std::string msg = "Too many oprands";
+			const std::string msg = "Too many operands";
 			if (options.onError)
 				options.onError(msg, tk);
 
@@ -723,8 +723,8 @@ private:
 		// Parse the tokens.
 		std::string mnemonic;
 		std::string opcode;
-		Oprands oprands;
-		std::string oprandType;
+		Operands operands;
+		std::string operandType;
 		int labelRefTokenIndex = -1;
 		std::string labelRefName;
 		int labelRefOffset = 0;
@@ -781,13 +781,13 @@ private:
 			if (opcode == "db") {
 				if (tk->is(IToken::Types::STRING)) {
 					const std::string data = (std::string)tk->data();
-					for (std::string::value_type oprand : data)
-						oprands.push_back(oprand); // Number literal.
+					for (std::string::value_type operand : data)
+						operands.push_back(operand); // Number literal.
 					mnemonic += data;
 				} else if (tk->is(IToken::Types::NUMBER)) {
-					const int oprand = (int)(Int)tk->data();
-					oprands.push_back(oprand); // Number literal.
-					const std::string data = "0x" + Text::toHex(oprand, 2, '0', true);
+					const int operand = (int)(Int)tk->data();
+					operands.push_back(operand); // Number literal.
+					const std::string data = "0x" + Text::toHex(operand, 2, '0', true);
 					mnemonic += data;
 				} else {
 					return throwByteExpected(cursor);
@@ -804,9 +804,9 @@ private:
 				continue;
 			} else if (opcode == "dw") {
 				if (tk->is(IToken::Types::NUMBER)) {
-					const int oprand = (int)(Int)tk->data();
-					oprands.push_back(oprand); // Number literal.
-					const std::string data = "0x" + Text::toHex(oprand, 4, '0', true);
+					const int operand = (int)(Int)tk->data();
+					operands.push_back(operand); // Number literal.
+					const std::string data = "0x" + Text::toHex(operand, 4, '0', true);
 					mnemonic += data;
 				} else {
 					return throwByteExpected(cursor);
@@ -893,11 +893,11 @@ private:
 
 			// Handle instructions.
 			auto handleNumericOpcode = [unpackLowByte, unpackHighByte, addressBank, throwUnsupportedOperation] (
-				const IToken::Array &tokens, const std::string &opcode, int oprand,
-				std::string &mnemonic, Oprands &oprands, int &cursor
+				const IToken::Array &tokens, const std::string &opcode, int operand,
+				std::string &mnemonic, Operands &operands, int &cursor
 			) -> bool {
 				if (opcode == "bit" || opcode == "res" || opcode == "set") {
-					mnemonic += Text::toString(oprand);
+					mnemonic += Text::toString(operand);
 				} else if (opcode == "rst") {
 					const int idx = cursor + 1;
 					bool endsWithH = false;
@@ -911,17 +911,17 @@ private:
 						}
 					}
 					const std::string data = endsWithH ?
-						(Text::toHex(oprand, 2, '0', true) + "h") :
-						("0x" + Text::toHex(oprand, 2, '0', true));
+						(Text::toHex(operand, 2, '0', true) + "h") :
+						("0x" + Text::toHex(operand, 2, '0', true));
 					mnemonic += data;
 				} else {
 					if (unpackLowByte)
-						oprand = oprand & 0xff;
+						operand = operand & 0xff;
 					else if (unpackHighByte)
-						oprand = (oprand >> 8) & 0xff;
+						operand = (operand >> 8) & 0xff;
 					else if (addressBank)
 						return throwUnsupportedOperation(cursor, "bank");
-					oprands.push_back(oprand); // Number.
+					operands.push_back(operand); // Number.
 					mnemonic += "*"; // Wildcard.
 				}
 
@@ -953,7 +953,7 @@ private:
 						cursor += 2;
 					}
 
-					oprands.push_back(0); // Placeholder.
+					operands.push_back(0); // Placeholder.
 					mnemonic += "*"; // Wildcard.
 				} else { // Is an identifier.
 					// Resolve BASIC identifiers.
@@ -968,17 +968,17 @@ private:
 
 						return throwIdHasNotBeenDeclared(cursor, id);
 					} else if (ret == IdentifierResolvingResults::NUMBER) {
-						const int oprand = loc.address;
-						if (!handleNumericOpcode(tokens, opcode, oprand, mnemonic, oprands, cursor))
+						const int operand = loc.address;
+						if (!handleNumericOpcode(tokens, opcode, operand, mnemonic, operands, cursor))
 							return false;
 					} else {
-						int oprand = loc.address;
+						int operand = loc.address;
 						if (unpackLowByte)
-							oprand = oprand & 0xff;
+							operand = operand & 0xff;
 						else if (unpackHighByte)
-							oprand = (oprand >> 8) & 0xff;
+							operand = (operand >> 8) & 0xff;
 						else if (addressBank)
-							oprand = bank;
+							operand = bank;
 
 						const IToken::Ptr tk_1 = (cursor + 1 >= 0 && cursor + 1 < (int)tokens.size()) ? tokens[cursor + 1] : nullptr;
 						const IToken::Ptr tk_2 = (cursor + 2 >= 0 && cursor + 2 < (int)tokens.size()) ? tokens[cursor + 2] : nullptr;
@@ -986,23 +986,23 @@ private:
 							const std::string op = (std::string)tk_1->data();
 							const int offset = (int)(Int)tk_2->data();
 							if (op == "+")
-								oprand += offset;
+								operand += offset;
 							else if (op == "-")
-								oprand -= offset;
+								operand -= offset;
 							else
 								return throwUnsupportedOperation(cursor + 1, op);
 							cursor += 2;
 						}
 
-						oprands.push_back(oprand); // Number.
+						operands.push_back(operand); // Number.
 						mnemonic += "*"; // Wildcard.
 					}
 				}
 			} else if (tk->is(IToken::Types::OPERATOR)) {
 				mnemonic += (std::string)tk->data();
 			} else if (tk->is(IToken::Types::NUMBER)) {
-				const int oprand = (int)(Int)tk->data();
-				if (!handleNumericOpcode(tokens, opcode, oprand, mnemonic, oprands, cursor))
+				const int operand = (int)(Int)tk->data();
+				if (!handleNumericOpcode(tokens, opcode, operand, mnemonic, operands, cursor))
 					return false;
 			} else if (tk->is(IToken::Types::COMMENT)) {
 				// Do nothing.
@@ -1028,25 +1028,25 @@ private:
 
 		// Translate the data if it's data declaration.
 		if (opcode == "db") {
-			for (int oprand : oprands)
-				emitUInt8(bytes, context, (UInt8)oprand);
+			for (int operand : operands)
+				emitUInt8(bytes, context, (UInt8)operand);
 
 			return true;
 		} else if (opcode == "dw") {
-			for (int oprand : oprands)
-				emitUInt16(bytes, context, (UInt16)oprand);
+			for (int operand : operands)
+				emitUInt16(bytes, context, (UInt16)operand);
 
 			return true;
 		}
 
-		// Translate the oprand.
-		if (!oprands.empty()) {
-			if (oprands.size() > 1) return throwTooManyOprands(cursor - 1);
+		// Translate the operand.
+		if (!operands.empty()) {
+			if (operands.size() > 1) return throwTooManyOperands(cursor - 1);
 
-			for (const OprandPattern &pattern : _oprandPatterns) {
+			for (const OperandPattern &pattern : _operandPatterns) {
 				if (Text::matchWildcard(pattern.pattern, mnemonic.c_str(), false)) {
 					mnemonic = pattern.pattern;
-					oprandType = pattern.type;
+					operandType = pattern.type;
 
 					break;
 				}
@@ -1085,7 +1085,7 @@ private:
 			// Resolve jump destination.
 			if (!labelRefName.empty()) {
 				Context::LabelRef::Types type = Context::LabelRef::Types::ADDRESS;
-				if (!(oprandType == "n16" || oprandType == "a16"))
+				if (!(operandType == "n16" || operandType == "a16"))
 					type = Context::LabelRef::Types::OFFSET;
 				const Context::LabelRef labelRef(
 					labelRefTokenIndex,
@@ -1096,44 +1096,44 @@ private:
 				context.labelRefs.push_back(labelRef);
 			}
 
-			// Emit the oprand.
+			// Emit the operand.
 			const int sz = ASSEMBLER_OPCODE_SIZE[op];
 			const int restSz = sz - 1;
 			if (restSz == 0) {
-				GBBASIC_ASSERT(oprandType.empty() && "Invalid opcode.");
+				GBBASIC_ASSERT(operandType.empty() && "Invalid opcode.");
 
 				return true;
 			}
 
 			if (restSz == 1) {
-				GBBASIC_ASSERT((oprandType == "n8" || oprandType == "a8" || oprandType == "e8") && !oprands.empty() && "Invalid oprand.");
+				GBBASIC_ASSERT((operandType == "n8" || operandType == "a8" || operandType == "e8") && !operands.empty() && "Invalid operand.");
 
-				if (oprands.empty())
+				if (operands.empty())
 					return false;
 
-				int oprand = oprands.front();
-				if (oprand < std::numeric_limits<Int8>::min() || oprand > std::numeric_limits<UInt8>::max()) {
-					if (oprandType == "a8") {
+				int operand = operands.front();
+				if (operand < std::numeric_limits<Int8>::min() || operand > std::numeric_limits<UInt8>::max()) {
+					if (operandType == "a8") {
 						// Do nothing.
 					} else {
 						return throwByteExpected(cursor - 1);
 					}
 				}
 
-				emitUInt8(bytes, context, (UInt8)oprand);
+				emitUInt8(bytes, context, (UInt8)operand);
 
 				return true;
 			} else if (restSz == 2) {
-				GBBASIC_ASSERT((oprandType == "n16" || oprandType == "a16") && !oprands.empty() && "Invalid oprand.");
+				GBBASIC_ASSERT((operandType == "n16" || operandType == "a16") && !operands.empty() && "Invalid operand.");
 
-				if (oprands.empty())
+				if (operands.empty())
 					return false;
 
-				const int oprand = oprands.front();
-				if (oprand < std::numeric_limits<Int16>::min() || oprand > std::numeric_limits<UInt16>::max())
+				const int operand = operands.front();
+				if (operand < std::numeric_limits<Int16>::min() || operand > std::numeric_limits<UInt16>::max())
 					return throwWordExpected(cursor - 1);
 
-				emitUInt16(bytes, context, (UInt16)oprand);
+				emitUInt16(bytes, context, (UInt16)operand);
 
 				return true;
 			}
