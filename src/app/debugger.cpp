@@ -373,6 +373,7 @@ private:
 	struct {
 		float startY = 0;
 		int safeHeight = 0;
+		int disassemblerView = 0;
 	} _options;
 	Window* _window = nullptr; // Foreign.
 	Renderer* _renderer = nullptr; // Foreign.
@@ -402,7 +403,8 @@ private:
 	int _activeCodePage = -1;
 	Snapshot _snapshot;
 	Device::Registers _registers;
-	GBBASIC::Disassembler::Mnemonic::Array _mnemonics;
+	GBBASIC::Disassembler::Mnemonic::Queue _mnemonics;
+	int _latestDisassembledMnemonicsBank = 0;
 	int _mnemonicsInit = 0;
 
 public:
@@ -423,6 +425,7 @@ public:
 		_snapshot.reset();
 		_registers = Device::Registers();
 		_mnemonics.clear();
+		_latestDisassembledMnemonicsBank = 0;
 		_mnemonicsInit = 0;
 
 		_window = wnd;
@@ -449,6 +452,7 @@ public:
 		_snapshot.reset();
 		_registers = Device::Registers();
 		_mnemonics.clear();
+		_latestDisassembledMnemonicsBank = 0;
 		_mnemonicsInit = 0;
 
 		_started = false;
@@ -552,6 +556,7 @@ public:
 		_snapshot.reset();
 		_registers = Device::Registers();
 		_mnemonics.clear();
+		_latestDisassembledMnemonicsBank = 0;
 		_mnemonicsInit = 0;
 
 		_compiled = nullptr;
@@ -665,20 +670,13 @@ public:
 	}
 
 	virtual bool breakpointHit(void) override {
-		// Resolve the CPU bank and PC.
+		// Resolve the CPU registers.
 		const Device::Registers regs = _device->readRegisters();
-		const UInt16 pc = regs.PC;
-		UInt8 bank = 0;
-		bool gotBank = false;
-		if (!_currentBankPointer.invalid()) {
-			if (_device->readRam((UInt16)_currentBankPointer.address, &bank))
-				gotBank = true;
-		}
-		if (!gotBank) {
-			bank = (UInt8)_device->currentBank();
-			gotBank = true;
-		}
 
+		// Resolve the CPU bank and PC.
+		UInt8 bank = 0;
+		UInt16 pc = 0;
+		const bool gotBank = probeCurrentProgramCounter(bank, pc);
 		if (!gotBank)
 			return false;
 
@@ -887,17 +885,37 @@ private:
 
 		return nullptr;
 	}
-	GBBASIC::Disassembler::Mnemonic::Array getDisassembledMnemonics(void) const {
-		GBBASIC::Disassembler::Mnemonic::Array result;
+	GBBASIC::Disassembler::Mnemonic::Queue getDisassembledMnemonics(bool compactMode, bool gotBank, UInt8 bank) const {
+		GBBASIC::Disassembler::Mnemonic::Queue result;
 		GBBASIC::Disassembler::Ptr dasm(GBBASIC::Disassembler::create());
 
-		GBBASIC::Disassembler::DisassemblingOptions options;
-		options.bankSize = DEBUGGER_BANK_SIZE;
-		options.startAddress = DEBUGGER_START_ADDRESS;
-		options.bank = 0;
-		options.addressCursor = 0;
 		try {
-			dasm->disassemble(result, compiledBytes(), options);
+			if (compactMode) {
+				GBBASIC::Disassembler::DisassemblingOptions options(
+					DEBUGGER_BANK_SIZE,
+					DEBUGGER_START_ADDRESS,
+					0,
+					0,
+					0,
+					1
+				);
+				dasm->disassemble(result, compiledBytes(), options);
+				if (gotBank) {
+					if (bank == 0)
+						bank = 1;
+					options.bank = bank;
+					options.offset = DEBUGGER_BANK_SIZE * bank;
+					dasm->disassemble(result, compiledBytes(), options);
+				}
+			} else {
+				const GBBASIC::Disassembler::DisassemblingOptions options(
+					DEBUGGER_BANK_SIZE,
+					DEBUGGER_START_ADDRESS,
+					0,
+					0
+				);
+				dasm->disassemble(result, compiledBytes(), options);
+			}
 		} catch (const std::bad_alloc &e) {
 			result.clear();
 			result.push_back(GBBASIC::Disassembler::Mnemonic((UInt8)0, (UInt16)0, "cannot disassemble", false, nullptr));
@@ -909,13 +927,53 @@ private:
 		return result;
 	}
 
-	const GBBASIC::Disassembler::Mnemonic::Array &touchMnemonics(void) {
-		if (_mnemonics.empty())
-			_mnemonics = getDisassembledMnemonics();
+	const GBBASIC::Disassembler::Mnemonic::Queue &touchMnemonics(void) {
+		UInt8 bank = 0;
+		UInt16 pc = 0;
+		bool gotBank = false;
+
+		const bool compactMode = _options.disassemblerView == 0;
+		if (compactMode && !_mnemonics.empty()) {
+			gotBank = probeCurrentProgramCounter(bank, pc);
+			if (gotBank && _latestDisassembledMnemonicsBank != bank) {
+				_mnemonics.clear();
+				_latestDisassembledMnemonicsBank = 0;
+			}
+		}
+
+		if (_mnemonics.empty()) {
+			if (!gotBank)
+				gotBank = probeCurrentProgramCounter(bank, pc);
+			_mnemonics = getDisassembledMnemonics(compactMode, gotBank, bank);
+			_latestDisassembledMnemonicsBank = bank;
+		}
 
 		return _mnemonics;
 	}
+	void unloadMnemonics(void) {
+		_mnemonics.clear();
+		_latestDisassembledMnemonicsBank = 0;
+	}
 
+	bool probeCurrentProgramCounter(UInt8 &bank, UInt16 &pc) const {
+		bool result = false;
+		const Device::Registers regs = _device->readRegisters();
+		pc = regs.PC;
+		bank = 0;
+		if (!_currentBankPointer.invalid()) {
+			if (_device->readRam((UInt16)_currentBankPointer.address, &bank))
+				result = true;
+		}
+		if (!result) {
+			bank = (UInt8)_device->currentBank();
+			result = true;
+		}
+
+		if (!result)
+			return false;
+
+		return true;
+	}
 	bool probeThreadProgramCounter(UInt16 threadAddr, UInt8 &bank, UInt16 &pc) const {
 		bank = 0;
 		pc = 0;
@@ -1526,7 +1584,7 @@ private:
 			if (_bringCategoryToFront == Categories::ASM)
 				flags |= ImGuiTabItemFlags_SetSelected;
 			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Asm(), nullptr, flags)) {
-				const GBBASIC::Disassembler::Mnemonic::Array* mnemonics_ = nullptr;
+				const GBBASIC::Disassembler::Mnemonic::Queue* mnemonics_ = nullptr;
 				if (_mnemonicsInit == 0) { // A simple FSM for lazy mnemonics initialization.
 					++_mnemonicsInit;
 				} else if (_mnemonicsInit == 1) {
@@ -1548,14 +1606,47 @@ private:
 					ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Disassembling());
 				ImGui::PopStyleColor();
 
-				const float width = ImGui::GetContentRegionAvail().x;
-				const float height = 200.0f - ImGui::GetTextLineHeightWithSpacing();
-				const ImGuiWindowFlags flags_ = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav;
-				ImGui::BeginChild("@Dasm", ImVec2(width, height), false, flags_);
-				{
-					mnemonics(mnemonics_);
-				}
-				ImGui::EndChild();
+				do {
+					VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+
+					const float width = ImGui::GetContentRegionAvail().x;
+					const float height = 200.0f - ImGui::GetTextLineHeightWithSpacing();
+					const ImGuiWindowFlags flags_ = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav;
+					ImGui::BeginChild("@Dasm", ImVec2(width, height), false, flags_);
+					{
+						mnemonics(mnemonics_);
+					}
+					ImGui::EndChild();
+				} while (false);
+
+				do {
+					ImGui::NewLine(1);
+					ImGui::Dummy(ImVec2(2, 0));
+					ImGui::SameLine();
+					const float posX = ImGui::GetCursorPosX();
+					ImGui::AlignTextToFramePadding();
+					ImGui::TextUnformatted(_theme->windowEmulator_CodeDebugger_View());
+					ImGui::SameLine();
+					const float diff = ImGui::GetCursorPosX() - posX;
+					const float remain = regSize.x * 0.3f - diff;
+					ImGui::Dummy(ImVec2(remain, 0));
+					ImGui::SameLine();
+
+					const char* ITEMS[] = {
+						_theme->windowEmulator_CodeDebugger_View_CompactMode().c_str(),
+						_theme->windowEmulator_CodeDebugger_View_FullRom().c_str()
+					};
+
+					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+					VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+					ImGui::SetNextItemWidth(regSize.x * 0.7f);
+					if (ImGui::Combo("##DasmView", &_options.disassemblerView, ITEMS, GBBASIC_COUNTOF(ITEMS))) {
+						unloadMnemonics();
+					}
+				} while (false);
+				ImGui::SameLine();
+				ImGui::NewLine(1);
 
 				ImGui::EndTabItem();
 			}
@@ -1603,15 +1694,13 @@ private:
 		// TODO: DBG.
 	}
 
-	void mnemonics(const GBBASIC::Disassembler::Mnemonic::Array* mnemonics_) {
+	void mnemonics(const GBBASIC::Disassembler::Mnemonic::Queue* mnemonics_) {
 		ImGuiIO &io = ImGui::GetIO();
 		ImGuiStyle &style = ImGui::GetStyle();
 		ImDrawList* drawList = ImGui::GetWindowDrawList();
 
 		if (!mnemonics_)
 			return;
-
-		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
 		const float lineHeight = ImGui::GetTextLineHeightWithSpacing() + style.FramePadding.y * 2;
 		if (lineHeight <= Math::EPSILON<float>()) return;

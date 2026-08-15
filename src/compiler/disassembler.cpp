@@ -35,10 +35,8 @@ public:
 		return false;
 	}
 
-	virtual bool disassemble(Mnemonic::Array &mnemonics, const Bytes::Ptr &bytes, const DisassemblingOptions &options) const override {
+	virtual bool disassemble(Mnemonic::Queue &mnemonics, const Bytes::Ptr &bytes, const DisassemblingOptions &options) const override {
 		// Prepare.
-		mnemonics.clear();
-
 		if (!bytes)
 			return true;
 
@@ -89,9 +87,10 @@ public:
 		const int base = (options.bank == 0) ? 0 : options.startAddress;
 		int bank = options.bank;
 		int address = base + options.addressCursor;
+		int bankCount = options.bankCount <= 0 ? -1 : options.bankCount;
 		Bytes::Ptr buf(Bytes::create());
 
-		int offset = 0;
+		int offset = options.offset;
 		while (offset < size) {
 			const UInt8 opcode = bytes->get(offset);
 			buf->writeUInt8(opcode);
@@ -163,10 +162,12 @@ public:
 				address = div.rem;
 				if (bank > 0)
 					address += options.startAddress;
+				if (bankCount > 0) {
+					if (--bankCount == 0)
+						break;
+				}
 			}
 		}
-
-		mnemonics.shrink_to_fit();
 
 		// Finish.
 		return true;
@@ -203,6 +204,14 @@ Disassembler::DisassemblingOptions::DisassemblingOptions(int bankSize_, int star
 	bankSize(bankSize_),
 	startAddress(startAddr),
 	bank(b), addressCursor(addr)
+{
+}
+
+Disassembler::DisassemblingOptions::DisassemblingOptions(int bankSize_, int startAddr, int b, int addr, int offset_, int banks) :
+	bankSize(bankSize_),
+	startAddress(startAddr),
+	bank(b), addressCursor(addr),
+	offset(offset_), bankCount(banks)
 {
 }
 

@@ -960,6 +960,9 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_CodeDebugger_Inspector("Inspector");
 	windowEmulator_CodeDebugger_KernelMemory("Kernel memory");
 	windowEmulator_CodeDebugger_Running("Running...");
+	windowEmulator_CodeDebugger_View("View");
+	windowEmulator_CodeDebugger_View_CompactMode("Compact mode");
+	windowEmulator_CodeDebugger_View_FullRom("Full ROM");
 	windowEmulator_VramDebugger("VRAM Debugger");
 	windowEmulator_VramDebugger_BgWinMap("BG/WIN map");
 	windowEmulator_VramDebugger_Layer("Layer");
