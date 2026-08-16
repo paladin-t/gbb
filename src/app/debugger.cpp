@@ -79,11 +79,11 @@ typedef Pointer UInt16Ptr;
 typedef Pointer CtxPtr;
 typedef Pointer MetaSpriteRef;
 
-typedef std::vector<Byte> Buffer;
+typedef std::deque<Byte> Buffer;
 
 struct ThreadStack {
 	typedef Reference<ThreadStack> Ref;
-	typedef std::vector<Ref> Array;
+	typedef std::deque<Ref> Queue;
 
 	VM::Buffer buffer;
 	int count = 0;
@@ -94,7 +94,7 @@ struct ThreadStack {
 
 struct SCRIPT_CTX {
 	typedef Reference<SCRIPT_CTX> Ref;
-	typedef std::vector<Ref> Array;
+	typedef std::deque<Ref> Queue;
 	typedef Pointer Ptr;
 
 	UInt8Ptr PC = NULL;
@@ -116,7 +116,7 @@ struct SCRIPT_CTX {
 
 struct actor_t {
 	typedef Reference<actor_t> Ref;
-	typedef std::vector<Ref> Array;
+	typedef std::deque<Ref> Queue;
 	typedef Pointer Ptr;
 
 	Boolean instantiated         : 1;
@@ -176,7 +176,7 @@ struct actor_t {
 
 struct projectile_def_t {
 	typedef Reference<projectile_def_t> Ref;
-	typedef std::vector<Ref> Array;
+	typedef std::deque<Ref> Queue;
 
 	boundingbox_t bounds;
 	UInt8 base_tile = 0;
@@ -195,7 +195,7 @@ struct projectile_def_t {
 
 struct projectile_t {
 	typedef Reference<projectile_t> Ref;
-	typedef std::vector<Ref> Array;
+	typedef std::deque<Ref> Queue;
 	typedef Pointer Ptr;
 
 	Boolean animation_no_loop   : 1;
@@ -228,7 +228,7 @@ struct projectile_t {
 
 struct trigger_t {
 	typedef Reference<trigger_t> Ref;
-	typedef std::vector<Ref> Array;
+	typedef std::deque<Ref> Queue;
 
 	UInt8 x = 0;
 	UInt8 y = 0;
@@ -344,13 +344,13 @@ private:
 	};
 
 	struct Snapshot {
-		VM::SCRIPT_CTX::Array threads; // Active only.
-		VM::ThreadStack::Array threadStacks; // Active only.
+		VM::SCRIPT_CTX::Queue threads; // Active only.
+		VM::ThreadStack::Queue threadStacks; // Active only.
 		VM::Buffer heap;
-		VM::actor_t::Array actors; // Active only.
-		VM::projectile_def_t::Array projectileDefs;
-		VM::projectile_t::Array projectiles;
-		VM::trigger_t::Array triggers;
+		VM::actor_t::Queue actors; // Active only.
+		VM::projectile_def_t::Queue projectileDefs;
+		VM::projectile_t::Queue projectiles;
+		VM::trigger_t::Queue triggers;
 		VM::scene_t scene;
 
 		Snapshot() {
@@ -376,7 +376,14 @@ private:
 		float startY = 0;
 		int safeHeight = 0;
 		int disassemblerView = 0;
-		int ramView = 0;
+		int ramView = 1;
+		int bankIndex = -1;
+		std::string bankText;
+		int vramIndex = -1;
+		std::string vramText;
+		int wramIndex = -1;
+		std::string wramText;
+		std::string echoText;
 	} _options;
 	Window* _window = nullptr; // Foreign.
 	Renderer* _renderer = nullptr; // Foreign.
@@ -875,6 +882,173 @@ private:
 		return _compiled->bytes;
 	}
 
+	const char* getAddressDescription(UInt16 addr, const char* &detail, bool &readonly, bool &prohibited) {
+		readonly = false;
+
+		if (addr <= 0x3fff) {
+			readonly = true;
+
+			detail = "16KB ROM bank 0";
+
+			return "ROM0 ";
+		}
+		if (addr <= 0x7fff) {
+			readonly = true;
+
+			detail = "16KB ROM bank n";
+
+			FarPtr pc;
+			if (!probeCurrentProgramCounter(pc))
+				pc.bank = 1;
+			if (_options.bankIndex != pc.bank) {
+				_options.bankIndex = pc.bank;
+				const std::string n = Text::toHex(_options.bankIndex, 2, '0', true);
+				if (_options.bankIndex <= 0x0f)
+					_options.bankText = "ROM" + n;
+				else
+					_options.bankText = "RO" + n + "H";
+			}
+
+			if (_options.bankIndex == 0)
+				return "ROM+ ";
+
+			return _options.bankText.c_str();
+		}
+		if (addr <= 0x9fff) {
+			detail = "8KB VRAM";
+
+			UInt8 vramIdx = 0;
+			if (!_device->readRam(0xff4f, &vramIdx))
+				vramIdx = 0;
+			vramIdx &= 0b00000001;
+			if (_options.vramIndex != vramIdx) {
+				_options.vramIndex = vramIdx;
+				_options.vramText = "VRAM" + Text::toString(_options.vramIndex);
+			}
+
+			return _options.vramText.c_str();
+		}
+		if (addr <= 0xbfff) {
+			detail = "8KB SRAM";
+
+			return "SRAM ";
+		}
+		if (addr <= 0xcfff) {
+			detail = "4KB WRAM 0";
+
+			return "WRAM0";
+		}
+		if (addr <= 0xdfff) {
+			detail = "4KB WRAM n";
+
+			UInt8 wramIdx = 0;
+			if (!_device->readRam(0xff70, &wramIdx))
+				wramIdx = 1;
+			wramIdx &= 0b00000111;
+			if (wramIdx == 0)
+				wramIdx = 1;
+			if (_options.wramIndex != wramIdx) {
+				_options.wramIndex = wramIdx;
+				_options.wramText = "WRAM" + Text::toString(_options.wramIndex);
+			}
+
+			return _options.wramText.c_str();
+		}
+		if (addr <= 0xfdff) {
+			readonly = true;
+			prohibited = true;
+
+			const int echoAddr = addr - 0xe000 + 0xc000;
+			_options.echoText = "Echo RAM (" + Text::toHex(echoAddr, 4, '0', true) + ")";
+
+			detail = _options.echoText.c_str();
+
+			return "ECHO ";
+		}
+		if (addr <= 0xfe9f) {
+			detail = "OAM";
+
+			return "OAM  ";
+		}
+		if (addr >= 0xfea0 && addr <= 0xfeff) {
+			if      (addr == 0xfea0) detail = "Ext. EXTF";
+			else if (addr == 0xfea1) detail = "Ext. PLTF";
+			else if (addr == 0xfea2) detail = "Ext. LOCF";
+			else if (addr == 0xfea3) detail = "Ext. Reserved";
+			else if (addr == 0xfea4) detail = "Ext. TCHX";
+			else if (addr == 0xfea5) detail = "Ext. TCHY";
+			else if (addr == 0xfea6) detail = "Ext. TCHF";
+			else if (addr == 0xfea7) detail = "Ext. Reserved";
+			else if (addr == 0xfea8) detail = "Ext. KEYM";
+			else if (addr == 0xfea9) detail = "Ext. KEYC";
+			else if (addr >= 0xfeaa && addr <= 0xfeab) detail = "Ext. Reserved";
+			else if (addr == 0xfeac) detail = "Ext. STMF";
+			else if (addr == 0xfead) detail = "Ext. STMB";
+			else if (addr == 0xfeae) detail = "Ext. Reserved";
+			else if (addr == 0xfeaf) detail = "Ext. TRSF";
+			else if (addr >= 0xfeb0 && addr <= 0xfeef) detail = "Ext. TRSC";
+			else if (addr <= 0xfeff) detail = "Ext. Reserved"; // 0xFEF0 - 0xFEFF
+
+			return "EXT. ";
+		}
+		if (addr <= 0xff7f) {
+			if      (addr == 0xff00) detail = "Joypad input";
+			else if (addr <= 0xff02) detail = "Serial transfer"; // FF01 - FF02
+			else if (addr <= 0xff07) detail = "Timer and div."; // FF04 - FF07
+			else if (addr == 0xff0f) detail = "Interrupts";
+			else if (addr <= 0xff26) detail = "Audio"; // FF10 - FF26
+			else if (addr <= 0xff3f) detail = "Wave pattern"; // FF30 - FF3F
+
+			else if (addr == 0xff40) detail = "LCDC";
+			else if (addr == 0xff41) detail = "STAT";
+			else if (addr == 0xff42) detail = "SCY";
+			else if (addr == 0xff43) detail = "SCX";
+			else if (addr == 0xff44) detail = "LY";
+			else if (addr == 0xff45) detail = "LYC";
+			else if (addr == 0xff46) detail = "DMA";
+			else if (addr == 0xff47) detail = "BGP";
+			else if (addr == 0xff48) detail = "OBP0";
+			else if (addr == 0xff49) detail = "OBP1";
+			else if (addr == 0xff4a) detail = "WY";
+			else if (addr == 0xff4b) detail = "WX";
+			else if (addr == 0xff4c) detail = "KEY0/SYS";
+			else if (addr == 0xff4d) detail = "KEY1/SPD";
+			else if (addr == 0xff4f) detail = "VBK";
+			else if (addr == 0xff50) detail = "Boot ROM ctrl.";
+			else if (addr == 0xff51) detail = "HDMA1";
+			else if (addr == 0xff52) detail = "HDMA2";
+			else if (addr == 0xff53) detail = "HDMA3";
+			else if (addr == 0xff54) detail = "HDMA4";
+			else if (addr == 0xff55) detail = "HDMA5";
+			else if (addr == 0xff56) detail = "IR port";
+			else if (addr == 0xff68) detail = "BCPS/BGPI";
+			else if (addr == 0xff69) detail = "BCPD/BGPD";
+			else if (addr == 0xff6a) detail = "OCPS/OBPI";
+			else if (addr == 0xff6b) detail = "OCPD/OBPD";
+			else if (addr == 0xff6c) detail = "OPRI";
+			else if (addr == 0xff70) detail = "SVBK/WBK";
+
+			else                     detail = "I/O registers";
+
+			return "I/O  ";
+		}
+		if (addr <= 0xfffe) {
+			detail = "HRAM";
+
+			return "HRAM ";
+		}
+		if (addr == 0xffff) {
+			detail = "IE";
+
+			return "IE   ";
+		}
+
+		readonly = true;
+
+		detail = "Unknown";
+
+		return "-----";
+	}
 	const GBBASIC::RomLocation* getRomLocationBySymbolName(const std::string &symbol) const {
 		const GBBASIC::SymbolTable* symbols = compiledSymbols();
 		if (!symbols)
@@ -964,7 +1138,8 @@ private:
 		}
 
 		if (!inspecting() && !_mnemonics.empty()) {
-			gotPc = probeCurrentProgramCounter(pc);
+			if (!gotPc)
+				gotPc = probeCurrentProgramCounter(pc);
 
 			toRefreshPc = true;
 		}
@@ -1127,7 +1302,7 @@ private:
 
 		return true;
 	}
-	bool probeThreads(VM::SCRIPT_CTX::Array &out) const {
+	bool probeThreads(VM::SCRIPT_CTX::Queue &out) const {
 		out.clear();
 
 		FarPtr farPtr;
@@ -1205,7 +1380,7 @@ private:
 
 		return true;
 	}
-	bool probeActors(VM::actor_t::Array &out) const {
+	bool probeActors(VM::actor_t::Queue &out) const {
 		out.clear();
 
 		FarPtr farPtr;
@@ -1232,7 +1407,7 @@ private:
 
 		return true;
 	}
-	bool probeProjectileDefs(VM::projectile_def_t::Array &out) const {
+	bool probeProjectileDefs(VM::projectile_def_t::Queue &out) const {
 		out.clear();
 
 		FarPtr farPtr;
@@ -1252,7 +1427,7 @@ private:
 
 		return true;
 	}
-	bool probeProjectiles(VM::projectile_t::Array &out) const {
+	bool probeProjectiles(VM::projectile_t::Queue &out) const {
 		out.clear();
 
 		FarPtr farPtr;
@@ -1279,7 +1454,7 @@ private:
 
 		return true;
 	}
-	bool probeTriggers(VM::trigger_t::Array &out) const {
+	bool probeTriggers(VM::trigger_t::Queue &out) const {
 		out.clear();
 
 		FarPtr farPtr_;
@@ -1332,6 +1507,8 @@ private:
 
 	void refreshBreakpoints(void) {
 		// Sort the breakpoints.
+		_breakpoints.shrink_to_fit();
+
 		std::sort(_breakpoints.begin(), _breakpoints.end());
 
 		// Re-assign breakpoints' type if needed.
@@ -2074,6 +2251,10 @@ private:
 		const UInt16 SP = regs.SP;
 		const UInt16 PC = regs.PC;
 
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+		ImGui::Text("%c %c %c %c", regs.F.Z ? 'Z' : '_', regs.F.N ? 'N' : '_', regs.F.H ? 'H' : '_', regs.F.C ? 'C' : '_');
+		ImGui::PopStyleColor();
+
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
 		ImGui::Text("AF=");
 		ImGui::PopStyleColor();
@@ -2134,6 +2315,10 @@ private:
 		_device->readRam(0xffff, &IE);
 		UInt8 IF = 0;
 		_device->readRam(0xff0f, &IF);
+		UInt8 BANK = 0;
+		FarPtr pc;
+		if (probeCurrentProgramCounter(pc))
+			BANK = (UInt8)pc.bank;
 
 		ImGui::SetCursorPos(pos);
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -2193,6 +2378,16 @@ private:
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
 		ImGui::Text("%02X", IF);
 		ImGui::PopStyleColor();
+
+		pos.y = ImGui::GetCursorPosY();
+		ImGui::SetCursorPos(pos);
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("BANK=");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%02X", BANK);
+		ImGui::PopStyleColor();
 	}
 	void ram(void) {
 		ImGuiIO &io = ImGui::GetIO();
@@ -2203,7 +2398,7 @@ private:
 		if (lineHeight <= Math::EPSILON<float>()) return;
 		const float panelHeight = ImGui::GetContentRegionAvail().y;
 		const int visibleLineCount = (int)std::ceil(panelHeight / lineHeight);
-		const int totalLineCount = std::numeric_limits<UInt16>::max() / 2 + 1;
+		const int totalLineCount = std::numeric_limits<UInt16>::max() + 1;
 		const float totalHeight = lineHeight * totalLineCount;
 
 		const float scrollbarWidth = 12.0f;
@@ -2219,18 +2414,21 @@ private:
 		const bool incMode = _options.ramView == 0;
 		for (int i = startIndex; i < endIndex; ++i) {
 			const int address = incMode ?
-				(i * 2) :
-				(std::numeric_limits<UInt16>::max() - i * 2 - 1);
-			UInt8 byte0 = 0;
-			UInt8 byte1 = 0;
-			_device->readRam((UInt16)address, &byte0);
-			_device->readRam((UInt16)(address + 1), &byte1);
+				(i) :
+				(std::numeric_limits<UInt16>::max() - i);
+			UInt8 byte = 0;
+			_device->readRam((UInt16)address, &byte);
+
+			const char* desc = nullptr;
+			bool readonly = false;
+			bool prohibited = false;
+			const char* type = getAddressDescription((UInt16)address, desc, readonly, prohibited);
 
 			ImGui::AlignTextToFramePadding();
 			ImGui::Dummy(ImVec2(1, 0));
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerHeadColor);
-			ImGui::Text("ROM0   ");
+			ImGui::Text("%s  ", type);
 			ImGui::SameLine();
 			ImGui::PopStyleColor();
 
@@ -2240,17 +2438,18 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-			ImGui::Text("%02X   ", byte0);
+			ImGui::Text("%02X   ", byte);
 			ImGui::SameLine();
 			ImGui::PopStyleColor();
 
-			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
-			ImGui::Text("%04X ", address + 1);
-			ImGui::SameLine();
-			ImGui::PopStyleColor();
-
-			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-			ImGui::Text("%02X ", byte1);
+			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+			ImGui::Text(
+				"%s %s",
+				desc,
+				prohibited ? "" :
+				readonly ? "R" :
+					"RW"
+			);
 			ImGui::PopStyleColor();
 		}
 
