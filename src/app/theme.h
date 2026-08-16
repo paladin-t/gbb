@@ -81,6 +81,11 @@ public:
 		ImU32 musicNoteColor;
 		ImU32 musicInstrumentColor;
 		ImU32 musicEffectColor;
+
+		ImU32 debuggerHeadColor;
+		ImU32 debuggerMajorColor;
+		ImU32 debuggerMinorColor;
+		ImU32 debuggerInfoColor;
 	};
 
 	typedef std::vector<std::string> Strings;
@@ -159,6 +164,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Code)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_CodeAsActor)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_CodeAsProjectile)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_CodeDebugger)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_CodeFile)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Compile)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_CompileAndRun)
@@ -256,6 +262,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, menu_StopRunning)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_SwapOrder)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_Tiles)
+	GBBASIC_PROPERTY_READONLY(std::string, menu_ToggleBreakpoint)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_ToggleComment)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_ToLowerCase)
 	GBBASIC_PROPERTY_READONLY(std::string, menu_ToUpperCase)
@@ -627,6 +634,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Debug_Compiler)
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Debug_Debugger)
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Debug_Emulation)
+	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Debug_EnableCodeDebugger)
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Debug_EnableLogging)
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Debug_EnableOnscreenDebug)
 	GBBASIC_PROPERTY_READONLY(std::string, windowPreferences_Debug_EnableVramDebugger)
@@ -709,6 +717,25 @@ public:
 
 	GBBASIC_PROPERTY_READONLY(std::string, windowCode_SearchFor)
 
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_Debugger_Code)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_Debugger_Vram)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Addr)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Asm)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Basic)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_DeviceMemory)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_ID)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Inspector)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_KernelMemory)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Order)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Running)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Type)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Value)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_View)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_View_CompactMode)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_View_Decremental)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_View_FullRom)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_View_Incremental)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_BgWinMap)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_VramDebugger_Layer)
@@ -974,6 +1001,20 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipCode_InfoWords)
 
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_AlternativeSpeed)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_ClearBreakpoints)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_DisableBreakpoints)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Disassembling)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_DisassembyHeadInfo)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_EnableBreakpoints)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Heap)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Objects)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Pause)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_RamInfo)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Registers)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Resume)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_StepAsm)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_StepBasic)
+	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_CodeDebugger_Threads)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_NormalSpeed)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_StatusNote)
 	GBBASIC_PROPERTY_READONLY(std::string, tooltipEmulator_StatusNoteRumble)
@@ -1199,6 +1240,11 @@ public:
 	GBBASIC_PROPERTY_PTR(class Texture, iconStop)
 	GBBASIC_PROPERTY_PTR(class Texture, iconStopPreview)
 	GBBASIC_PROPERTY_PTR(class Texture, iconPause)
+	GBBASIC_PROPERTY_PTR(class Texture, iconBreakEnable)
+	GBBASIC_PROPERTY_PTR(class Texture, iconBreakDisable)
+	GBBASIC_PROPERTY_PTR(class Texture, iconBreakClear)
+	GBBASIC_PROPERTY_PTR(class Texture, iconStepAsm)
+	GBBASIC_PROPERTY_PTR(class Texture, iconStepBasic)
 
 	GBBASIC_PROPERTY_PTR(class Texture, iconNumber0)
 	GBBASIC_PROPERTY_PTR(class Texture, iconNumber1)

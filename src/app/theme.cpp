@@ -288,6 +288,10 @@ bool Theme::open(class Renderer* rnd) {
 	styleDefault().musicNoteColor                           = ImGui::GetColorU32(ImVec4(0.95f, 0.50f, 0.04f, 1.00f));
 	styleDefault().musicInstrumentColor                     = ImGui::GetColorU32(ImVec4(0.17f, 0.48f, 0.16f, 1.00f));
 	styleDefault().musicEffectColor                         = ImGui::GetColorU32(ImVec4(0.00f, 0.58f, 1.00f, 1.00f));
+	styleDefault().debuggerHeadColor                        = ImGui::GetColorU32(ImVec4(0.17f, 0.57f, 0.69f, 1.00f));
+	styleDefault().debuggerMajorColor                       = ImGui::GetColorU32(ImVec4(0.00f, 0.58f, 1.00f, 1.00f));
+	styleDefault().debuggerMinorColor                       = ImGui::GetColorU32(ImVec4(0.95f, 0.50f, 0.04f, 1.00f));
+	styleDefault().debuggerInfoColor                        = ImGui::GetColorU32(ImVec4(0.17f, 0.48f, 0.16f, 1.00f));
 
 	generic_Apply("Apply");
 	generic_Browse("Browse...");
@@ -358,6 +362,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Code("Code");
 	menu_CodeAsActor("Code (as Actor)");
 	menu_CodeAsProjectile("Code (as Projectile)");
+	menu_CodeDebugger("Code Debugger");
 	menu_CodeFile("Code File...");
 	menu_Compile("Compile");
 	menu_CompileAndRun("Compile & Run");
@@ -455,6 +460,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_StopRunning("Stop Running");
 	menu_SwapOrder("Swap Order");
 	menu_Tiles("Tiles");
+	menu_ToggleBreakpoint("Toggle Breakpoint");
 	menu_ToggleComment("Toggle Comment");
 	menu_ToLowerCase("To Lower Case");
 	menu_ToUpperCase("To Upper Case");
@@ -869,6 +875,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Debug_Compiler("Compiler:");
 	windowPreferences_Debug_Debugger("Debugger:");
 	windowPreferences_Debug_Emulation("Emulation:");
+	windowPreferences_Debug_EnableCodeDebugger("Enable code debugger");
 	windowPreferences_Debug_EnableLogging("Enable logging");
 	windowPreferences_Debug_EnableOnscreenDebug("Enable onscreen debug");
 	windowPreferences_Debug_EnableVramDebugger("Enable VRAM debugger");
@@ -944,6 +951,25 @@ bool Theme::open(class Renderer* rnd) {
 
 	windowCode_SearchFor("Search for");
 
+	windowEmulator_Debugger_Code("Code");
+	windowEmulator_Debugger_Vram("VRAM");
+	windowEmulator_CodeDebugger("Code Debugger");
+	windowEmulator_CodeDebugger_Addr("Addr.");
+	windowEmulator_CodeDebugger_Asm("ASM");
+	windowEmulator_CodeDebugger_Basic("BASIC");
+	windowEmulator_CodeDebugger_DeviceMemory("Device memory");
+	windowEmulator_CodeDebugger_ID("ID");
+	windowEmulator_CodeDebugger_Inspector("Inspector");
+	windowEmulator_CodeDebugger_KernelMemory("Kernel memory");
+	windowEmulator_CodeDebugger_Order("Order");
+	windowEmulator_CodeDebugger_Running("Running...");
+	windowEmulator_CodeDebugger_Type("Type");
+	windowEmulator_CodeDebugger_Value("Value");
+	windowEmulator_CodeDebugger_View("View");
+	windowEmulator_CodeDebugger_View_CompactMode("Compact mode");
+	windowEmulator_CodeDebugger_View_Decremental("Decremental");
+	windowEmulator_CodeDebugger_View_FullRom("Full ROM");
+	windowEmulator_CodeDebugger_View_Incremental("Incremental");
 	windowEmulator_VramDebugger("VRAM Debugger");
 	windowEmulator_VramDebugger_BgWinMap("BG/WIN map");
 	windowEmulator_VramDebugger_Layer("Layer");
@@ -1346,6 +1372,20 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipCode_InfoWords("words");
 
 	tooltipEmulator_AlternativeSpeed("Alternative speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
+	tooltipEmulator_CodeDebugger_ClearBreakpoints("Clear breakpoints");
+	tooltipEmulator_CodeDebugger_DisableBreakpoints("Disable breakpoints");
+	tooltipEmulator_CodeDebugger_Disassembling("Disassembling...");
+	tooltipEmulator_CodeDebugger_DisassembyHeadInfo("ROM     Bytes    Mnemonic");
+	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
+	tooltipEmulator_CodeDebugger_Heap("Heap");
+	tooltipEmulator_CodeDebugger_Objects("Objects");
+	tooltipEmulator_CodeDebugger_Pause("Pause");
+	tooltipEmulator_CodeDebugger_RamInfo("Memory Addr Byte Description");
+	tooltipEmulator_CodeDebugger_Registers("Registers");
+	tooltipEmulator_CodeDebugger_Resume("Resume");
+	tooltipEmulator_CodeDebugger_StepAsm("Step ASM (" GBBASIC_MODIFIER_KEY_NAME "+F10)");
+	tooltipEmulator_CodeDebugger_StepBasic("Step BASIC (F10)");
+	tooltipEmulator_CodeDebugger_Threads("Threads");
 	tooltipEmulator_NormalSpeed("Normal speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
 	tooltipEmulator_StatusNote(
 		"Cartridge flag   : {0}\n"
@@ -1722,6 +1762,11 @@ bool Theme::open(class Renderer* rnd) {
 	iconStop(createTexture(rnd, RES_ICON_STOP, GBBASIC_COUNTOF(RES_ICON_STOP), nullptr));
 	iconStopPreview(createTexture(rnd, RES_ICON_STOP_AUDIO, GBBASIC_COUNTOF(RES_ICON_STOP_AUDIO), nullptr));
 	iconPause(createTexture(rnd, RES_ICON_PAUSE, GBBASIC_COUNTOF(RES_ICON_PAUSE), nullptr));
+	iconBreakEnable(createTexture(rnd, RES_ICON_BREAK_ENABLE, GBBASIC_COUNTOF(RES_ICON_BREAK_ENABLE), nullptr));
+	iconBreakDisable(createTexture(rnd, RES_ICON_BREAK_DISABLE, GBBASIC_COUNTOF(RES_ICON_BREAK_DISABLE), nullptr));
+	iconBreakClear(createTexture(rnd, RES_ICON_BREAK_CLEAR, GBBASIC_COUNTOF(RES_ICON_BREAK_CLEAR), nullptr));
+	iconStepBasic(createTexture(rnd, RES_ICON_BREAK_STEP_BASIC, GBBASIC_COUNTOF(RES_ICON_BREAK_STEP_BASIC), nullptr));
+	iconStepAsm(createTexture(rnd, RES_ICON_BREAK_STEP_ASM, GBBASIC_COUNTOF(RES_ICON_BREAK_STEP_ASM), nullptr));
 
 	iconNumber0(createTexture(rnd, RES_ICON_NUMBER_0, GBBASIC_COUNTOF(RES_ICON_NUMBER_0), nullptr));
 	iconNumber1(createTexture(rnd, RES_ICON_NUMBER_1, GBBASIC_COUNTOF(RES_ICON_NUMBER_1), nullptr));
@@ -1894,6 +1939,11 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconStop(), nullptr);
 	destroyTexture(rnd, iconStopPreview(), nullptr);
 	destroyTexture(rnd, iconPause(), nullptr);
+	destroyTexture(rnd, iconBreakEnable(), nullptr);
+	destroyTexture(rnd, iconBreakDisable(), nullptr);
+	destroyTexture(rnd, iconBreakClear(), nullptr);
+	destroyTexture(rnd, iconStepBasic(), nullptr);
+	destroyTexture(rnd, iconStepAsm(), nullptr);
 
 	destroyTexture(rnd, iconNumber0(), nullptr);
 	destroyTexture(rnd, iconNumber1(), nullptr);
@@ -2202,6 +2252,14 @@ void Theme::setColor(const std::string &idx, const ImColor &col) {
 		styleDefault().musicInstrumentColor = ImGui::GetColorU32((ImVec4)col);
 	else if (idx == "music_effect")
 		styleDefault().musicEffectColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "debugger_head")
+		styleDefault().debuggerHeadColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "debugger_major")
+		styleDefault().debuggerMajorColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "debugger_minor")
+		styleDefault().debuggerMinorColor = ImGui::GetColorU32((ImVec4)col);
+	else if (idx == "debugger_info")
+		styleDefault().debuggerInfoColor = ImGui::GetColorU32((ImVec4)col);
 }
 
 void Theme::fromFile(const char* path_) {
@@ -2395,6 +2453,14 @@ void Theme::fromFile(const char* path_) {
 				setColor("music_instrument", ImColor(col.r, col.g, col.b, col.a));
 			else if (theme == "music_effect")
 				setColor("music_effect", ImColor(col.r, col.g, col.b, col.a));
+			else if (theme == "debugger_head")
+				setColor("debugger_head", ImColor(col.r, col.g, col.b, col.a));
+			else if (theme == "debugger_major")
+				setColor("debugger_major", ImColor(col.r, col.g, col.b, col.a));
+			else if (theme == "debugger_minor")
+				setColor("debugger_minor", ImColor(col.r, col.g, col.b, col.a));
+			else if (theme == "debugger_info")
+				setColor("debugger_info", ImColor(col.r, col.g, col.b, col.a));
 		}
 	}
 

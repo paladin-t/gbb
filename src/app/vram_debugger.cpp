@@ -316,6 +316,11 @@ private:
 		float startY = 0;
 		int safeHeight = 0;
 	} _options;
+	Window* _window = nullptr; // Foreign.
+	Renderer* _renderer = nullptr; // Foreign.
+	Workspace* _workspace = nullptr; // Foreign.
+	Theme* _theme = nullptr; // Foreign.
+	Device* _device = nullptr; // Foreign.
 
 	Device::MapBuffer _bgMapBuf;
 	Device::MapBuffer _bgMapAttrBuf;
@@ -514,9 +519,15 @@ public:
 		close();
 	}
 
-	virtual bool open(class Renderer* rnd, class Theme* /* theme */) override {
+	virtual bool open(class Window* wnd, class Renderer* rnd, class Workspace* ws, class Theme* theme, class Device* device) override {
 		if (_opened)
 			return true;
+
+		_window = wnd;
+		_renderer = rnd;
+		_workspace = ws;
+		_theme = theme;
+		_device = device;
 
 		_tiles.touch(rnd);
 		_bgMap.touch(rnd);
@@ -537,6 +548,12 @@ public:
 		_winMap.reset();
 		for (ObjBuffer &obj : _objs)
 			obj.reset();
+
+		_window = nullptr;
+		_renderer = nullptr;
+		_workspace = nullptr;
+		_theme = nullptr;
+		_device = nullptr;
 
 		_opened = false;
 
@@ -569,66 +586,66 @@ public:
 	}
 
 	virtual void update(
-		class Renderer* rnd, class Theme* theme, class Device* device,
 		bool previewPaletteBits, bool showGrids,
-		bool isNewFrame
+		bool isNewFrame,
+		bool showTitle
 	) override {
-		refresh(rnd, theme, device, previewPaletteBits, isNewFrame);
+		refresh(previewPaletteBits, isNewFrame);
 
-		begin(rnd);
+		begin(showTitle);
 		{
-			tiles(rnd, theme, device, showGrids);
+			tiles(showGrids);
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
-			map(rnd, theme, device, showGrids);
+			map(showGrids);
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
-			oam(rnd, theme, device, showGrids);
+			oam(showGrids);
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
-			palettes(rnd, theme, device);
+			palettes();
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
-			status(rnd, theme, device);
+			status();
 		}
-		end(rnd);
+		end();
 	}
 
 private:
-	void refresh(Renderer* /* rnd */, Theme* /* theme */, Device* device, bool previewPaletteBits, bool /* isNewFrame */) {
+	void refresh(bool previewPaletteBits, bool /* isNewFrame */) {
 		// Retrieve data.
-		const bool isCgb = device->isDeviceCgbCompatible();
+		const bool isCgb = _device->isDeviceCgbCompatible();
 
-		const Device::MapSourceTypes bgMapSrc = device->getMapSourceType(Device::LayerTypes::BG);
-		const Device::MapSourceTypes winMapSrc = device->getMapSourceType(Device::LayerTypes::WINDOW);
+		const Device::MapSourceTypes bgMapSrc = _device->getMapSourceType(Device::LayerTypes::BG);
+		const Device::MapSourceTypes winMapSrc = _device->getMapSourceType(Device::LayerTypes::WINDOW);
 
 		Device::TileBuffer tilesBuf;
-		device->getTileBuffer(tilesBuf); // Retrieve tile data.
+		_device->getTileBuffer(tilesBuf); // Retrieve tile data.
 
-		device->getMapBuffer(bgMapSrc, _bgMapBuf); // Retrieve BG map data.
+		_device->getMapBuffer(bgMapSrc, _bgMapBuf); // Retrieve BG map data.
 		if (isCgb)
-			device->getMapAttrBuffer(bgMapSrc, _bgMapAttrBuf); // Retrieve BG map attributes.
+			_device->getMapAttrBuffer(bgMapSrc, _bgMapAttrBuf); // Retrieve BG map attributes.
 		else
 			_bgMapAttrBuf.fill(0);
 
-		device->getMapBuffer(winMapSrc, _winMapBuf); // Retrieve WIN map data.
+		_device->getMapBuffer(winMapSrc, _winMapBuf); // Retrieve WIN map data.
 		if (isCgb)
-			device->getMapAttrBuffer(winMapSrc, _winMapAttrBuf); // Retrieve WIN map attributes.
+			_device->getMapAttrBuffer(winMapSrc, _winMapAttrBuf); // Retrieve WIN map attributes.
 		else
 			_winMapAttrBuf.fill(0);
 
-		_is8x16Obj = device->is8x16Obj();
+		_is8x16Obj = _device->is8x16Obj();
 		for (int i = 0; i < DEVICE_OBJ_COUNT; ++i) {
-			_objs[i].obj = device->getObj(i); // Retrieve OBJ data.
-			_objs[i].visible = device->isObjVisible(&_objs[i].obj);
+			_objs[i].obj = _device->getObj(i); // Retrieve OBJ data.
+			_objs[i].visible = _device->isObjVisible(&_objs[i].obj);
 		}
 
 		for (int i = 0; i < (int)Device::PaletteTypes::COUNT; ++i) {
-			const Device::PaletteRgba &pltRgba = device->getPaletteRgba((Device::PaletteTypes)i); // Retrieve classic palettes.
+			const Device::PaletteRgba &pltRgba = _device->getPaletteRgba((Device::PaletteTypes)i); // Retrieve classic palettes.
 			for (int k = 0; k < 4; ++k) {
 				const UInt32 rgba = pltRgba.color[k];
 				const Colour col = Colour::byRGBA8888(rgba);
@@ -638,7 +655,7 @@ private:
 		if (isCgb) {
 			for (int i = 0; i < (int)Device::CgbPaletteTypes::COUNT; ++i) {
 				for (int j = 0; j < 8; ++j) {
-					const Device::PaletteRgba &pltRgba = device->getCgbPaletteRgba((Device::CgbPaletteTypes)i, j); // Retrieve CGB palettes.
+					const Device::PaletteRgba &pltRgba = _device->getCgbPaletteRgba((Device::CgbPaletteTypes)i, j); // Retrieve CGB palettes.
 					for (int k = 0; k < 4; ++k) {
 						const UInt32 rgba = pltRgba.color[k];
 						const Colour col = Colour::byRGBA8888(rgba);
@@ -739,7 +756,7 @@ private:
 		);
 
 		// Translate data.
-		auto translateTiles = [device, previewPaletteBits, isCgb] (
+		auto translateTiles = [this, previewPaletteBits, isCgb] (
 			TilesBuffer &tiles,
 			const Device::TileBuffer &tilesBuf, const TileDetail::Banks &tileDetails,
 			const Palette::Collection &palettes, const CgbPalette::Collection &cgbPalettes
@@ -816,10 +833,10 @@ private:
 								}
 							}
 						} else {
-							col = device->classicPalette(val);
+							col = _device->classicPalette(val);
 						}
 					} else {
-						const Colour col_ = device->classicPalette(val);
+						const Colour col_ = _device->classicPalette(val);
 						const UInt8 gray = (UInt8)Math::clamp(col_.toGray(), 0, 255);
 						col = Colour(gray, gray, gray);
 					}
@@ -836,7 +853,7 @@ private:
 			_palettes, _cgbPalettes
 		);
 
-		auto translateMap = [device, previewPaletteBits, isCgb] (
+		auto translateMap = [this, previewPaletteBits, isCgb] (
 			MapBuffer &map,
 			const Device::MapBuffer &mapBuf, const Device::MapBuffer &mapAttrBuf,
 			const Device::TileBuffer &tilesBuf, const TilesBuffer &tiles, const TileDetail::Banks &tileDetails,
@@ -911,7 +928,7 @@ private:
 										col = palettes[(int)Device::PaletteTypes::BGP].color[val];
 									}
 								} else {
-									col = device->classicPalette(val);
+									col = _device->classicPalette(val);
 								}
 								const int dx = hFlip ?
 									x + (GBBASIC_TILE_SIZE - i - 1) :
@@ -1005,14 +1022,21 @@ private:
 		);
 	}
 
-	void begin(Renderer* /* rnd */) {
+	void begin(bool showTitle) {
 		_options.startY = ImGui::GetCursorPosY();
+
+		if (showTitle) {
+			ImGui::AlignTextToFramePadding();
+			ImGui::Dummy(ImVec2(1, 0));
+			ImGui::SameLine();
+			ImGui::TextUnformatted(_theme->windowEmulator_VramDebugger());
+		}
 	}
-	void end(Renderer* /* rnd */) {
+	void end(void) {
 		_options.safeHeight = (int)(ImGui::GetCursorPosY() - _options.startY + 48);
 	}
 
-	void tiles(Renderer* rnd, Theme* theme, Device* /* device */, bool showGrids) {
+	void tiles(bool showGrids) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		const float borderSize = style.ChildBorderSize;
@@ -1023,13 +1047,8 @@ private:
 			regMax.y - regMin.y - borderSize * 2
 		);
 
-		ImGui::AlignTextToFramePadding();
-		ImGui::Dummy(ImVec2(1, 0));
-		ImGui::SameLine();
-		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger());
-
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_Tiles().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_VramDebugger_Tiles().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
@@ -1094,7 +1113,7 @@ private:
 			{
 				const ImVec2 curPos = ImGui::GetCursorScreenPos();
 				ImGui::Image(
-					_tiles.buffer.texture->pointer(rnd),
+					_tiles.buffer.texture->pointer(_renderer),
 					dstSize,
 					ImVec2(0, 0), ImVec2(1, 1),
 					ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
@@ -1124,7 +1143,7 @@ private:
 		} else {
 			const ImVec2 curPos = ImGui::GetCursorScreenPos();
 			ImGui::Image(
-				_tiles.buffer.texture->pointer(rnd),
+				_tiles.buffer.texture->pointer(_renderer),
 				dstSize,
 				ImVec2(0, 0), ImVec2(1, 1),
 				ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
@@ -1174,7 +1193,7 @@ private:
 			if (hasInfoForOam)
 				refCount += oamRef.refCount;
 			_tileTips.refresh(
-				theme,
+				_theme,
 				tile,
 				(UInt8)infoBank, addr,
 				plt,
@@ -1202,11 +1221,11 @@ private:
 		_tiles.highlights[0] = Math::Vec2i(-1, -1);
 		_tiles.highlights[1] = Math::Vec2i(-1, -1);
 	}
-	void map(Renderer* rnd, Theme* theme, Device* device, bool showGrids) {
+	void map(bool showGrids) {
 		UInt8 bgX, bgY;
-		device->getBgScroll(&bgX, &bgY);
+		_device->getBgScroll(&bgX, &bgY);
 		UInt8 wndX, wndY;
-		device->getWindowScroll(&wndX, &wndY);
+		_device->getWindowScroll(&wndX, &wndY);
 
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -1219,7 +1238,7 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_BgWinMap().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_VramDebugger_BgWinMap().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
@@ -1227,7 +1246,7 @@ private:
 		ImGui::SameLine();
 		const float posX = ImGui::GetCursorPosX();
 		ImGui::AlignTextToFramePadding();
-		ImGui::TextUnformatted(theme->windowEmulator_VramDebugger_Layer());
+		ImGui::TextUnformatted(_theme->windowEmulator_VramDebugger_Layer());
 		ImGui::SameLine();
 		const float diff = ImGui::GetCursorPosX() - posX;
 		const float remain = regSize.x * 0.3f - diff;
@@ -1354,7 +1373,7 @@ private:
 			{
 				const ImVec2 curPos = ImGui::GetCursorScreenPos();
 				ImGui::Image(
-					mapBuf->buffer.texture->pointer(rnd),
+					mapBuf->buffer.texture->pointer(_renderer),
 					dstSize,
 					ImVec2(0, 0), ImVec2(1, 1),
 					ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
@@ -1385,7 +1404,7 @@ private:
 		} else {
 			const ImVec2 curPos = ImGui::GetCursorScreenPos();
 			ImGui::Image(
-				mapBuf->buffer.texture->pointer(rnd),
+				mapBuf->buffer.texture->pointer(_renderer),
 				dstSize,
 				ImVec2(0, 0), ImVec2(1, 1),
 				ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
@@ -1426,7 +1445,7 @@ private:
 			const bool vFlip = !!((attrs >> GBBASIC_MAP_VFLIP_BIT) & 0x00000001);
 			const int pri = (attrs >> GBBASIC_MAP_PRIORITY_BIT) & 0x00000001;
 
-			const Device::MapSourceTypes mapSrc = _options.isBgLayerActive ? device->getMapSourceType(Device::LayerTypes::BG) : device->getMapSourceType(Device::LayerTypes::WINDOW);
+			const Device::MapSourceTypes mapSrc = _options.isBgLayerActive ? _device->getMapSourceType(Device::LayerTypes::BG) : _device->getMapSourceType(Device::LayerTypes::WINDOW);
 			const UInt16 base = mapSrc == Device::MapSourceTypes::FROM_9800_TO_9BFF ? 0x9800 : 0x9c00;
 			const UInt16 addr = (UInt16)(
 				(0x8000 + (
@@ -1436,7 +1455,7 @@ private:
 				) * 16)
 			);
 			_mapTips.refresh(
-				theme,
+				_theme,
 				mapPos,
 				tile,
 				attrs,
@@ -1466,10 +1485,12 @@ private:
 		MapBuffer::Points &highlights = _options.isBgLayerActive ? _bgMap.highlights : _winMap.highlights;
 		highlights.clear();
 	}
-	void oam(Renderer* rnd, Theme* theme, Device* /* device */, bool showGrids) {
+	void oam(bool showGrids) {
 		constexpr const int OBJECT_COUNT_PER_LINE = 8;
 
 		ImGuiStyle &style = ImGui::GetStyle();
+
+		Renderer* rnd = _renderer;
 
 		const float borderSize = style.ChildBorderSize;
 		const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
@@ -1480,7 +1501,7 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_Oam().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_VramDebugger_Oam().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
@@ -1631,7 +1652,7 @@ private:
 			);
 
 			_oamTips.refresh(
-				theme,
+				_theme,
 				Math::Vec2i(x, y),
 				tile,
 				attrs,
@@ -1671,8 +1692,8 @@ private:
 			_inGameHighlight.area = Math::Recti::byXYWH(x_, y_, GBBASIC_TILE_SIZE, _is8x16Obj ? GBBASIC_TILE_SIZE * 2 : GBBASIC_TILE_SIZE);
 		}
 	}
-	void palettes(Renderer* /* rnd */, Theme* theme, Device* device) {
-		const bool isCgb = device->isDeviceCgbCompatible();
+	void palettes(void) {
+		const bool isCgb = _device->isDeviceCgbCompatible();
 
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -1685,7 +1706,7 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_Palettes().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_VramDebugger_Palettes().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
@@ -1828,22 +1849,22 @@ private:
 			}
 		}
 	}
-	void status(Renderer* /* rnd */, Theme* theme, Device* device) {
-		bool bgOn = device->getBgDisplay();
-		bool winOn = device->getWindowDisplay();
-		bool objOn = device->getObjDisplay();
+	void status(void) {
+		bool bgOn = _device->getBgDisplay();
+		bool winOn = _device->getWindowDisplay();
+		bool objOn = _device->getObjDisplay();
 
-		const Device::TileSourceTypes tileSrc = device->getTileSourceType();
+		const Device::TileSourceTypes tileSrc = _device->getTileSourceType();
 		const UInt16 tileBase = tileSrc == Device::TileSourceTypes::FROM_8800_TO_97FF ? 0x8800 : 0x8000;
-		const std::string &tileTxt = _tileDataArea.refresh(theme->windowEmulator_VramDebugger_StatusReadonly_TileArea(), tileBase);
+		const std::string &tileTxt = _tileDataArea.refresh(_theme->windowEmulator_VramDebugger_StatusReadonly_TileArea(), tileBase);
 
-		const Device::MapSourceTypes mapSrc = device->getMapSourceType(Device::LayerTypes::BG);
+		const Device::MapSourceTypes mapSrc = _device->getMapSourceType(Device::LayerTypes::BG);
 		const UInt16 mapBase = mapSrc == Device::MapSourceTypes::FROM_9800_TO_9BFF ? 0x9800 : 0x9c00;
-		const std::string &mapTxt = _bgDataArea.refresh(theme->windowEmulator_VramDebugger_StatusReadonly_BgArea(), mapBase);
+		const std::string &mapTxt = _bgDataArea.refresh(_theme->windowEmulator_VramDebugger_StatusReadonly_BgArea(), mapBase);
 
-		const Device::MapSourceTypes winSrc = device->getMapSourceType(Device::LayerTypes::WINDOW);
+		const Device::MapSourceTypes winSrc = _device->getMapSourceType(Device::LayerTypes::WINDOW);
 		const UInt16 winBase = winSrc == Device::MapSourceTypes::FROM_9800_TO_9BFF ? 0x9800 : 0x9c00;
-		const std::string &winTxt = _winDataArea.refresh(theme->windowEmulator_VramDebugger_StatusReadonly_WinArea(), winBase);
+		const std::string &winTxt = _winDataArea.refresh(_theme->windowEmulator_VramDebugger_StatusReadonly_WinArea(), winBase);
 
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -1856,17 +1877,17 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(theme->windowEmulator_VramDebugger_StatusReadonly().c_str(), regSize.x, flags))
+		if (!ImGui::CollapsingHeader(_theme->windowEmulator_VramDebugger_StatusReadonly().c_str(), regSize.x, flags))
 			return;
 		ImGui::NewLine(1);
 
-		if (ImGui::Checkbox(theme->windowEmulator_VramDebugger_StatusReadonly_BgOn(), &bgOn)) {
+		if (ImGui::Checkbox(_theme->windowEmulator_VramDebugger_StatusReadonly_BgOn(), &bgOn)) {
 			// Do nothing.
 		}
-		if (ImGui::Checkbox(theme->windowEmulator_VramDebugger_StatusReadonly_WinOn(), &winOn)) {
+		if (ImGui::Checkbox(_theme->windowEmulator_VramDebugger_StatusReadonly_WinOn(), &winOn)) {
 			// Do nothing.
 		}
-		if (ImGui::Checkbox(theme->windowEmulator_VramDebugger_StatusReadonly_ObjOn(), &objOn)) {
+		if (ImGui::Checkbox(_theme->windowEmulator_VramDebugger_StatusReadonly_ObjOn(), &objOn)) {
 			// Do nothing.
 		}
 

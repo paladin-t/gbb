@@ -1248,6 +1248,9 @@ RomLocation::RomLocation(int b, int a) : bank(b), address(a) {
 RomLocation::RomLocation(int b, int a, int s) : bank(b), address(a), size(s) {
 }
 
+RomLocation::RomLocation(int b, int a, int s, Types y) : bank(b), address(a), size(s), type(y) {
+}
+
 RamLocation::RamLocation() {
 }
 
@@ -1419,7 +1422,11 @@ const RomLocation* SymbolTable::fuzzy(const std::string &key, std::string &gotKe
 		if (name.empty())
 			continue;
 
-		const double score = rapidfuzz::fuzz::ratio(name, key);
+		std::string name_ = name;
+		std::string key_ = key;
+		Text::toLowerCase(name_);
+		Text::toLowerCase(key_);
+		const double score = rapidfuzz::fuzz::ratio(name_, key_);
 		if (score < FUZZY_MATCHING_SCORE_THRESHOLD)
 			continue;
 		if (score > fuzzyScore) {
@@ -1461,10 +1468,30 @@ int TracePoint::compare(const TracePoint &other) const {
 	else if ((unsigned)inRom.type > (unsigned)other.inRom.type)
 		return 1;
 
-	if (inRom.size < other.inRom.size)
+	// `inRom.size` doesn't count.
+
+	// `inCode` doesn't count.
+
+	return 0;
+}
+
+int TracePoint::compare(const RomLocation &other) const {
+	if (inRom.bank < other.bank)
 		return -1;
-	else if (inRom.size > other.inRom.size)
+	else if (inRom.bank > other.bank)
 		return 1;
+
+	if (inRom.address < other.address)
+		return -1;
+	else if (inRom.address > other.address)
+		return 1;
+
+	if ((unsigned)inRom.type < (unsigned)other.type)
+		return -1;
+	else if ((unsigned)inRom.type > (unsigned)other.type)
+		return 1;
+
+	// `size` doesn't count.
 
 	return 0;
 }
@@ -2193,7 +2220,7 @@ const Asm::Instructions Asm::INSTRUCTIONS = array(
 Op::Op(Opcode oc, int s, int r, int a, int p, bool f) :
 	opcode(oc),
 	size(s),
-	oprands(r),
+	operands(r),
 	associativity(a),
 	precedence(p),
 	isFunctionLike(f)
@@ -2237,42 +2264,42 @@ Op::Types Op::typeOf(const std::string &str) {
 }
 
 Op::Operators Op::OPERATORS = array(
-	// OP, SIZE, OPRANDS, ASSOCIATIVITY, PRECECDENCE, IS FUNCTION.
-	Op( 0,    0,       0,             0,           0,       false), // STOP.
-	Op(32,    1,       0,             0,           0,       false), // INT8.
-	Op(33,    2,       0,             0,           0,       false), // INT16.
-	Op(34,    2,       0,             0,           0,       false), // REF.
-	Op( 1,    0,       2,            -1,           4,       false), // EQ.
-	Op( 2,    0,       2,            -1,           4,       false), // LT.
-	Op( 3,    0,       2,            -1,           4,       false), // LE.
-	Op( 4,    0,       2,            -1,           4,       false), // GT.
-	Op( 5,    0,       2,            -1,           4,       false), // GE.
-	Op( 6,    0,       2,            -1,           4,       false), // NE.
-	Op( 7,    0,       2,            -1,           3,       false), // AND.
-	Op( 8,    0,       2,            -1,           3,       false), // OR.
-	Op( 9,    0,       1,             1,           8,       false), // NOT.
-	Op(10,    0,       2,            -1,           5,       false), // ADD.
-	Op(11,    0,       2,            -1,           5,       false), // SUB.
-	Op(12,    0,       2,            -1,           6,       false), // MUL.
-	Op(13,    0,       2,            -1,           6,       false), // DIV.
-	Op(14,    0,       2,            -1,           6,       false), // MOD.
-	Op(15,    0,       2,            -1,           7,       false), // BITWISE_AND.
-	Op(16,    0,       2,            -1,           7,       false), // BITWISE_OR.
-	Op(17,    0,       2,            -1,           7,       false), // BITWISE_XOR.
-	Op(18,    0,       2,            -1,           7,       false), // BITWISE_LSHIFT.
-	Op(19,    0,       2,            -1,           7,       false), // BITWISE_RSHIFT.
-	Op(20,    0,       1,             1,           7,       false), // BITWISE_NOT.
-	Op(21,    0,       1,             1,           8,       false), // NEG.
-	Op(22,    0,       1,            -1,           1,        true), // SGN.
-	Op(23,    0,       1,            -1,           1,        true), // ABS.
-	Op(24,    0,       1,            -1,           1,        true), // SQR.
-	Op(25,    0,       1,            -1,           1,        true), // SQRT.
-	Op(26,    0,       1,            -1,           1,        true), // SIN.
-	Op(27,    0,       1,            -1,           1,        true), // COS.
-	Op(28,    0,       2,            -1,           1,        true), // ATAN2.
-	Op(29,    0,       2,            -1,           1,        true), // POWI.
-	Op(30,    0,       2,            -1,           2,        true), // MIN.
-	Op(31,    0,       2,            -1,           2,        true)  // MAX.
+	// OP, SIZE, OPERANDS, ASSOCIATIVITY, PRECECDENCE, IS FUNCTION.
+	Op( 0,    0,        0,             0,           0,       false), // STOP.
+	Op(32,    1,        0,             0,           0,       false), // INT8.
+	Op(33,    2,        0,             0,           0,       false), // INT16.
+	Op(34,    2,        0,             0,           0,       false), // REF.
+	Op( 1,    0,        2,            -1,           4,       false), // EQ.
+	Op( 2,    0,        2,            -1,           4,       false), // LT.
+	Op( 3,    0,        2,            -1,           4,       false), // LE.
+	Op( 4,    0,        2,            -1,           4,       false), // GT.
+	Op( 5,    0,        2,            -1,           4,       false), // GE.
+	Op( 6,    0,        2,            -1,           4,       false), // NE.
+	Op( 7,    0,        2,            -1,           3,       false), // AND.
+	Op( 8,    0,        2,            -1,           3,       false), // OR.
+	Op( 9,    0,        1,             1,           8,       false), // NOT.
+	Op(10,    0,        2,            -1,           5,       false), // ADD.
+	Op(11,    0,        2,            -1,           5,       false), // SUB.
+	Op(12,    0,        2,            -1,           6,       false), // MUL.
+	Op(13,    0,        2,            -1,           6,       false), // DIV.
+	Op(14,    0,        2,            -1,           6,       false), // MOD.
+	Op(15,    0,        2,            -1,           7,       false), // BITWISE_AND.
+	Op(16,    0,        2,            -1,           7,       false), // BITWISE_OR.
+	Op(17,    0,        2,            -1,           7,       false), // BITWISE_XOR.
+	Op(18,    0,        2,            -1,           7,       false), // BITWISE_LSHIFT.
+	Op(19,    0,        2,            -1,           7,       false), // BITWISE_RSHIFT.
+	Op(20,    0,        1,             1,           7,       false), // BITWISE_NOT.
+	Op(21,    0,        1,             1,           8,       false), // NEG.
+	Op(22,    0,        1,            -1,           1,        true), // SGN.
+	Op(23,    0,        1,            -1,           1,        true), // ABS.
+	Op(24,    0,        1,            -1,           1,        true), // SQR.
+	Op(25,    0,        1,            -1,           1,        true), // SQRT.
+	Op(26,    0,        1,            -1,           1,        true), // SIN.
+	Op(27,    0,        1,            -1,           1,        true), // COS.
+	Op(28,    0,        2,            -1,           1,        true), // ATAN2.
+	Op(29,    0,        2,            -1,           1,        true), // POWI.
+	Op(30,    0,        2,            -1,           2,        true), // MIN.
+	Op(31,    0,        2,            -1,           2,        true)  // MAX.
 );
 
 }
@@ -2704,7 +2731,7 @@ public:
 		}
 		Entry(Op::Types y) : type(y) {
 			const Op &op = Op::OPERATORS[(size_t)type];
-			parameters = op.oprands;
+			parameters = op.operands;
 			isFunctionLike = op.isFunctionLike;
 		}
 	};
@@ -6122,7 +6149,7 @@ public:
 	 * Output interfaces.
 	 */
 
-	/**< Emitting and filling functions that output opcodes, oprands and data. */
+	/**< Emitting and filling functions that output opcodes, operands and data. */
 
 	Byte* emit(Bytes::Ptr &bytes, Context::Stack &context, const Asm &data) {
 		Context &ctx = context.top();
@@ -6520,8 +6547,12 @@ public:
 
 		// Trace ROM allocation points.
 		if (context.top().tracePoints) {
+			const Context &ctx = context.top();
 			const State &state = top();
-			context.top().tracePoints->push_back(TracePoint(state.inRom, state.inCode));
+
+			RomLocation inRom = state.inRom;
+			inRom.address += ctx.startAddress;
+			context.top().tracePoints->push_back(TracePoint(inRom, state.inCode));
 		}
 
 		// Active the top context and state.
@@ -16229,8 +16260,7 @@ public:
 					Context &ctx = context.top();
 
 					for (const Assembler::Context::InstructionTrace &trace : _asmCtx.instructionTraces) {
-						RomLocation rom(bank, address + trace.offset, trace.size);
-						rom.type = RomLocation::Types::ASM;
+						const RomLocation rom(bank, address + trace.offset, trace.size, RomLocation::Types::ASM);
 						ctx.tracePoints->push_back(TracePoint(rom, trace.source));
 					}
 				};

@@ -4847,9 +4847,8 @@ void ProjectPropertyPopupBox::update(Workspace* ws) {
 											_borderError.clear();
 										}
 									},
-									[this] (WorkTask* /* task */, uintptr_t ptr) -> void { // On main thread.
+									[] (WorkTask* /* task */, uintptr_t ptr) -> void { // On main thread.
 										Data* data = (Data*)ptr;
-
 										delete data;
 									}
 								);
@@ -5186,6 +5185,8 @@ void PreferencesPopupBox::update(Workspace*) {
 				Checkbox(_theme->windowPreferences_Debug_EnableOnscreenDebug(), &_settingsShadow.debugOnscreenShellEnabled);
 
 				TextUnformatted(_theme->windowPreferences_Debug_Debugger());
+
+				Checkbox(_theme->windowPreferences_Debug_EnableCodeDebugger(), &_settingsShadow.debugCodeInspectorEnabled);
 
 				Checkbox(_theme->windowPreferences_Debug_EnableVramDebugger(), &_settingsShadow.debugVramInspectorEnabled);
 

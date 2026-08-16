@@ -41,6 +41,8 @@ public:
 	virtual const std::string &toString(void) const = 0;
 	virtual void fromString(const char* txt, size_t len = 0) = 0;
 
+	virtual void ensureCursorVisible(void) = 0;
+
 	virtual bool isToolBarVisible(void) const = 0;
 
 	virtual void renderStatus(class Window* wnd, class Renderer* rnd, class Workspace* ws, float x, float y, float width, float height) = 0;

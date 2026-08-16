@@ -665,6 +665,7 @@ Device::Breakpoint DeviceBinjgb::getBreakpointByAddress(UInt8 bank, UInt16 addr)
 int DeviceBinjgb::addBreakpoint(UInt8 bank, UInt16 addr) {
 	const int idx = emulator_add_empty_breakpoint();
 	emulator_set_breakpoint_address_and_bank(_emulator, idx, addr, bank);
+	emulator_enable_breakpoint(idx, TRUE);
 
 	return idx;
 }
@@ -673,8 +674,18 @@ void DeviceBinjgb::removeBreakpoint(int idx) {
 	emulator_remove_breakpoint(idx);
 }
 
+void DeviceBinjgb::clearBreakpoints(void) {
+	const int n = emulator_get_max_breakpoint_id();
+	for (int i = n - 1; i >= 0; --i)
+		emulator_remove_breakpoint(i);
+}
+
 void DeviceBinjgb::setBreakpointEnabled(int idx, bool enabled) {
 	emulator_enable_breakpoint(idx, enabled ? TRUE : FALSE);
+}
+
+void DeviceBinjgb::breakAtNextInstruction(void) {
+	_breakAtNextInstruction = true;
 }
 
 Device::TileSourceTypes DeviceBinjgb::getTileSourceType(void) const {
@@ -1218,7 +1229,7 @@ bool DeviceBinjgb::update(
 		return true;
 	}
 
-	// Tick a frame.
+	// Tick.
 	bool timeout = false;
 	long long start = 0;
 	if (_timeoutThreshold > 0)
@@ -1240,7 +1251,10 @@ bool DeviceBinjgb::update(
 	}
 	do {
 		// Tick.
-		event = emulator_run_until(_emulator, untilTicks);
+		if (_breakAtNextInstruction)
+			event = emulator_step(_emulator); // Tick one instruction.
+		else
+			event = emulator_run_until(_emulator, untilTicks); // Tick for the specific interval.
 
 		// Update the video system.
 		if (event & EMULATOR_EVENT_NEW_FRAME) {
@@ -1294,18 +1308,21 @@ bool DeviceBinjgb::update(
 				break;
 			}
 		}
-	} while (!(event & (EMULATOR_EVENT_UNTIL_TICKS | EMULATOR_EVENT_BREAKPOINT | EMULATOR_EVENT_INVALID_OPCODE)));
+	} while (!(event & (EMULATOR_EVENT_UNTIL_TICKS | EMULATOR_EVENT_BREAKPOINT | EMULATOR_EVENT_INVALID_OPCODE)) && !_breakAtNextInstruction);
 
 	if (disabledInput) {
 		_inputEnabled = true;
 	}
 
-	if (event & EMULATOR_EVENT_BREAKPOINT) {
-		pause();
-
-		if (_debugListener)
-			_debugListener->breakpointHit();
+	if (event & EMULATOR_EVENT_BREAKPOINT || _breakAtNextInstruction) {
+		if (_debugListener) {
+			if (_debugListener->breakpointHit())
+				pause();
+		}
 	}
+
+	if (_breakAtNextInstruction)
+		_breakAtNextInstruction = false;
 
 	// Tick the RTC.
 	if (cartridgeHasRtc()) {
@@ -1349,7 +1366,40 @@ void DeviceBinjgb::resume(void) {
 	_emulatorPaused = false;
 }
 
-bool DeviceBinjgb::readRam(UInt16 address, UInt8* data) {
+Device::Registers DeviceBinjgb::readRegisters(void) const {
+	const ::Registers regs = emulator_get_registers(_emulator);
+	Registers result;
+	result.A = regs.A;
+	result.F.Z = regs.F.Z ? 1 : 0;
+	result.F.N = regs.F.N ? 1 : 0;
+	result.F.H = regs.F.H ? 1 : 0;
+	result.F.C = regs.F.C ? 1 : 0;
+	result.BC = regs.BC;
+	result.DE = regs.DE;
+	result.HL = regs.HL;
+	result.SP = regs.SP;
+	result.PC = regs.PC;
+
+	return result;
+}
+
+void DeviceBinjgb::writeRegisters(const Registers &regs) {
+	::Registers regs_;
+	regs_.A = regs.A;
+	regs_.F.Z = regs.F.Z ? TRUE : FALSE;
+	regs_.F.N = regs.F.N ? TRUE : FALSE;
+	regs_.F.H = regs.F.H ? TRUE : FALSE;
+	regs_.F.C = regs.F.C ? TRUE : FALSE;
+	regs_.BC = regs.BC;
+	regs_.DE = regs.DE;
+	regs_.HL = regs.HL;
+	regs_.SP = regs.SP;
+	regs_.PC = regs.PC;
+
+	emulator_set_registers(_emulator, &regs_);
+}
+
+bool DeviceBinjgb::readRam(UInt16 address, UInt8* data) const {
 	if (!_emulator)
 		return false;
 
@@ -1359,7 +1409,7 @@ bool DeviceBinjgb::readRam(UInt16 address, UInt8* data) {
 	return true;
 }
 
-bool DeviceBinjgb::readRam(UInt16 address, UInt16* data) {
+bool DeviceBinjgb::readRam(UInt16 address, UInt16* data) const {
 	if (!_emulator)
 		return false;
 
@@ -1374,6 +1424,20 @@ bool DeviceBinjgb::readRam(UInt16 address, UInt16* data) {
 	*data = u.data;
 
 	return true;
+}
+
+size_t DeviceBinjgb::readRam(UInt16 address, Byte* data, size_t len) const {
+	size_t result = 0;
+	if (!_emulator)
+		return result;
+
+	for (size_t i = 0; i < len; ++i) {
+		const u8 ret = emulator_read_u8_raw(_emulator, (Address)(address + i));
+		data[i] = ret;
+		++result;
+	}
+
+	return result;
 }
 
 bool DeviceBinjgb::writeRam(UInt16 address, UInt8 data) {
@@ -1402,7 +1466,20 @@ bool DeviceBinjgb::writeRam(UInt16 address, UInt16 data) {
 	return true;
 }
 
-bool DeviceBinjgb::readSram(const Bytes* bytes) {
+size_t DeviceBinjgb::writeRam(UInt16 address, const Byte* data, size_t len) {
+	size_t result = 0;
+	if (!_emulator)
+		return result;
+
+	for (size_t i = 0; i < len; ++i) {
+		emulator_write_u8_raw(_emulator, (Address)(address + i), data[i]);
+		++result;
+	}
+
+	return result;
+}
+
+bool DeviceBinjgb::readSram(const Bytes* bytes) const {
 	if (!bytes)
 		return false;
 	if (bytes->empty())
@@ -1427,6 +1504,13 @@ bool DeviceBinjgb::writeSram(Bytes* bytes) {
 	bytes->resize(size);
 
 	return ret == OK;
+}
+
+int DeviceBinjgb::currentBank(void) const {
+	if (!_emulator)
+		return 0;
+
+	return emulator_get_current_rom_bank(_emulator);
 }
 
 void DeviceBinjgb::setBwPalette(PaletteType type, u32 white, u32 light_gray, u32 dark_gray, u32 black) {

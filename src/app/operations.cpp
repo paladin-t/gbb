@@ -4830,6 +4830,7 @@ promise::Promise Operations::projectRun(Window* wnd, Renderer* rnd, Workspace* w
 			}
 			ws->canvasStatusTooltip(statusTips);
 
+			ws->initializeCodeDebugger(wnd, rnd);
 			ws->initializeVramDebugger(wnd, rnd);
 
 			const Project::Ptr &prj = ws->currentProject();
@@ -4865,6 +4866,7 @@ promise::Promise Operations::projectStop(Window*, Renderer*, Workspace* ws) {
 			ws->tabsWidth(0.0f);
 
 			ws->disposeVramDebugger();
+			ws->disposeCodeDebugger();
 
 			const bool traceless = ws->canvasDevice()->traceless();
 			sram = Bytes::Ptr(Bytes::create());

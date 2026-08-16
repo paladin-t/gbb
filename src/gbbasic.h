@@ -10,6 +10,7 @@
 #define __GBBASIC_H__
 
 #include <assert.h>
+#include <cstddef>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -755,6 +756,10 @@
 ** {===========================================================================
 ** Functions
 */
+
+#ifndef GBBASIC_OFFSETOF
+#	define GBBASIC_OFFSETOF(S, F) offsetof(S, F)
+#endif /* GBBASIC_OFFSETOF */
 
 #ifndef GBBASIC_COUNTOF
 #	define GBBASIC_COUNTOF(A) (sizeof(A) / sizeof(*(A)))

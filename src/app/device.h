@@ -121,6 +121,30 @@ public:
 
 	/**< Debugger operations. */
 
+	struct Registers {
+		UInt8 A;
+		union {
+			struct { Byte Z, N, H, C; };
+			UInt32 Val;
+		} F;
+		union {
+			struct { UInt8 C; UInt8 B; };
+			UInt16 BC;
+		};
+		union {
+			struct { UInt8 E; UInt8 D; };
+			UInt16 DE;
+		};
+		union {
+			struct { UInt8 L; UInt8 H; };
+			UInt16 HL;
+		};
+		UInt16 SP;
+		UInt16 PC;
+
+		Registers();
+	};
+
 	struct Breakpoint {
 		bool valid = false;
 		UInt8 bank = 0;
@@ -209,7 +233,7 @@ public:
 		virtual void pause(class Window* wnd, class Renderer* rnd) = 0;
 		virtual void stop(class Window* wnd, class Renderer* rnd) = 0;
 
-		virtual void breakpointHit(void) = 0;
+		virtual bool breakpointHit(void) = 0;
 	};
 
 	/**< Handlers. */
@@ -284,7 +308,9 @@ public:
 	virtual Breakpoint getBreakpointByAddress(UInt8 bank, UInt16 addr) const = 0;
 	virtual int addBreakpoint(UInt8 bank, UInt16 addr) = 0;
 	virtual void removeBreakpoint(int idx) = 0;
+	virtual void clearBreakpoints(void) = 0;
 	virtual void setBreakpointEnabled(int idx, bool enabled) = 0;
+	virtual void breakAtNextInstruction(void) = 0;
 
 	/**< VRAM debugging operations. */
 
@@ -338,13 +364,20 @@ public:
 
 	/**< Memory bus operations. */
 
-	virtual bool readRam(UInt16 address, UInt8* data) = 0;
-	virtual bool readRam(UInt16 address, UInt16* data) = 0;
+	virtual Registers readRegisters(void) const = 0;
+	virtual void writeRegisters(const Registers &regs) = 0;
+
+	virtual bool readRam(UInt16 address, UInt8* data) const = 0;
+	virtual bool readRam(UInt16 address, UInt16* data) const = 0;
+	virtual size_t readRam(UInt16 address, Byte* data, size_t len) const = 0;
 	virtual bool writeRam(UInt16 address, UInt8 data) = 0;
 	virtual bool writeRam(UInt16 address, UInt16 data) = 0;
+	virtual size_t writeRam(UInt16 address, const Byte* data, size_t len) = 0;
 
-	virtual bool readSram(const Bytes* bytes) = 0;
+	virtual bool readSram(const Bytes* bytes) const = 0;
 	virtual bool writeSram(Bytes* bytes) = 0;
+
+	virtual int currentBank(void) const = 0;
 
 	/**< Creating and destroying. */
 

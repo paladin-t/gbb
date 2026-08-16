@@ -448,6 +448,7 @@ public:
 		TO_LOCATION,
 		COMPILE,
 		RUN,
+		TOGGLE_CODE_DEBUGGER,
 		TOGGLE_VRAM_DEBUGGER,
 		COUNT
 	};
@@ -646,15 +647,17 @@ public:
 
 	GBBASIC_PROPERTY(DebuggerMessages, onscreenDebuggerMessages)
 	GBBASIC_FIELD(Mutex, onscreenDebuggerLock)
-	GBBASIC_PROPERTY_READONLY_PTR(class Debugger, debugger)
+	GBBASIC_PROPERTY_READONLY_PTR(class Debugger, codeDebugger)
+	GBBASIC_PROPERTY(bool, bringCodeDebuggerToFront)
 	GBBASIC_PROPERTY_READONLY_PTR(class VramDebugger, vramDebugger)
 	GBBASIC_PROPERTY(bool, vramDebuggerPreviewPaletteBits)
 	GBBASIC_PROPERTY(bool, vramDebuggerShowGrids)
-	GBBASIC_PROPERTY(float, vramDebuggerPreviousOuterWidth)
-	GBBASIC_PROPERTY(float, vramDebuggerWidth)
-	GBBASIC_PROPERTY(float, vramDebuggerHeight)
-	GBBASIC_PROPERTY(bool, vramDebuggerResizing)
-	GBBASIC_PROPERTY(bool, vramDebuggerResetting)
+	GBBASIC_PROPERTY(bool, isVramDebuggerActive)
+	GBBASIC_PROPERTY(float, debuggerPreviousOuterWidth)
+	GBBASIC_PROPERTY(float, debuggerWidth)
+	GBBASIC_PROPERTY(float, debuggerHeight)
+	GBBASIC_PROPERTY(bool, debuggerResizing)
+	GBBASIC_PROPERTY(bool, debuggerResetting)
 
 private:
 	bool _opened = false;
@@ -667,6 +670,7 @@ private:
 	bool _toCompile = false;
 	CompilingParameters _compilingParameters;
 	CompilingErrors::Ptr _compilingErrors = nullptr;
+	std::string _compilingConfig;
 	GBBASIC::Program::Compiled _compilingOutput;
 
 #if defined GBBASIC_OS_HTML
@@ -746,11 +750,17 @@ public:
 	void run(class Window* wnd, class Renderer* rnd, Bytes::Ptr rom, bool traceless);
 	virtual bool running(void) const override;
 	virtual void pause(class Window* wnd, class Renderer* rnd) override;
+	void resume(class Window* wnd, class Renderer* rnd);
 	virtual void stop(class Window* wnd, class Renderer* rnd) override;
+	void step(class Window* wnd, class Renderer* rnd);
 
-	virtual void breakpointHit(void) override;
-	class Debugger* initializeDebugger(class Window* wnd, class Renderer* rnd);
-	void disposeDebugger(void);
+	virtual bool breakpointHit(void) override;
+	void enableBreakpoints(void);
+	void disableBreakpoints(void);
+	void clearBreakpoints(void);
+	void clearProgramCounter(void);
+	class Debugger* initializeCodeDebugger(class Window* wnd, class Renderer* rnd);
+	void disposeCodeDebugger(void);
 
 	class VramDebugger* initializeVramDebugger(class Window* wnd, class Renderer* rnd);
 	void disposeVramDebugger(void);
@@ -1032,6 +1042,8 @@ public:
 	void clearScenePageNames(void);
 	const Text::Array &getScenePageNames(void);
 
+	void toggleBreakpoint(int page, int ln);
+
 	/**
 	 * @brief Upgrades project.
 	 */
@@ -1040,6 +1052,10 @@ public:
 		const Text::Dictionary &arguments
 	);
 
+	/**
+	 * @param[out] config
+	 */
+	const GBBASIC::Program::Compiled &getCompiledData(std::string* config /* nullable */) const;
 	void clearCompiledData(void);
 	void joinCompiling(void);
 	/**

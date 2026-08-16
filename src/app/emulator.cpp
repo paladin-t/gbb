@@ -6,6 +6,7 @@
 ** For the latest info, see https://paladin-t.github.io/kits/gbb/
 */
 
+#include "debugger.h"
 #include "editor.h"
 #include "emulator.h"
 #include "theme.h"
@@ -28,12 +29,12 @@
 #	define EMULATOR_SGB_PADDING_Y SGB_SCREEN_TOP
 #endif /* EMULATOR_SGB_PADDING_Y */
 
-#ifndef EMULATOR_VRAM_DEBUGGER_MAX_WIDTH
-#	define EMULATOR_VRAM_DEBUGGER_MAX_WIDTH 256.0f
-#endif /* EMULATOR_VRAM_DEBUGGER_MAX_WIDTH */
-#ifndef EMULATOR_VRAM_DEBUGGER_MIN_WIDTH
-#	define EMULATOR_VRAM_DEBUGGER_MIN_WIDTH 160.0f
-#endif /* EMULATOR_VRAM_DEBUGGER_MIN_WIDTH */
+#ifndef EMULATOR_DEBUGGER_MAX_WIDTH
+#	define EMULATOR_DEBUGGER_MAX_WIDTH 256.0f
+#endif /* EMULATOR_DEBUGGER_MAX_WIDTH */
+#ifndef EMULATOR_DEBUGGER_MIN_WIDTH
+#	define EMULATOR_DEBUGGER_MIN_WIDTH 160.0f
+#endif /* EMULATOR_DEBUGGER_MIN_WIDTH */
 
 /* ===========================================================================} */
 
@@ -68,15 +69,18 @@ struct Context {
 	Math::Vec2<float> onscreenGamepadPadding;
 	bool* onscreenDebugEnabled = nullptr;
 	Debugger* debugger = nullptr;
+	bool* codeDebugEnabled = nullptr;
+	bool* bringCodeDebuggerToFront = nullptr;
 	VramDebugger* vramDebugger = nullptr;
 	bool* vramDebugEnabled = nullptr;
 	bool* vramDebuggerPreviewPaletteBits = nullptr;
 	bool* vramDebuggerShowGrids = nullptr;
-	float* vramDebuggerPreviousOuterWidth = nullptr;
-	float* vramDebuggerWidth = nullptr;
-	float* vramDebuggerHeight = nullptr;
-	bool* vramDebuggerResizing = nullptr;
-	bool* vramDebuggerResetting = nullptr;
+	bool* isVramDebuggerActive = nullptr;
+	float* debuggerPreviousOuterWidth = nullptr;
+	float* debuggerWidth = nullptr;
+	float* debuggerHeight = nullptr;
+	bool* debuggerResizing = nullptr;
+	bool* debuggerResetting = nullptr;
 	Device::CursorTypes cursor = Device::CursorTypes::POINTER;
 	bool hasPopup;
 	unsigned deviceFps;
@@ -93,8 +97,10 @@ struct Context {
 	Math::Vec2i clientSize; // The size of the client area.
 
 	bool canShowOnscreenGamepad = false;
+	bool canShowCodeDebugger = false;
 	bool canShowVramDebugger = false;
-	bool ramDebuggerGotSafeHeight = false;
+	bool codeDebuggerGotSafeHeight = false;
+	bool vramDebuggerGotSafeHeight = false;
 
 	Context(
 		Window* window_, Renderer* renderer_,
@@ -106,9 +112,9 @@ struct Context {
 		bool integerScale_, bool fixRatio_,
 		bool* onscreenGamepadEnabled_, bool onscreenGamepadSwapAB_, float onscreenGamepadScale_, const Math::Vec2<float> onscreenGamepadPadding_,
 		bool* onscreenDebugEnabled_,
-		Debugger* debugger_,
-		VramDebugger* vramDebugger_, bool* vramDebugEnabled_, bool* vramDebuggerPreviewPaletteBits_, bool* vramDebuggerShowGrids_,
-		float* vramDebuggerPreviousOuterWidth_, float* vramDebuggerWidth_, float* vramDebuggerHeight_,  bool* vramDebuggerResizing_, bool* vramDebuggerResetting_,
+		Debugger* debugger_, bool* codeDebugEnabled_, bool* bringCodeDebuggerToFront_,
+		VramDebugger* vramDebugger_, bool* vramDebugEnabled_, bool* vramDebuggerPreviewPaletteBits_, bool* vramDebuggerShowGrids_, bool* isVramDebuggerActive_,
+		float* debuggerPreviousOuterWidth_, float* debuggerWidth_, float* debuggerHeight_,  bool* debuggerResizing_, bool* debuggerResetting_,
 		Device::CursorTypes cursor_,
 		bool hasPopup_,
 		unsigned deviceFps_, unsigned fps_,
@@ -124,9 +130,9 @@ struct Context {
 		integerScale(integerScale_), fixRatio(fixRatio_),
 		onscreenGamepadEnabled(onscreenGamepadEnabled_), onscreenGamepadSwapAB(onscreenGamepadSwapAB_), onscreenGamepadScale(onscreenGamepadScale_), onscreenGamepadPadding(onscreenGamepadPadding_),
 		onscreenDebugEnabled(onscreenDebugEnabled_),
-		debugger(debugger_),
-		vramDebugger(vramDebugger_), vramDebugEnabled(vramDebugEnabled_), vramDebuggerPreviewPaletteBits(vramDebuggerPreviewPaletteBits_), vramDebuggerShowGrids(vramDebuggerShowGrids_),
-		vramDebuggerPreviousOuterWidth(vramDebuggerPreviousOuterWidth_), vramDebuggerWidth(vramDebuggerWidth_), vramDebuggerHeight(vramDebuggerHeight_),  vramDebuggerResizing(vramDebuggerResizing_), vramDebuggerResetting(vramDebuggerResetting_),
+		debugger(debugger_), codeDebugEnabled(codeDebugEnabled_), bringCodeDebuggerToFront(bringCodeDebuggerToFront_),
+		vramDebugger(vramDebugger_), vramDebugEnabled(vramDebugEnabled_), vramDebuggerPreviewPaletteBits(vramDebuggerPreviewPaletteBits_), vramDebuggerShowGrids(vramDebuggerShowGrids_), isVramDebuggerActive(isVramDebuggerActive_),
+		debuggerPreviousOuterWidth(debuggerPreviousOuterWidth_), debuggerWidth(debuggerWidth_), debuggerHeight(debuggerHeight_),  debuggerResizing(debuggerResizing_), debuggerResetting(debuggerResetting_),
 		cursor(cursor_),
 		hasPopup(hasPopup_),
 		deviceFps(deviceFps_), fps(fps_),
@@ -136,7 +142,7 @@ struct Context {
 	}
 
 	// Begin rendering context.
-	bool begin(bool showSgbBorder) {
+	void begin(bool showSgbBorder, bool &codeDbg_, bool &vramDbg_) {
 		// Prepare.
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -149,9 +155,10 @@ struct Context {
 			regMax.y - regMin.y - borderSize * 2
 		);
 
-		canShowVramDebugger = regSize.x >= SCREEN_WIDTH + EMULATOR_VRAM_DEBUGGER_MIN_WIDTH + 2;
+		canShowCodeDebugger = canShowVramDebugger = regSize.x >= SCREEN_WIDTH + EMULATOR_DEBUGGER_MIN_WIDTH + 2;
+		const bool codeDbg = canShowCodeDebugger && (!!debugger && *codeDebugEnabled);
 		const bool vramDbg = canShowVramDebugger && (!!vramDebugger && *vramDebugEnabled);
-		if (vramDbg) {
+		if (codeDbg || vramDbg) {
 			const ImGuiWindowFlags flags =
 				ImGuiWindowFlags_NoTitleBar |
 				ImGuiWindowFlags_NoResize |
@@ -163,35 +170,43 @@ struct Context {
 				ImGuiWindowFlags_NoNav;
 
 			const float height = regSize.y - statusBarHeight - borderSize * 2;
-			ramDebuggerGotSafeHeight = vramDebugger->safeHeight() > 0 && height >= vramDebugger->safeHeight();
+			codeDebuggerGotSafeHeight = debugger->safeHeight() > 0 && height >= debugger->safeHeight();
+			vramDebuggerGotSafeHeight = vramDebugger->safeHeight() > 0 && height >= vramDebugger->safeHeight();
 
-			const float preferedWidth = ramDebuggerGotSafeHeight ?
-				(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + 2) :
-				(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
-			if (*vramDebuggerWidth <= 0) {
-				*vramDebuggerWidth = calculateVramDebuggerWidth(preferedWidth);
+			float preferedWidth;
+			if (*isVramDebuggerActive) {
+				preferedWidth = vramDebuggerGotSafeHeight ?
+					(EMULATOR_DEBUGGER_MAX_WIDTH + 2) :
+					(EMULATOR_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
+			} else {
+				preferedWidth = codeDebuggerGotSafeHeight ?
+					(EMULATOR_DEBUGGER_MAX_WIDTH + 2) :
+					(EMULATOR_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
 			}
-			if (*vramDebuggerPreviousOuterWidth <= 0) {
-				*vramDebuggerPreviousOuterWidth = regSize.x;
+			if (*debuggerWidth <= 0) {
+				*debuggerWidth = calculateDebuggerWidth(preferedWidth);
 			}
-			if (*vramDebuggerPreviousOuterWidth != regSize.x) {
-				*vramDebuggerWidth = *vramDebuggerWidth / *vramDebuggerPreviousOuterWidth * regSize.x;
-				*vramDebuggerWidth = calculateVramDebuggerWidth(preferedWidth);
-				*vramDebuggerPreviousOuterWidth = regSize.x;
+			if (*debuggerPreviousOuterWidth <= 0) {
+				*debuggerPreviousOuterWidth = regSize.x;
+			}
+			if (*debuggerPreviousOuterWidth != regSize.x) {
+				*debuggerWidth = *debuggerWidth / *debuggerPreviousOuterWidth * regSize.x;
+				*debuggerWidth = calculateDebuggerWidth(preferedWidth);
+				*debuggerPreviousOuterWidth = regSize.x;
 			}
 
 			const ImVec2 curPos = ImGui::GetCursorScreenPos();
 			const ImVec2 size(
-				regSize.x - *vramDebuggerWidth,
+				regSize.x - *debuggerWidth,
 				regSize.y - (showStatus ? (statusBarHeight - style.ChildBorderSize) : style.ChildBorderSize)
 			);
 			ImGui::PushClipRect(curPos, curPos + size, false);
 
-			ImGui::BeginChild("#Cvs", ImVec2(regSize.x - *vramDebuggerWidth, regSize.y), true, flags);
+			ImGui::BeginChild("#Cvs", ImVec2(regSize.x - *debuggerWidth, regSize.y), true, flags);
 		}
 
 		ImVec2 regSize_ = regSize;
-		if (vramDbg) {
+		if (codeDbg || vramDbg) {
 			const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
 			const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
 			regSize_ = ImVec2(
@@ -268,10 +283,11 @@ struct Context {
 		}
 
 		// Finish.
-		return vramDbg;
+		codeDbg_ = codeDbg;
+		vramDbg_ = vramDbg;
 	}
 	// End rendering context.
-	void end(bool vramDbg) {
+	void end(bool codeDbg, bool vramDbg) {
 		// Render the onscreen gamepad.
 		canShowOnscreenGamepad = false;
 
@@ -303,23 +319,49 @@ struct Context {
 			input->sync();
 		}
 
-		if (vramDbg) {
+		if (codeDbg || vramDbg) {
 			ImGui::EndChild();
 
 			ImGui::PopClipRect();
 		}
 	}
 
-	void debugVram(bool vramDbg) {
+	bool beginDebug(bool codeDbg, bool vramDbg, bool &wasResizing_, bool &isResizing_, bool &isResetting_, float &width_, float &height_, ImGuiWindowFlags &flags_) {
 		// Prepare.
-		if (!vramDbg)
-			return;
+		if (!codeDbg && !vramDbg)
+			return false;
 
-		const bool wasResizing = *vramDebuggerResizing;
-		bool isResizing = *vramDebuggerResizing;
-		bool isResetting = *vramDebuggerResetting;
+		// Begin tab bar.
+		bool tabOpened = false;
+		if (codeDbg && vramDbg) {
+			ImGui::SameLine();
 
-		ImGui::SameLine();
+			tabOpened = ImGui::BeginTabBar("@Dbg");
+		}
+
+		const bool wasResizing = *debuggerResizing;
+		bool isResizing = *debuggerResizing;
+		bool isResetting = *debuggerResetting;
+		int safeHeight;
+		bool debuggerGotSafeHeight;
+		if (codeDbg && vramDbg) {
+			if (*isVramDebuggerActive) {
+				safeHeight = vramDebugger->safeHeight();
+				debuggerGotSafeHeight = vramDebuggerGotSafeHeight;
+			} else {
+				safeHeight = debugger->safeHeight();
+				debuggerGotSafeHeight = codeDebuggerGotSafeHeight;
+			}
+		} else if (codeDbg) {
+			safeHeight = debugger->safeHeight();
+			debuggerGotSafeHeight = codeDebuggerGotSafeHeight;
+		} else /* if (vramDbg) */ {
+			safeHeight = vramDebugger->safeHeight();
+			debuggerGotSafeHeight = vramDebuggerGotSafeHeight;
+		}
+
+		if (!tabOpened)
+			ImGui::SameLine();
 
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -340,13 +382,13 @@ struct Context {
 			ImGuiWindowFlags_NoNav;
 		const float x = (float)ImGui::GetCursorPosX();
 		const float height = regSize.y - statusBarHeight - borderSize * 2;
-		const bool heightIsSafeForVramDebugger = height >= vramDebugger->safeHeight();
-		if (!ramDebuggerGotSafeHeight)
+		const bool heightIsSafeForDebugger = height >= safeHeight;
+		if (!debuggerGotSafeHeight)
 			flags |= ImGuiWindowFlags_AlwaysVerticalScrollbar;
-		const float width = *vramDebuggerWidth;
-		const bool heightChanged = *vramDebuggerHeight != height;
+		const float width = *debuggerWidth;
+		const bool heightChanged = *debuggerHeight != height;
 		if (heightChanged)
-			*vramDebuggerHeight = height;
+			*debuggerHeight = height;
 
 		// Resize.
 		const float gripMarginX = ImGui::WindowResizingPadding().x;
@@ -376,23 +418,26 @@ struct Context {
 			flags &= ~ImGuiWindowFlags_NoResize;
 		}
 
-		if (isResetting || heightChanged || vramDebugger->safeHeight() == 0) {
-			*vramDebuggerWidth = 0;
+		if (isResetting || heightChanged || safeHeight == 0) {
+			*debuggerWidth = 0;
 		} else if (isResizing) {
 			const ImVec2 mousePos = ImGui::GetMousePos();
-			*vramDebuggerWidth = calculateVramDebuggerWidth(regSize.x - mousePos.x);
+			*debuggerWidth = calculateDebuggerWidth(regSize.x - mousePos.x);
 		}
 
-		// Draw the VRAM debugger.
-		ImGui::BeginChild("#VDbg", ImVec2(width, height), true, flags);
-		{
-			vramDebugger->update(
-				renderer, theme, canvasDevice,
-				*vramDebuggerPreviewPaletteBits, *vramDebuggerShowGrids,
-				isNewFrame
-			);
-		}
-		ImGui::EndChild();
+		wasResizing_ = wasResizing;
+		isResizing_ = isResizing;
+		isResetting_ = isResetting;
+		width_ = width;
+		height_ = height;
+		flags_ = flags;
+
+		return tabOpened;
+	}
+	void endDebug(bool codeDbg, bool vramDbg, bool tabOpened, bool wasResizing, bool isResizing, bool isResetting) {
+		// Prepare.
+		if (!codeDbg && !vramDbg)
+			return;
 
 		// Finish.
 		if (wasResizing) {
@@ -400,19 +445,106 @@ struct Context {
 		}
 		ImGui::PopStyleVar();
 
-		*vramDebuggerResizing = isResizing;
-		*vramDebuggerResetting = isResetting;
+		*debuggerResizing = isResizing;
+		*debuggerResetting = isResetting;
+
+		// End tab bar.
+		if (tabOpened) {
+			ImGui::EndTabBar();
+		}
+	}
+	void debugCode(bool codeDbg, bool /* vramDbg */, bool tabOpened, const ImVec2 &pos, const ImVec2 &size, ImGuiWindowFlags flags) {
+		// Prepare.
+		if (!codeDbg)
+			return;
+
+		const bool focus = *bringCodeDebuggerToFront;
+		if (focus)
+			*bringCodeDebuggerToFront = false;
+
+		// Draw the code debugger.
+		if (tabOpened) {
+			ImGuiTabItemFlags tabFlags = ImGuiTabItemFlags_NoTooltip;
+			if (focus)
+				tabFlags |= ImGuiTabItemFlags_SetSelected;
+			if (ImGui::BeginTabItem(theme->windowEmulator_Debugger_Code(), nullptr, tabFlags)) {
+				ImGui::SetCursorScreenPos(pos);
+
+				ImGui::BeginChild("#CDbg", ImVec2(size.x, size.y - 19.0f), true, flags);
+				{
+					debugger->update(true, !tabOpened);
+				}
+				ImGui::EndChild();
+
+				*isVramDebuggerActive = false;
+
+				ImGui::EndTabItem();
+			} else {
+				debugger->update(false, !tabOpened);
+			}
+		} else {
+			ImGui::BeginChild("#CDbg", size, true, flags);
+			{
+				debugger->update(true, !tabOpened);
+			}
+			ImGui::EndChild();
+		}
+	}
+	void debugVram(bool /* codeDbg */, bool vramDbg, bool tabOpened, const ImVec2 &pos, const ImVec2 &size, ImGuiWindowFlags flags) {
+		// Prepare.
+		if (!vramDbg)
+			return;
+
+		// Draw the VRAM debugger.
+		if (tabOpened) {
+			if (ImGui::BeginTabItem(theme->windowEmulator_Debugger_Vram(), nullptr, ImGuiTabItemFlags_NoTooltip)) {
+				ImGui::SetCursorScreenPos(pos);
+
+				ImGui::BeginChild("#VDbg", ImVec2(size.x, size.y - 19.0f), true, flags);
+				{
+					vramDebugger->update(
+						*vramDebuggerPreviewPaletteBits, *vramDebuggerShowGrids,
+						isNewFrame,
+						!tabOpened
+					);
+				}
+				ImGui::EndChild();
+
+				*isVramDebuggerActive = true;
+
+				ImGui::EndTabItem();
+			}
+		} else {
+			ImGui::BeginChild("#VDbg", size, true, flags);
+			{
+				vramDebugger->update(
+					*vramDebuggerPreviewPaletteBits, *vramDebuggerShowGrids,
+					isNewFrame,
+					!tabOpened
+				);
+			}
+			ImGui::EndChild();
+		}
 	}
 
 private:
-	float calculateVramDebuggerWidth(float width) const {
+	float calculateDebuggerWidth(float width) const {
 		ImGuiStyle &style = ImGui::GetStyle();
 
-		const float maxWidth = ramDebuggerGotSafeHeight ?
-			(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + 2) :
-			(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
-		width = std::min(width, std::min(regSize.x - SCREEN_WIDTH, maxWidth));
-		width = std::max(width, EMULATOR_VRAM_DEBUGGER_MIN_WIDTH);
+		float maxWidth;
+		if (*isVramDebuggerActive) {
+			maxWidth = vramDebuggerGotSafeHeight ?
+				(EMULATOR_DEBUGGER_MAX_WIDTH + 2) :
+				(EMULATOR_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
+			width = std::min(width, std::min(regSize.x - SCREEN_WIDTH, maxWidth));
+			width = std::max(width, EMULATOR_DEBUGGER_MIN_WIDTH);
+		} else {
+			maxWidth = codeDebuggerGotSafeHeight ?
+				(EMULATOR_DEBUGGER_MAX_WIDTH + 2) :
+				(EMULATOR_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
+			width = std::min(width, std::min(regSize.x - SCREEN_WIDTH, maxWidth));
+			width = std::max(width, EMULATOR_DEBUGGER_MIN_WIDTH);
+		}
 
 		return std::floor(width);
 	}
@@ -744,6 +876,18 @@ static void menu(const Context &context) {
 
 			ImGui::MenuItem(context.theme->menu_OnscreenDebug(), nullptr, context.onscreenDebugEnabled);
 
+			if (!!context.debugger) {
+				ImGui::Separator();
+
+				if (context.canShowCodeDebugger) {
+					ImGui::MenuItem(context.theme->menu_CodeDebugger(), nullptr, context.codeDebugEnabled);
+				} else {
+					ImGui::BeginDisabled();
+					ImGui::MenuItem(context.theme->menu_CodeDebugger(), nullptr, context.codeDebugEnabled);
+					ImGui::EndDisabled();
+				}
+			}
+
 			if (!!context.vramDebugger) {
 				ImGui::Separator();
 
@@ -785,9 +929,9 @@ void emulator(
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,
-	class Debugger* debugger,
-	class VramDebugger* vramDebugger, bool &vramDebugEnabled, bool &vramDebuggerPreviewPaletteBits, bool &vramDebuggerShowGrids,
-	float &vramDebuggerPreviousOuterWidth, float &vramDebuggerWidth, float &vramDebuggerHeight, bool &vramDebuggerResizing, bool &vramDebuggerResetting,
+	class Debugger* debugger, bool &codeDebugEnabled, bool &bringCodeDebuggerToFront,
+	class VramDebugger* vramDebugger, bool &vramDebugEnabled, bool &vramDebuggerPreviewPaletteBits, bool &vramDebuggerShowGrids, bool &isVramDebuggerActive,
+	float &debuggerPreviousOuterWidth, float &debuggerWidth, float &debuggerHeight, bool &debuggerResizing, bool &debuggerResetting,
 	Device::CursorTypes cursor,
 	bool hasPopup,
 	unsigned fps,
@@ -796,6 +940,9 @@ void emulator(
 	DebugHandler debug
 ) {
 	// Prepare.
+	if (bringCodeDebuggerToFront)
+		codeDebugEnabled = true;
+
 	Context context(
 		wnd, rnd,
 		theme,
@@ -806,9 +953,9 @@ void emulator(
 		integerScale, fixRatio,
 		&onscreenGamepadEnabled, onscreenGamepadSwapAB, onscreenGamepadScale, onscreenGamepadPadding,
 		&onscreenDebugEnabled,
-		debugger,
-		vramDebugger, &vramDebugEnabled, &vramDebuggerPreviewPaletteBits, &vramDebuggerShowGrids,
-		&vramDebuggerPreviousOuterWidth, &vramDebuggerWidth, &vramDebuggerHeight, &vramDebuggerResizing, &vramDebuggerResetting,
+		debugger, &codeDebugEnabled, &bringCodeDebuggerToFront,
+		vramDebugger, &vramDebugEnabled, &vramDebuggerPreviewPaletteBits, &vramDebuggerShowGrids, &isVramDebuggerActive,
+		&debuggerPreviousOuterWidth, &debuggerWidth, &debuggerHeight, &debuggerResizing, &debuggerResetting,
 		cursor,
 		hasPopup,
 		canvasDevice->fps(), fps,
@@ -822,7 +969,9 @@ void emulator(
 		return;
 
 	// Render emulation.
-	const bool vramDbg = context.begin(!!canvasTextureForBorderFrame);
+	bool codeDbg = false;
+	bool vramDbg = false;
+	context.begin(!!canvasTextureForBorderFrame, codeDbg, vramDbg);
 	{
 		// Render the canvas.
 		if (canvasTextureForBorderFrame) {
@@ -900,10 +1049,21 @@ void emulator(
 				debug();
 		}
 	}
-	context.end(vramDbg);
+	context.end(codeDbg, vramDbg);
 
-	// Render VRAM debugger.
-	context.debugVram(vramDbg);
+	// Render the debuggers.
+	bool wasResizing = false, isResizing = false, isResetting = false;
+	float width = 0, height = 0;
+	ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+	const bool tabOpened = context.beginDebug(codeDbg, vramDbg, wasResizing, isResizing, isResetting, width, height, flags);
+	{
+		const ImVec2 pos = ImGui::GetCursorScreenPos();
+
+		context.debugVram(codeDbg, vramDbg, tabOpened, pos, ImVec2(width, height), flags);
+
+		context.debugCode(codeDbg, vramDbg, tabOpened, pos, ImVec2(width, height), flags);
+	}
+	context.endDebug(codeDbg, vramDbg, tabOpened, wasResizing, isResizing, isResetting);
 
 	// Render the status.
 	renderStatus(context);

@@ -73,6 +73,7 @@ Settings &Settings::operator = (const Settings &other) {
 
 	debugShowAstEnabled = other.debugShowAstEnabled;
 	debugOnscreenShellEnabled = other.debugOnscreenShellEnabled;
+	debugCodeInspectorEnabled = other.debugCodeInspectorEnabled;
 	debugVramInspectorEnabled = other.debugVramInspectorEnabled;
 	debugLogEnabled = other.debugLogEnabled;
 	debugLogPath = other.debugLogPath;
@@ -143,6 +144,7 @@ bool Settings::operator != (const Settings &other) const {
 
 	if (debugShowAstEnabled != other.debugShowAstEnabled ||
 		debugOnscreenShellEnabled != other.debugOnscreenShellEnabled ||
+		debugCodeInspectorEnabled != other.debugCodeInspectorEnabled ||
 		debugVramInspectorEnabled != other.debugVramInspectorEnabled ||
 		debugLogEnabled != other.debugLogEnabled ||
 		debugLogPath != other.debugLogPath

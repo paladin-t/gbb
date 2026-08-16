@@ -724,6 +724,7 @@ struct Emulator {
   u32 cart_info_count;
   CartInfo* cart_info; /* Cached for convenience. */
   MemoryMap memory_map;
+  u16 current_bank;
   EmulatorState state;
   FrameBuffer frame_buffer;
   SgbFrameBuffer sgb_frame_buffer;
@@ -1242,6 +1243,8 @@ static void set_rom_bank(Emulator* e, int index, u16 bank) {
   if (new_base != *base) {
     HOOK(set_rom_bank_ihi, index, bank, new_base);
   }
+  if (index == 1)
+    e->current_bank = bank;
   *base = new_base;
 }
 
@@ -5121,6 +5124,10 @@ error:
   return result;
 }
 #endif
+
+u16 emulator_get_current_rom_bank(Emulator* e) {
+  return e->current_bank;
+}
 
 Emulator* emulator_new(const EmulatorInit* init) {
   Emulator* e = xcalloc(1, sizeof(Emulator));

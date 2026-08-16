@@ -43,6 +43,7 @@ private:
 	Colour _classicPalette[4];
 	Emulator* _emulator = nullptr;
 	bool _emulatorPaused = false;
+	bool _breakAtNextInstruction = false;
 	double _rtcTicks = 0;
 	Bytes::Ptr _streamingBuffer = nullptr;
 	RGBA _sgbBorderVideoBuffer[SGB_SCREEN_WIDTH * SGB_SCREEN_HEIGHT];
@@ -128,7 +129,9 @@ public:
 	virtual Breakpoint getBreakpointByAddress(UInt8 bank, UInt16 addr) const override;
 	virtual int addBreakpoint(UInt8 bank, UInt16 addr) override;
 	virtual void removeBreakpoint(int idx) override;
+	virtual void clearBreakpoints(void) override;
 	virtual void setBreakpointEnabled(int idx, bool enabled) override;
+	virtual void breakAtNextInstruction(void) override;
 
 	virtual TileSourceTypes getTileSourceType(void) const override;
 	virtual MapSourceTypes getMapSourceType(LayerTypes layer) const override;
@@ -169,13 +172,20 @@ public:
 	virtual void pause(void) override;
 	virtual void resume(void) override;
 
-	virtual bool readRam(UInt16 address, UInt8* data) override;
-	virtual bool readRam(UInt16 address, UInt16* data) override;
+	virtual Registers readRegisters(void) const override;
+	virtual void writeRegisters(const Registers &regs) override;
+
+	virtual bool readRam(UInt16 address, UInt8* data) const override;
+	virtual bool readRam(UInt16 address, UInt16* data) const override;
+	virtual size_t readRam(UInt16 address, Byte* data, size_t len) const override;
 	virtual bool writeRam(UInt16 address, UInt8 data) override;
 	virtual bool writeRam(UInt16 address, UInt16 data) override;
+	virtual size_t writeRam(UInt16 address, const Byte* data, size_t len) override;
 
-	virtual bool readSram(const Bytes* bytes) override;
+	virtual bool readSram(const Bytes* bytes) const override;
 	virtual bool writeSram(Bytes* bytes) override;
+
+	virtual int currentBank(void) const override;
 
 private:
 	void setBwPalette(PaletteType type, u32 white, u32 light_gray, u32 dark_gray, u32 black);

@@ -178,24 +178,45 @@
 #	define COMPILER_STACK_ARGUMENT_MAX_COUNT 64
 #endif /* COMPILER_STACK_ARGUMENT_MAX_COUNT */
 
+#ifndef COMPILERFREE_CURRENT_BANK_ENTRY_NAME
+#	define COMPILERFREE_CURRENT_BANK_ENTRY_NAME "_current_bank" // DOC: RAM SCHEMA.
+#endif /* COMPILERFREE_CURRENT_BANK_ENTRY_NAME */
 #ifndef COMPILER_VM_STEP_ENTRY_NAME
 #	define COMPILER_VM_STEP_ENTRY_NAME "VM_STEP" // DOC: ROM SCHEMA.
 #endif /* COMPILER_VM_STEP_ENTRY_NAME */
 #ifndef COMPILER_SCRIPT_MEMORY_ENTRY_NAME
 #	define COMPILER_SCRIPT_MEMORY_ENTRY_NAME "script_memory" // DOC: RAM SCHEMA.
 #endif /* COMPILER_SCRIPT_MEMORY_ENTRY_NAME */
-#ifndef COMPILERCONTEXTS_ENTRY_NAME
-#	define COMPILERCONTEXTS_ENTRY_NAME "CTXS" // DOC: RAM SCHEMA.
-#endif /* COMPILERCONTEXTS_ENTRY_NAME */
-#ifndef COMPILERFIRST_CONTEXT_ENTRY_NAME
-#	define COMPILERFIRST_CONTEXT_ENTRY_NAME "first_ctx" // DOC: RAM SCHEMA.
-#endif /* COMPILERFIRST_CONTEXT_ENTRY_NAME */
-#ifndef COMPILERFREE_CONTEXT_ENTRY_NAME
-#	define COMPILERFREE_CONTEXT_ENTRY_NAME "free_ctxs" // DOC: RAM SCHEMA.
-#endif /* COMPILERFREE_CONTEXT_ENTRY_NAME */
+#ifndef COMPILER_CONTEXTS_ENTRY_NAME
+#	define COMPILER_CONTEXTS_ENTRY_NAME "CTXS" // DOC: RAM SCHEMA.
+#endif /* COMPILER_CONTEXTS_ENTRY_NAME */
+#ifndef COMPILER_FIRST_CONTEXT_ENTRY_NAME
+#	define COMPILER_FIRST_CONTEXT_ENTRY_NAME "first_ctx" // DOC: RAM SCHEMA.
+#endif /* COMPILER_FIRST_CONTEXT_ENTRY_NAME */
+#ifndef COMPILER_FREE_CONTEXT_ENTRY_NAME
+#	define COMPILER_FREE_CONTEXT_ENTRY_NAME "free_ctxs" // DOC: RAM SCHEMA.
+#endif /* COMPILER_FREE_CONTEXT_ENTRY_NAME */
 #ifndef COMPILER_VM_LOCK_STATE_ENTRY_NAME
 #	define COMPILER_VM_LOCK_STATE_ENTRY_NAME "vm_lock_state" // DOC: RAM SCHEMA.
 #endif /* COMPILER_VM_LOCK_STATE_ENTRY_NAME */
+#ifndef COMPILER_ACTOR_ACTIVE_HEAD_ENTRY_NAME
+#	define COMPILER_ACTOR_ACTIVE_HEAD_ENTRY_NAME "actor_active_head" // DOC: RAM SCHEMA.
+#endif /* COMPILER_ACTOR_ACTIVE_HEAD_ENTRY_NAME */
+#ifndef COMPILER_PROJECTILE_DEFS_ENTRY_NAME
+#	define COMPILER_PROJECTILE_DEFS_ENTRY_NAME "projectile_defs" // DOC: RAM SCHEMA.
+#endif /* COMPILER_PROJECTILE_DEFS_ENTRY_NAME */
+#ifndef COMPILER_PROJECTILE_ACTIVE_HEAD_ENTRY_NAME
+#	define COMPILER_PROJECTILE_ACTIVE_HEAD_ENTRY_NAME "projectile_active_head" // DOC: RAM SCHEMA.
+#endif /* COMPILER_PROJECTILE_ACTIVE_HEAD_ENTRY_NAME */
+#ifndef COMPILER_TRIGGERS_ENTRY_NAME
+#	define COMPILER_TRIGGERS_ENTRY_NAME "triggers" // DOC: RAM SCHEMA.
+#endif /* COMPILER_TRIGGERS_ENTRY_NAME */
+#ifndef COMPILER_TRIGGER_COUNT_ENTRY_NAME
+#	define COMPILER_TRIGGER_COUNT_ENTRY_NAME "trigger_count" // DOC: RAM SCHEMA.
+#endif /* COMPILER_TRIGGER_COUNT_ENTRY_NAME */
+#ifndef COMPILER_SCENE_ENTRY_NAME
+#	define COMPILER_SCENE_ENTRY_NAME "scene" // DOC: RAM SCHEMA.
+#endif /* COMPILER_SCENE_ENTRY_NAME */
 
 namespace GBBASIC {
 
@@ -288,6 +309,7 @@ struct RomLocation {
 	RomLocation();
 	RomLocation(int b, int a);
 	RomLocation(int b, int a, int s);
+	RomLocation(int b, int a, int s, Types y);
 };
 
 /**
@@ -358,6 +380,7 @@ struct TracePoint {
 	TracePoint(const RomLocation &rom, const TextLocation &code);
 
 	int compare(const TracePoint &other) const;
+	int compare(const RomLocation &other) const;
 };
 
 }
@@ -419,7 +442,7 @@ struct Op {
 
 	Opcode opcode = 0x00;
 	int size = 0;                // Size of the parameter list in bytes.
-	int oprands = 0;             // Count of oprands.
+	int operands = 0;            // Count of operands.
 	int associativity = 0;       // -1 for left, 1 for right.
 	int precedence = 0;          // The greater, the higher.
 	bool isFunctionLike = false; // Whether the operator is function-like;

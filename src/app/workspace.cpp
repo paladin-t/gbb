@@ -580,17 +580,20 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 	searchResultHeight(0.0f);
 	searchResultResizing(false);
 
-	// Initialize the debugger states.
-	debugger(nullptr);
+	// Initialize the debuggers.
+	codeDebugger(nullptr);
+	bringCodeDebuggerToFront(false);
 
 	vramDebugger(nullptr);
 	vramDebuggerPreviewPaletteBits(true);
 	vramDebuggerShowGrids(true);
-	vramDebuggerPreviousOuterWidth(0.0f);
-	vramDebuggerWidth(0.0f);
-	vramDebuggerHeight(0.0f);
-	vramDebuggerResizing(false);
-	vramDebuggerResetting(false);
+	isVramDebuggerActive(true);
+
+	debuggerPreviousOuterWidth(0.0f);
+	debuggerWidth(0.0f);
+	debuggerHeight(0.0f);
+	debuggerResizing(false);
+	debuggerResetting(false);
 
 	// Config the recorder.
 #if defined GBBASIC_OS_WIN || defined GBBASIC_OS_MAC || defined GBBASIC_OS_LINUX
@@ -2115,6 +2118,33 @@ bool Workspace::running(void) const {
 void Workspace::pause(class Window*, class Renderer*) {
 	if (canvasDevice())
 		canvasDevice()->pause();
+
+	if (codeDebugger())
+		codeDebugger()->pause();
+}
+
+void Workspace::resume(class Window*, class Renderer*) {
+	if (canvasDevice())
+		canvasDevice()->resume();
+
+	if (codeDebugger())
+		codeDebugger()->resume();
+
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)-1);
+		}
+	}
 }
 
 void Workspace::stop(class Window* wnd, class Renderer* rnd) {
@@ -2131,35 +2161,185 @@ void Workspace::stop(class Window* wnd, class Renderer* rnd) {
 		);
 }
 
-void Workspace::breakpointHit(void) {
-	// TODO: DBG.
+void Workspace::step(class Window*, class Renderer*) {
+	if (canvasDevice())
+		canvasDevice()->breakAtNextInstruction();
 }
 
-class Debugger* Workspace::initializeDebugger(class Window* /* wnd */, class Renderer* rnd) {
-	if (debugger())
-		return debugger();
+bool Workspace::breakpointHit(void) {
+	if (!canvasDevice())
+		return false;
 
-	debugger(Debugger::create());
-	debugger()->open(rnd, theme());
+	if (!codeDebugger())
+		return false;
 
-	return debugger();
+	return codeDebugger()->breakpointHit();
 }
 
-void Workspace::disposeDebugger(void) {
-	if (!debugger())
+void Workspace::enableBreakpoints(void) {
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			Object::Ptr obj = (Object::Ptr)editor->post(Editable::GET_BREAKPOINTS);
+			IList::Ptr lst = Object::as<IList::Ptr>(obj);
+
+			const int m = lst->count();
+			for (int j = 0; j < m; j += 2) {
+				const Variant::Int line = (Variant::Int)lst->at(j);
+				const bool enabled = (bool)lst->at(j + 1);
+				(void)enabled;
+				editor->post(Editable::SET_BREAKPOINT, line, true, true);
+				codeDebugger()->setBreakpoint(i, line + 1, true); // 1-based.
+			}
+		}
+	}
+}
+
+void Workspace::disableBreakpoints(void) {
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			Object::Ptr obj = (Object::Ptr)editor->post(Editable::GET_BREAKPOINTS);
+			IList::Ptr lst = Object::as<IList::Ptr>(obj);
+
+			const int m = lst->count();
+			for (int j = 0; j < m; j += 2) {
+				const Variant::Int line = (Variant::Int)lst->at(j);
+				const bool enabled = (bool)lst->at(j + 1);
+				(void)enabled;
+				editor->post(Editable::SET_BREAKPOINT, line, true, false);
+				codeDebugger()->setBreakpoint(i, line + 1, false); // 1-based.
+			}
+		}
+	}
+}
+
+void Workspace::clearBreakpoints(void) {
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			editor->post(Editable::CLEAR_BREAKPOINTS);
+		}
+
+		codeDebugger()->clearBreakpoints();
+	}
+}
+
+void Workspace::clearProgramCounter(void) {
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)-1);
+		}
+	}
+}
+
+class Debugger* Workspace::initializeCodeDebugger(class Window* wnd, class Renderer* rnd) {
+	if (codeDebugger())
+		return codeDebugger();
+
+	codeDebugger(Debugger::create());
+	codeDebugger()->open(wnd, rnd, this, theme(), canvasDevice().get());
+
+	codeDebugger()->clearBreakpoints();
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			Object::Ptr obj = (Object::Ptr)editor->post(Editable::GET_BREAKPOINTS);
+			IList::Ptr lst = Object::as<IList::Ptr>(obj);
+
+			const int m = lst->count();
+			for (int j = 0; j < m; j += 2) {
+				const Variant::Int line = (Variant::Int)lst->at(j);
+				const bool enabled = (bool)lst->at(j + 1);
+				codeDebugger()->setBreakpoint(i, line + 1, enabled); // 1-based.
+			}
+		}
+
+		codeDebugger()->start();
+	}
+
+	return codeDebugger();
+}
+
+void Workspace::disposeCodeDebugger(void) {
+	if (!codeDebugger())
 		return;
 
-	debugger()->close();
-	Debugger::destroy(debugger());
-	debugger(nullptr);
+	codeDebugger()->stop();
+
+	codeDebugger()->close();
+	Debugger::destroy(codeDebugger());
+	codeDebugger(nullptr);
+
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)-1);
+		}
+	}
 }
 
-class VramDebugger* Workspace::initializeVramDebugger(class Window* /* wnd */, class Renderer* rnd) {
+class VramDebugger* Workspace::initializeVramDebugger(class Window* wnd, class Renderer* rnd) {
 	if (vramDebugger())
 		return vramDebugger();
 
 	vramDebugger(VramDebugger::create());
-	vramDebugger()->open(rnd, theme());
+	vramDebugger()->open(wnd, rnd, this, theme(), canvasDevice().get());
 
 	return vramDebugger();
 }
@@ -2966,6 +3146,15 @@ void Workspace::sendExternalEvent(Window* wnd, Renderer* rnd, ExternalEventTypes
 			}
 
 			toRun(wnd, rnd);
+		}
+
+		break;
+	case ExternalEventTypes::TOGGLE_CODE_DEBUGGER: {
+			fprintf(stdout, "SDL: TOGGLE_CODE_DEBUGGER.\n");
+
+			const bool on = !!(int)(intptr_t)evt->user.data1;
+
+			settings().debugCodeInspectorEnabled = on;
 		}
 
 		break;
@@ -5790,6 +5979,28 @@ const Text::Array &Workspace::getScenePageNames(void) {
 	return assetPageNames().scene;
 }
 
+void Workspace::toggleBreakpoint(int page, int ln) {
+	const Project::Ptr &prj = currentProject();
+	if (!prj)
+		return;
+
+	CodeAssets::Entry* entry = prj->getCode(page);
+	if (!entry)
+		return;
+
+	Editable* editor = entry->editor;
+	bool brk = false;
+	if (editor) {
+		if (ln < 0)
+			ln = (int)(Variant::Int)editor->post(Editable::GET_CURSOR);
+		brk = !(bool)editor->post(Editable::GET_BREAKPOINT, (Variant::Int)ln);
+		editor->post(Editable::SET_BREAKPOINT, (Variant::Int)ln, brk);
+	}
+
+	if (codeDebugger())
+		codeDebugger()->setBreakpoint(page, ln + 1, brk); // 1-based.
+}
+
 void Workspace::upgrade(
 	Window* wnd, Renderer* rnd,
 	const Text::Dictionary &arguments
@@ -5977,7 +6188,15 @@ void Workspace::upgrade(
 	}
 }
 
+const GBBASIC::Program::Compiled &Workspace::getCompiledData(std::string* config) const {
+	if (config)
+		*config = _compilingConfig;
+
+	return _compilingOutput;
+}
+
 void Workspace::clearCompiledData(void) {
+	_compilingConfig.clear();
 	_compilingOutput = GBBASIC::Program::Compiled();
 }
 
@@ -6468,7 +6687,12 @@ void Workspace::compile(
 
 			self->_compilingParameters = CompilingParameters();
 
-			self->_compilingOutput = codeIsOk && resIsOk ? program.compiled : GBBASIC::Program::Compiled();
+			self->_compilingConfig.clear();
+			self->_compilingOutput = GBBASIC::Program::Compiled();
+			if (codeIsOk && resIsOk) {
+				self->_compilingConfig = program.config;
+				self->_compilingOutput = program.compiled;
+			}
 		} while (false);
 
 		self->_state = States::COMPILED;
@@ -6574,6 +6798,7 @@ void Workspace::compile(
 
 		_compilingErrors = CompilingErrors::Ptr(new CompilingErrors());
 
+		_compilingConfig.clear();
 		_compilingOutput = GBBASIC::Program::Compiled();
 	} while (false);
 
@@ -6808,6 +7033,7 @@ bool Workspace::loadConfig(Window*, Renderer*, const rapidjson::Document &doc) {
 
 	Jpath::get(doc, settings().debugShowAstEnabled, "debug", "show_ast", "enabled");
 	Jpath::get(doc, settings().debugOnscreenShellEnabled, "debug", "onscreen_shell", "enabled");
+	Jpath::get(doc, settings().debugCodeInspectorEnabled, "debug", "code_inspector", "enabled");
 	Jpath::get(doc, settings().debugVramInspectorEnabled, "debug", "vram_inspector", "enabled");
 	Jpath::get(doc, settings().debugLogEnabled, "debug", "log", "enabled");
 	if (!Jpath::get(doc, settings().debugLogPath, "debug", "log", "path")) {
@@ -6910,6 +7136,7 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 
 	Jpath::set(doc, doc, settings().debugShowAstEnabled, "debug", "show_ast", "enabled");
 	Jpath::set(doc, doc, settings().debugOnscreenShellEnabled, "debug", "onscreen_shell", "enabled");
+	Jpath::set(doc, doc, settings().debugCodeInspectorEnabled, "debug", "code_inspector", "enabled");
 	Jpath::set(doc, doc, settings().debugVramInspectorEnabled, "debug", "vram_inspector", "enabled");
 	Jpath::set(doc, doc, settings().debugLogEnabled, "debug", "log", "enabled");
 	Jpath::set(doc, doc, settings().debugLogPath, "debug", "log", "path");
@@ -7614,6 +7841,8 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 	const bool f8         = ImGui::IsKeyPressed(SDL_SCANCODE_F8);
 	const bool f11        = ImGui::IsKeyPressed(SDL_SCANCODE_F11);
 #endif /* Platform macro. */
+	const bool f9         = ImGui::IsKeyPressed(SDL_SCANCODE_F9);
+	const bool f10        = ImGui::IsKeyPressed(SDL_SCANCODE_F10);
 
 	const bool num1       = ImGui::IsKeyPressed(SDL_SCANCODE_1);
 	const bool num2       = ImGui::IsKeyPressed(SDL_SCANCODE_2);
@@ -8185,8 +8414,14 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 			}
 		} else if ((f5 && !modifier && !io.KeyShift && !io.KeyAlt) || (r && modifier && !io.KeyShift && !io.KeyAlt)) {
 			if (canvasDevice()) {
-				if (canvasDevice()->paused())
+				if (canvasDevice()->paused()) {
 					canvasDevice()->resume();
+
+					if (codeDebugger())
+						codeDebugger()->resume();
+
+					clearProgramCounter();
+				}
 			} else {
 				launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 			}
@@ -8216,6 +8451,20 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 				}
 			}
 			exportProject(wnd, rnd, toExport_);
+		}
+	}
+
+	// Debug operations.
+	if (opened) {
+		if (f9 && !modifier && !io.KeyShift && !io.KeyAlt) {
+			if (category() == Categories::CODE)
+				toggleBreakpoint(currentAssetPage(), -1);
+		}
+		if (f10 && !io.KeyShift && !io.KeyAlt) {
+			if (category() == Categories::EMULATOR) {
+				if (codeDebugger())
+					codeDebugger()->step(modifier);
+			}
 		}
 	}
 
@@ -8585,6 +8834,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 						stopProject(wnd, rnd, false);
 					}
 					if (ImGui::MenuItem(theme()->menu_Restart())) {
+						stopProject(wnd, rnd, false);
 						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
@@ -8600,6 +8850,7 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 						stopProject(wnd, rnd, false);
 					}
 					if (ImGui::MenuItem(theme()->menu_Restart())) {
+						stopProject(wnd, rnd, false);
 						launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
 					}
 				}
@@ -9323,6 +9574,10 @@ void Workspace::menu(Window* wnd, Renderer* rnd) {
 						}
 						if (ImGui::MenuItem(theme()->menu_Remove())) {
 							Operations::codeRemovePage(wnd, rnd, this);
+						}
+						ImGui::Separator();
+						if (ImGui::MenuItem(theme()->menu_ToggleBreakpoint(), "F9")) {
+							toggleBreakpoint(currentAssetPage(), -1);
 						}
 						ImGui::Separator();
 						if (ImGui::MenuItem(theme()->menu_Find(), GBBASIC_MODIFIER_KEY_NAME "+F")) {
@@ -10301,10 +10556,18 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 				if (canvasDevice()->paused()) {
 					if (ImGui::MenuBarImageButton(theme()->iconPlay()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltipProject_Resume().c_str())) {
 						canvasDevice()->resume();
+
+						if (codeDebugger())
+							codeDebugger()->resume();
+
+						clearProgramCounter();
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPause()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_Pause().c_str())) {
 						canvasDevice()->pause();
+
+						if (codeDebugger())
+							codeDebugger()->pause();
 					}
 				}
 			}
@@ -12454,9 +12717,9 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
 			settings().debugOnscreenShellEnabled,
-			debugger(),
-			vramDebugger(), settings().debugVramInspectorEnabled, vramDebuggerPreviewPaletteBits(), vramDebuggerShowGrids(),
-			vramDebuggerPreviousOuterWidth(), vramDebuggerWidth(), vramDebuggerHeight(), vramDebuggerResizing(), vramDebuggerResetting(),
+			codeDebugger(), settings().debugCodeInspectorEnabled, bringCodeDebuggerToFront(),
+			vramDebugger(), settings().debugVramInspectorEnabled, vramDebuggerPreviewPaletteBits(), vramDebuggerShowGrids(), isVramDebuggerActive(),
+			debuggerPreviousOuterWidth(), debuggerWidth(), debuggerHeight(), debuggerResizing(), debuggerResetting(),
 			canvasCursorMode(),
 			!!popupBox(),
 			fps,
@@ -13657,6 +13920,9 @@ void Workspace::launchProject(
 
 		toRun(toRun_);
 		toExport(toExport_);
+
+		Bytes::Ptr rom = prj->rom();
+		_compilingOutput.bytes = rom;
 
 		_state = States::LAUNCHED;
 	}
