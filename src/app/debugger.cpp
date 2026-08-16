@@ -41,7 +41,7 @@
 #endif /* DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT */
 
 #ifndef DEBUGGER_TABLE_LEVEL_MAX_COUNT
-#	define DEBUGGER_TABLE_LEVEL_MAX_COUNT 21
+#	define DEBUGGER_TABLE_LEVEL_MAX_COUNT 16
 #endif /* DEBUGGER_TABLE_LEVEL_MAX_COUNT */
 
 /* ===========================================================================} */
@@ -1365,9 +1365,8 @@ private:
 				continue;
 
 			const int len = ram.size / 2;
-			const VM::HeapAllocation healAlloc(ord, id, (UInt16)(heapAddr + ram.address), len, ram.usage);
+			const VM::HeapAllocation healAlloc(ord++, id, (UInt16)(heapAddr + ram.address * 2), len, ram.usage);
 			out.push_back(healAlloc);
-			ord += len;
 		}
 
 		const int column = _options.heapSortingRule.index;
@@ -2439,51 +2438,46 @@ private:
 				const UInt16 address = alloc.address;
 				const int usage = Math::clamp((int)alloc.usage, 0, (int)GBBASIC_COUNTOF(USAGES));
 
-				if (alloc.usage == GBBASIC::RamLocation::Usages::ARRAY) {
-					for (int i = 0; i < alloc.length; ++i) {
-						ImGui::TableNextRow();
-						ImGui::PushID(j);
-						{
-							ImGui::PushStyleColor(ImGuiCol_Text, col);
-							ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord + i);
-							ImGui::PopStyleColor();
+				ImGui::TableNextRow();
+				ImGui::PushID(j);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord);
+					ImGui::PopStyleColor();
 
-							ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
-							ImGui::TableSetColumnIndex(1); ImGui::Text("%s+%d", id.c_str(), i);
-							ImGui::PopStyleColor();
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(id);
+					ImGui::PopStyleColor();
 
-							ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-							ImGui::TableSetColumnIndex(2); ImGui::Text("%04X", address + i);
-							ImGui::TableSetColumnIndex(3); ImGui::TextUnformatted(USAGES[usage]);
-							ImGui::PopStyleColor();
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%04X", address);
+					ImGui::TableSetColumnIndex(3); ImGui::TextUnformatted(USAGES[usage]);
+					ImGui::PopStyleColor();
 
-							ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-							UInt16 val = 0;
-							if (!_device->readRam(address, &val))
-								val = 0;
-							ImGui::TableSetColumnIndex(4); ImGui::Text("%d (%04X)", val, val);
-							ImGui::PopStyleColor();
+					if (alloc.usage == GBBASIC::RamLocation::Usages::ARRAY) {
+						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+						ImGui::TableSetColumnIndex(4);
+						if (ImGui::TreeNode("[...]")) {
+							for (int i = 0; i < alloc.length; ++i) {
+								ImGui::PushID(i);
+								{
+									ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+									ImGui::Text("[%d]=", i);
+									ImGui::SameLine();
+									ImGui::PopStyleColor();
+
+									UInt16 val = 0;
+									if (!_device->readRam((UInt16)(address + i * 2), &val))
+										val = 0;
+									ImGui::Text("%d (%04X)", val, val);
+								}
+								ImGui::PopID();
+							}
+
+							ImGui::TreePop();
 						}
-						ImGui::PopID();
-						++j;
-					}
-				} else {
-					ImGui::TableNextRow();
-					ImGui::PushID(j);
-					{
-						ImGui::PushStyleColor(ImGuiCol_Text, col);
-						ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord);
 						ImGui::PopStyleColor();
-
-						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
-						ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(id);
-						ImGui::PopStyleColor();
-
-						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-						ImGui::TableSetColumnIndex(2); ImGui::Text("%04X", address);
-						ImGui::TableSetColumnIndex(3); ImGui::TextUnformatted(USAGES[usage]);
-						ImGui::PopStyleColor();
-
+					} else {
 						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
 						UInt16 val = 0;
 						if (!_device->readRam(address, &val))
@@ -2491,9 +2485,9 @@ private:
 						ImGui::TableSetColumnIndex(4); ImGui::Text("%d (%04X)", val, val);
 						ImGui::PopStyleColor();
 					}
-					ImGui::PopID();
-					++j;
 				}
+				ImGui::PopID();
+				++j;
 			}
 
 			ImGui::EndTable();
@@ -2520,7 +2514,7 @@ private:
 			debugThread = [&debugThread] (const VM::SCRIPT_CTX::Array &all, const VM::SCRIPT_CTX &thread, int level, ImU32 majCol, ImU32 minCol) -> void {
 				if (ImGui::TreeNode("{...}")) {
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-					ImGui::TextUnformatted("PC: ");
+					ImGui::TextUnformatted("PC=");
 					ImGui::PopStyleColor();
 					ImGui::SameLine();
 					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2528,7 +2522,7 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-					ImGui::TextUnformatted("Bank: ");
+					ImGui::TextUnformatted("Bank=");
 					ImGui::PopStyleColor();
 					ImGui::SameLine();
 					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2537,7 +2531,7 @@ private:
 
 					if (thread.next == NULL) {
 						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-						ImGui::TextUnformatted("Next: ");
+						ImGui::TextUnformatted("Next=");
 						ImGui::PopStyleColor();
 						ImGui::SameLine();
 						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2553,7 +2547,7 @@ private:
 							);
 							if (it == all.end()) {
 								ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-								ImGui::TextUnformatted("Next: ");
+								ImGui::TextUnformatted("Next=");
 								ImGui::PopStyleColor();
 								ImGui::SameLine();
 								ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2561,7 +2555,7 @@ private:
 								ImGui::PopStyleColor();
 							} else {
 								ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-								ImGui::TextUnformatted("Next: ");
+								ImGui::TextUnformatted("Next=");
 								ImGui::PopStyleColor();
 								ImGui::SameLine();
 
@@ -2570,7 +2564,7 @@ private:
 							}
 						} else {
 							ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-							ImGui::TextUnformatted("Next: ");
+							ImGui::TextUnformatted("Next=");
 							ImGui::PopStyleColor();
 							ImGui::SameLine();
 							ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2579,7 +2573,7 @@ private:
 						}
 					}
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-					ImGui::TextUnformatted("SP: ");
+					ImGui::TextUnformatted("SP=");
 					ImGui::PopStyleColor();
 					ImGui::SameLine();
 					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2587,7 +2581,7 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-					ImGui::TextUnformatted("Stack base: ");
+					ImGui::TextUnformatted("Stack base=");
 					ImGui::PopStyleColor();
 					ImGui::SameLine();
 					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2595,7 +2589,7 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-					ImGui::TextUnformatted("ID: ");
+					ImGui::TextUnformatted("ID=");
 					ImGui::PopStyleColor();
 					ImGui::SameLine();
 					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2603,7 +2597,7 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-					ImGui::TextUnformatted("Handle: ");
+					ImGui::TextUnformatted("Handle=");
 					ImGui::PopStyleColor();
 					ImGui::SameLine();
 					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2611,7 +2605,7 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-					ImGui::TextUnformatted("Terminated: ");
+					ImGui::TextUnformatted("Terminated=");
 					ImGui::PopStyleColor();
 					ImGui::SameLine();
 					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2619,7 +2613,7 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-					ImGui::TextUnformatted("Waitable: ");
+					ImGui::TextUnformatted("Waitable=");
 					ImGui::PopStyleColor();
 					ImGui::SameLine();
 					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2627,7 +2621,7 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-					ImGui::TextUnformatted("Locks: ");
+					ImGui::TextUnformatted("Locks=");
 					ImGui::PopStyleColor();
 					ImGui::SameLine();
 					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2635,7 +2629,7 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-					ImGui::TextUnformatted("Fn: ");
+					ImGui::TextUnformatted("Fn=");
 					ImGui::PopStyleColor();
 					ImGui::SameLine();
 					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2643,7 +2637,7 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-					ImGui::TextUnformatted("Fn bank: ");
+					ImGui::TextUnformatted("Fn bank=");
 					ImGui::PopStyleColor();
 					ImGui::SameLine();
 					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -2707,6 +2701,9 @@ private:
 
 			ImGui::EndTable();
 		}
+
+		// TODO: DBG.
+		// _snapshot.threadStacks
 	}
 	void objects(Snapshot* snapshot) {
 		ImGuiStyle &style = ImGui::GetStyle();
@@ -2723,6 +2720,11 @@ private:
 
 		(void)snapshot;
 		// TODO: DBG.
+		//_snapshot.actors
+		//_snapshot.projectileDefs
+		//_snapshot.projectiles
+		//_snapshot.triggers
+		//_snapshot.scene
 	}
 	void registers(void) {
 		ImVec2 pos = ImGui::GetCursorPos();
