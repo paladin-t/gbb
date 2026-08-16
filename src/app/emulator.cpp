@@ -29,12 +29,19 @@
 #	define EMULATOR_SGB_PADDING_Y SGB_SCREEN_TOP
 #endif /* EMULATOR_SGB_PADDING_Y */
 
-#ifndef EMULATOR_DEBUGGER_MAX_WIDTH
-#	define EMULATOR_DEBUGGER_MAX_WIDTH 256.0f
-#endif /* EMULATOR_DEBUGGER_MAX_WIDTH */
-#ifndef EMULATOR_DEBUGGER_MIN_WIDTH
-#	define EMULATOR_DEBUGGER_MIN_WIDTH 160.0f
-#endif /* EMULATOR_DEBUGGER_MIN_WIDTH */
+#ifndef EMULATOR_CODE_DEBUGGER_MAX_WIDTH
+#	define EMULATOR_CODE_DEBUGGER_MAX_WIDTH 480.0f
+#endif /* EMULATOR_CODE_DEBUGGER_MAX_WIDTH */
+#ifndef EMULATOR_CODE_DEBUGGER_MIN_WIDTH
+#	define EMULATOR_CODE_DEBUGGER_MIN_WIDTH 160.0f
+#endif /* EMULATOR_CODE_DEBUGGER_MIN_WIDTH */
+
+#ifndef EMULATOR_VRAM_DEBUGGER_MAX_WIDTH
+#	define EMULATOR_VRAM_DEBUGGER_MAX_WIDTH 256.0f
+#endif /* EMULATOR_VRAM_DEBUGGER_MAX_WIDTH */
+#ifndef EMULATOR_VRAM_DEBUGGER_MIN_WIDTH
+#	define EMULATOR_VRAM_DEBUGGER_MIN_WIDTH 160.0f
+#endif /* EMULATOR_VRAM_DEBUGGER_MIN_WIDTH */
 
 /* ===========================================================================} */
 
@@ -155,7 +162,7 @@ struct Context {
 			regMax.y - regMin.y - borderSize * 2
 		);
 
-		canShowCodeDebugger = canShowVramDebugger = regSize.x >= SCREEN_WIDTH + EMULATOR_DEBUGGER_MIN_WIDTH + 2;
+		canShowCodeDebugger = canShowVramDebugger = regSize.x >= SCREEN_WIDTH + EMULATOR_VRAM_DEBUGGER_MIN_WIDTH + 2;
 		const bool codeDbg = canShowCodeDebugger && (!!debugger && *codeDebugEnabled);
 		const bool vramDbg = canShowVramDebugger && (!!vramDebugger && *vramDebugEnabled);
 		if (codeDbg || vramDbg) {
@@ -176,12 +183,12 @@ struct Context {
 			float preferedWidth;
 			if (*isVramDebuggerActive) {
 				preferedWidth = vramDebuggerGotSafeHeight ?
-					(EMULATOR_DEBUGGER_MAX_WIDTH + 2) :
-					(EMULATOR_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
+					(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + 2) :
+					(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
 			} else {
 				preferedWidth = codeDebuggerGotSafeHeight ?
-					(EMULATOR_DEBUGGER_MAX_WIDTH + 2) :
-					(EMULATOR_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
+					(EMULATOR_CODE_DEBUGGER_MAX_WIDTH + 2) :
+					(EMULATOR_CODE_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
 			}
 			if (*debuggerWidth <= 0) {
 				*debuggerWidth = calculateDebuggerWidth(preferedWidth);
@@ -464,6 +471,7 @@ struct Context {
 
 		// Draw the code debugger.
 		if (tabOpened) {
+			const bool wasVramDebuggerActive = *isVramDebuggerActive;
 			ImGuiTabItemFlags tabFlags = ImGuiTabItemFlags_NoTooltip;
 			if (focus)
 				tabFlags |= ImGuiTabItemFlags_SetSelected;
@@ -480,6 +488,9 @@ struct Context {
 
 				ImGui::EndTabItem();
 			} else {
+				if (wasVramDebuggerActive && *debuggerWidth > EMULATOR_VRAM_DEBUGGER_MAX_WIDTH)
+					*debuggerWidth = 0;
+
 				debugger->update(false, !tabOpened);
 			}
 		} else {
@@ -534,16 +545,16 @@ private:
 		float maxWidth;
 		if (*isVramDebuggerActive) {
 			maxWidth = vramDebuggerGotSafeHeight ?
-				(EMULATOR_DEBUGGER_MAX_WIDTH + 2) :
-				(EMULATOR_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
+				(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + 2) :
+				(EMULATOR_VRAM_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
 			width = std::min(width, std::min(regSize.x - SCREEN_WIDTH, maxWidth));
-			width = std::max(width, EMULATOR_DEBUGGER_MIN_WIDTH);
+			width = std::max(width, EMULATOR_VRAM_DEBUGGER_MIN_WIDTH);
 		} else {
 			maxWidth = codeDebuggerGotSafeHeight ?
-				(EMULATOR_DEBUGGER_MAX_WIDTH + 2) :
-				(EMULATOR_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
+				(EMULATOR_CODE_DEBUGGER_MAX_WIDTH + 2) :
+				(EMULATOR_CODE_DEBUGGER_MAX_WIDTH + style.ScrollbarSize + 2);
 			width = std::min(width, std::min(regSize.x - SCREEN_WIDTH, maxWidth));
-			width = std::max(width, EMULATOR_DEBUGGER_MIN_WIDTH);
+			width = std::max(width, EMULATOR_CODE_DEBUGGER_MIN_WIDTH);
 		}
 
 		return std::floor(width);

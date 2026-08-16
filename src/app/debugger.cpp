@@ -29,6 +29,10 @@
 #	define DEBUGGER_START_ADDRESS 0x4000
 #endif /* DEBUGGER_START_ADDRESS */
 
+#ifndef DEBUGGER_WORD_SIZE
+#	define DEBUGGER_WORD_SIZE sizeof(UInt16)
+#endif /* DEBUGGER_WORD_SIZE */
+
 #ifndef DEBUGGER_ACTOR_MAX_ANIMATIONS
 #	define DEBUGGER_ACTOR_MAX_ANIMATIONS 8
 #endif /* DEBUGGER_ACTOR_MAX_ANIMATIONS */
@@ -106,13 +110,13 @@ typedef Pointer UInt16Ptr;
 typedef Pointer CtxPtr;
 typedef Pointer MetaSpriteRef;
 
-typedef std::deque<Byte> Buffer;
+typedef std::vector<Byte> Buffer;
 
 struct ThreadStack {
 	typedef Reference<ThreadStack> Ref;
 	typedef std::vector<Ref> Array;
 
-	VM::Buffer buffer;
+	Buffer buffer;
 	int count = 0;
 
 	ThreadStack() {
@@ -483,7 +487,7 @@ public:
 
 #if defined GBBASIC_OS_WIN32 || defined GBBASIC_OS_HTML || defined GBBASIC_OS_RASPBERRYPI
 		_options.disassemblerView = 1;
-#elif defined GBBASIC_OS_MAC || defined GBBASIC_OS_LINUX
+#elif defined GBBASIC_OS_WIN || defined GBBASIC_OS_MAC || defined GBBASIC_OS_LINUX
 		_options.disassemblerView = 0;
 #else
 		_options.disassemblerView = 1;
@@ -603,8 +607,16 @@ public:
 		_compiled = &_workspace->getCompiledData(&config);
 		rapidjson::Document doc;
 		Json::fromString(doc, config.c_str());
-		Jpath::get(doc, _runtimeConfig.heapSize, "memory", "heap_size");
-		Jpath::get(doc, _runtimeConfig.stackSize, "memory", "stack_size");
+		std::string txt;
+		if (Jpath::get(doc, txt, "memory", "heap_size")) {
+			if (!Text::fromString(txt, _runtimeConfig.heapSize))
+				_runtimeConfig.heapSize = 0;
+		}
+		txt.clear();
+		if (Jpath::get(doc, txt, "memory", "stack_size")) {
+			if (!Text::fromString(txt, _runtimeConfig.stackSize))
+				_runtimeConfig.stackSize = 0;
+		}
 		Jpath::get(doc, _runtimeConfig.actorMaxCount, "objects", "max_actor_count");
 		Jpath::get(doc, _runtimeConfig.projectileDefMaxCount, "objects", "max_projectile_def_count");
 		Jpath::get(doc, _runtimeConfig.projectileMaxCount, "objects", "max_projectile_count");
@@ -1364,8 +1376,8 @@ private:
 			if (ram.usage == GBBASIC::RamLocation::Usages::NONE)
 				continue;
 
-			const int len = ram.size / 2;
-			const VM::HeapAllocation healAlloc(ord++, id, (UInt16)(heapAddr + ram.address * 2), len, ram.usage);
+			const int len = ram.size / DEBUGGER_WORD_SIZE;
+			const VM::HeapAllocation healAlloc(ord++, id, (UInt16)(heapAddr + ram.address * DEBUGGER_WORD_SIZE), len, ram.usage);
 			out.push_back(healAlloc);
 		}
 
@@ -1411,7 +1423,7 @@ private:
 		if (heapAddr == 0)
 			return false;
 
-		for (size_t i = 0; i < _runtimeConfig.heapSize * sizeof(UInt16); ++i) {
+		for (size_t i = 0; i < _runtimeConfig.heapSize * DEBUGGER_WORD_SIZE; ++i) {
 			UInt8 data = 0;
 			if (!_device->readRam((UInt16)(heapAddr + i), &data))
 				data = 0;
@@ -1505,14 +1517,14 @@ private:
 		if (!_device->readRam((UInt16)stackPtrAddress, &stackPtr))
 			return false;
 
-		for (size_t i = 0; i < _runtimeConfig.stackSize * sizeof(UInt16); ++i) {
+		for (size_t i = 0; i < _runtimeConfig.stackSize * DEBUGGER_WORD_SIZE; ++i) {
 			UInt8 data = 0;
 			if (!_device->readRam((UInt16)(baseAddr + i), &data))
 				data = 0;
 			out.buffer.push_back(data);
 		}
 
-		out.count = (stackPtr - baseAddr) / sizeof(UInt16);
+		out.count = (stackPtr - baseAddr) / DEBUGGER_WORD_SIZE;
 
 		return true;
 	}
@@ -2000,6 +2012,10 @@ private:
 		code(regSize);
 	}
 	void kernelMemory(void) {
+		Snapshot* snapshot = touchSnapshot();
+		if (!snapshot)
+			return;
+
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		const float borderSize = style.ChildBorderSize;
@@ -2015,7 +2031,6 @@ private:
 			return;
 		ImGui::NewLine(1);
 
-		Snapshot* snapshot = touchSnapshot();
 		variables(snapshot);
 		threads(snapshot);
 		objects(snapshot);
@@ -2397,7 +2412,8 @@ private:
 
 		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2(style.FramePadding.x, 0));
 
-		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Sortable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
+		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Sortable |
+			ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
 		if (ImGui::BeginTable("##Heap", 5, flags)) {
 			constexpr const char* USAGES[] = {
 				"-",
@@ -2467,9 +2483,9 @@ private:
 									ImGui::PopStyleColor();
 
 									UInt16 val = 0;
-									if (!_device->readRam((UInt16)(address + i * 2), &val))
+									if (!_device->readRam((UInt16)(address + i * DEBUGGER_WORD_SIZE), &val))
 										val = 0;
-									ImGui::Text("%d (%04X)", val, val);
+									ImGui::Text("%d(%04X)", val, val);
 								}
 								ImGui::PopID();
 							}
@@ -2482,7 +2498,7 @@ private:
 						UInt16 val = 0;
 						if (!_device->readRam(address, &val))
 							val = 0;
-						ImGui::TableSetColumnIndex(4); ImGui::Text("%d (%04X)", val, val);
+						ImGui::TableSetColumnIndex(4); ImGui::Text("%d(%04X)", val, val);
 						ImGui::PopStyleColor();
 					}
 				}
@@ -2506,12 +2522,13 @@ private:
 
 		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
-		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Sortable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
+		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Sortable |
+			ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
 		if (ImGui::BeginTable("##Threads", 4, flags)) {
-			typedef std::function<void(const VM::SCRIPT_CTX::Array &, const VM::SCRIPT_CTX &, int, ImU32, ImU32)> Debugger;
+			typedef std::function<void(const VM::SCRIPT_CTX::Array &, const VM::ThreadStack::Array, const VM::SCRIPT_CTX &, int, int, ImU32, ImU32)> Debugger;
 
 			Debugger debugThread = nullptr;
-			debugThread = [&debugThread] (const VM::SCRIPT_CTX::Array &all, const VM::SCRIPT_CTX &thread, int level, ImU32 majCol, ImU32 minCol) -> void {
+			debugThread = [&debugThread] (const VM::SCRIPT_CTX::Array &all, const VM::ThreadStack::Array &allThreadStacks, const VM::SCRIPT_CTX &thread, int index, int level, ImU32 majCol, ImU32 minCol) -> void {
 				if (ImGui::TreeNode("{...}")) {
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 					ImGui::TextUnformatted("PC=");
@@ -2535,7 +2552,7 @@ private:
 						ImGui::PopStyleColor();
 						ImGui::SameLine();
 						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-						ImGui::TextUnformatted("NULL");
+						ImGui::TextUnformatted("NOTHING");
 						ImGui::PopStyleColor();
 					} else {
 						if (level <= DEBUGGER_TABLE_LEVEL_MAX_COUNT) {
@@ -2560,7 +2577,8 @@ private:
 								ImGui::SameLine();
 
 								const VM::SCRIPT_CTX &next = it->data;
-								debugThread(all, next, level + 1, majCol, minCol);
+								const int idx = (int)(it - all.begin());
+								debugThread(all, allThreadStacks, next, idx, level + 1, majCol, minCol);
 							}
 						} else {
 							ImGui::PushStyleColor(ImGuiCol_Text, majCol);
@@ -2587,6 +2605,44 @@ private:
 					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
 					ImGui::Text("%04X", thread.base_addr);
 					ImGui::PopStyleColor();
+
+					if (index >= 0 && index < (int)allThreadStacks.size()) {
+						const VM::ThreadStack::Ref &stkRef = allThreadStacks[index];
+						if (!stkRef.data.buffer.empty()) {
+							ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+							ImGui::TextUnformatted("Stack=");
+							ImGui::PopStyleColor();
+							ImGui::SameLine();
+
+							const Int16* buffer = (Int16*)&stkRef.data.buffer.front();
+							ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+							if (ImGui::TreeNode("[...]")) {
+								for (int i = 0; i < (int)(stkRef.data.buffer.size() / DEBUGGER_WORD_SIZE); ++i) {
+									ImGui::PushID(i);
+									{
+										ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+										ImGui::Text("[%d]=", i);
+										ImGui::SameLine();
+										ImGui::PopStyleColor();
+
+										const Int16 val = buffer[i];
+										ImGui::Text("%d(%04X)", val, val);
+
+										if (stkRef.data.count == i) {
+											ImGui::SameLine();
+											ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+											ImGui::TextUnformatted("<-");
+											ImGui::PopStyleColor();
+										}
+									}
+									ImGui::PopID();
+								}
+
+								ImGui::TreePop();
+							}
+							ImGui::PopStyleColor();
+						}
+					}
 
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 					ImGui::TextUnformatted("ID=");
@@ -2692,7 +2748,7 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-					ImGui::TableSetColumnIndex(3); debugThread(snapshot->threads, val, 1, _theme->style()->debuggerMajorColor, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(3); debugThread(snapshot->threads, _snapshot.threadStacks, val, j, 1, _theme->style()->debuggerMajorColor, _theme->style()->debuggerMinorColor);
 					ImGui::PopStyleColor();
 				}
 				ImGui::PopID();
@@ -2701,20 +2757,17 @@ private:
 
 			ImGui::EndTable();
 		}
-
-		// TODO: DBG.
-		// _snapshot.threadStacks
 	}
 	void objects(Snapshot* snapshot) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
-		const ImU32 col = _theme->style()->debuggerHeadColor;
+		/*const ImU32 col = _theme->style()->debuggerHeadColor;
 		ImGui::PushStyleColor(ImGuiCol_Text, col);
 		ImGui::Dummy(ImVec2(1, 0));
 		ImGui::SameLine();
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Objects());
-		ImGui::PopStyleColor();
+		ImGui::PopStyleColor();*/
 
 		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
