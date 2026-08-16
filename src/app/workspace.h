@@ -758,6 +758,7 @@ public:
 	void enableBreakpoints(void);
 	void disableBreakpoints(void);
 	void clearBreakpoints(void);
+	void clearProgramCounter(void);
 	class Debugger* initializeCodeDebugger(class Window* wnd, class Renderer* rnd);
 	void disposeCodeDebugger(void);
 

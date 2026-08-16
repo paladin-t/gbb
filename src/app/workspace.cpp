@@ -2252,6 +2252,24 @@ void Workspace::clearBreakpoints(void) {
 	}
 }
 
+void Workspace::clearProgramCounter(void) {
+	const Project::Ptr &prj = currentProject();
+	if (prj) {
+		const int n = prj->codePageCount();
+		for (int i = 0; i < n; ++i) {
+			CodeAssets::Entry* entry = prj->getCode(i);
+			if (!entry)
+				continue;
+
+			Editable* editor = entry->editor;
+			if (!editor)
+				continue;
+
+			editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)-1);
+		}
+	}
+}
+
 class Debugger* Workspace::initializeCodeDebugger(class Window* wnd, class Renderer* rnd) {
 	if (codeDebugger())
 		return codeDebugger();
@@ -8401,6 +8419,8 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 
 					if (codeDebugger())
 						codeDebugger()->resume();
+
+					clearProgramCounter();
 				}
 			} else {
 				launchProject(wnd, rnd, nullptr, nullptr, nullptr, nullptr, nullptr, true, -1);
@@ -10539,6 +10559,8 @@ void Workspace::buttons(Window* wnd, Renderer* rnd, double delta) {
 
 						if (codeDebugger())
 							codeDebugger()->resume();
+
+						clearProgramCounter();
 					}
 				} else {
 					if (ImGui::MenuBarImageButton(theme()->iconPause()->pointer(rnd), ImVec2(13, 13), ImVec4(1, 1, 1, 1), theme()->tooltip_Pause().c_str())) {

@@ -81,9 +81,30 @@ typedef Pointer MetaSpriteRef;
 
 typedef std::deque<Byte> Buffer;
 
+struct HeapAllocation {
+	typedef std::vector<HeapAllocation> Array;
+
+	int order = 0;
+	std::string identifier;
+	UInt16 address = 0;
+	int length = 0; // In words.
+	GBBASIC::RamLocation::Usages usage = GBBASIC::RamLocation::Usages::NONE;
+
+	HeapAllocation() {
+	}
+	HeapAllocation(int ord, const std::string &id, UInt16 addr, int len, GBBASIC::RamLocation::Usages usg) :
+		order(ord),
+		identifier(id),
+		address(addr),
+		length(len),
+		usage(usg)
+	{
+	}
+};
+
 struct ThreadStack {
 	typedef Reference<ThreadStack> Ref;
-	typedef std::deque<Ref> Queue;
+	typedef std::vector<Ref> Array;
 
 	VM::Buffer buffer;
 	int count = 0;
@@ -94,7 +115,7 @@ struct ThreadStack {
 
 struct SCRIPT_CTX {
 	typedef Reference<SCRIPT_CTX> Ref;
-	typedef std::deque<Ref> Queue;
+	typedef std::vector<Ref> Array;
 	typedef Pointer Ptr;
 
 	UInt8Ptr PC = NULL;
@@ -116,7 +137,7 @@ struct SCRIPT_CTX {
 
 struct actor_t {
 	typedef Reference<actor_t> Ref;
-	typedef std::deque<Ref> Queue;
+	typedef std::vector<Ref> Array;
 	typedef Pointer Ptr;
 
 	Boolean instantiated         : 1;
@@ -176,7 +197,7 @@ struct actor_t {
 
 struct projectile_def_t {
 	typedef Reference<projectile_def_t> Ref;
-	typedef std::deque<Ref> Queue;
+	typedef std::vector<Ref> Array;
 
 	boundingbox_t bounds;
 	UInt8 base_tile = 0;
@@ -195,7 +216,7 @@ struct projectile_def_t {
 
 struct projectile_t {
 	typedef Reference<projectile_t> Ref;
-	typedef std::deque<Ref> Queue;
+	typedef std::vector<Ref> Array;
 	typedef Pointer Ptr;
 
 	Boolean animation_no_loop   : 1;
@@ -228,7 +249,7 @@ struct projectile_t {
 
 struct trigger_t {
 	typedef Reference<trigger_t> Ref;
-	typedef std::deque<Ref> Queue;
+	typedef std::vector<Ref> Array;
 
 	UInt8 x = 0;
 	UInt8 y = 0;
@@ -344,22 +365,22 @@ private:
 	};
 
 	struct Snapshot {
-		VM::SCRIPT_CTX::Queue threads; // Active only.
-		VM::ThreadStack::Queue threadStacks; // Active only.
-		VM::Buffer heap;
-		VM::actor_t::Queue actors; // Active only.
-		VM::projectile_def_t::Queue projectileDefs;
-		VM::projectile_t::Queue projectiles;
-		VM::trigger_t::Queue triggers;
+		VM::HeapAllocation::Array heap;
+		VM::SCRIPT_CTX::Array threads; // Active only.
+		VM::ThreadStack::Array threadStacks; // Active only.
+		VM::actor_t::Array actors; // Active only.
+		VM::projectile_def_t::Array projectileDefs;
+		VM::projectile_t::Array projectiles;
+		VM::trigger_t::Array triggers;
 		VM::scene_t scene;
 
 		Snapshot() {
 		}
 
 		void reset(void) {
+			heap.clear();
 			threads.clear();
 			threadStacks.clear();
-			heap.clear();
 			actors.clear();
 			projectileDefs.clear();
 			projectiles.clear();
@@ -679,7 +700,7 @@ public:
 	}
 
 	virtual void step(bool toNextAsmInst) override {
-		if (!toNextAsmInst && !(compiledTracePoints() && !compiledTracePoints()->empty()))
+		if (!toNextAsmInst && !(isCompiledFromSource()))
 			return;
 
 		_inspecting = false;
@@ -880,6 +901,9 @@ private:
 			return nullptr;
 
 		return _compiled->bytes;
+	}
+	bool isCompiledFromSource(void) const {
+		return compiledTracePoints() && !compiledTracePoints()->empty();
 	}
 
 	const char* getAddressDescription(UInt16 addr, const char* &detail, bool &readonly, bool &prohibited) {
@@ -1246,6 +1270,30 @@ private:
 		_latestDisassembledMnemonicsAddress = FarPtr();
 	}
 
+	const Snapshot* touchSnapshot(void) {
+		if (!isCompiledFromSource())
+			return nullptr;
+
+		probeHeap(_snapshot.heap);
+		probeThreads(_snapshot.threads);
+		_snapshot.threadStacks.clear();
+		for (const VM::SCRIPT_CTX::Ref &ctx : _snapshot.threads) {
+			VM::ThreadStack stk;
+			if (probeThreadStack((UInt16)ctx.pointer.address, stk))
+				_snapshot.threadStacks.push_back(VM::ThreadStack::Ref(stk, FarPtr(0, ctx.data.base_addr)));
+		}
+		probeActors(_snapshot.actors);
+		probeProjectileDefs(_snapshot.projectileDefs);
+		probeProjectiles(_snapshot.projectiles);
+		probeTriggers(_snapshot.triggers);
+		probeScene(_snapshot.scene);
+
+		return &_snapshot;
+	}
+	void unloadSnapshot(void) {
+		_snapshot.reset();
+	}
+
 	bool probeCurrentProgramCounter(FarPtr &pc_) const {
 		bool result = false;
 		const Device::Registers regs = _device->readRegisters();
@@ -1265,6 +1313,54 @@ private:
 
 		if (!result)
 			return false;
+
+		return true;
+	}
+	bool probeHeap(VM::HeapAllocation::Array &out) const {
+		out.clear();
+
+		const GBBASIC::RamLocation::Dictionary* allocations = compiledAllocations();
+		if (!allocations)
+			return false;
+
+		FarPtr farPtr;
+		if (!getFarPointerBySymbolName(COMPILER_SCRIPT_MEMORY_ENTRY_NAME, farPtr))
+			return false;
+		UInt16 heapAddr = 0;
+		if (!_device->readRam((UInt16)farPtr.address, &heapAddr) || heapAddr == 0)
+			return false;
+
+		int ord = 0;
+		for (const GBBASIC::RamLocation::Dictionary::value_type kv : *allocations) {
+			const std::string &id = kv.first;
+			const GBBASIC::RamLocation &ram = kv.second;
+			if (ram.usage == GBBASIC::RamLocation::Usages::NONE)
+				continue;
+
+			const VM::HeapAllocation healAlloc(ord++, id, (UInt16)(heapAddr + ram.address), ram.size / 2, ram.usage);
+			out.push_back(healAlloc);
+		}
+
+		out.shrink_to_fit();
+
+		return true;
+	}
+	bool probeHeap(VM::Buffer &out) const {
+		out.clear();
+
+		FarPtr farPtr;
+		if (!getFarPointerBySymbolName(COMPILER_SCRIPT_MEMORY_ENTRY_NAME, farPtr))
+			return false;
+		UInt16 heapAddr = 0;
+		if (!_device->readRam((UInt16)farPtr.address, &heapAddr) || heapAddr == 0)
+			return false;
+
+		for (size_t i = 0; i < _runtimeConfig.heapSize * sizeof(UInt16); ++i) {
+			UInt8 data = 0;
+			if (!_device->readRam((UInt16)(heapAddr + i), &data))
+				data = 0;
+			out.push_back(data);
+		}
 
 		return true;
 	}
@@ -1302,7 +1398,7 @@ private:
 
 		return true;
 	}
-	bool probeThreads(VM::SCRIPT_CTX::Queue &out) const {
+	bool probeThreads(VM::SCRIPT_CTX::Array &out) const {
 		out.clear();
 
 		FarPtr farPtr;
@@ -1324,6 +1420,8 @@ private:
 			if (!_device->readRam((UInt16)nextAddress, &threadAddr))
 				return false;
 		} while (threadAddr != 0);
+
+		out.shrink_to_fit();
 
 		return true;
 	}
@@ -1361,26 +1459,7 @@ private:
 
 		return true;
 	}
-	bool probeHeap(VM::Buffer &out) const {
-		out.clear();
-
-		FarPtr farPtr;
-		if (!getFarPointerBySymbolName(COMPILER_SCRIPT_MEMORY_ENTRY_NAME, farPtr))
-			return false;
-		UInt16 heapAddr = 0;
-		if (!_device->readRam((UInt16)farPtr.address, &heapAddr) || heapAddr == 0)
-			return false;
-
-		for (size_t i = 0; i < _runtimeConfig.heapSize * sizeof(UInt16); ++i) {
-			UInt8 data = 0;
-			if (!_device->readRam((UInt16)(heapAddr + i), &data))
-				data = 0;
-			out.push_back(data);
-		}
-
-		return true;
-	}
-	bool probeActors(VM::actor_t::Queue &out) const {
+	bool probeActors(VM::actor_t::Array &out) const {
 		out.clear();
 
 		FarPtr farPtr;
@@ -1403,11 +1482,13 @@ private:
 				return false;
 		} while (actorAddr != 0);
 
+		out.shrink_to_fit();
+
 		GBBASIC_ASSERT((int)out.size() <= _runtimeConfig.actorMaxCount && "Wrong data.");
 
 		return true;
 	}
-	bool probeProjectileDefs(VM::projectile_def_t::Queue &out) const {
+	bool probeProjectileDefs(VM::projectile_def_t::Array &out) const {
 		out.clear();
 
 		FarPtr farPtr;
@@ -1425,9 +1506,11 @@ private:
 			projectileDefAddr += sizeof(VM::projectile_def_t);
 		}
 
+		out.shrink_to_fit();
+
 		return true;
 	}
-	bool probeProjectiles(VM::projectile_t::Queue &out) const {
+	bool probeProjectiles(VM::projectile_t::Array &out) const {
 		out.clear();
 
 		FarPtr farPtr;
@@ -1450,11 +1533,13 @@ private:
 				return false;
 		} while (projectileAddr != 0);
 
+		out.shrink_to_fit();
+
 		GBBASIC_ASSERT((int)out.size() <= _runtimeConfig.projectileMaxCount && "Wrong data.");
 
 		return true;
 	}
-	bool probeTriggers(VM::trigger_t::Queue &out) const {
+	bool probeTriggers(VM::trigger_t::Array &out) const {
 		out.clear();
 
 		FarPtr farPtr_;
@@ -1482,6 +1567,8 @@ private:
 			out.push_back(VM::trigger_t::Ref(trigger, FarPtr(0, triggerAddr)));
 			triggerAddr += sizeof(VM::trigger_t);
 		}
+
+		out.shrink_to_fit();
 
 		GBBASIC_ASSERT((int)out.size() <= _runtimeConfig.triggerMaxCount && "Wrong data.");
 
@@ -1659,6 +1746,9 @@ private:
 
 			_bringSourceCodeCursorToFront = true;
 		} while (false);
+
+		// Refresh the snapshot.
+		touchSnapshot();
 	}
 
 	void begin(bool showTitle) {
@@ -1787,7 +1877,7 @@ private:
 		ImGui::Dummy(ImVec2(2, 0));
 		ImGui::SameLine();
 
-		if (compiledTracePoints() && !compiledTracePoints()->empty()) {
+		if (isCompiledFromSource()) {
 			if (ImGui::ImageButton(_theme->iconStepBasic()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 				step(false);
 			}
@@ -1861,9 +1951,10 @@ private:
 			return;
 		ImGui::NewLine(1);
 
-		variables();
-		threads();
-		objects();
+		const Snapshot* snapshot = touchSnapshot();
+		variables(snapshot);
+		threads(snapshot);
+		objects(snapshot);
 	}
 	void deviceMemory(void) {
 		ImGuiStyle &style = ImGui::GetStyle();
@@ -2229,13 +2320,19 @@ private:
 			drawList->AddRectFilled(barGrabMin, barGrabMax, grabColor);
 		}
 	}
-	void variables(void) {
+	void variables(const Snapshot* snapshot) {
+		(void)snapshot;
+
 		// TODO: DBG.
 	}
-	void threads(void) {
+	void threads(const Snapshot* snapshot) {
+		(void)snapshot;
+
 		// TODO: DBG.
 	}
-	void objects(void) {
+	void objects(const Snapshot* snapshot) {
+		(void)snapshot;
+
 		// TODO: DBG.
 	}
 	void registers(void) {
