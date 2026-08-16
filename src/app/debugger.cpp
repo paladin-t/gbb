@@ -40,6 +40,10 @@
 #	define DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT DateTime::fromSeconds(0.333333);
 #endif /* DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT */
 
+#ifndef DEBUGGER_TABLE_LEVEL_MAX_COUNT
+#	define DEBUGGER_TABLE_LEVEL_MAX_COUNT 21
+#endif /* DEBUGGER_TABLE_LEVEL_MAX_COUNT */
+
 /* ===========================================================================} */
 
 /*
@@ -54,12 +58,14 @@ namespace VM {
 template<typename T> struct Reference {
 	typedef T ValueType;
 
+	int order = 0;
 	ValueType data;
 	Debugger::FarPtr pointer;
 
 	Reference() {
 	}
-	Reference(const ValueType &d, const Debugger::FarPtr &ptr) :
+	Reference(int ord, const ValueType &d, const Debugger::FarPtr &ptr) :
+		order(ord),
 		data(d),
 		pointer(ptr)
 	{
@@ -408,6 +414,7 @@ private:
 		int safeHeight = 0;
 		int disassemblerView = 0;
 		SortingRule heapSortingRule;
+		SortingRule threadSortingRule;
 		int ramView = 1;
 		int bankIndex = -1;
 		std::string bankText;
@@ -1296,10 +1303,11 @@ private:
 		probeHeap(_snapshot.heap);
 		probeThreads(_snapshot.threads);
 		_snapshot.threadStacks.clear();
+		int ord = 0;
 		for (const VM::SCRIPT_CTX::Ref &ctx : _snapshot.threads) {
 			VM::ThreadStack stk;
 			if (probeThreadStack((UInt16)ctx.pointer.address, stk))
-				_snapshot.threadStacks.push_back(VM::ThreadStack::Ref(stk, FarPtr(0, ctx.data.base_addr)));
+				_snapshot.threadStacks.push_back(VM::ThreadStack::Ref(ord++, stk, FarPtr(0, ctx.data.base_addr)));
 		}
 		probeActors(_snapshot.actors);
 		probeProjectileDefs(_snapshot.projectileDefs);
@@ -1457,12 +1465,13 @@ private:
 		if (!_device->readRam((UInt16)farPtr.address, &threadAddr) || threadAddr == 0)
 			return false;
 
+		int ord = 0;
 		do {
 			VM::SCRIPT_CTX ctx;
 			if (!probeThread(threadAddr, ctx))
 				return false;
 
-			out.push_back(VM::SCRIPT_CTX::Ref(ctx, FarPtr(0, threadAddr)));
+			out.push_back(VM::SCRIPT_CTX::Ref(ord++, ctx, FarPtr(0, threadAddr)));
 
 			constexpr const int nextOffset = GBBASIC_OFFSETOF(VM::SCRIPT_CTX, next);
 			const int nextAddress = threadAddr + nextOffset;
@@ -1518,22 +1527,24 @@ private:
 		if (!_device->readRam((UInt16)farPtr.address, &actorAddr) || actorAddr == 0)
 			return false;
 
+		int ord = 0;
 		do {
 			VM::actor_t actor;
 			if (!_device->readRam(actorAddr, (Byte*)&actor, sizeof(VM::actor_t)))
 				return false;
 
-			out.push_back(VM::actor_t::Ref(actor, FarPtr(0, actorAddr)));
+			out.push_back(VM::actor_t::Ref(ord++, actor, FarPtr(0, actorAddr)));
 
 			constexpr const int nextOffset = GBBASIC_OFFSETOF(VM::actor_t, next);
 			const int nextAddress = actorAddr + nextOffset;
 			if (!_device->readRam((UInt16)nextAddress, &actorAddr))
 				return false;
+
+			if ((int)out.size() > _runtimeConfig.actorMaxCount)
+				break;
 		} while (actorAddr != 0);
 
 		out.shrink_to_fit();
-
-		GBBASIC_ASSERT((int)out.size() <= _runtimeConfig.actorMaxCount && "Wrong data.");
 
 		return true;
 	}
@@ -1551,7 +1562,7 @@ private:
 			VM::projectile_def_t projectileDef;
 			if (!_device->readRam((UInt16)projectileDefAddr, (Byte*)&projectileDef, sizeof(VM::projectile_def_t)))
 				projectileDef = VM::projectile_def_t();
-			out.push_back(VM::projectile_def_t::Ref(projectileDef, FarPtr(0, projectileDefAddr)));
+			out.push_back(VM::projectile_def_t::Ref((int)i, projectileDef, FarPtr(0, projectileDefAddr)));
 			projectileDefAddr += sizeof(VM::projectile_def_t);
 		}
 
@@ -1569,22 +1580,24 @@ private:
 		if (!_device->readRam((UInt16)farPtr.address, &projectileAddr) || projectileAddr == 0)
 			return false;
 
+		int ord = 0;
 		do {
 			VM::projectile_t projectile;
 			if (!_device->readRam(projectileAddr, (Byte*)&projectile, sizeof(VM::projectile_t)))
 				return false;
 
-			out.push_back(VM::projectile_t::Ref(projectile, FarPtr(0, projectileAddr)));
+			out.push_back(VM::projectile_t::Ref(ord++, projectile, FarPtr(0, projectileAddr)));
 
 			constexpr const int nextOffset = GBBASIC_OFFSETOF(VM::projectile_t, next);
 			const int nextAddress = projectileAddr + nextOffset;
 			if (!_device->readRam((UInt16)nextAddress, &projectileAddr))
 				return false;
+
+			if ((int)out.size() > _runtimeConfig.projectileMaxCount)
+				break;
 		} while (projectileAddr != 0);
 
 		out.shrink_to_fit();
-
-		GBBASIC_ASSERT((int)out.size() <= _runtimeConfig.projectileMaxCount && "Wrong data.");
 
 		return true;
 	}
@@ -1613,13 +1626,14 @@ private:
 			VM::trigger_t trigger;
 			if (!_device->readRam((UInt16)triggerAddr, (Byte*)&trigger, sizeof(VM::trigger_t)))
 				trigger = VM::trigger_t();
-			out.push_back(VM::trigger_t::Ref(trigger, FarPtr(0, triggerAddr)));
+			out.push_back(VM::trigger_t::Ref((int)i, trigger, FarPtr(0, triggerAddr)));
 			triggerAddr += sizeof(VM::trigger_t);
+
+			if ((int)out.size() > _runtimeConfig.triggerMaxCount)
+				break;
 		}
 
 		out.shrink_to_fit();
-
-		GBBASIC_ASSERT((int)out.size() <= _runtimeConfig.triggerMaxCount && "Wrong data.");
 
 		return true;
 	}
@@ -2405,8 +2419,8 @@ private:
 			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Addr(), ImGuiTableColumnFlags_WidthFixed, width);
 			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Type(), ImGuiTableColumnFlags_WidthFixed, width);
 			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Value(), ImGuiTableColumnFlags_WidthStretch);
-			ImGui::PopStyleColor();
 			ImGui::TableHeadersRow();
+			ImGui::PopStyleColor();
 
 			ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs();
 			if (sortSpecs->SpecsDirty && sortSpecs->SpecsCount > 0) {
@@ -2498,8 +2512,201 @@ private:
 
 		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
-		(void)snapshot;
-		// TODO: DBG.
+		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Sortable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
+		if (ImGui::BeginTable("##Threads", 4, flags)) {
+			typedef std::function<void(const VM::SCRIPT_CTX::Array &, const VM::SCRIPT_CTX &, int, ImU32, ImU32)> Debugger;
+
+			Debugger debugThread = nullptr;
+			debugThread = [&debugThread] (const VM::SCRIPT_CTX::Array &all, const VM::SCRIPT_CTX &thread, int level, ImU32 majCol, ImU32 minCol) -> void {
+				if (ImGui::TreeNode("{...}")) {
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("PC: ");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04X", thread.PC);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Bank: ");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%d", thread.bank);
+					ImGui::PopStyleColor();
+
+					if (thread.next == NULL) {
+						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+						ImGui::TextUnformatted("Next: ");
+						ImGui::PopStyleColor();
+						ImGui::SameLine();
+						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+						ImGui::TextUnformatted("NULL");
+						ImGui::PopStyleColor();
+					} else {
+						if (level <= DEBUGGER_TABLE_LEVEL_MAX_COUNT) {
+							VM::SCRIPT_CTX::Array::const_iterator it = std::find_if(
+								all.begin(), all.end(),
+								[thread] (const VM::SCRIPT_CTX::Ref &ref) -> bool {
+									return thread.next == ref.pointer.address;
+								}
+							);
+							if (it == all.end()) {
+								ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+								ImGui::TextUnformatted("Next: ");
+								ImGui::PopStyleColor();
+								ImGui::SameLine();
+								ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+								ImGui::Text("%04X...", thread.next);
+								ImGui::PopStyleColor();
+							} else {
+								ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+								ImGui::TextUnformatted("Next: ");
+								ImGui::PopStyleColor();
+								ImGui::SameLine();
+
+								const VM::SCRIPT_CTX &next = it->data;
+								debugThread(all, next, level + 1, majCol, minCol);
+							}
+						} else {
+							ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+							ImGui::TextUnformatted("Next: ");
+							ImGui::PopStyleColor();
+							ImGui::SameLine();
+							ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+							ImGui::Text("%04X...", thread.next);
+							ImGui::PopStyleColor();
+						}
+					}
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("SP: ");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04X", thread.stack_ptr);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Stack base: ");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04X", thread.base_addr);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("ID: ");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%d", thread.ID);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Handle: ");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04X", thread.hthread);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Terminated: ");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%s", thread.terminated ? "true" : "false");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Waitable: ");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%s", thread.waitable ? "true" : "false");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Locks: ");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%d", thread.lock_count);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Fn: ");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04X", thread.update_fn);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Fn bank: ");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%d", thread.update_fn_bank);
+					ImGui::PopStyleColor();
+
+					ImGui::TreePop();
+				}
+			};
+
+			const float width0 = ImGui::GetFontSize() * 2.0f;
+			const float width = ImGui::GetFontSize() * 3.0f;
+			const ImU32 col = _theme->style()->debuggerHeadColor;
+			ImGui::PushStyleColor(ImGuiCol_Text, col);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Order(), ImGuiTableColumnFlags_WidthFixed, width0);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_ID(), ImGuiTableColumnFlags_WidthFixed, width);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Addr(), ImGuiTableColumnFlags_WidthFixed, width);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Value(), ImGuiTableColumnFlags_WidthStretch);
+			ImGui::TableHeadersRow();
+			ImGui::PopStyleColor();
+
+			ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs();
+			if (sortSpecs->SpecsDirty && sortSpecs->SpecsCount > 0) {
+				const ImGuiTableColumnSortSpecs* spec = &sortSpecs->Specs[0];
+				const int column = spec->ColumnIndex;
+				const bool ascending = (spec->SortDirection == ImGuiSortDirection_Ascending);
+				_options.threadSortingRule = SortingRule(column, ascending);
+
+				sortSpecs->SpecsDirty = false;
+			}
+
+			int j = 0;
+			for (const VM::SCRIPT_CTX::Ref &thread : snapshot->threads) {
+				const int ord = thread.order;
+				const UInt8 id = thread.data.ID;
+				const UInt16 address = (UInt16)thread.pointer.address;
+				const VM::SCRIPT_CTX &val = thread.data;
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+					ImGui::TableSetColumnIndex(1); ImGui::Text("%d", id);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%04X", address);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(3); debugThread(snapshot->threads, val, 1, _theme->style()->debuggerMajorColor, _theme->style()->debuggerMinorColor);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+				++j;
+			}
+
+			ImGui::EndTable();
+		}
 	}
 	void objects(Snapshot* snapshot) {
 		ImGuiStyle &style = ImGui::GetStyle();
