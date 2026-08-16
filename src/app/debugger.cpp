@@ -417,7 +417,6 @@ private:
 	bool _inspecting = false;
 	// States.
 	Snapshot _snapshot;
-	Device::Registers _registers;
 	Semaphore _mnemonicsIsBeingGenerated;
 	GBBASIC::Disassembler::Mnemonic::Queue _mnemonics;
 	FarPtr _latestDisassembledMnemonicsAddress;
@@ -438,7 +437,6 @@ public:
 		_activeCodePage = -1;
 		_inspecting = false;
 		_snapshot.reset();
-		_registers = Device::Registers();
 		_mnemonics.clear();
 		_latestDisassembledMnemonicsAddress = FarPtr();
 
@@ -458,6 +456,8 @@ public:
 
 		_device->clearBreakpoints();
 
+		_workspace->join();
+
 		_bringCodeDebuggerToFront = false;
 		_bringCategoryToFront = Categories::NONE;
 		_bringSourceCodeCursorToFront = false;
@@ -465,7 +465,6 @@ public:
 		_activeCodePage = -1;
 		_inspecting = false;
 		_snapshot.reset();
-		_registers = Device::Registers();
 		_mnemonicsIsBeingGenerated.wait();
 		_mnemonics.clear();
 		_latestDisassembledMnemonicsAddress = FarPtr();
@@ -509,7 +508,7 @@ public:
 
 		begin(showTitle);
 		if (inspecting()) {
-			code();
+			paused();
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
@@ -520,6 +519,14 @@ public:
 			deviceMemory();
 		} else {
 			running();
+			ImGui::NewLine(1);
+			ImGui::Separator();
+
+			kernelMemory();
+			ImGui::NewLine(1);
+			ImGui::Separator();
+
+			deviceMemory();
 		}
 		end();
 	}
@@ -564,6 +571,8 @@ public:
 		if (_device)
 			_device->clearBreakpoints();
 
+		_workspace->join();
+
 		_bringCodeDebuggerToFront = false;
 		_bringCategoryToFront = Categories::NONE;
 		_bringSourceCodeCursorToFront = false;
@@ -571,7 +580,6 @@ public:
 		_activeCodePage = -1;
 		_inspecting = false;
 		_snapshot.reset();
-		_registers = Device::Registers();
 		_mnemonicsIsBeingGenerated.wait();
 		_mnemonics.clear();
 		_latestDisassembledMnemonicsAddress = FarPtr();
@@ -605,7 +613,6 @@ public:
 		_inspecting = false;
 
 		_snapshot.reset();
-		_registers = Device::Registers();
 	}
 	bool inspecting(void) const {
 		return _inspecting;
@@ -658,7 +665,6 @@ public:
 		_inspecting = false;
 
 		_snapshot.reset();
-		_registers = Device::Registers();
 
 		_bringCategoryToFront = toNextAsmInst ? Categories::ASM : Categories::BASIC;
 
@@ -1552,8 +1558,10 @@ private:
 
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_ClearBreakpoints());
 		}
+
+		code(regSize);
 	}
-	void code(void) {
+	void paused(void) {
 		ImGuiIO &io = ImGui::GetIO();
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -1639,112 +1647,7 @@ private:
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_ClearBreakpoints());
 		}
 
-		if (ImGui::BeginTabBar("@Code")) {
-			ImGuiTabItemFlags flags = ImGuiTabItemFlags_NoTooltip;
-			do {
-				Project::Ptr &prj = _workspace->currentProject();
-				if (!prj)
-					break;
-				CodeAssets::Entry* entry = prj->getCode(_activeCodePage);
-				if (!entry)
-					break;
-				EditorCode* editor = (EditorCode*)entry->editor;
-				if (!editor)
-					break;
-
-				if (_bringSourceCodeCursorToFront) {
-					_bringSourceCodeCursorToFront = false;
-
-					editor->ensureCursorVisible();
-				}
-
-				if (_bringCategoryToFront == Categories::BASIC)
-					flags |= ImGuiTabItemFlags_SetSelected;
-				if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Basic(), nullptr, flags)) {
-					const float width = ImGui::GetContentRegionAvail().x;
-					const float height = 200.0f;
-					const bool ro = editor->readonly();
-					editor->readonly(true);
-					editor->update(
-						_window, _renderer,
-						_workspace,
-						prj->title().c_str(),
-						0, 0, width, height,
-						0.0
-					);
-					editor->readonly(ro);
-
-					ImGui::EndTabItem();
-				}
-			} while (false);
-
-			flags = ImGuiTabItemFlags_NoTooltip;
-			if (_bringCategoryToFront == Categories::ASM)
-				flags |= ImGuiTabItemFlags_SetSelected;
-			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Asm(), nullptr, flags)) {
-				const GBBASIC::Disassembler::Mnemonic::Queue* mnemonics_ = touchMnemonics();
-
-				const ImU32 col = _theme->style()->debuggerHeadColor;
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::Dummy(ImVec2(1, 0));
-				ImGui::SameLine();
-				ImGui::AlignTextToFramePadding();
-				if (mnemonics_)
-					ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_DisassembyHeadInfo());
-				else
-					ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Disassembling());
-				ImGui::PopStyleColor();
-
-				do {
-					VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
-
-					const float width = ImGui::GetContentRegionAvail().x;
-					const float height = 200.0f - ImGui::GetTextLineHeightWithSpacing();
-					const ImGuiWindowFlags flags_ = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav;
-					ImGui::BeginChild("@Dasm", ImVec2(width, height), false, flags_);
-					{
-						mnemonics(mnemonics_);
-					}
-					ImGui::EndChild();
-				} while (false);
-
-				do {
-					ImGui::NewLine(1);
-					ImGui::Dummy(ImVec2(2, 0));
-					ImGui::SameLine();
-					const float posX = ImGui::GetCursorPosX();
-					ImGui::AlignTextToFramePadding();
-					ImGui::TextUnformatted(_theme->windowEmulator_CodeDebugger_View());
-					ImGui::SameLine();
-					const float diff = ImGui::GetCursorPosX() - posX;
-					const float remain = regSize.x * 0.3f - diff;
-					ImGui::Dummy(ImVec2(remain, 0));
-					ImGui::SameLine();
-
-					const char* ITEMS[] = {
-						_theme->windowEmulator_CodeDebugger_View_CompactMode().c_str(),
-						_theme->windowEmulator_CodeDebugger_View_FullRom().c_str()
-					};
-
-					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
-					VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
-
-					ImGui::SetNextItemWidth(regSize.x * 0.7f);
-					if (ImGui::Combo("##DasmView", &_options.disassemblerView, ITEMS, GBBASIC_COUNTOF(ITEMS))) {
-						unloadMnemonics();
-					}
-				} while (false);
-				ImGui::SameLine();
-				ImGui::NewLine(1);
-
-				ImGui::EndTabItem();
-			}
-
-			if (_bringCategoryToFront != Categories::NONE)
-				_bringCategoryToFront = Categories::NONE;
-
-			ImGui::EndTabBar();
-		}
+		code(regSize);
 	}
 	void kernelMemory(void) {
 		ImGuiStyle &style = ImGui::GetStyle();
@@ -1822,6 +1725,126 @@ private:
 		} while (false);
 	}
 
+	void code(const ImVec2 &regSize) {
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		if (ImGui::BeginTabBar("@Code")) {
+			ImGuiTabItemFlags flags = ImGuiTabItemFlags_NoTooltip;
+			do {
+				Project::Ptr &prj = _workspace->currentProject();
+				if (!prj)
+					break;
+				CodeAssets::Entry* entry = prj->getCode(_activeCodePage);
+				if (!entry)
+					break;
+				EditorCode* editor = (EditorCode*)entry->editor;
+				if (!editor)
+					break;
+
+				if (_bringSourceCodeCursorToFront) {
+					_bringSourceCodeCursorToFront = false;
+
+					editor->ensureCursorVisible();
+				}
+
+				if (_bringCategoryToFront == Categories::BASIC)
+					flags |= ImGuiTabItemFlags_SetSelected;
+				if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Basic(), nullptr, flags)) {
+					const float width = ImGui::GetContentRegionAvail().x;
+					const float height = 200.0f;
+					const bool ro = editor->readonly();
+					editor->readonly(true);
+					editor->update(
+						_window, _renderer,
+						_workspace,
+						prj->title().c_str(),
+						0, 0, width, height,
+						0.0
+					);
+					editor->readonly(ro);
+
+					ImGui::NewLine(2);
+					ImGui::SameLine();
+					ImGui::Dummy(ImVec2(2, 0));
+#if GBBASIC_ASSET_PAGE_SHOW_HEX_ENABLED
+					ImGui::Text("%s %02X", _theme->status_Pg().c_str(), _activeCodePage);
+#else /* GBBASIC_ASSET_PAGE_SHOW_HEX_ENABLED */
+					ImGui::Text("%s %d", _theme->status_Pg().c_str(), _activeCodePage);
+#endif /* GBBASIC_ASSET_PAGE_SHOW_HEX_ENABLED */
+					ImGui::NewLine(3);
+
+					ImGui::EndTabItem();
+				}
+			} while (false);
+
+			flags = ImGuiTabItemFlags_NoTooltip;
+			if (_bringCategoryToFront == Categories::ASM)
+				flags |= ImGuiTabItemFlags_SetSelected;
+			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Asm(), nullptr, flags)) {
+				const GBBASIC::Disassembler::Mnemonic::Queue* mnemonics_ = touchMnemonics();
+
+				const ImU32 col = _theme->style()->debuggerHeadColor;
+				ImGui::PushStyleColor(ImGuiCol_Text, col);
+				ImGui::Dummy(ImVec2(1, 0));
+				ImGui::SameLine();
+				ImGui::AlignTextToFramePadding();
+				if (mnemonics_)
+					ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_DisassembyHeadInfo());
+				else
+					ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Disassembling());
+				ImGui::PopStyleColor();
+
+				do {
+					VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+
+					const float width = ImGui::GetContentRegionAvail().x;
+					const float height = 200.0f - ImGui::GetTextLineHeightWithSpacing();
+					const ImGuiWindowFlags flags_ = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav;
+					ImGui::BeginChild("@Dasm", ImVec2(width, height), false, flags_);
+					{
+						mnemonics(mnemonics_);
+					}
+					ImGui::EndChild();
+				} while (false);
+
+				do {
+					ImGui::NewLine(1);
+					ImGui::Dummy(ImVec2(2, 0));
+					ImGui::SameLine();
+					const float posX = ImGui::GetCursorPosX();
+					ImGui::AlignTextToFramePadding();
+					ImGui::TextUnformatted(_theme->windowEmulator_CodeDebugger_View());
+					ImGui::SameLine();
+					const float diff = ImGui::GetCursorPosX() - posX;
+					const float remain = regSize.x * 0.3f - diff;
+					ImGui::Dummy(ImVec2(remain, 0));
+					ImGui::SameLine();
+
+					const char* ITEMS[] = {
+						_theme->windowEmulator_CodeDebugger_View_CompactMode().c_str(),
+						_theme->windowEmulator_CodeDebugger_View_FullRom().c_str()
+					};
+
+					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+					VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+					ImGui::SetNextItemWidth(regSize.x * 0.7f);
+					if (ImGui::Combo("##DasmView", &_options.disassemblerView, ITEMS, GBBASIC_COUNTOF(ITEMS))) {
+						unloadMnemonics();
+					}
+				} while (false);
+				ImGui::SameLine();
+				ImGui::NewLine(1);
+
+				ImGui::EndTabItem();
+			}
+
+			if (_bringCategoryToFront != Categories::NONE)
+				_bringCategoryToFront = Categories::NONE;
+
+			ImGui::EndTabBar();
+		}
+	}
 	void mnemonics(const GBBASIC::Disassembler::Mnemonic::Queue* mnemonics_) {
 		ImGuiIO &io = ImGui::GetIO();
 		ImGuiStyle &style = ImGui::GetStyle();
@@ -1993,7 +2016,138 @@ private:
 		// TODO: DBG.
 	}
 	void registers(void) {
-		// TODO: DBG.
+		ImVec2 pos = ImGui::GetCursorPos();
+		pos.x += ImGui::GetContentRegionAvail().x * 0.5f;
+
+		const Device::Registers regs = _device->readRegisters();
+
+		const UInt16 AF = (regs.A << 8) | ((regs.F.Z << 7) | (regs.F.N << 6) | (regs.F.H << 5) | (regs.F.C << 4));
+		const UInt16 BC = regs.BC;
+		const UInt16 DE = regs.DE;
+		const UInt16 HL = regs.HL;
+		const UInt16 SP = regs.SP;
+		const UInt16 PC = regs.PC;
+
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("AF=");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%04X", AF);
+		ImGui::PopStyleColor();
+
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("BC=");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%04X", BC);
+		ImGui::PopStyleColor();
+
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("DE=");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%04X", DE);
+		ImGui::PopStyleColor();
+
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("HL=");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%04X", HL);
+		ImGui::PopStyleColor();
+
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("SP=");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%04X", SP);
+		ImGui::PopStyleColor();
+
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("PC=");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%04X", PC);
+		ImGui::PopStyleColor();
+
+
+		UInt8 LCDC = 0;
+		_device->readRam(0xff40, &LCDC);
+		UInt8 STAT = 0;
+		_device->readRam(0xff41, &STAT);
+		UInt8 LY = 0;
+		_device->readRam(0xff44, &LY);
+		UInt8 LYC = 0;
+		_device->readRam(0xff45, &LYC);
+		UInt8 IE = 0;
+		_device->readRam(0xffff, &IE);
+		UInt8 IF = 0;
+		_device->readRam(0xff0f, &IF);
+
+		ImGui::SetCursorPos(pos);
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("LCDC=");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%02X", LCDC);
+		ImGui::PopStyleColor();
+
+		pos.y = ImGui::GetCursorPosY();
+		ImGui::SetCursorPos(pos);
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("STAT=");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%02X", STAT);
+		ImGui::PopStyleColor();
+
+		pos.y = ImGui::GetCursorPosY();
+		ImGui::SetCursorPos(pos);
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("LY  =");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%02X", LY);
+		ImGui::PopStyleColor();
+
+		pos.y = ImGui::GetCursorPosY();
+		ImGui::SetCursorPos(pos);
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("LYC =");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%02X", LYC);
+		ImGui::PopStyleColor();
+
+		pos.y = ImGui::GetCursorPosY();
+		ImGui::SetCursorPos(pos);
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("IE  =");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%02X", IE);
+		ImGui::PopStyleColor();
+
+		pos.y = ImGui::GetCursorPosY();
+		ImGui::SetCursorPos(pos);
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+		ImGui::Text("IF  =");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+		ImGui::Text("%02X", IF);
+		ImGui::PopStyleColor();
 	}
 	void ram(void) {
 		// TODO: DBG.
