@@ -2485,7 +2485,9 @@ private:
 									UInt16 val = 0;
 									if (!_device->readRam((UInt16)(address + i * DEBUGGER_WORD_SIZE), &val))
 										val = 0;
-									ImGui::Text("%d(%04X)", val, val);
+									union { Int16 i; UInt16 u; } u;
+									u.u = val;
+									ImGui::Text("%d(%04X)", u.i, val);
 								}
 								ImGui::PopID();
 							}
@@ -2498,7 +2500,9 @@ private:
 						UInt16 val = 0;
 						if (!_device->readRam(address, &val))
 							val = 0;
-						ImGui::TableSetColumnIndex(4); ImGui::Text("%d(%04X)", val, val);
+						union { Int16 i; UInt16 u; } u;
+						u.u = val;
+						ImGui::TableSetColumnIndex(4); ImGui::Text("%d(%04X)", u.i, val);
 						ImGui::PopStyleColor();
 					}
 				}
@@ -2575,6 +2579,10 @@ private:
 								ImGui::TextUnformatted("Next=");
 								ImGui::PopStyleColor();
 								ImGui::SameLine();
+								ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+								ImGui::Text("%04X", thread.next);
+								ImGui::PopStyleColor();
+								ImGui::SameLine();
 
 								const VM::SCRIPT_CTX &next = it->data;
 								const int idx = (int)(it - all.begin());
@@ -2598,19 +2606,15 @@ private:
 					ImGui::Text("%04X", thread.stack_ptr);
 					ImGui::PopStyleColor();
 
-					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-					ImGui::TextUnformatted("Stack base=");
-					ImGui::PopStyleColor();
-					ImGui::SameLine();
-					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-					ImGui::Text("%04X", thread.base_addr);
-					ImGui::PopStyleColor();
-
 					if (index >= 0 && index < (int)allThreadStacks.size()) {
 						const VM::ThreadStack::Ref &stkRef = allThreadStacks[index];
 						if (!stkRef.data.buffer.empty()) {
 							ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 							ImGui::TextUnformatted("Stack=");
+							ImGui::PopStyleColor();
+							ImGui::SameLine();
+							ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+							ImGui::Text("%04X", thread.base_addr);
 							ImGui::PopStyleColor();
 							ImGui::SameLine();
 
@@ -2626,7 +2630,7 @@ private:
 										ImGui::PopStyleColor();
 
 										const Int16 val = buffer[i];
-										ImGui::Text("%d(%04X)", val, val);
+										ImGui::Text("%d(%04hX)", val, val);
 
 										if (stkRef.data.count == i) {
 											ImGui::SameLine();

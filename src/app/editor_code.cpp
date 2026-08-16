@@ -1212,7 +1212,7 @@ private:
 			}
 			ImGui::Separator();
 			if (!snippets->empty()) {
-				if (ImGui::BeginMenu(ws->theme()->menu_InsertSnippet())) {
+				if (ImGui::BeginMenu(ws->theme()->menu_InsertSnippet(), !readonly())) {
 					for (int i = 0; i < (int)snippets->size(); ++i) {
 						const GBBASIC::Kernel::Snippet &snippet = (*snippets)[i];
 
@@ -1503,7 +1503,7 @@ private:
 			const GBBASIC::Kernel::Snippet::Array* snippets = krnl ? &krnl->snippets() : nullptr;
 
 			if (!snippets->empty()) {
-				if (ImGui::BeginMenu(ws->theme()->menu_InsertSnippet())) {
+				if (ImGui::BeginMenu(ws->theme()->menu_InsertSnippet(), !readonly())) {
 					for (int i = 0; i < (int)snippets->size(); ++i) {
 						const GBBASIC::Kernel::Snippet &snippet = (*snippets)[i];
 
