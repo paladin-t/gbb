@@ -954,12 +954,17 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_Debugger_Code("Code");
 	windowEmulator_Debugger_Vram("VRAM");
 	windowEmulator_CodeDebugger("Code Debugger");
+	windowEmulator_CodeDebugger_Addr("Addr.");
 	windowEmulator_CodeDebugger_Asm("ASM");
 	windowEmulator_CodeDebugger_Basic("BASIC");
 	windowEmulator_CodeDebugger_DeviceMemory("Device memory");
+	windowEmulator_CodeDebugger_ID("ID");
 	windowEmulator_CodeDebugger_Inspector("Inspector");
 	windowEmulator_CodeDebugger_KernelMemory("Kernel memory");
+	windowEmulator_CodeDebugger_Order("Order");
 	windowEmulator_CodeDebugger_Running("Running...");
+	windowEmulator_CodeDebugger_Type("Type");
+	windowEmulator_CodeDebugger_Value("Value");
 	windowEmulator_CodeDebugger_View("View");
 	windowEmulator_CodeDebugger_View_CompactMode("Compact mode");
 	windowEmulator_CodeDebugger_View_Decremental("Decremental");
@@ -1372,12 +1377,15 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_CodeDebugger_Disassembling("Disassembling...");
 	tooltipEmulator_CodeDebugger_DisassembyHeadInfo("ROM     Bytes    Mnemonic");
 	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
+	tooltipEmulator_CodeDebugger_Heap("Heap");
+	tooltipEmulator_CodeDebugger_Objects("Objects");
 	tooltipEmulator_CodeDebugger_Pause("Pause");
 	tooltipEmulator_CodeDebugger_RamInfo("Memory Addr Byte Description");
 	tooltipEmulator_CodeDebugger_Registers("Registers");
 	tooltipEmulator_CodeDebugger_Resume("Resume");
 	tooltipEmulator_CodeDebugger_StepAsm("Step ASM (" GBBASIC_MODIFIER_KEY_NAME "+F10)");
 	tooltipEmulator_CodeDebugger_StepBasic("Step BASIC (F10)");
+	tooltipEmulator_CodeDebugger_Threads("Threads");
 	tooltipEmulator_NormalSpeed("Normal speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
 	tooltipEmulator_StatusNote(
 		"Cartridge flag   : {0}\n"

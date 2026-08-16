@@ -66,21 +66,6 @@ template<typename T> struct Reference {
 	}
 };
 
-}
-
-#pragma pack(push, 1)
-
-namespace VM {
-
-typedef UInt8 Boolean;
-typedef UInt16 Pointer;
-typedef Pointer UInt8Ptr;
-typedef Pointer UInt16Ptr;
-typedef Pointer CtxPtr;
-typedef Pointer MetaSpriteRef;
-
-typedef std::deque<Byte> Buffer;
-
 struct HeapAllocation {
 	typedef std::vector<HeapAllocation> Array;
 
@@ -101,6 +86,21 @@ struct HeapAllocation {
 	{
 	}
 };
+
+}
+
+#pragma pack(push, 1)
+
+namespace VM {
+
+typedef UInt8 Boolean;
+typedef UInt16 Pointer;
+typedef Pointer UInt8Ptr;
+typedef Pointer UInt16Ptr;
+typedef Pointer CtxPtr;
+typedef Pointer MetaSpriteRef;
+
+typedef std::deque<Byte> Buffer;
 
 struct ThreadStack {
 	typedef Reference<ThreadStack> Ref;
@@ -389,6 +389,16 @@ private:
 		}
 	};
 
+	struct SortingRule {
+		int index = 0;
+		bool ascending = true;
+
+		SortingRule() {
+		}
+		SortingRule(int idx, bool asc) : index(idx), ascending(asc) {
+		}
+	};
+
 private:
 	/**< General. */
 
@@ -397,6 +407,7 @@ private:
 		float startY = 0;
 		int safeHeight = 0;
 		int disassemblerView = 0;
+		SortingRule heapSortingRule;
 		int ramView = 1;
 		int bankIndex = -1;
 		std::string bankText;
@@ -558,6 +569,7 @@ public:
 			deviceMemory();
 		} else {
 			running();
+#if !defined GBBASIC_OS_HTML
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
@@ -566,6 +578,7 @@ public:
 			ImGui::Separator();
 
 			deviceMemory();
+#endif /* GBBASIC_OS_HTML */
 		}
 		end();
 
@@ -1154,6 +1167,9 @@ private:
 		if (compactMode && !_mnemonics.empty()) {
 			gotPc = probeCurrentProgramCounter(pc);
 			if (gotPc && _latestDisassembledMnemonicsAddress.bank != pc.bank) { // Bank changed.
+#if defined GBBASIC_OS_HTML
+				_mnemonicsIsBeingGenerated.wait();
+#endif /* GBBASIC_OS_HTML */
 				_mnemonicsIsBeingGenerated = Semaphore();
 				_mnemonics.clear(); // Invalidate.
 			}
@@ -1265,12 +1281,15 @@ private:
 		return _mnemonics.empty() ? nullptr : &_mnemonics;
 	}
 	void unloadMnemonics(void) {
+#if defined GBBASIC_OS_HTML
+		_mnemonicsIsBeingGenerated.wait();
+#endif /* GBBASIC_OS_HTML */
 		_mnemonicsIsBeingGenerated = Semaphore();
 		_mnemonics.clear();
 		_latestDisassembledMnemonicsAddress = FarPtr();
 	}
 
-	const Snapshot* touchSnapshot(void) {
+	Snapshot* touchSnapshot(void) {
 		if (!isCompiledFromSource())
 			return nullptr;
 
@@ -1326,8 +1345,8 @@ private:
 		FarPtr farPtr;
 		if (!getFarPointerBySymbolName(COMPILER_SCRIPT_MEMORY_ENTRY_NAME, farPtr))
 			return false;
-		UInt16 heapAddr = 0;
-		if (!_device->readRam((UInt16)farPtr.address, &heapAddr) || heapAddr == 0)
+		const UInt16 heapAddr = (UInt16)farPtr.address;
+		if (heapAddr == 0)
 			return false;
 
 		int ord = 0;
@@ -1337,8 +1356,38 @@ private:
 			if (ram.usage == GBBASIC::RamLocation::Usages::NONE)
 				continue;
 
-			const VM::HeapAllocation healAlloc(ord++, id, (UInt16)(heapAddr + ram.address), ram.size / 2, ram.usage);
+			const int len = ram.size / 2;
+			const VM::HeapAllocation healAlloc(ord, id, (UInt16)(heapAddr + ram.address), len, ram.usage);
 			out.push_back(healAlloc);
+			ord += len;
+		}
+
+		const int column = _options.heapSortingRule.index;
+		const bool ascending = _options.heapSortingRule.ascending;
+		if (column != 0 || !ascending) {
+			std::sort(
+				out.begin(), out.end(),
+				[column, ascending] (const VM::HeapAllocation &l, const VM::HeapAllocation &r) -> bool {
+					switch (column) {
+					case 1:
+						return ascending ?
+							l.identifier < r.identifier :
+							l.identifier > r.identifier;
+					case 2:
+						return ascending ?
+							l.address < r.address :
+							l.address > r.address;
+					case 3:
+						return ascending ?
+							l.usage < r.usage :
+							l.usage > r.usage;
+					default:
+						return ascending ?
+							l.order < r.order :
+							l.order > r.order;
+					}
+				}
+			);
 		}
 
 		out.shrink_to_fit();
@@ -1351,8 +1400,8 @@ private:
 		FarPtr farPtr;
 		if (!getFarPointerBySymbolName(COMPILER_SCRIPT_MEMORY_ENTRY_NAME, farPtr))
 			return false;
-		UInt16 heapAddr = 0;
-		if (!_device->readRam((UInt16)farPtr.address, &heapAddr) || heapAddr == 0)
+		const UInt16 heapAddr = (UInt16)farPtr.address;
+		if (heapAddr == 0)
 			return false;
 
 		for (size_t i = 0; i < _runtimeConfig.heapSize * sizeof(UInt16); ++i) {
@@ -1845,7 +1894,9 @@ private:
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_ClearBreakpoints());
 		}
 
+#if !defined GBBASIC_OS_HTML
 		code(regSize);
+#endif /* GBBASIC_OS_HTML */
 	}
 	void paused(void) {
 		ImGuiIO &io = ImGui::GetIO();
@@ -1951,7 +2002,7 @@ private:
 			return;
 		ImGui::NewLine(1);
 
-		const Snapshot* snapshot = touchSnapshot();
+		Snapshot* snapshot = touchSnapshot();
 		variables(snapshot);
 		threads(snapshot);
 		objects(snapshot);
@@ -1972,7 +2023,7 @@ private:
 			return;
 		ImGui::NewLine(1);
 
-		do {
+		{
 			const ImU32 col = _theme->style()->debuggerHeadColor;
 			ImGui::PushStyleColor(ImGuiCol_Text, col);
 			ImGui::Dummy(ImVec2(1, 0));
@@ -1981,14 +2032,14 @@ private:
 			ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Registers());
 			ImGui::PopStyleColor();
 
-			do {
+			{
 				VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
 				registers();
-			} while (false);
-		} while (false);
+			}
+		}
 
-		do {
+		{
 			const ImU32 col = _theme->style()->debuggerHeadColor;
 			ImGui::PushStyleColor(ImGuiCol_Text, col);
 			ImGui::Dummy(ImVec2(1, 0));
@@ -1997,7 +2048,7 @@ private:
 			ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_RamInfo());
 			ImGui::PopStyleColor();
 
-			do {
+			{
 				VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
 				const float width = ImGui::GetContentRegionAvail().x;
@@ -2008,9 +2059,9 @@ private:
 					ram();
 				}
 				ImGui::EndChild();
-			} while (false);
+			}
 
-			do {
+			{
 				ImGui::NewLine(1);
 				ImGui::Dummy(ImVec2(2, 0));
 				ImGui::SameLine();
@@ -2035,8 +2086,8 @@ private:
 				if (ImGui::Combo("##RamView", &_options.ramView, ITEMS, GBBASIC_COUNTOF(ITEMS))) {
 					// Do nothing.
 				}
-			} while (false);
-		} while (false);
+			}
+		}
 	}
 
 	void code(const ImVec2 &regSize) {
@@ -2108,7 +2159,7 @@ private:
 					ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Disassembling());
 				ImGui::PopStyleColor();
 
-				do {
+				{
 					VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
 					const float width = ImGui::GetContentRegionAvail().x;
@@ -2119,9 +2170,9 @@ private:
 						mnemonics(mnemonics_);
 					}
 					ImGui::EndChild();
-				} while (false);
+				}
 
-				do {
+				{
 					ImGui::NewLine(1);
 					ImGui::Dummy(ImVec2(2, 0));
 					ImGui::SameLine();
@@ -2146,7 +2197,7 @@ private:
 					if (ImGui::Combo("##DasmView", &_options.disassemblerView, ITEMS, GBBASIC_COUNTOF(ITEMS))) {
 						unloadMnemonics();
 					}
-				} while (false);
+				}
 				ImGui::SameLine();
 				ImGui::NewLine(1);
 
@@ -2320,19 +2371,150 @@ private:
 			drawList->AddRectFilled(barGrabMin, barGrabMax, grabColor);
 		}
 	}
-	void variables(const Snapshot* snapshot) {
-		(void)snapshot;
+	void variables(Snapshot* snapshot) {
+		ImGuiStyle &style = ImGui::GetStyle();
 
+		const ImU32 col = _theme->style()->debuggerHeadColor;
+		ImGui::PushStyleColor(ImGuiCol_Text, col);
+		ImGui::Dummy(ImVec2(1, 0));
+		ImGui::SameLine();
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Heap());
+		ImGui::PopStyleColor();
+
+		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2(style.FramePadding.x, 0));
+
+		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Sortable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
+		if (ImGui::BeginTable("##Heap", 5, flags)) {
+			constexpr const char* USAGES[] = {
+				"-",
+				"LET",
+				"DIM",
+				"FOR",
+				"READ",
+				"TOUCH",
+				"VIEWPORT"
+			};
+
+			const float width0 = ImGui::GetFontSize() * 2.0f;
+			const float width = ImGui::GetFontSize() * 3.0f;
+			const ImU32 col = _theme->style()->debuggerHeadColor;
+			ImGui::PushStyleColor(ImGuiCol_Text, col);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Order(), ImGuiTableColumnFlags_WidthFixed, width0);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_ID(), ImGuiTableColumnFlags_WidthFixed, width);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Addr(), ImGuiTableColumnFlags_WidthFixed, width);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Type(), ImGuiTableColumnFlags_WidthFixed, width);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Value(), ImGuiTableColumnFlags_WidthStretch);
+			ImGui::PopStyleColor();
+			ImGui::TableHeadersRow();
+
+			ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs();
+			if (sortSpecs->SpecsDirty && sortSpecs->SpecsCount > 0) {
+				const ImGuiTableColumnSortSpecs* spec = &sortSpecs->Specs[0];
+				const int column = spec->ColumnIndex;
+				const bool ascending = (spec->SortDirection == ImGuiSortDirection_Ascending);
+				_options.heapSortingRule = SortingRule(column, ascending);
+
+				sortSpecs->SpecsDirty = false;
+			}
+
+			int j = 0;
+			for (const VM::HeapAllocation &alloc : snapshot->heap) {
+				const int ord = alloc.order;
+				const std::string &id = alloc.identifier;
+				const UInt16 address = alloc.address;
+				const int usage = Math::clamp((int)alloc.usage, 0, (int)GBBASIC_COUNTOF(USAGES));
+
+				if (alloc.usage == GBBASIC::RamLocation::Usages::ARRAY) {
+					for (int i = 0; i < alloc.length; ++i) {
+						ImGui::TableNextRow();
+						ImGui::PushID(j);
+						{
+							ImGui::PushStyleColor(ImGuiCol_Text, col);
+							ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord + i);
+							ImGui::PopStyleColor();
+
+							ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+							ImGui::TableSetColumnIndex(1); ImGui::Text("%s+%d", id.c_str(), i);
+							ImGui::PopStyleColor();
+
+							ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+							ImGui::TableSetColumnIndex(2); ImGui::Text("%04X", address + i);
+							ImGui::TableSetColumnIndex(3); ImGui::TextUnformatted(USAGES[usage]);
+							ImGui::PopStyleColor();
+
+							ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+							UInt16 val = 0;
+							if (!_device->readRam(address, &val))
+								val = 0;
+							ImGui::TableSetColumnIndex(4); ImGui::Text("%d (%04X)", val, val);
+							ImGui::PopStyleColor();
+						}
+						ImGui::PopID();
+						++j;
+					}
+				} else {
+					ImGui::TableNextRow();
+					ImGui::PushID(j);
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, col);
+						ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord);
+						ImGui::PopStyleColor();
+
+						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+						ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(id);
+						ImGui::PopStyleColor();
+
+						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+						ImGui::TableSetColumnIndex(2); ImGui::Text("%04X", address);
+						ImGui::TableSetColumnIndex(3); ImGui::TextUnformatted(USAGES[usage]);
+						ImGui::PopStyleColor();
+
+						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+						UInt16 val = 0;
+						if (!_device->readRam(address, &val))
+							val = 0;
+						ImGui::TableSetColumnIndex(4); ImGui::Text("%d (%04X)", val, val);
+						ImGui::PopStyleColor();
+					}
+					ImGui::PopID();
+					++j;
+				}
+			}
+
+			ImGui::EndTable();
+		}
+	}
+	void threads(Snapshot* snapshot) {
+		ImGuiStyle &style = ImGui::GetStyle();
+
+		const ImU32 col = _theme->style()->debuggerHeadColor;
+		ImGui::PushStyleColor(ImGuiCol_Text, col);
+		ImGui::Dummy(ImVec2(1, 0));
+		ImGui::SameLine();
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Threads());
+		ImGui::PopStyleColor();
+
+		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+
+		(void)snapshot;
 		// TODO: DBG.
 	}
-	void threads(const Snapshot* snapshot) {
-		(void)snapshot;
+	void objects(Snapshot* snapshot) {
+		ImGuiStyle &style = ImGui::GetStyle();
 
-		// TODO: DBG.
-	}
-	void objects(const Snapshot* snapshot) {
-		(void)snapshot;
+		const ImU32 col = _theme->style()->debuggerHeadColor;
+		ImGui::PushStyleColor(ImGuiCol_Text, col);
+		ImGui::Dummy(ImVec2(1, 0));
+		ImGui::SameLine();
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted(_theme->tooltipEmulator_CodeDebugger_Objects());
+		ImGui::PopStyleColor();
 
+		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+
+		(void)snapshot;
 		// TODO: DBG.
 	}
 	void registers(void) {
