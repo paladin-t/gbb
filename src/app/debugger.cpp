@@ -376,6 +376,7 @@ private:
 		float startY = 0;
 		int safeHeight = 0;
 		int disassemblerView = 0;
+		int ramView = 0;
 	} _options;
 	Window* _window = nullptr; // Foreign.
 	Renderer* _renderer = nullptr; // Foreign.
@@ -433,6 +434,14 @@ public:
 	virtual bool open(class Window* wnd, class Renderer* rnd, class Workspace* ws, class Theme* theme, class Device* device) override {
 		if (_opened)
 			return true;
+
+#if defined GBBASIC_OS_WIN32 || defined GBBASIC_OS_HTML || defined GBBASIC_OS_RASPBERRYPI
+		_options.disassemblerView = 1;
+#elif defined GBBASIC_OS_MAC || defined GBBASIC_OS_LINUX
+		_options.disassemblerView = 0;
+#else
+		_options.disassemblerView = 1;
+#endif /* Platform macro. */
 
 		_activeCodePage = -1;
 		_inspecting = false;
@@ -506,6 +515,8 @@ public:
 		if (!visible)
 			return;
 
+		ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetColorU32(ImGuiCol_TableRowBgAlt));
+
 		begin(showTitle);
 		if (inspecting()) {
 			paused();
@@ -529,6 +540,8 @@ public:
 			deviceMemory();
 		}
 		end();
+
+		ImGui::PopStyleColor();
 	}
 
 	virtual void start(void) override {
@@ -938,14 +951,20 @@ private:
 		bool gotPc = false;
 		bool toRefreshPc = false;
 
-		// Validate for compact mode.
-		const bool compactMode = _options.disassemblerView == 0;
+		// Validate for refreshing.
+		const bool compactMode = _options.disassemblerView == 1;
 		if (compactMode && !_mnemonics.empty()) {
 			gotPc = probeCurrentProgramCounter(pc);
 			if (gotPc && _latestDisassembledMnemonicsAddress.bank != pc.bank) { // Bank changed.
 				_mnemonicsIsBeingGenerated = Semaphore();
 				_mnemonics.clear(); // Invalidate.
 			}
+
+			toRefreshPc = true;
+		}
+
+		if (!inspecting() && !_mnemonics.empty()) {
+			gotPc = probeCurrentProgramCounter(pc);
 
 			toRefreshPc = true;
 		}
@@ -1722,6 +1741,33 @@ private:
 				}
 				ImGui::EndChild();
 			} while (false);
+
+			do {
+				ImGui::NewLine(1);
+				ImGui::Dummy(ImVec2(2, 0));
+				ImGui::SameLine();
+				const float posX = ImGui::GetCursorPosX();
+				ImGui::AlignTextToFramePadding();
+				ImGui::TextUnformatted(_theme->windowEmulator_CodeDebugger_View());
+				ImGui::SameLine();
+				const float diff = ImGui::GetCursorPosX() - posX;
+				const float remain = regSize.x * 0.3f - diff;
+				ImGui::Dummy(ImVec2(remain, 0));
+				ImGui::SameLine();
+
+				const char* ITEMS[] = {
+					_theme->windowEmulator_CodeDebugger_View_Incremental().c_str(),
+					_theme->windowEmulator_CodeDebugger_View_Decremental().c_str()
+				};
+
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+				VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+				ImGui::SetNextItemWidth(regSize.x * 0.7f);
+				if (ImGui::Combo("##RamView", &_options.ramView, ITEMS, GBBASIC_COUNTOF(ITEMS))) {
+					// Do nothing.
+				}
+			} while (false);
 		} while (false);
 	}
 
@@ -1821,8 +1867,8 @@ private:
 					ImGui::SameLine();
 
 					const char* ITEMS[] = {
-						_theme->windowEmulator_CodeDebugger_View_CompactMode().c_str(),
-						_theme->windowEmulator_CodeDebugger_View_FullRom().c_str()
+						_theme->windowEmulator_CodeDebugger_View_FullRom().c_str(),
+						_theme->windowEmulator_CodeDebugger_View_CompactMode().c_str()
 					};
 
 					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
@@ -2076,7 +2122,6 @@ private:
 		ImGui::Text("%04X", PC);
 		ImGui::PopStyleColor();
 
-
 		UInt8 LCDC = 0;
 		_device->readRam(0xff40, &LCDC);
 		UInt8 STAT = 0;
@@ -2150,7 +2195,112 @@ private:
 		ImGui::PopStyleColor();
 	}
 	void ram(void) {
-		// TODO: DBG.
+		ImGuiIO &io = ImGui::GetIO();
+		ImGuiStyle &style = ImGui::GetStyle();
+		ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+		const float lineHeight = ImGui::GetTextLineHeightWithSpacing() + style.FramePadding.y * 2;
+		if (lineHeight <= Math::EPSILON<float>()) return;
+		const float panelHeight = ImGui::GetContentRegionAvail().y;
+		const int visibleLineCount = (int)std::ceil(panelHeight / lineHeight);
+		const int totalLineCount = std::numeric_limits<UInt16>::max() / 2 + 1;
+		const float totalHeight = lineHeight * totalLineCount;
+
+		const float scrollbarWidth = 12.0f;
+		float scrollY = ImGui::GetScrollY();
+
+		int startIndex = (int)(scrollY / lineHeight);
+		int endIndex = startIndex + (int)std::ceil(panelHeight / lineHeight) + 1;
+		startIndex = Math::clamp(startIndex, 0, totalLineCount);
+		endIndex = Math::clamp(endIndex, startIndex, totalLineCount);
+		if (startIndex > 0) 
+			ImGui::Dummy(ImVec2(0.0f, startIndex * lineHeight));
+
+		const bool incMode = _options.ramView == 0;
+		for (int i = startIndex; i < endIndex; ++i) {
+			const int address = incMode ?
+				(i * 2) :
+				(std::numeric_limits<UInt16>::max() - i * 2 - 1);
+			UInt8 byte0 = 0;
+			UInt8 byte1 = 0;
+			_device->readRam((UInt16)address, &byte0);
+			_device->readRam((UInt16)(address + 1), &byte1);
+
+			ImGui::AlignTextToFramePadding();
+			ImGui::Dummy(ImVec2(1, 0));
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerHeadColor);
+			ImGui::Text("ROM0   ");
+			ImGui::SameLine();
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+			ImGui::Text("%04X ", address);
+			ImGui::SameLine();
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+			ImGui::Text("%02X   ", byte0);
+			ImGui::SameLine();
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+			ImGui::Text("%04X ", address + 1);
+			ImGui::SameLine();
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+			ImGui::Text("%02X ", byte1);
+			ImGui::PopStyleColor();
+		}
+
+		if (endIndex < totalLineCount)
+			ImGui::Dummy(ImVec2(0.0f, (totalLineCount - endIndex) * lineHeight));
+
+		if (ImGui::IsWindowHovered()) {
+			const float wheel = io.MouseWheel;
+			if (wheel != 0.0f)
+				scrollY -= wheel * lineHeight * 3.0f;
+		}
+		const float maxScrollY = Math::max(0.0f, totalHeight - panelHeight);
+		scrollY = Math::clamp(scrollY, 0.0f, maxScrollY);
+		ImGui::SetScrollY(scrollY);
+
+		if (totalHeight > panelHeight) {
+			const ImVec2 windowPos = ImGui::GetWindowPos();
+			const ImVec2 windowSize = ImGui::GetWindowSize();
+        
+			const ImVec2 barTrackMin = ImVec2(windowPos.x + windowSize.x - scrollbarWidth, windowPos.y);
+			const ImVec2 barTrackMax = ImVec2(windowPos.x + windowSize.x, windowPos.y + panelHeight);
+
+			const float grabHeight = Math::max(20.0f, panelHeight * (panelHeight / totalHeight));
+			const float scrollRatio = scrollY / maxScrollY;
+			const float grabMinY = barTrackMin.y + scrollRatio * (panelHeight - grabHeight);
+
+			const ImVec2 barGrabMin = ImVec2(barTrackMin.x + 2.0f, grabMinY + 1);
+			const ImVec2 barGrabMax = ImVec2(barTrackMax.x - 2.0f, grabMinY + grabHeight);
+
+			ImGui::SetCursorScreenPos(barTrackMin);
+			ImGui::InvisibleButton("##RamScrollbar", ImVec2(scrollbarWidth, panelHeight));
+
+			const bool isHovered = ImGui::IsItemHovered();
+			const bool isActive = ImGui::IsItemActive();
+
+			if (isActive) {
+				const float mouseLocalY = io.MousePos.y - barTrackMin.y;
+				float newScrollRatio = (mouseLocalY - grabHeight * 0.5f) / (panelHeight - grabHeight);
+				newScrollRatio = Math::clamp(newScrollRatio, 0.0f, 1.0f);
+				scrollY = newScrollRatio * maxScrollY;
+				ImGui::SetScrollY(scrollY);
+			}
+
+			const ImU32 trackColor = ImGui::GetColorU32(ImGuiCol_ScrollbarBg);
+			drawList->AddRectFilled(barTrackMin, barTrackMax, trackColor);
+
+			const ImGuiCol grabCol = isActive ? ImGuiCol_ScrollbarGrabActive : (isHovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab);
+			const ImU32 grabColor = ImGui::GetColorU32(grabCol);
+			drawList->AddRectFilled(barGrabMin, barGrabMax, grabColor);
+		}
 	}
 };
 

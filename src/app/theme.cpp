@@ -962,7 +962,9 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_CodeDebugger_Running("Running...");
 	windowEmulator_CodeDebugger_View("View");
 	windowEmulator_CodeDebugger_View_CompactMode("Compact mode");
+	windowEmulator_CodeDebugger_View_Decremental("Decremental");
 	windowEmulator_CodeDebugger_View_FullRom("Full ROM");
+	windowEmulator_CodeDebugger_View_Incremental("Incremental");
 	windowEmulator_VramDebugger("VRAM Debugger");
 	windowEmulator_VramDebugger_BgWinMap("BG/WIN map");
 	windowEmulator_VramDebugger_Layer("Layer");
@@ -1371,7 +1373,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_CodeDebugger_DisassembyHeadInfo("ROM     Bytes    Mnemonic");
 	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
 	tooltipEmulator_CodeDebugger_Pause("Pause");
-	tooltipEmulator_CodeDebugger_RamInfo("Address    Word");
+	tooltipEmulator_CodeDebugger_RamInfo("Memory      Byte      Byte");
 	tooltipEmulator_CodeDebugger_Registers("Registers");
 	tooltipEmulator_CodeDebugger_Resume("Resume");
 	tooltipEmulator_CodeDebugger_StepAsm("Step ASM (" GBBASIC_MODIFIER_KEY_NAME "+F10)");
