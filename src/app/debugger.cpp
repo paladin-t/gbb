@@ -420,6 +420,7 @@ private:
 		SortingRule heapSortingRule;
 		SortingRule threadSortingRule;
 		SortingRule actorSortingRule;
+		SortingRule projectileSortingRule;
 		int ramView = 1;
 		int bankIndex = -1;
 		std::string bankText;
@@ -1654,6 +1655,26 @@ private:
 			if ((int)out.size() > _runtimeConfig.projectileMaxCount)
 				break;
 		} while (projectileAddr != 0);
+
+		const int column = _options.projectileSortingRule.index;
+		const bool ascending = _options.projectileSortingRule.ascending;
+		if (column != 0 || !ascending) {
+			std::sort(
+				out.begin(), out.end(),
+				[column, ascending] (const VM::projectile_t::Ref &l, const VM::projectile_t::Ref &r) -> bool {
+					switch (column) {
+					case 1:
+						return ascending ?
+							l.pointer.address < r.pointer.address :
+							l.pointer.address > r.pointer.address;
+					default:
+						return ascending ?
+							l.order < r.order :
+							l.order > r.order;
+					}
+				}
+			);
+		}
 
 		return true;
 	}
@@ -3909,16 +3930,290 @@ private:
 			ImGui::EndTable();
 		}
 	}
-	void projectiles(const Snapshot* snapshot) const {
+	void projectiles(const Snapshot* snapshot) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
-		// TODO: DBG.
-		//snapshot->projectileDefs
-		//snapshot->projectiles
+		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Sortable |
+			ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
+		if (ImGui::BeginTable("##Prtls", 4, flags, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
+			const float width0 = ImGui::GetFontSize() * 2.0f;
+			const float width = ImGui::GetFontSize() * 3.0f;
+			const ImU32 col = _theme->style()->debuggerHeadColor;
+			ImGui::PushStyleColor(ImGuiCol_Text, col);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Order(), ImGuiTableColumnFlags_WidthFixed, width0);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Addr(), ImGuiTableColumnFlags_WidthFixed, width);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Value(), ImGuiTableColumnFlags_WidthStretch);
+			ImGui::TableHeadersRow();
+			ImGui::PopStyleColor();
+
+			ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs();
+			if (sortSpecs->SpecsDirty && sortSpecs->SpecsCount > 0) {
+				const ImGuiTableColumnSortSpecs* spec = &sortSpecs->Specs[0];
+				const int column = spec->ColumnIndex;
+				const bool ascending = (spec->SortDirection == ImGuiSortDirection_Ascending);
+				_options.projectileSortingRule = SortingRule(column, ascending);
+
+				sortSpecs->SpecsDirty = false;
+			}
+
+			int j = 0;
+			for (const VM::projectile_t::Ref &ref : snapshot->projectiles) {
+				const int ord = ref.order;
+				const UInt16 address = (UInt16)ref.pointer.address;
+				const VM::projectile_t &projectileObj = ref.data;
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::Text("%04X", address);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); projectile(snapshot, projectileObj, j, 1);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+				++j;
+			}
+
+			ImGui::EndTable();
+		}
+	}
+	void projectile(const Snapshot* snapshot, const VM::projectile_t &projectile_, int /* index */, int level) const {
+		const VM::projectile_t::Array &all = snapshot->projectiles;
+
+		const ImU32 majCol = _theme->style()->debuggerMajorColor;
+		const ImU32 minCol = _theme->style()->debuggerMinorColor;
+
+		if (ImGui::TreeNode("{...}")) {
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Animation no loop=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%s", projectile_.animation_no_loop ? "true" : "false");
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Strong=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%s", projectile_.strong ? "true" : "false");
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Position=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushID("##Pos");
+			point(projectile_.position);
+			ImGui::PopID();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Movement=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushID("##Mov");
+			point(projectile_.movement);
+			ImGui::PopID();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Frame=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%d", projectile_.frame);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Animation=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%d", projectile_.animation);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Def=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			def(projectile_.def);
+			ImGui::PopStyleColor();
+
+			if (projectile_.next == NULL) {
+				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+				ImGui::TextUnformatted("Next=");
+				ImGui::PopStyleColor();
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+				ImGui::TextUnformatted("nothing");
+				ImGui::PopStyleColor();
+			} else {
+				if (level <= DEBUGGER_TABLE_LEVEL_MAX_COUNT) {
+					VM::projectile_t::Array::const_iterator it = std::find_if(
+						all.begin(), all.end(),
+						[projectile_] (const VM::projectile_t::Ref &ref) -> bool {
+							return projectile_.next == ref.pointer.address;
+						}
+					);
+					if (it == all.end()) {
+						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+						ImGui::TextUnformatted("Next=");
+						ImGui::PopStyleColor();
+						ImGui::SameLine();
+						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+						ImGui::Text("%04X...", projectile_.next);
+						ImGui::PopStyleColor();
+					} else {
+						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+						ImGui::TextUnformatted("Next=");
+						ImGui::PopStyleColor();
+						ImGui::SameLine();
+						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+						ImGui::Text("%04X", projectile_.next);
+						ImGui::PopStyleColor();
+						ImGui::SameLine();
+
+						const VM::projectile_t &next = it->data;
+						const int idx = (int)(it - all.begin());
+						projectile(snapshot, next, idx, level + 1);
+					}
+				} else {
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Next=");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04X...", projectile_.next);
+					ImGui::PopStyleColor();
+				}
+			}
+
+			ImGui::TreePop();
+		}
+	}
+	void def(const VM::projectile_def_t &def) const {
+		const ImU32 majCol = _theme->style()->debuggerMajorColor;
+		const ImU32 minCol = _theme->style()->debuggerMinorColor;
+
+		if (ImGui::TreeNode("{...}")) {
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("bounds=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushID("##Bounds");
+			box(def.bounds);
+			ImGui::PopID();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Base tile=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%hu", def.base_tile);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Sprite bank=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%hu", def.sprite_bank);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Sprite frames=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%04X", def.sprite_frames);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Animation interval=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%hu", def.animation_interval);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Animations=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushID("##Anims");
+			animations(def.animations);
+			ImGui::PopID();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Life time=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%d", def.life_time);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Move speed=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%hu", def.move_speed);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Initial offset=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%hu", def.initial_offset);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Collision group=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%02X", def.collision_group);
+			ImGui::PopStyleColor();
+
+			ImGui::TreePop();
+		}
 	}
 	void point(const upoint16_t &point) const {
+		const ImU32 majCol = _theme->style()->debuggerMajorColor;
+		const ImU32 minCol = _theme->style()->debuggerMinorColor;
+
+		if (ImGui::TreeNode("##Pnt", "{x=%u,y=%u}", point.x, point.y)) {
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("X=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%u", point.x);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Y=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%u", point.y);
+			ImGui::PopStyleColor();
+
+			ImGui::TreePop();
+		}
+	}
+	void point(const point16_t &point) const {
 		const ImU32 majCol = _theme->style()->debuggerMajorColor;
 		const ImU32 minCol = _theme->style()->debuggerMinorColor;
 
@@ -4044,6 +4339,24 @@ private:
 
 		if (ImGui::TreeNode("{...}")) {
 			for (int i = 0; i < DEBUGGER_ACTOR_MAX_ANIMATIONS; ++i) {
+				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+				ImGui::Text("[%d]=", i);
+				ImGui::PopStyleColor();
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+				ImGui::Text("[%d,%d]", anims[i].begin, anims[i].end);
+				ImGui::PopStyleColor();
+			}
+
+			ImGui::TreePop();
+		}
+	}
+	void animations(const animation_t (&anims)[DEBUGGER_PROJECTILE_MAX_ANIMATIONS]) const {
+		const ImU32 majCol = _theme->style()->debuggerMajorColor;
+		const ImU32 minCol = _theme->style()->debuggerMinorColor;
+
+		if (ImGui::TreeNode("{...}")) {
+			for (int i = 0; i < DEBUGGER_PROJECTILE_MAX_ANIMATIONS; ++i) {
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 				ImGui::Text("[%d]=", i);
 				ImGui::PopStyleColor();
