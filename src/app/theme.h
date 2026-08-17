@@ -728,6 +728,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Disassembling)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_DisassembyHeadInfo)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Empty)
+	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Field)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Heap)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_ID)
 	GBBASIC_PROPERTY_READONLY(std::string, windowEmulator_CodeDebugger_Inspector)

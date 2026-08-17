@@ -962,6 +962,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_CodeDebugger_Disassembling("Disassembling...");
 	windowEmulator_CodeDebugger_DisassembyHeadInfo("ROM     Bytes    Mnemonic");
 	windowEmulator_CodeDebugger_Empty("Empty");
+	windowEmulator_CodeDebugger_Field("Field");
 	windowEmulator_CodeDebugger_Heap("Heap");
 	windowEmulator_CodeDebugger_ID("ID");
 	windowEmulator_CodeDebugger_Inspector("Inspector");
