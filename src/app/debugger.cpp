@@ -1665,20 +1665,15 @@ private:
 		FarPtr farPtr_;
 		if (!getFarPointerBySymbolName(COMPILER_TRIGGER_COUNT_ENTRY_NAME, farPtr_))
 			return false;
-		UInt16 triggerCountAddr = 0;
-		if (!_device->readRam((UInt16)farPtr_.address, &triggerCountAddr) || triggerCountAddr == 0)
-			return false;
 
 		UInt8 triggerCount = 0;
-		if (!_device->readRam((UInt16)triggerCountAddr, &triggerCount))
+		if (!_device->readRam((UInt16)farPtr_.address, &triggerCount))
 			return false;
 
 		FarPtr farPtr;
-		if (!getFarPointerBySymbolName(COMPILER_PROJECTILE_DEFS_ENTRY_NAME, farPtr))
+		if (!getFarPointerBySymbolName(COMPILER_TRIGGERS_ENTRY_NAME, farPtr))
 			return false;
-		UInt16 triggerAddr = 0;
-		if (!_device->readRam((UInt16)farPtr.address, &triggerAddr) || triggerAddr == 0)
-			return false;
+		UInt16 triggerAddr = (UInt16)farPtr.address;
 
 		for (size_t i = 0; i < triggerCount; ++i) {
 			VM::trigger_t trigger;
@@ -2686,7 +2681,7 @@ private:
 				ImGui::PopStyleColor();
 				ImGui::SameLine();
 				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-				ImGui::TextUnformatted("NOTHING");
+				ImGui::TextUnformatted("nothing");
 				ImGui::PopStyleColor();
 			} else {
 				if (level <= DEBUGGER_TABLE_LEVEL_MAX_COUNT) {
@@ -2784,7 +2779,7 @@ private:
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-			ImGui::Text("%d", threadCtx.ID);
+			ImGui::Text("%04hX", threadCtx.ID);
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
@@ -2958,8 +2953,9 @@ private:
 			ImGui::EndTable();
 		}
 	}
-	void actor(const Snapshot* snapshot, const VM::actor_t &actor_, int index, int level) {
+	void actor(const Snapshot* snapshot, const VM::actor_t &actor_, int /* index */, int level) const {
 		const VM::actor_t::Array &all = snapshot->actors;
+		const VM::SCRIPT_CTX::Array &threads = snapshot->threads;
 
 		const ImU32 majCol = _theme->style()->debuggerMajorColor;
 		const ImU32 minCol = _theme->style()->debuggerMinorColor;
@@ -3157,16 +3153,57 @@ private:
 			ImGui::Text("%02X", actor_.collision_group);
 			ImGui::PopStyleColor();
 
-			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Behave thread ID=");
-			ImGui::PopStyleColor();
-			ImGui::SameLine();
-			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-			ImGui::Text("%04hX", actor_.behave_thread_id);
-			ImGui::PopStyleColor();
+			if (actor_.behave_thread_id == 0) {
+				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+				ImGui::TextUnformatted("Behave thread ID=");
+				ImGui::PopStyleColor();
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+				ImGui::TextUnformatted("0000");
+				ImGui::PopStyleColor();
+			} else {
+				if (level <= DEBUGGER_TABLE_LEVEL_MAX_COUNT) {
+					VM::SCRIPT_CTX::Array::const_iterator it = std::find_if(
+						threads.begin(), threads.end(),
+						[actor_] (const VM::SCRIPT_CTX::Ref &ref) -> bool {
+							return (actor_.behave_thread_id & 0x00ff) == ref.data.ID;
+						}
+					);
+					if (it == threads.end()) {
+						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+						ImGui::TextUnformatted("Behave thread ID=");
+						ImGui::PopStyleColor();
+						ImGui::SameLine();
+						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+						ImGui::Text("%04hX...", actor_.behave_thread_id);
+						ImGui::PopStyleColor();
+					} else {
+						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+						ImGui::TextUnformatted("Behave thread ID=");
+						ImGui::PopStyleColor();
+						ImGui::SameLine();
+						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+						ImGui::Text("%04hX", actor_.behave_thread_id);
+						ImGui::PopStyleColor();
+						ImGui::SameLine();
+
+						const VM::SCRIPT_CTX &next = it->data;
+						const int idx = (int)(it - threads.begin());
+						thread(snapshot, next, idx, level + 1);
+					}
+				} else {
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Behave thread ID=");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04hX...", actor_.behave_thread_id);
+					ImGui::PopStyleColor();
+				}
+			}
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Behave handler bank=");
+			ImGui::TextUnformatted("Behave fn bank=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3174,23 +3211,64 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Behave handler address=");
+			ImGui::TextUnformatted("Behave fn address=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
 			ImGui::Text("%04hX", actor_.behave_handler_address);
 			ImGui::PopStyleColor();
 
-			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Hit thread ID=");
-			ImGui::PopStyleColor();
-			ImGui::SameLine();
-			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-			ImGui::Text("%04hX", actor_.hit_thread_id);
-			ImGui::PopStyleColor();
+			if (actor_.hit_thread_id == 0) {
+				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+				ImGui::TextUnformatted("Hit thread ID=");
+				ImGui::PopStyleColor();
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+				ImGui::TextUnformatted("0");
+				ImGui::PopStyleColor();
+			} else {
+				if (level <= DEBUGGER_TABLE_LEVEL_MAX_COUNT) {
+					VM::SCRIPT_CTX::Array::const_iterator it = std::find_if(
+						threads.begin(), threads.end(),
+						[actor_] (const VM::SCRIPT_CTX::Ref &ref) -> bool {
+							return (actor_.hit_thread_id & 0x00ff) == ref.data.ID;
+						}
+					);
+					if (it == threads.end()) {
+						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+						ImGui::TextUnformatted("Hit thread ID=");
+						ImGui::PopStyleColor();
+						ImGui::SameLine();
+						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+						ImGui::Text("%04hX...", actor_.hit_thread_id);
+						ImGui::PopStyleColor();
+					} else {
+						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+						ImGui::TextUnformatted("Hit thread ID=");
+						ImGui::PopStyleColor();
+						ImGui::SameLine();
+						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+						ImGui::Text("%04hX", actor_.hit_thread_id);
+						ImGui::PopStyleColor();
+						ImGui::SameLine();
+
+						const VM::SCRIPT_CTX &next = it->data;
+						const int idx = (int)(it - threads.begin());
+						thread(snapshot, next, idx, level + 1);
+					}
+				} else {
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Hit thread ID=");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04hX...", actor_.hit_thread_id);
+					ImGui::PopStyleColor();
+				}
+			}
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Hit handler bank=");
+			ImGui::TextUnformatted("Hit fn bank=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3198,7 +3276,7 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Hit handler address=");
+			ImGui::TextUnformatted("Hit fn address=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3211,7 +3289,7 @@ private:
 				ImGui::PopStyleColor();
 				ImGui::SameLine();
 				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-				ImGui::TextUnformatted("NOTHING");
+				ImGui::TextUnformatted("nothing");
 				ImGui::PopStyleColor();
 			} else {
 				if (level <= DEBUGGER_TABLE_LEVEL_MAX_COUNT) {
@@ -3260,7 +3338,7 @@ private:
 				ImGui::PopStyleColor();
 				ImGui::SameLine();
 				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-				ImGui::TextUnformatted("NOTHING");
+				ImGui::TextUnformatted("nothing");
 				ImGui::PopStyleColor();
 			} else {
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
@@ -3280,8 +3358,110 @@ private:
 
 		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
-		// TODO: DBG.
-		//snapshot->triggers
+		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
+			ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
+		if (ImGui::BeginTable("##Triggers", 4, flags, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
+			const float width0 = ImGui::GetFontSize() * 2.0f;
+			const float width = ImGui::GetFontSize() * 3.0f;
+			const ImU32 col = _theme->style()->debuggerHeadColor;
+			ImGui::PushStyleColor(ImGuiCol_Text, col);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Order(), ImGuiTableColumnFlags_WidthFixed, width0);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Addr(), ImGuiTableColumnFlags_WidthFixed, width);
+			ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Value(), ImGuiTableColumnFlags_WidthStretch);
+			ImGui::TableHeadersRow();
+			ImGui::PopStyleColor();
+
+			int j = 0;
+			for (const VM::trigger_t::Ref &ref : snapshot->triggers) {
+				const int ord = ref.order;
+				const UInt16 address = (UInt16)ref.pointer.address;
+				const VM::trigger_t &triggerObj = ref.data;
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::Text("%04X", address);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); trigger(snapshot, triggerObj);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+				++j;
+			}
+
+			ImGui::EndTable();
+		}
+	}
+	void trigger(const Snapshot* /* snapshot */, const VM::trigger_t &trigger_) const {
+		const ImU32 majCol = _theme->style()->debuggerMajorColor;
+		const ImU32 minCol = _theme->style()->debuggerMinorColor;
+
+		if (ImGui::TreeNode("{...}")) {
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("X=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%d", trigger_.x);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Y=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%d", trigger_.y);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Width=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%d", trigger_.width);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Height=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%d", trigger_.height);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Hit fn flags=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%02X", trigger_.hit_handler_flags);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Hit fn bank=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%hu", trigger_.hit_handler_bank);
+			ImGui::PopStyleColor();
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Hit fn address=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%04X", trigger_.hit_handler_address);
+			ImGui::PopStyleColor();
+
+			ImGui::TreePop();
+		}
 	}
 	void scene(const Snapshot* snapshot) const {
 		ImGuiStyle &style = ImGui::GetStyle();
@@ -3306,7 +3486,7 @@ private:
 
 		if (ImGui::TreeNode("##Pnt", "{x=%u,y=%u}", point.x, point.y)) {
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("x=");
+			ImGui::TextUnformatted("X=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3314,7 +3494,7 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("y=");
+			ImGui::TextUnformatted("Y=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3330,7 +3510,7 @@ private:
 
 		if (ImGui::TreeNode("##Box", "{l=%d,t=%d,r=%d,b=%d}", box.left, box.top, box.right, box.bottom)) {
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("l=");
+			ImGui::TextUnformatted("L=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3338,7 +3518,7 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("t=");
+			ImGui::TextUnformatted("T=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3346,7 +3526,7 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("r=");
+			ImGui::TextUnformatted("R=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3354,7 +3534,7 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("b=");
+			ImGui::TextUnformatted("B=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3375,7 +3555,7 @@ private:
 			ImGui::SameLine();
 			if (ImGui::TreeNode("##AbsMov", "{x=%u,y=%u}", abs.x, abs.y)) {
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-				ImGui::TextUnformatted("x=");
+				ImGui::TextUnformatted("X=");
 				ImGui::PopStyleColor();
 				ImGui::SameLine();
 				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3383,7 +3563,7 @@ private:
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-				ImGui::TextUnformatted("y=");
+				ImGui::TextUnformatted("Y=");
 				ImGui::PopStyleColor();
 				ImGui::SameLine();
 				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3399,7 +3579,7 @@ private:
 			ImGui::SameLine();
 			if (ImGui::TreeNode("##RelMov", "{x=%d,y=%d}", rel.x, rel.y)) {
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-				ImGui::TextUnformatted("x=");
+				ImGui::TextUnformatted("X=");
 				ImGui::PopStyleColor();
 				ImGui::SameLine();
 				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3407,7 +3587,7 @@ private:
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-				ImGui::TextUnformatted("y=");
+				ImGui::TextUnformatted("Y=");
 				ImGui::PopStyleColor();
 				ImGui::SameLine();
 				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
