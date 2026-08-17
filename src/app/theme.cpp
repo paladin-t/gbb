@@ -954,15 +954,27 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_Debugger_Code("Code");
 	windowEmulator_Debugger_Vram("VRAM");
 	windowEmulator_CodeDebugger("Code Debugger");
+	windowEmulator_CodeDebugger_Actors("Actors");
 	windowEmulator_CodeDebugger_Addr("Addr.");
 	windowEmulator_CodeDebugger_Asm("ASM");
 	windowEmulator_CodeDebugger_Basic("BASIC");
 	windowEmulator_CodeDebugger_DeviceMemory("Device memory");
+	windowEmulator_CodeDebugger_Disassembling("Disassembling...");
+	windowEmulator_CodeDebugger_DisassembyHeadInfo("ROM     Bytes    Mnemonic");
+	windowEmulator_CodeDebugger_Empty("Empty");
+	windowEmulator_CodeDebugger_Heap("Heap");
 	windowEmulator_CodeDebugger_ID("ID");
 	windowEmulator_CodeDebugger_Inspector("Inspector");
 	windowEmulator_CodeDebugger_KernelMemory("Kernel memory");
+	windowEmulator_CodeDebugger_Objects("Objects");
 	windowEmulator_CodeDebugger_Order("Order");
+	windowEmulator_CodeDebugger_Projectiles("Projectiles");
+	windowEmulator_CodeDebugger_RamInfo("Memory Addr Byte Description");
+	windowEmulator_CodeDebugger_Registers("Registers");
 	windowEmulator_CodeDebugger_Running("Running...");
+	windowEmulator_CodeDebugger_Scene("Scene");
+	windowEmulator_CodeDebugger_Threads("Threads");
+	windowEmulator_CodeDebugger_Triggers("Triggers");
 	windowEmulator_CodeDebugger_Type("Type");
 	windowEmulator_CodeDebugger_Value("Value");
 	windowEmulator_CodeDebugger_View("View");
@@ -1374,18 +1386,11 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_AlternativeSpeed("Alternative speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
 	tooltipEmulator_CodeDebugger_ClearBreakpoints("Clear breakpoints");
 	tooltipEmulator_CodeDebugger_DisableBreakpoints("Disable breakpoints");
-	tooltipEmulator_CodeDebugger_Disassembling("Disassembling...");
-	tooltipEmulator_CodeDebugger_DisassembyHeadInfo("ROM     Bytes    Mnemonic");
 	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
-	tooltipEmulator_CodeDebugger_Heap("Heap");
-	tooltipEmulator_CodeDebugger_Objects("Objects");
 	tooltipEmulator_CodeDebugger_Pause("Pause");
-	tooltipEmulator_CodeDebugger_RamInfo("Memory Addr Byte Description");
-	tooltipEmulator_CodeDebugger_Registers("Registers");
 	tooltipEmulator_CodeDebugger_Resume("Resume");
 	tooltipEmulator_CodeDebugger_StepAsm("Step ASM (" GBBASIC_MODIFIER_KEY_NAME "+F10)");
 	tooltipEmulator_CodeDebugger_StepBasic("Step BASIC (F10)");
-	tooltipEmulator_CodeDebugger_Threads("Threads");
 	tooltipEmulator_NormalSpeed("Normal speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
 	tooltipEmulator_StatusNote(
 		"Cartridge flag   : {0}\n"
