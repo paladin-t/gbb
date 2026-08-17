@@ -4046,7 +4046,9 @@ private:
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::PushID("##Def");
 			def(projectile_.def);
+			ImGui::PopID();
 			ImGui::PopStyleColor();
 
 			if (projectile_.next == NULL) {
@@ -4107,7 +4109,7 @@ private:
 
 		if (ImGui::TreeNode("{...}")) {
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("bounds=");
+			ImGui::TextUnformatted("Bounds=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushID("##Bounds");
