@@ -1426,6 +1426,38 @@ bool DeviceBinjgb::readRam(UInt16 address, UInt16* data) const {
 	return true;
 }
 
+bool DeviceBinjgb::readRam(UInt16 address, Int8* data) const {
+	if (!_emulator)
+		return false;
+
+	union {
+		UInt8 o;
+		Int8 r;
+	} u;
+	u.o = emulator_read_u8_raw(_emulator, address);
+
+	*data = u.r;
+
+	return true;
+}
+
+bool DeviceBinjgb::readRam(UInt16 address, Int16* data) const {
+	if (!_emulator)
+		return false;
+
+	union {
+		Int16 data;
+		UInt8 bytes[2];
+	} u;
+	u.bytes[0] = emulator_read_u8_raw(_emulator, address);
+	u.bytes[1] = emulator_read_u8_raw(_emulator, address + 1);
+	if (!Platform::isLittleEndian())
+		std::swap(u.bytes[0], u.bytes[1]);
+	*data = u.data;
+
+	return true;
+}
+
 size_t DeviceBinjgb::readRam(UInt16 address, Byte* data, size_t len) const {
 	size_t result = 0;
 	if (!_emulator)
@@ -1455,6 +1487,37 @@ bool DeviceBinjgb::writeRam(UInt16 address, UInt16 data) {
 
 	union {
 		UInt16 data;
+		UInt8 bytes[2];
+	} u;
+	u.data = data;
+	if (!Platform::isLittleEndian())
+		std::swap(u.bytes[0], u.bytes[1]);
+	emulator_write_u8_raw(_emulator, address,     u.bytes[0]);
+	emulator_write_u8_raw(_emulator, address + 1, u.bytes[1]);
+
+	return true;
+}
+
+bool DeviceBinjgb::writeRam(UInt16 address, Int8 data) {
+	if (!_emulator)
+		return false;
+
+	union {
+		Int8 i;
+		UInt8 r;
+	} u;
+	u.i = data;
+	emulator_write_u8_raw(_emulator, address, u.r);
+
+	return true;
+}
+
+bool DeviceBinjgb::writeRam(UInt16 address, Int16 data) {
+	if (!_emulator)
+		return false;
+
+	union {
+		Int16 data;
 		UInt8 bytes[2];
 	} u;
 	u.data = data;

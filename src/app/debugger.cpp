@@ -48,6 +48,16 @@
 #	define DEBUGGER_TABLE_LEVEL_MAX_COUNT 21
 #endif /* DEBUGGER_TABLE_LEVEL_MAX_COUNT */
 
+#ifndef DEBUGGER_OBJECT_DETAIL_LEVEL_COMPACT
+#	define DEBUGGER_OBJECT_DETAIL_LEVEL_COMPACT 0
+#endif /* DEBUGGER_OBJECT_DETAIL_LEVEL_COMPACT */
+#ifndef DEBUGGER_OBJECT_DETAIL_LEVEL_FULL
+#	define DEBUGGER_OBJECT_DETAIL_LEVEL_FULL 1
+#endif /* DEBUGGER_OBJECT_DETAIL_LEVEL_FULL */
+#ifndef DEBUGGER_OBJECT_DETAIL_LEVEL
+#	define DEBUGGER_OBJECT_DETAIL_LEVEL DEBUGGER_OBJECT_DETAIL_LEVEL_COMPACT
+#endif /* DEBUGGER_OBJECT_DETAIL_LEVEL */
+
 /* ===========================================================================} */
 
 /*
@@ -324,6 +334,44 @@ struct scene_t {
 	}
 };
 
+struct SceneData {
+	Int16 camera_x = 0;
+	Int16 camera_y = 0;
+	UInt8 camera_deadzone_x = 0;
+	UInt8 camera_deadzone_y = 0;
+	Int8 camera_offset_y = 0;
+	UInt8 camera_shake_x = 0;
+	UInt8 camera_shake_y = 0;
+	UInt8 map_x = 0;
+	UInt8 map_y = 0;
+
+	SceneData() {
+	}
+
+	bool empty(void) const {
+		if (camera_x != 0)
+			return false;
+		if (camera_y != 0)
+			return false;
+		if (camera_deadzone_x != 0)
+			return false;
+		if (camera_deadzone_y != 0)
+			return false;
+		if (camera_offset_y != 0)
+			return false;
+		if (camera_shake_x != 0)
+			return false;
+		if (camera_shake_y != 0)
+			return false;
+		if (map_x != 0)
+			return false;
+		if (map_y != 0)
+			return false;
+
+		return true;
+	}
+};
+
 }
 
 #pragma pack(pop)
@@ -388,6 +436,7 @@ private:
 		VM::projectile_t::Array projectiles;
 		VM::trigger_t::Array triggers;
 		VM::scene_t scene;
+		VM::SceneData sceneData;
 
 		Snapshot() {
 		}
@@ -401,6 +450,7 @@ private:
 			projectiles.clear();
 			triggers.clear();
 			scene = VM::scene_t();
+			sceneData = VM::SceneData();
 		}
 	};
 
@@ -638,7 +688,7 @@ public:
 		_snapshot.triggers.reserve(_runtimeConfig.triggerMaxCount);
 
 		// Resolve the ROM entries.
-		getFarPointerBySymbolName(COMPILERFREE_CURRENT_BANK_ENTRY_NAME, _currentBankPointer);
+		getFarPointerBySymbolName(COMPILER_FREE_CURRENT_BANK_ENTRY_NAME, _currentBankPointer);
 		getFarPointerBySymbolName(COMPILER_VM_STEP_ENTRY_NAME, _vmStepPointer);
 
 		// Refresh the breakpoints.
@@ -1353,7 +1403,7 @@ private:
 
 		probeTriggers(_snapshot.triggers);
 
-		probeScene(_snapshot.scene);
+		probeScene(_snapshot.scene, _snapshot.sceneData);
 
 		return &_snapshot;
 	}
@@ -1721,8 +1771,9 @@ private:
 
 		return true;
 	}
-	bool probeScene(VM::scene_t &out) const {
+	bool probeScene(VM::scene_t &out, VM::SceneData &data) const {
 		out = VM::scene_t();
+		data = VM::SceneData();
 
 		FarPtr farPtr;
 		if (!getFarPointerBySymbolName(COMPILER_SCENE_ENTRY_NAME, farPtr))
@@ -1733,6 +1784,56 @@ private:
 		if (!_device->readRam(sceneAddr, (Byte*)&scene, sizeof(VM::scene_t)))
 			scene = VM::scene_t();
 		out = scene;
+
+		farPtr = FarPtr();
+		if (getFarPointerBySymbolName(COMPILER_SCENE_CAMERA_X_ENTRY_NAME, farPtr)) {
+			if (!_device->readRam((UInt16)farPtr.address, &data.camera_x))
+				data.camera_x = 0;
+		}
+		farPtr = FarPtr();
+		if (getFarPointerBySymbolName(COMPILER_SCENE_CAMERA_Y_ENTRY_NAME, farPtr)) {
+			if (!_device->readRam((UInt16)farPtr.address, &data.camera_y))
+				data.camera_y = 0;
+		}
+
+		farPtr = FarPtr();
+		if (getFarPointerBySymbolName(COMPILER_SCENE_CAMERA_DEADZONE_X_ENTRY_NAME, farPtr)) {
+			if (!_device->readRam((UInt16)farPtr.address, &data.camera_deadzone_x))
+				data.camera_deadzone_x = 0;
+		}
+		farPtr = FarPtr();
+		if (getFarPointerBySymbolName(COMPILER_SCENE_CAMERA_DEADZONE_Y_ENTRY_NAME, farPtr)) {
+			if (!_device->readRam((UInt16)farPtr.address, &data.camera_deadzone_y))
+				data.camera_deadzone_y = 0;
+		}
+
+		farPtr = FarPtr();
+		if (getFarPointerBySymbolName(COMPILER_SCENE_CAMERA_OFFSET_Y_ENTRY_NAME, farPtr)) {
+			if (!_device->readRam((UInt16)farPtr.address, &data.camera_offset_y))
+				data.camera_offset_y = 0;
+		}
+
+		farPtr = FarPtr();
+		if (getFarPointerBySymbolName(COMPILER_SCENE_CAMERA_SHAKE_X_ENTRY_NAME, farPtr)) {
+			if (!_device->readRam((UInt16)farPtr.address, &data.camera_shake_x))
+				data.camera_shake_x = 0;
+		}
+		farPtr = FarPtr();
+		if (getFarPointerBySymbolName(COMPILER_SCENE_CAMERA_SHAKE_Y_ENTRY_NAME, farPtr)) {
+			if (!_device->readRam((UInt16)farPtr.address, &data.camera_shake_y))
+				data.camera_shake_y = 0;
+		}
+
+		farPtr = FarPtr();
+		if (getFarPointerBySymbolName(COMPILER_SCENE_MAP_X_ENTRY_NAME, farPtr)) {
+			if (!_device->readRam((UInt16)farPtr.address, &data.map_x))
+				data.map_x = 0;
+		}
+		farPtr = FarPtr();
+		if (getFarPointerBySymbolName(COMPILER_SCENE_MAP_Y_ENTRY_NAME, farPtr)) {
+			if (!_device->readRam((UInt16)farPtr.address, &data.map_y))
+				data.map_y = 0;
+		}
 
 		return true;
 	}
@@ -2268,7 +2369,7 @@ private:
 					flags |= ImGuiTabItemFlags_SetSelected;
 				if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Basic(), nullptr, flags)) {
 					const float width = ImGui::GetContentRegionAvail().x;
-					const float height = 200.0f;
+					const float height = 200.0f + 6;
 					const bool ro = editor->readonly();
 					editor->readonly(true);
 					editor->update(
@@ -2281,8 +2382,8 @@ private:
 					editor->readonly(ro);
 
 					ImGui::NewLine(2);
+					ImGui::Dummy(ImVec2(1, 0));
 					ImGui::SameLine();
-					ImGui::Dummy(ImVec2(3, 0));
 #if GBBASIC_ASSET_PAGE_SHOW_HEX_ENABLED
 					ImGui::Text("%s %02X", _theme->status_Pg().c_str(), _activeCodePage);
 #else /* GBBASIC_ASSET_PAGE_SHOW_HEX_ENABLED */
@@ -2315,7 +2416,7 @@ private:
 					VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
 					const float width = ImGui::GetContentRegionAvail().x;
-					const float height = 200.0f - ImGui::GetTextLineHeightWithSpacing();
+					const float height = 200.0f - 2 - ImGui::GetTextLineHeightWithSpacing();
 					const ImGuiWindowFlags flags_ = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNav;
 					ImGui::BeginChild("@Dasm", ImVec2(width, height), false, flags_);
 					{
@@ -2779,22 +2880,14 @@ private:
 							return threadCtx.next == ref.pointer.address;
 						}
 					);
-					if (it == all.end()) {
-						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-						ImGui::TextUnformatted("Next=");
-						ImGui::PopStyleColor();
-						ImGui::SameLine();
-						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-						ImGui::Text("%04X...", threadCtx.next);
-						ImGui::PopStyleColor();
-					} else {
-						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-						ImGui::TextUnformatted("Next=");
-						ImGui::PopStyleColor();
-						ImGui::SameLine();
-						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-						ImGui::Text("%04X", threadCtx.next);
-						ImGui::PopStyleColor();
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Next=");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04X", threadCtx.next);
+					ImGui::PopStyleColor();
+					if (it != all.end()) {
 						ImGui::SameLine();
 
 						const VM::SCRIPT_CTX &next = it->data;
@@ -2958,7 +3051,7 @@ private:
 				ImGui::EndTabItem();
 			}
 			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Scene(), nullptr, flags)) {
-				if (snapshot->scene.map_bank == 0) {
+				if (snapshot->scene.map_bank == 0 && snapshot->sceneData.empty()) {
 					ImGui::Dummy(ImVec2(2, 0));
 					ImGui::SameLine();
 					ImGui::AlignTextToFramePadding();
@@ -3049,6 +3142,7 @@ private:
 		const ImU32 minCol = _theme->style()->debuggerMinorColor;
 
 		if (ImGui::TreeNode("{...}")) {
+#if DEBUGGER_OBJECT_DETAIL_LEVEL == DEBUGGER_OBJECT_DETAIL_LEVEL_FULL
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Instantiated=");
 			ImGui::PopStyleColor();
@@ -3056,6 +3150,7 @@ private:
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
 			ImGui::Text("%s", actor_.instantiated ? "true" : "false");
 			ImGui::PopStyleColor();
+#endif /* DEBUGGER_OBJECT_DETAIL_LEVEL */
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Active=");
@@ -3105,6 +3200,7 @@ private:
 			ImGui::Text("%s", actor_.animation_loop ? "true" : "false");
 			ImGui::PopStyleColor();
 
+#if DEBUGGER_OBJECT_DETAIL_LEVEL == DEBUGGER_OBJECT_DETAIL_LEVEL_FULL
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Interrupt movement=");
 			ImGui::PopStyleColor();
@@ -3112,6 +3208,7 @@ private:
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
 			ImGui::Text("%s", actor_.movement_interrupt ? "true" : "false");
 			ImGui::PopStyleColor();
+#endif /* DEBUGGER_OBJECT_DETAIL_LEVEL */
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Template=");
@@ -3134,7 +3231,7 @@ private:
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-			ImGui::Text("%hu", actor_.direction);
+			direction(actor_.direction);
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
@@ -3257,22 +3354,14 @@ private:
 							return (actor_.behave_thread_id & 0x00ff) == ref.data.ID;
 						}
 					);
-					if (it == threads.end()) {
-						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-						ImGui::TextUnformatted("Behave thread ID=");
-						ImGui::PopStyleColor();
-						ImGui::SameLine();
-						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-						ImGui::Text("%04hX...", actor_.behave_thread_id);
-						ImGui::PopStyleColor();
-					} else {
-						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-						ImGui::TextUnformatted("Behave thread ID=");
-						ImGui::PopStyleColor();
-						ImGui::SameLine();
-						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-						ImGui::Text("%04hX", actor_.behave_thread_id);
-						ImGui::PopStyleColor();
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Behave thread ID=");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04hX", actor_.behave_thread_id);
+					ImGui::PopStyleColor();
+					if (it != threads.end()) {
 						ImGui::SameLine();
 
 						const VM::SCRIPT_CTX &next = it->data;
@@ -3291,7 +3380,7 @@ private:
 			}
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Behave fn bank=");
+			ImGui::TextUnformatted("Behave Fn bank=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3299,7 +3388,7 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Behave fn address=");
+			ImGui::TextUnformatted("Behave Fn address=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3322,22 +3411,14 @@ private:
 							return (actor_.hit_thread_id & 0x00ff) == ref.data.ID;
 						}
 					);
-					if (it == threads.end()) {
-						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-						ImGui::TextUnformatted("Hit thread ID=");
-						ImGui::PopStyleColor();
-						ImGui::SameLine();
-						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-						ImGui::Text("%04hX...", actor_.hit_thread_id);
-						ImGui::PopStyleColor();
-					} else {
-						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-						ImGui::TextUnformatted("Hit thread ID=");
-						ImGui::PopStyleColor();
-						ImGui::SameLine();
-						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-						ImGui::Text("%04hX", actor_.hit_thread_id);
-						ImGui::PopStyleColor();
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Hit thread ID=");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04hX", actor_.hit_thread_id);
+					ImGui::PopStyleColor();
+					if (it != threads.end()) {
 						ImGui::SameLine();
 
 						const VM::SCRIPT_CTX &next = it->data;
@@ -3356,7 +3437,7 @@ private:
 			}
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Hit fn bank=");
+			ImGui::TextUnformatted("Hit Fn bank=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3364,7 +3445,7 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Hit fn address=");
+			ImGui::TextUnformatted("Hit Fn address=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3387,22 +3468,14 @@ private:
 							return actor_.next == ref.pointer.address;
 						}
 					);
-					if (it == all.end()) {
-						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-						ImGui::TextUnformatted("Next=");
-						ImGui::PopStyleColor();
-						ImGui::SameLine();
-						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-						ImGui::Text("%04X...", actor_.next);
-						ImGui::PopStyleColor();
-					} else {
-						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-						ImGui::TextUnformatted("Next=");
-						ImGui::PopStyleColor();
-						ImGui::SameLine();
-						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-						ImGui::Text("%04X", actor_.next);
-						ImGui::PopStyleColor();
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Next=");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04X", actor_.next);
+					ImGui::PopStyleColor();
+					if (it != all.end()) {
 						ImGui::SameLine();
 
 						const VM::actor_t &next = it->data;
@@ -3420,7 +3493,8 @@ private:
 				}
 			}
 
-			/*if (actor_.prev == (VM::Ptr)NULL) {
+#if DEBUGGER_OBJECT_DETAIL_LEVEL == DEBUGGER_OBJECT_DETAIL_LEVEL_FULL
+			if (actor_.prev == (VM::Ptr)NULL) {
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 				ImGui::TextUnformatted("Prev=");
 				ImGui::PopStyleColor();
@@ -3436,7 +3510,8 @@ private:
 				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
 				ImGui::Text("%04X...", actor_.prev);
 				ImGui::PopStyleColor();
-			}*/
+			}
+#endif /* DEBUGGER_OBJECT_DETAIL_LEVEL */
 
 			ImGui::TreePop();
 		}
@@ -3525,7 +3600,7 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Hit fn flags=");
+			ImGui::TextUnformatted("Hit Fn flags=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3533,7 +3608,7 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Hit fn bank=");
+			ImGui::TextUnformatted("Hit Fn bank=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3541,7 +3616,7 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Hit fn address=");
+			ImGui::TextUnformatted("Hit Fn address=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
@@ -3570,9 +3645,437 @@ private:
 			ImGui::PopStyleColor();
 
 			const VM::scene_t &sceneObj = snapshot->scene;
+			const VM::SceneData &sceneData = snapshot->sceneData;
 			int j = 0;
 			int ord = 0;
 
+			if (snapshot->scene.map_bank != 0) {
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Is 16x16 grid");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%s", sceneObj.is_16x16_grid ? "true" : "false");
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Is 16x16 player");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%s", sceneObj.is_16x16_player ? "true" : "false");
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Clamp camera");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%s", sceneObj.clamp_camera ? "true" : "false");
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Player on ladder");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%s", sceneObj.player_on_ladder ? "true" : "false");
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Gravity");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.gravity);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Jump gravity");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.jump_gravity);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Jump max count");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.jump_max_count);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Jump max ticks");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.jump_max_ticks);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Climb velocity");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.climb_velocity);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Player can jump");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.player_can_jump);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Player jump ticks");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.player_jump_ticks);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Player velocity Y");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.player_velocity_y);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Width");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.width);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Height");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.height);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Base tile");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.base_tile);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Map bank");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.map_bank);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Map address");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%04hX", sceneObj.map_address);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Attr. bank");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.attr_bank);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Attr. address");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%04hX", sceneObj.attr_address);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Prop. bank");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.prop_bank);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Prop. address");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%04hX", sceneObj.prop_address);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Actor bank");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.actor_bank);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Actor address");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%04hX", sceneObj.actor_address);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Trigger bank");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.trigger_bank);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+
+				ImGui::TableNextRow();
+				ImGui::PushID(j++);
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+					ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Trigger address");
+					ImGui::PopStyleColor();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::TableSetColumnIndex(2); ImGui::Text("%04hX", sceneObj.trigger_address);
+					ImGui::PopStyleColor();
+				}
+				ImGui::PopID();
+			}
+
 			ImGui::TableNextRow();
 			ImGui::PushID(j++);
 			{
@@ -3581,11 +4084,11 @@ private:
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Is 16x16 grid");
+				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Camera X");
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%s", sceneObj.is_16x16_grid ? "true" : "false");
+				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneData.camera_x);
 				ImGui::PopStyleColor();
 			}
 			ImGui::PopID();
@@ -3598,11 +4101,11 @@ private:
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Is 16x16 player");
+				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Camera Y");
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%s", sceneObj.is_16x16_player ? "true" : "false");
+				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneData.camera_y);
 				ImGui::PopStyleColor();
 			}
 			ImGui::PopID();
@@ -3615,11 +4118,11 @@ private:
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Clamp camera");
+				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Camera deadzone X");
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%s", sceneObj.clamp_camera ? "true" : "false");
+				ImGui::TableSetColumnIndex(2); ImGui::Text("%u", (unsigned)sceneData.camera_deadzone_x);
 				ImGui::PopStyleColor();
 			}
 			ImGui::PopID();
@@ -3632,11 +4135,11 @@ private:
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Player on ladder");
+				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Camera deadzone Y");
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%s", sceneObj.player_on_ladder ? "true" : "false");
+				ImGui::TableSetColumnIndex(2); ImGui::Text("%u", (unsigned)sceneData.camera_deadzone_y);
 				ImGui::PopStyleColor();
 			}
 			ImGui::PopID();
@@ -3649,11 +4152,11 @@ private:
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Gravity");
+				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Camera offset Y");
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.gravity);
+				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneData.camera_offset_y);
 				ImGui::PopStyleColor();
 			}
 			ImGui::PopID();
@@ -3666,11 +4169,13 @@ private:
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Jump gravity");
+				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Camera shake X");
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.jump_gravity);
+				union { UInt8 u; Int8 i; } u;
+				u.u = sceneData.camera_shake_x;
+				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", u.i);
 				ImGui::PopStyleColor();
 			}
 			ImGui::PopID();
@@ -3683,11 +4188,13 @@ private:
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Jump max count");
+				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Camera shake Y");
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.jump_max_count);
+				union { UInt8 u; Int8 i; } u;
+				u.u = sceneData.camera_shake_y;
+				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", u.i);
 				ImGui::PopStyleColor();
 			}
 			ImGui::PopID();
@@ -3700,11 +4207,13 @@ private:
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Jump max ticks");
+				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Map X");
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.jump_max_ticks);
+				union { UInt8 u; Int8 i; } u;
+				u.u = sceneData.map_x;
+				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", u.i);
 				ImGui::PopStyleColor();
 			}
 			ImGui::PopID();
@@ -3717,283 +4226,13 @@ private:
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Climb velocity");
+				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Map Y");
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.climb_velocity);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Player can jump");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.player_can_jump);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Player jump ticks");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.player_jump_ticks);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Player velocity y");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.player_velocity_y);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Width");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.width);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Height");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.height);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Base tile");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.base_tile);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Map bank");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.map_bank);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Map address");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%04hX", sceneObj.map_address);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Attr. bank");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.attr_bank);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Attr. address");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%04hX", sceneObj.attr_address);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Prop. bank");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.prop_bank);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Prop. address");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%04hX", sceneObj.prop_address);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Actor bank");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.actor_bank);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Actor address");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%04hX", sceneObj.actor_address);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Trigger bank");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", sceneObj.trigger_bank);
-				ImGui::PopStyleColor();
-			}
-			ImGui::PopID();
-
-			ImGui::TableNextRow();
-			ImGui::PushID(j++);
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, col);
-				ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord++);
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-				ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted("Trigger address");
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::TableSetColumnIndex(2); ImGui::Text("%04hX", sceneObj.trigger_address);
+				union { UInt8 u; Int8 i; } u;
+				u.u = sceneData.map_y;
+				ImGui::TableSetColumnIndex(2); ImGui::Text("%d", u.i);
 				ImGui::PopStyleColor();
 			}
 			ImGui::PopID();
@@ -4138,22 +4377,14 @@ private:
 							return projectile_.next == ref.pointer.address;
 						}
 					);
-					if (it == all.end()) {
-						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-						ImGui::TextUnformatted("Next=");
-						ImGui::PopStyleColor();
-						ImGui::SameLine();
-						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-						ImGui::Text("%04X...", projectile_.next);
-						ImGui::PopStyleColor();
-					} else {
-						ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-						ImGui::TextUnformatted("Next=");
-						ImGui::PopStyleColor();
-						ImGui::SameLine();
-						ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-						ImGui::Text("%04X", projectile_.next);
-						ImGui::PopStyleColor();
+					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+					ImGui::TextUnformatted("Next=");
+					ImGui::PopStyleColor();
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+					ImGui::Text("%04X", projectile_.next);
+					ImGui::PopStyleColor();
+					if (it != all.end()) {
 						ImGui::SameLine();
 
 						const VM::projectile_t &next = it->data;
@@ -4348,6 +4579,16 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::TreePop();
+		}
+	}
+	void direction(UInt8 dir) const {
+		switch (dir) {
+		case (UInt8)Directions::DIRECTION_NONE:  ImGui::TextUnformatted("NONE_DIR");  break;
+		case (UInt8)Directions::DIRECTION_DOWN:  ImGui::TextUnformatted("DOWN_DIR");  break;
+		case (UInt8)Directions::DIRECTION_RIGHT: ImGui::TextUnformatted("RIGHT_DIR"); break;
+		case (UInt8)Directions::DIRECTION_UP:    ImGui::TextUnformatted("UP_DIR");    break;
+		case (UInt8)Directions::DIRECTION_LEFT:  ImGui::TextUnformatted("LEFT_DIR");  break;
+		default:                                 ImGui::TextUnformatted("nothing");  break;
 		}
 	}
 	void movement(const upoint16_t &abs, const point8_t &rel) const {

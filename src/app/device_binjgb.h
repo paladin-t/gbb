@@ -177,9 +177,13 @@ public:
 
 	virtual bool readRam(UInt16 address, UInt8* data) const override;
 	virtual bool readRam(UInt16 address, UInt16* data) const override;
+	virtual bool readRam(UInt16 address, Int8* data) const override;
+	virtual bool readRam(UInt16 address, Int16* data) const override;
 	virtual size_t readRam(UInt16 address, Byte* data, size_t len) const override;
 	virtual bool writeRam(UInt16 address, UInt8 data) override;
 	virtual bool writeRam(UInt16 address, UInt16 data) override;
+	virtual bool writeRam(UInt16 address, Int8 data) override;
+	virtual bool writeRam(UInt16 address, Int16 data) override;
 	virtual size_t writeRam(UInt16 address, const Byte* data, size_t len) override;
 
 	virtual bool readSram(const Bytes* bytes) const override;

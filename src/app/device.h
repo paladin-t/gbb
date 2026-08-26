@@ -369,9 +369,13 @@ public:
 
 	virtual bool readRam(UInt16 address, UInt8* data) const = 0;
 	virtual bool readRam(UInt16 address, UInt16* data) const = 0;
+	virtual bool readRam(UInt16 address, Int8* data) const = 0;
+	virtual bool readRam(UInt16 address, Int16* data) const = 0;
 	virtual size_t readRam(UInt16 address, Byte* data, size_t len) const = 0;
 	virtual bool writeRam(UInt16 address, UInt8 data) = 0;
 	virtual bool writeRam(UInt16 address, UInt16 data) = 0;
+	virtual bool writeRam(UInt16 address, Int8 data) = 0;
+	virtual bool writeRam(UInt16 address, Int16 data) = 0;
 	virtual size_t writeRam(UInt16 address, const Byte* data, size_t len) = 0;
 
 	virtual bool readSram(const Bytes* bytes) const = 0;
