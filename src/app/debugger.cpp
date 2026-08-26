@@ -128,17 +128,17 @@ struct SCRIPT_CTX {
 	typedef std::vector<Ref> Array;
 	typedef Pointer Ptr;
 
-	UInt8Ptr PC = NULL;
+	UInt8Ptr PC = (UInt8Ptr)NULL;
 	UInt8 bank = 0;
-	Ptr next = NULL;
-	UInt16Ptr stack_ptr = NULL;
-	UInt16Ptr base_addr = NULL;
+	Ptr next = (Ptr)NULL;
+	UInt16Ptr stack_ptr = (UInt16Ptr)NULL;
+	UInt16Ptr base_addr = (UInt16Ptr)NULL;
 	UInt8 ID = 0;
-	UInt16Ptr hthread = NULL;
+	UInt16Ptr hthread = (UInt16Ptr)NULL;
 	Boolean terminated = 0;
 	Boolean waitable = 0;
 	UInt8 lock_count = 0;
-	Pointer update_fn = NULL;
+	Pointer update_fn = (Pointer)NULL;
 	UInt8 update_fn_bank = 0;
 
 	SCRIPT_CTX() {
@@ -149,6 +149,20 @@ struct actor_t {
 	typedef Reference<actor_t> Ref;
 	typedef std::vector<Ref> Array;
 	typedef Pointer Ptr;
+
+	union MovementData {
+		UInt32 movement;
+		upoint16_t absolute_movement;
+		struct RelativeData {
+			point8_t relative_movement;
+			UInt8 original_move_speed;
+			UInt8 max_move_speed;
+		} relative_data;
+
+		MovementData() {
+			movement = 0;
+		}
+	};
 
 	Boolean instantiated         : 1;
 	Boolean active               : 1;
@@ -164,32 +178,24 @@ struct actor_t {
 	boundingbox_t bounds;
 	UInt8 base_tile = 0;
 	UInt8 sprite_bank = 0;
-	MetaSpriteRef sprite_frames = NULL;
+	MetaSpriteRef sprite_frames = (MetaSpriteRef)NULL;
 	UInt8 animation = 0;
 	UInt8 animation_interval = 0;
 	animation_t animations[DEBUGGER_ACTOR_MAX_ANIMATIONS];
 	UInt8 frame = 0;
 	UInt8 motion = 0;
 	UInt8 move_speed = 0;
-	union {
-		UInt32 movement;
-		upoint16_t absolute_movement;
-		struct {
-			point8_t relative_movement;
-			UInt8 original_move_speed;
-			UInt8 max_move_speed;
-		};
-	};
+	MovementData movement;
 	UInt8 behaviour = 0;
 	UInt8 collision_group = 0;
 	UInt16 behave_thread_id = 0;
 	UInt8 behave_handler_bank = 0;
-	UInt8Ptr behave_handler_address = NULL;
+	UInt8Ptr behave_handler_address = (UInt8Ptr)NULL;
 	UInt16 hit_thread_id = 0;
 	UInt8 hit_handler_bank = 0;
-	UInt8Ptr hit_handler_address = NULL;
-	Ptr next = NULL;
-	Ptr prev = NULL;
+	UInt8Ptr hit_handler_address = (UInt8Ptr)NULL;
+	Ptr next = (Ptr)NULL;
+	Ptr prev = (Ptr)NULL;
 
 	actor_t() :
 		instantiated(0),
@@ -199,8 +205,7 @@ struct actor_t {
 		pinned(0),
 		persistent(0),
 		animation_loop(0),
-		movement_interrupt(0),
-		movement(0)
+		movement_interrupt(0)
 	{
 	}
 };
@@ -212,7 +217,7 @@ struct projectile_def_t {
 	boundingbox_t bounds;
 	UInt8 base_tile = 0;
 	UInt8 sprite_bank = 0;
-	MetaSpriteRef sprite_frames = NULL;
+	MetaSpriteRef sprite_frames = (MetaSpriteRef)NULL;
 	UInt8 animation_interval = 0;
 	animation_t animations[DEBUGGER_PROJECTILE_MAX_ANIMATIONS];
 	UInt8 life_time = 0;
@@ -242,7 +247,7 @@ struct projectile_t {
 	UInt8 frame = 0;
 	UInt8 animation = 0;
 	projectile_def_t def;
-	Ptr next = NULL;
+	Ptr next = (Ptr)NULL;
 
 	projectile_t() :
 		animation_no_loop(0),
@@ -267,7 +272,7 @@ struct trigger_t {
 	UInt8 height = 0;
 	UInt8 hit_handler_flags = 0;
 	UInt8 hit_handler_bank = 0;
-	UInt8Ptr hit_handler_address = NULL;
+	UInt8Ptr hit_handler_address = (UInt8Ptr)NULL;
 
 	trigger_t() {
 	}
@@ -296,15 +301,15 @@ struct scene_t {
 	UInt8 height = 0;
 	UInt8 base_tile = 0;
 	UInt8 map_bank = 0;
-	UInt8Ptr map_address = NULL;
+	UInt8Ptr map_address = (UInt8Ptr)NULL;
 	UInt8 attr_bank = 0;
-	UInt8Ptr attr_address = NULL;
+	UInt8Ptr attr_address = (UInt8Ptr)NULL;
 	UInt8 prop_bank = 0;
-	UInt8Ptr prop_address = NULL;
+	UInt8Ptr prop_address = (UInt8Ptr)NULL;
 	UInt8 actor_bank = 0;
-	UInt8Ptr actor_address = NULL;
+	UInt8Ptr actor_address = (UInt8Ptr)NULL;
 	UInt8 trigger_bank = 0;
-	UInt8Ptr trigger_address = NULL;
+	UInt8Ptr trigger_address = (UInt8Ptr)NULL;
 
 	scene_t() :
 		is_16x16_grid(0),
@@ -2692,7 +2697,7 @@ private:
 			ImGui::Text("%d", threadCtx.bank);
 			ImGui::PopStyleColor();
 
-			if (threadCtx.next == NULL) {
+			if (threadCtx.next == (VM::SCRIPT_CTX::Ptr)NULL) {
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 				ImGui::TextUnformatted("Next=");
 				ImGui::PopStyleColor();
@@ -3151,7 +3156,7 @@ private:
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushID("##Mov");
-			movement(actor_.absolute_movement, actor_.relative_movement);
+			movement(actor_.movement.absolute_movement, actor_.movement.relative_data.relative_movement);
 			ImGui::PopID();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
@@ -3300,7 +3305,7 @@ private:
 			ImGui::Text("%04hX", actor_.hit_handler_address);
 			ImGui::PopStyleColor();
 
-			if (actor_.next == NULL) {
+			if (actor_.next == (VM::actor_t::Ptr)NULL) {
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 				ImGui::TextUnformatted("Next=");
 				ImGui::PopStyleColor();
@@ -3349,7 +3354,7 @@ private:
 				}
 			}
 
-			if (actor_.prev == NULL) {
+			/*if (actor_.prev == (VM::Ptr)NULL) {
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 				ImGui::TextUnformatted("Prev=");
 				ImGui::PopStyleColor();
@@ -3365,7 +3370,7 @@ private:
 				ImGui::PushStyleColor(ImGuiCol_Text, minCol);
 				ImGui::Text("%04X...", actor_.prev);
 				ImGui::PopStyleColor();
-			}
+			}*/
 
 			ImGui::TreePop();
 		}
@@ -4051,7 +4056,7 @@ private:
 			ImGui::PopID();
 			ImGui::PopStyleColor();
 
-			if (projectile_.next == NULL) {
+			if (projectile_.next == (VM::projectile_t::Ptr)NULL) {
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 				ImGui::TextUnformatted("Next=");
 				ImGui::PopStyleColor();
@@ -4195,7 +4200,7 @@ private:
 		const ImU32 majCol = _theme->style()->debuggerMajorColor;
 		const ImU32 minCol = _theme->style()->debuggerMinorColor;
 
-		if (ImGui::TreeNode("##Pnt", "{x=%u,y=%u}", point.x, point.y)) {
+		if (ImGui::TreeNode("##Pnt", "{X=%u,Y=%u}", point.x, point.y)) {
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("X=");
 			ImGui::PopStyleColor();
@@ -4219,7 +4224,7 @@ private:
 		const ImU32 majCol = _theme->style()->debuggerMajorColor;
 		const ImU32 minCol = _theme->style()->debuggerMinorColor;
 
-		if (ImGui::TreeNode("##Pnt", "{x=%u,y=%u}", point.x, point.y)) {
+		if (ImGui::TreeNode("##Pnt", "{X=%u,Y=%u}", point.x, point.y)) {
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("X=");
 			ImGui::PopStyleColor();
@@ -4243,7 +4248,7 @@ private:
 		const ImU32 majCol = _theme->style()->debuggerMajorColor;
 		const ImU32 minCol = _theme->style()->debuggerMinorColor;
 
-		if (ImGui::TreeNode("##Box", "{l=%d,t=%d,r=%d,b=%d}", box.left, box.top, box.right, box.bottom)) {
+		if (ImGui::TreeNode("##Box", "{L=%d,T=%d,R=%d,B=%d}", box.left, box.top, box.right, box.bottom)) {
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("L=");
 			ImGui::PopStyleColor();
@@ -4288,7 +4293,7 @@ private:
 			ImGui::TextUnformatted("Absolute=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
-			if (ImGui::TreeNode("##AbsMov", "{x=%u,y=%u}", abs.x, abs.y)) {
+			if (ImGui::TreeNode("##AbsMov", "{X=%u,Y=%u}", abs.x, abs.y)) {
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 				ImGui::TextUnformatted("X=");
 				ImGui::PopStyleColor();
@@ -4312,7 +4317,7 @@ private:
 			ImGui::TextUnformatted("Relative=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
-			if (ImGui::TreeNode("##RelMov", "{x=%d,y=%d}", rel.x, rel.y)) {
+			if (ImGui::TreeNode("##RelMov", "{X=%d,Y=%d}", rel.x, rel.y)) {
 				ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 				ImGui::TextUnformatted("X=");
 				ImGui::PopStyleColor();
