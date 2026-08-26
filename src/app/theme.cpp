@@ -432,6 +432,8 @@ bool Theme::open(class Renderer* rnd) {
 	menu_Palette("Palette");
 	menu_PaletteBits("Palette Bits");
 	menu_Paste("Paste");
+	menu_Pause("Pause");
+	menu_PauseInBasic("Pause in BASIC");
 	menu_Preferences("Preferences...");
 	menu_Priority("Priority");
 	menu_Project("Project");
@@ -763,6 +765,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_Volume_25(" 25%");
 	dialogPrompt_Volume_50(" 50%");
 	dialogPrompt_Volume_Mute("Mute");
+	dialogPrompt_WaitingForActiveThread("Waiting for active thread");
 	dialogPrompt_Waveform("Waveform");
 	dialogPrompt_Waveform_0("Waveform 0");
 	dialogPrompt_Waveform_1("Waveform 1");
@@ -958,6 +961,7 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_CodeDebugger_Addr("Addr.");
 	windowEmulator_CodeDebugger_Asm("ASM");
 	windowEmulator_CodeDebugger_Basic("BASIC");
+	windowEmulator_CodeDebugger_Breakpoints("Breakpoints");
 	windowEmulator_CodeDebugger_DeviceMemory("Device memory");
 	windowEmulator_CodeDebugger_Disassembling("Disassembling...");
 	windowEmulator_CodeDebugger_DisassembyHeadInfo("ROM     Bytes    Mnemonic");
@@ -1389,6 +1393,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_CodeDebugger_DisableBreakpoints("Disable breakpoints");
 	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
 	tooltipEmulator_CodeDebugger_Pause("Pause");
+	tooltipEmulator_CodeDebugger_PauseInBasic("Pause in BASIC");
 	tooltipEmulator_CodeDebugger_Resume("Resume");
 	tooltipEmulator_CodeDebugger_StepAsm("Step ASM (" GBBASIC_MODIFIER_KEY_NAME "+F10)");
 	tooltipEmulator_CodeDebugger_StepBasic("Step BASIC (F10)");
@@ -1692,6 +1697,8 @@ bool Theme::open(class Renderer* rnd) {
 
 	iconSeparator(createTexture(rnd, RES_ICON_SEPARATOR, GBBASIC_COUNTOF(RES_ICON_SEPARATOR), nullptr));
 
+	iconMore(createTexture(rnd, RES_ICON_MORE, GBBASIC_COUNTOF(RES_ICON_MORE), nullptr));
+
 	iconCursor(createTexture(rnd, RES_ICON_CURSOR, GBBASIC_COUNTOF(RES_ICON_CURSOR), &imageCursor()));
 
 	iconMainMenu(createTexture(rnd, RES_ICON_MAIN_MENU, GBBASIC_COUNTOF(RES_ICON_MAIN_MENU), nullptr));
@@ -1768,6 +1775,7 @@ bool Theme::open(class Renderer* rnd) {
 	iconStop(createTexture(rnd, RES_ICON_STOP, GBBASIC_COUNTOF(RES_ICON_STOP), nullptr));
 	iconStopPreview(createTexture(rnd, RES_ICON_STOP_AUDIO, GBBASIC_COUNTOF(RES_ICON_STOP_AUDIO), nullptr));
 	iconPause(createTexture(rnd, RES_ICON_PAUSE, GBBASIC_COUNTOF(RES_ICON_PAUSE), nullptr));
+	iconPauseInBasic(createTexture(rnd, RES_ICON_PAUSE_IN_BASIC, GBBASIC_COUNTOF(RES_ICON_PAUSE_IN_BASIC), nullptr));
 	iconBreakEnable(createTexture(rnd, RES_ICON_BREAK_ENABLE, GBBASIC_COUNTOF(RES_ICON_BREAK_ENABLE), nullptr));
 	iconBreakDisable(createTexture(rnd, RES_ICON_BREAK_DISABLE, GBBASIC_COUNTOF(RES_ICON_BREAK_DISABLE), nullptr));
 	iconBreakClear(createTexture(rnd, RES_ICON_BREAK_CLEAR, GBBASIC_COUNTOF(RES_ICON_BREAK_CLEAR), nullptr));
@@ -1869,6 +1877,8 @@ bool Theme::close(class Renderer* rnd) {
 
 	destroyTexture(rnd, iconSeparator(), nullptr);
 
+	destroyTexture(rnd, iconMore(), nullptr);
+
 	destroyTexture(rnd, iconCursor(), &imageCursor());
 
 	destroyTexture(rnd, iconMainMenu(), nullptr);
@@ -1945,6 +1955,7 @@ bool Theme::close(class Renderer* rnd) {
 	destroyTexture(rnd, iconStop(), nullptr);
 	destroyTexture(rnd, iconStopPreview(), nullptr);
 	destroyTexture(rnd, iconPause(), nullptr);
+	destroyTexture(rnd, iconPauseInBasic(), nullptr);
 	destroyTexture(rnd, iconBreakEnable(), nullptr);
 	destroyTexture(rnd, iconBreakDisable(), nullptr);
 	destroyTexture(rnd, iconBreakClear(), nullptr);

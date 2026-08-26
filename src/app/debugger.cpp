@@ -693,6 +693,8 @@ public:
 	virtual void pause(void) override {
 		_bringCodeDebuggerToFront = true;
 
+		_bringCategoryToFront = Categories::ASM;
+
 		_inspecting = true;
 
 		inspect(nullptr);
@@ -786,6 +788,13 @@ public:
 			_workspace->resume(_window, _renderer);
 
 			_workspace->skipFrame(5);
+
+			VM::SCRIPT_CTX::Array threads;
+			probeThreads(threads);
+			if (threads.empty())
+				_workspace->bubble(_theme->dialogPrompt_WaitingForActiveThread(), nullptr);
+		} else {
+			_workspace->bubble(_theme->dialogPrompt_WaitingForActiveThread(), nullptr);
 		}
 		_breakTimeout = DateTime::ticks() + DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT;
 	}
@@ -1905,6 +1914,8 @@ private:
 		ImGuiIO &io = ImGui::GetIO();
 		ImGuiStyle &style = ImGui::GetStyle();
 
+		bool openBtnCtx = false;
+		ImVec2 btnCtxPos;
 		const float borderSize = style.ChildBorderSize;
 		const ImVec2 regMin = ImGui::GetWindowContentRegionMin();
 		const ImVec2 regMax = ImGui::GetWindowContentRegionMax();
@@ -1919,22 +1930,43 @@ private:
 		ImGui::NewLine(1);
 
 		const ImVec2 buttonSize(13 * io.FontGlobalScale, 13 * io.FontGlobalScale);
-		if (ImGui::ImageButton(_theme->iconPause()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
-			_workspace->pause(_window, _renderer);
-		}
-		if (ImGui::IsItemHovered()) {
-			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+		const ImVec2 smallButtonSize(5 * io.FontGlobalScale, 13 * io.FontGlobalScale);
+		if (isCompiledFromSource()) {
+			if (ImGui::ImageButton(_theme->iconPauseInBasic()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
+				step(false);
+			}
+			if (ImGui::IsItemHovered() && !_workspace->bubble()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
-			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_Pause());
+				ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_PauseInBasic());
+			}
+			ImGui::SameLine();
+			btnCtxPos.x = ImGui::GetCursorScreenPos().x;
+			if (ImGui::ImageButton(_theme->iconMore()->pointer(_renderer), smallButtonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
+				openBtnCtx = true;
+			}
+			btnCtxPos.y = ImGui::GetCursorScreenPos().y;
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(2, 0));
+			ImGui::SameLine();
+		} else {
+			if (ImGui::ImageButton(_theme->iconPause()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
+				_workspace->pause(_window, _renderer);
+			}
+			if (ImGui::IsItemHovered() && !_workspace->bubble()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_Pause());
+			}
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(2, 0));
+			ImGui::SameLine();
 		}
-		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(2, 0));
-		ImGui::SameLine();
 
 		if (ImGui::ImageButton(_theme->iconStepBasic()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconDisabledColor))) {
 			// Do nothing.
 		}
-		if (ImGui::IsItemHovered()) {
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_StepBasic());
@@ -1943,7 +1975,7 @@ private:
 		if (ImGui::ImageButton(_theme->iconStepAsm()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconDisabledColor))) {
 			// Do nothing.
 		}
-		if (ImGui::IsItemHovered()) {
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_StepAsm());
@@ -1955,7 +1987,7 @@ private:
 		if (ImGui::ImageButton(_theme->iconBreakDisable()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->disableBreakpoints();
 		}
-		if (ImGui::IsItemHovered()) {
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_DisableBreakpoints());
@@ -1965,7 +1997,7 @@ private:
 		if (ImGui::ImageButton(_theme->iconBreakEnable()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->enableBreakpoints();
 		}
-		if (ImGui::IsItemHovered()) {
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_EnableBreakpoints());
@@ -1975,11 +2007,33 @@ private:
 		if (ImGui::ImageButton(_theme->iconBreakClear()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->clearBreakpoints();
 		}
-		if (ImGui::IsItemHovered()) {
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_ClearBreakpoints());
 		}
+
+		if (openBtnCtx)
+			ImGui::OpenPopup("@Btn/Ctx");
+
+		do {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(8, 8));
+			VariableGuard<decltype(style.ItemSpacing)> guardItemSpacing(&style.ItemSpacing, style.ItemSpacing, ImVec2(8, 4));
+
+			if (ImGui::IsPopupOpen("@Btn/Ctx")) {
+				ImGui::SetNextWindowPos(btnCtxPos, ImGuiCond_Always);
+			}
+			if (ImGui::BeginPopup("@Btn/Ctx")) {
+				if (ImGui::MenuItem(_theme->menu_Pause())) {
+					_workspace->pause(_window, _renderer);
+				}
+				if (ImGui::MenuItem(_theme->menu_PauseInBasic())) {
+					step(false);
+				}
+
+				ImGui::EndPopup();
+			}
+		} while (false);
 
 #if !defined GBBASIC_OS_HTML
 		code(regSize);
@@ -2003,13 +2057,18 @@ private:
 		ImGui::NewLine(1);
 
 		const ImVec2 buttonSize(13 * io.FontGlobalScale, 13 * io.FontGlobalScale);
+		const ImVec2 smallButtonSize(5 * io.FontGlobalScale, 13 * io.FontGlobalScale);
 		if (ImGui::ImageButton(_theme->iconPlay()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->resume(_window, _renderer);
 		}
-		if (ImGui::IsItemHovered()) {
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_Resume());
+		}
+		ImGui::SameLine();
+		if (ImGui::ImageButton(_theme->iconMore()->pointer(_renderer), smallButtonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconDisabledColor))) {
+			// Do nothing.
 		}
 		ImGui::SameLine();
 		ImGui::Dummy(ImVec2(2, 0));
@@ -2024,7 +2083,7 @@ private:
 				// Do nothing.
 			}
 		}
-		if (ImGui::IsItemHovered()) {
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_StepBasic());
@@ -2033,7 +2092,7 @@ private:
 		if (ImGui::ImageButton(_theme->iconStepAsm()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			step(true);
 		}
-		if (ImGui::IsItemHovered()) {
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_StepAsm());
@@ -2045,7 +2104,7 @@ private:
 		if (ImGui::ImageButton(_theme->iconBreakDisable()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->disableBreakpoints();
 		}
-		if (ImGui::IsItemHovered()) {
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_DisableBreakpoints());
@@ -2055,7 +2114,7 @@ private:
 		if (ImGui::ImageButton(_theme->iconBreakEnable()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->enableBreakpoints();
 		}
-		if (ImGui::IsItemHovered()) {
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_EnableBreakpoints());
@@ -2065,7 +2124,7 @@ private:
 		if (ImGui::ImageButton(_theme->iconBreakClear()->pointer(_renderer), buttonSize, ImGui::ColorConvertU32ToFloat4(_theme->style()->iconColor))) {
 			_workspace->clearBreakpoints();
 		}
-		if (ImGui::IsItemHovered()) {
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
 
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_ClearBreakpoints());
@@ -2293,6 +2352,13 @@ private:
 				}
 				ImGui::SameLine();
 				ImGui::NewLine(1);
+
+				ImGui::EndTabItem();
+			}
+
+			flags = ImGuiTabItemFlags_NoTooltip;
+			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Breakpoints(), nullptr, flags)) {
+				// TODO: DBG.
 
 				ImGui::EndTabItem();
 			}
