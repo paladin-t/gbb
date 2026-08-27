@@ -468,7 +468,7 @@ private:
 	/**< General. */
 
 	bool _opened = false;
-	struct {
+	struct Options {
 		float startY = 0;
 		int safeHeight = 0;
 		int disassemblerView = 0;
@@ -484,6 +484,15 @@ private:
 		int wramIndex = -1;
 		std::string wramText;
 		std::string echoText;
+		char newBreakpointBankBuf[3];
+		char newBreakpointAddressBuf[5];
+
+		Options() {
+			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
+			memset(newBreakpointBankBuf, 'F', 2);
+			memset(newBreakpointAddressBuf, 0, sizeof(newBreakpointAddressBuf));
+			memset(newBreakpointAddressBuf, 'F', 4);
+		}
 	} _options;
 	Window* _window = nullptr; // Foreign.
 	Renderer* _renderer = nullptr; // Foreign.
@@ -968,7 +977,7 @@ public:
 				if (!breakpoint.hitPointer.equals(pc.bank, pc.address))
 					continue;
 
-				if (isBasic) {
+				if (isBasic && breakpoint.type == Categories::BASIC && (breakpoint.page != -1 && breakpoint.row != -1)) {
 					if (breakpoint.vmPointer.equals(ctxBank, ctxPc)) {
 						hitBreakpoint(breakpoint);
 						++hitCount;
@@ -976,6 +985,9 @@ public:
 				} else {
 					hitBreakpoint(breakpoint);
 					++hitCount;
+
+					if (breakpoint.page == -1 && breakpoint.row == -1)
+						_bringCategoryToFront = Categories::ASM;
 				}
 			}
 		}
@@ -1860,6 +1872,24 @@ private:
 				breakpoint.type = Categories::ASM;
 		}
 	}
+	bool installBreakpoint(int &id, UInt8 bank, UInt16 address) {
+		const Bytes::Ptr rom = compiledBytes();
+		if (!rom)
+			return false;
+
+		const int banks = (int)(rom->count() / DEBUGGER_BANK_SIZE);
+		if (bank >= banks)
+			return false;
+
+		if (bank == 0 && address >= DEBUGGER_BANK_SIZE)
+			return false;
+		else if (bank != 0 && (address < DEBUGGER_START_ADDRESS || address >= DEBUGGER_START_ADDRESS + DEBUGGER_BANK_SIZE))
+			return false;
+
+		id = _device->addBreakpoint(bank, address);
+
+		return true;
+	}
 	bool installBreakpoint(Breakpoint &breakpoint) {
 		if (breakpoint.type == Categories::NONE)
 			return false;
@@ -2519,7 +2549,11 @@ private:
 								ImGui::PopStyleColor();
 
 								ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-								ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(brk.type == Categories::BASIC ? "BASIC" : "ASM");
+								ImGui::TableSetColumnIndex(1);
+								if (brk.page == -1 && brk.row == -1)
+									ImGui::TextUnformatted("ASM (ROM)");
+								else
+									ImGui::TextUnformatted(brk.type == Categories::BASIC ? "BASIC" : "ASM");
 								ImGui::PopStyleColor();
 
 								if (brk.type == Categories::BASIC) {
@@ -2562,15 +2596,115 @@ private:
 						}
 
 						if (tobeDeleted >= 0 && tobeDeleted < (int)_breakpoints.size()) {
-							const Breakpoint &brk = _breakpoints[tobeDeleted];
+							Breakpoint &brk = _breakpoints[tobeDeleted];
 							if (brk.page != -1 && brk.row != -1) {
 								_workspace->toggleBreakpoint(brk.page, brk.row - 1); // 1-based.
 							} else {
+								Breakpoint::Array::iterator it = std::find_if(
+									_breakpoints.begin(), _breakpoints.end(),
+									[brk] (const Breakpoint &brk_) -> bool {
+										if (brk_.type != Categories::ASM)
+											return false;
+										if (!(brk_.page == -1 && brk_.row == -1))
+											return false;
+										if (!brk_.hitPointer.equals(brk.hitPointer.bank, brk.hitPointer.address))
+											return false;
 
+										return true;
+									}
+								);
+								if (it != _breakpoints.end()) {
+									if (it->enabled)
+										uninstallBreakpoint(*it);
+
+									_breakpoints.erase(it);
+								}
 							}
 						}
 
 						ImGui::EndTable();
+					}
+				}
+
+				ImGui::NewLine(1);
+				ImGui::Dummy(ImVec2(2, 0));
+				ImGui::SameLine();
+				const float posX = ImGui::GetCursorPosX();
+				ImGui::AlignTextToFramePadding();
+				ImGui::TextUnformatted(_theme->windowEmulator_CodeDebugger_New());
+				ImGui::SameLine();
+				const float diff = ImGui::GetCursorPosX() - posX;
+				const float remain = regSize.x * 0.3f - diff;
+				ImGui::Dummy(ImVec2(remain, 0));
+				ImGui::SameLine();
+
+				const float width = ImGui::GetContentRegionAvail().x;
+				ImGui::SetNextItemWidth(32);
+				if (ImGui::InputText("##B", _options.newBreakpointBankBuf, sizeof(_options.newBreakpointBankBuf), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AutoSelectAll)) {
+					// Do nothing.
+				}
+				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
+					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+					ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_Bank());
+				}
+				ImGui::SameLine();
+				ImGui::TextUnformatted(":");
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(width - 58.0f);
+				if (ImGui::InputText("##A", _options.newBreakpointAddressBuf, sizeof(_options.newBreakpointAddressBuf), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AutoSelectAll)) {
+					// Do nothing.
+				}
+				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
+					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+					ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_Address());
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("+", ImVec2(19, 0))) {
+					const std::string bankStr = std::string("0x") + _options.newBreakpointBankBuf;
+					const std::string addrStr = std::string("0x") + _options.newBreakpointAddressBuf;
+					int bank = 0;
+					int addr = 0;
+					if (Text::fromString(bankStr, bank) && Text::fromString(addrStr, addr)) {
+						Breakpoint breakpoint(-1, -1, true);
+						breakpoint.type = Categories::ASM;
+						breakpoint.hitPointer = FarPtr(bank, addr);
+
+						Breakpoint::Array::const_iterator it = std::find_if(
+							_breakpoints.begin(), _breakpoints.end(),
+							[breakpoint] (const Breakpoint &brk) -> bool {
+								if (brk.type != Categories::ASM)
+									return false;
+								if (!(brk.page == -1 && brk.row == -1))
+									return false;
+								if (!brk.hitPointer.equals(breakpoint.hitPointer.bank, breakpoint.hitPointer.address))
+									return false;
+
+								return true;
+							}
+						);
+						if (it == _breakpoints.end()) {
+							int id = -1;
+							if (installBreakpoint(id, (UInt8)breakpoint.hitPointer.bank, (UInt16)breakpoint.hitPointer.address)) {
+								breakpoint.id = id;
+
+								_breakpoints.push_back(breakpoint); // Add a new breakpoint.
+
+								refreshBreakpoints();
+
+								memset(_options.newBreakpointBankBuf, 0, sizeof(_options.newBreakpointBankBuf));
+								memset(_options.newBreakpointBankBuf, 'F', 2);
+								memset(_options.newBreakpointAddressBuf, 0, sizeof(_options.newBreakpointAddressBuf));
+								memset(_options.newBreakpointAddressBuf, 'F', 4);
+
+								_workspace->bubble(_theme->dialogPrompt_AddedBreakpoint(), nullptr);
+							} else {
+								_workspace->bubble(_theme->dialogPrompt_InvalidBreakpoint(), nullptr);
+							}
+						} else {
+							_workspace->bubble(_theme->dialogPrompt_AlreadyExists(), nullptr);
+						}
 					}
 				}
 

@@ -511,7 +511,9 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_8x16("8x16");
 	dialogPrompt_Actor("Actor");
 	dialogPrompt_AddedAssetPage("Added asset page");
+	dialogPrompt_AddedBreakpoint("Added breakpoint");
 	dialogPrompt_AllowFlip("Allow flip");
+	dialogPrompt_AlreadyExists("Already exists");
 	dialogPrompt_Analyzing("Analyzing...");
 	dialogPrompt_Anchor("Anchor");
 	dialogPrompt_Animations("Animations");
@@ -625,6 +627,7 @@ bool Theme::open(class Renderer* rnd) {
 		"Invalid border image size,\n"
 		"256x224px required"
 	);
+	dialogPrompt_InvalidBreakpoint("Invalid breakpoint");
 	dialogPrompt_InvalidData("Invalid data");
 	dialogPrompt_InvalidDataSeeTheConsoleWindowForDetails("Invalid data; see the console window for details.");
 	dialogPrompt_InvalidFile("Invalid file.");
@@ -971,8 +974,9 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_CodeDebugger_Hits("Hits");
 	windowEmulator_CodeDebugger_ID("ID");
 	windowEmulator_CodeDebugger_Inspector("Inspector");
-	windowEmulator_CodeDebugger_Location("Location");
 	windowEmulator_CodeDebugger_Kernel("Kernel");
+	windowEmulator_CodeDebugger_Location("Location");
+	windowEmulator_CodeDebugger_New("New");
 	windowEmulator_CodeDebugger_Objects("Objects");
 	windowEmulator_CodeDebugger_Order("Order");
 	windowEmulator_CodeDebugger_Projectiles("Projectiles");
@@ -1391,6 +1395,8 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipCode_InfoWords("words");
 
 	tooltipEmulator_AlternativeSpeed("Alternative speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
+	tooltipEmulator_CodeDebugger_Address("Address");
+	tooltipEmulator_CodeDebugger_Bank("Bank");
 	tooltipEmulator_CodeDebugger_ClearBreakpoints("Clear breakpoints");
 	tooltipEmulator_CodeDebugger_DisableBreakpoints("Disable breakpoints");
 	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
