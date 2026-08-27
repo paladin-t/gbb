@@ -2484,68 +2484,94 @@ private:
 
 			flags = ImGuiTabItemFlags_NoTooltip;
 			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Breakpoints(), nullptr, flags)) {
-				VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+				if (_breakpoints.empty()) {
+					ImGui::Dummy(ImVec2(2, 0));
+					ImGui::SameLine();
+					ImGui::AlignTextToFramePadding();
+					ImGui::TextUnformatted(_theme->windowEmulator_CodeDebugger_Empty());
+				} else {
+					VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
-				const ImGuiTableFlags flags_ = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
-					ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
-				if (ImGui::BeginTable("##Brks", 5, flags_, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
-					const float width0 = ImGui::GetFontSize() * 2.0f;
-					const float width = ImGui::GetFontSize() * 5.0f;
-					const ImU32 col = _theme->style()->debuggerHeadColor;
-					ImGui::PushStyleColor(ImGuiCol_Text, col);
-					ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Order(), ImGuiTableColumnFlags_WidthFixed, width0);
-					ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Type(), ImGuiTableColumnFlags_WidthFixed, width);
-					ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Location(), ImGuiTableColumnFlags_WidthStretch);
-					ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Enabled(), ImGuiTableColumnFlags_WidthFixed, width0);
-					ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Hits(), ImGuiTableColumnFlags_WidthFixed, width0);
-					ImGui::TableHeadersRow();
-					ImGui::PopStyleColor();
+					const ImGuiTableFlags flags_ = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
+						ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
+					if (ImGui::BeginTable("##Brks", 4, flags_, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
+						const float width0 = ImGui::GetFontSize() * 2.0f;
+						const float width = ImGui::GetFontSize() * 5.0f;
+						const ImU32 col = _theme->style()->debuggerHeadColor;
+						ImGui::PushStyleColor(ImGuiCol_Text, col);
+						ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Order(), ImGuiTableColumnFlags_WidthFixed, width0);
+						ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Type(), ImGuiTableColumnFlags_WidthFixed, width0);
+						ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Location(), ImGuiTableColumnFlags_WidthStretch);
+						ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Hits(), ImGuiTableColumnFlags_WidthFixed, width0);
+						ImGui::TableHeadersRow();
+						ImGui::PopStyleColor();
 
-					for (int j = 0; j < (int)_breakpoints.size(); ++j) {
-						const int ord = j;
-						const Breakpoint &brk = _breakpoints[j];
+						int tobeDeleted = -1;
+						for (int j = 0; j < (int)_breakpoints.size(); ++j) {
+							const int ord = j;
+							const Breakpoint &brk = _breakpoints[j];
 
-						ImGui::TableNextRow();
-						ImGui::PushID(j);
-						{
-							ImGui::PushStyleColor(ImGuiCol_Text, col);
-							ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord);
-							ImGui::PopStyleColor();
-
-							ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-							ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(brk.type == Categories::BASIC ? "BASIC" : "ASM");
-							ImGui::PopStyleColor();
-
-							if (brk.type == Categories::BASIC) {
-								ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-								ImGui::TableSetColumnIndex(2);
-								if (brk.enabled)
-									ImGui::Text("Pg %d, Ln %d (%02X:%04X)", brk.page, brk.row, brk.hitPointer.bank, brk.hitPointer.address);
-								else
-									ImGui::Text("Pg %d, Ln %d (--:----)", brk.page, brk.row);
+							ImGui::TableNextRow();
+							ImGui::PushID(j);
+							{
+								ImGui::PushStyleColor(ImGuiCol_Text, col);
+								ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord);
 								ImGui::PopStyleColor();
-							} else {
+
+								ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+								ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(brk.type == Categories::BASIC ? "BASIC" : "ASM");
+								ImGui::PopStyleColor();
+
+								if (brk.type == Categories::BASIC) {
+									ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+									ImGui::TableSetColumnIndex(2);
+									if (brk.enabled)
+										ImGui::Text("Pg %d, Ln %d (%02X:%04X)", brk.page, brk.row, brk.hitPointer.bank, brk.hitPointer.address);
+									else
+										ImGui::Text("Pg %d, Ln %d (--:----)", brk.page, brk.row);
+									ImGui::PopStyleColor();
+								} else {
+									ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+									ImGui::TableSetColumnIndex(2);
+									if (brk.enabled)
+										ImGui::Text("%02X:%04X", brk.hitPointer.bank, brk.hitPointer.address);
+									else
+										ImGui::TextUnformatted("--:----");
+									ImGui::PopStyleColor();
+								}
+								ImGui::SameLine();
+								const ImVec2 btnSize(15, 15);
+								const float x = ImGui::GetCursorScreenPos().x
+									+ ImGui::GetColumnWidth(0) - btnSize.x + style.CellPadding.x;
+								const float y = ImGui::GetCursorScreenPos().y
+									- style.CellPadding.y + 1;
+								if (ImGui::CompactButton(_theme->iconRecycle()->pointer(_renderer), ImVec2(x, y), ImVec2(15, 15), ImVec4(1, 1, 1, 1))) {
+									tobeDeleted = j;
+								}
+								if (ImGui::IsItemHovered() && !_workspace->bubble()) {
+									VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+									ImGui::SetTooltip(_theme->tooltip_Delete());
+								}
+
 								ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-								ImGui::TableSetColumnIndex(2);
-								if (brk.enabled)
-									ImGui::Text("%02X:%04X", brk.hitPointer.bank, brk.hitPointer.address);
-								else
-									ImGui::TextUnformatted("--:----");
+								ImGui::TableSetColumnIndex(3); ImGui::Text("%d", brk.hitCount);
 								ImGui::PopStyleColor();
 							}
-
-							ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-							ImGui::TableSetColumnIndex(3); ImGui::TextUnformatted(brk.enabled ? "true" : "false");
-							ImGui::PopStyleColor();
-
-							ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-							ImGui::TableSetColumnIndex(4); ImGui::Text("%d", brk.hitCount);
-							ImGui::PopStyleColor();
+							ImGui::PopID();
 						}
-						ImGui::PopID();
-					}
 
-					ImGui::EndTable();
+						if (tobeDeleted >= 0 && tobeDeleted < (int)_breakpoints.size()) {
+							const Breakpoint &brk = _breakpoints[tobeDeleted];
+							if (brk.page != -1 && brk.row != -1) {
+								_workspace->toggleBreakpoint(brk.page, brk.row - 1); // 1-based.
+							} else {
+
+							}
+						}
+
+						ImGui::EndTable();
+					}
 				}
 
 				ImGui::EndTabItem();
