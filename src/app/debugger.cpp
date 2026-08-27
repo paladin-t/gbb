@@ -2559,7 +2559,7 @@ private:
 								if (brk.type == Categories::BASIC) {
 									ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
 									ImGui::TableSetColumnIndex(2);
-									if (brk.enabled)
+									if (brk.enabled && !(brk.hitPointer.bank == -1 && brk.hitPointer.address == -1))
 										ImGui::Text("Pg %d, Ln %d (%02X:%04X)", brk.page, brk.row, brk.hitPointer.bank, brk.hitPointer.address);
 									else
 										ImGui::Text("Pg %d, Ln %d (--:----)", brk.page, brk.row);
@@ -2567,7 +2567,7 @@ private:
 								} else {
 									ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
 									ImGui::TableSetColumnIndex(2);
-									if (brk.enabled)
+									if (brk.enabled && !(brk.hitPointer.bank == -1 && brk.hitPointer.address == -1))
 										ImGui::Text("%02X:%04X", brk.hitPointer.bank, brk.hitPointer.address);
 									else
 										ImGui::TextUnformatted("--:----");
