@@ -766,17 +766,18 @@ public:
 	virtual void setBreakpoint(int page, int ln, bool brk) override {
 		const Breakpoint breakpoint(page, ln, brk);
 		Breakpoint::Array::iterator it = std::lower_bound(_breakpoints.begin(), _breakpoints.end(), breakpoint);
-		Breakpoint* pointer = nullptr;
-		if (it != _breakpoints.end() && !(breakpoint < *it)) {
+		if (it != _breakpoints.end() && !(breakpoint < *it))
 			it->enabled = brk; // Update the existing breakpoint.
-			pointer = &*it;
-		} else {
+		else
 			_breakpoints.push_back(breakpoint); // Add a new breakpoint.
-			pointer = &_breakpoints.back();
-		}
 
 		if (_started) {
 			refreshBreakpoints();
+
+			it = std::lower_bound(_breakpoints.begin(), _breakpoints.end(), breakpoint);
+			Breakpoint* pointer = nullptr;
+			if (it != _breakpoints.end() && !(breakpoint < *it))
+				pointer = &*it;
 
 			GBBASIC_ASSERT(pointer && "Impossible.");
 			if (pointer) {
@@ -1860,9 +1861,8 @@ private:
 		}
 	}
 	bool installBreakpoint(Breakpoint &breakpoint) {
-		if (breakpoint.type == Categories::NONE) {
+		if (breakpoint.type == Categories::NONE)
 			return false;
-		}
 
 		const GBBASIC::TracePoint* tp = getTracePointBySourceLocation(breakpoint.page, breakpoint.row);
 		if (!tp)
@@ -1890,9 +1890,8 @@ private:
 		return true;
 	}
 	bool uninstallBreakpoint(Breakpoint &breakpoint) {
-		if (breakpoint.type == Categories::NONE) {
+		if (breakpoint.type == Categories::NONE)
 			return false;
-		}
 
 		if (breakpoint.type == Categories::ASM) {
 			_device->removeBreakpoint(breakpoint.id);
@@ -1937,6 +1936,8 @@ private:
 		return _vmStepBreakpointRefCount;
 	}
 	void hitBreakpoint(const Breakpoint &breakpoint) {
+		++breakpoint.hitCount;
+
 		_bringCodeDebuggerToFront = true;
 
 		_inspecting = true;
@@ -2249,7 +2250,13 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(_theme->windowEmulator_CodeDebugger_KernelMemory().c_str(), regSize.x, flags))
+		const bool open = ImGui::CollapsingHeader(_theme->windowEmulator_CodeDebugger_Kernel().c_str(), regSize.x, flags);
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_VmHeapThreadsAndObjects());
+		}
+		if (!open)
 			return;
 		ImGui::NewLine(1);
 
@@ -2269,7 +2276,13 @@ private:
 		);
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen;
-		if (!ImGui::CollapsingHeader(_theme->windowEmulator_CodeDebugger_DeviceMemory().c_str(), regSize.x, flags))
+		const bool open = ImGui::CollapsingHeader(_theme->windowEmulator_CodeDebugger_Device().c_str(), regSize.x, flags);
+		if (ImGui::IsItemHovered() && !_workspace->bubble()) {
+			VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_HardwareRegistersAndMemoryBus());
+		}
+		if (!open)
 			return;
 		ImGui::NewLine(1);
 
@@ -2367,7 +2380,13 @@ private:
 
 				if (_bringCategoryToFront == Categories::BASIC)
 					flags |= ImGuiTabItemFlags_SetSelected;
-				if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Basic(), nullptr, flags)) {
+				const bool open = ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Basic(), nullptr, flags);
+				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
+					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+					ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_FromCode());
+				}
+				if (open) {
 					const float width = ImGui::GetContentRegionAvail().x;
 					const float height = 200.0f + 6;
 					const bool ro = editor->readonly();
@@ -2398,7 +2417,13 @@ private:
 			flags = ImGuiTabItemFlags_NoTooltip;
 			if (_bringCategoryToFront == Categories::ASM)
 				flags |= ImGuiTabItemFlags_SetSelected;
-			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Asm(), nullptr, flags)) {
+			const bool open = ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Asm(), nullptr, flags);
+			if (ImGui::IsItemHovered() && !_workspace->bubble()) {
+				VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+				ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_FromRom());
+			}
+			if (open) {
 				const GBBASIC::Disassembler::Mnemonic::Queue* mnemonics_ = touchMnemonics();
 
 				const ImU32 col = _theme->style()->debuggerHeadColor;
@@ -2459,7 +2484,69 @@ private:
 
 			flags = ImGuiTabItemFlags_NoTooltip;
 			if (ImGui::BeginTabItem(_theme->windowEmulator_CodeDebugger_Breakpoints(), nullptr, flags)) {
-				// TODO: DBG.
+				VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+
+				const ImGuiTableFlags flags_ = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
+					ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
+				if (ImGui::BeginTable("##Brks", 5, flags_, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
+					const float width0 = ImGui::GetFontSize() * 2.0f;
+					const float width = ImGui::GetFontSize() * 5.0f;
+					const ImU32 col = _theme->style()->debuggerHeadColor;
+					ImGui::PushStyleColor(ImGuiCol_Text, col);
+					ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Order(), ImGuiTableColumnFlags_WidthFixed, width0);
+					ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Type(), ImGuiTableColumnFlags_WidthFixed, width);
+					ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Location(), ImGuiTableColumnFlags_WidthStretch);
+					ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Enabled(), ImGuiTableColumnFlags_WidthFixed, width0);
+					ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Hits(), ImGuiTableColumnFlags_WidthFixed, width0);
+					ImGui::TableHeadersRow();
+					ImGui::PopStyleColor();
+
+					for (int j = 0; j < (int)_breakpoints.size(); ++j) {
+						const int ord = j;
+						const Breakpoint &brk = _breakpoints[j];
+
+						ImGui::TableNextRow();
+						ImGui::PushID(j);
+						{
+							ImGui::PushStyleColor(ImGuiCol_Text, col);
+							ImGui::TableSetColumnIndex(0); ImGui::Text("%d", ord);
+							ImGui::PopStyleColor();
+
+							ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+							ImGui::TableSetColumnIndex(1); ImGui::TextUnformatted(brk.type == Categories::BASIC ? "BASIC" : "ASM");
+							ImGui::PopStyleColor();
+
+							if (brk.type == Categories::BASIC) {
+								ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+								ImGui::TableSetColumnIndex(2);
+								if (brk.enabled)
+									ImGui::Text("Pg %d, Ln %d (%02X:%04X)", brk.page, brk.row, brk.hitPointer.bank, brk.hitPointer.address);
+								else
+									ImGui::Text("Pg %d, Ln %d (--:----)", brk.page, brk.row);
+								ImGui::PopStyleColor();
+							} else {
+								ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+								ImGui::TableSetColumnIndex(2);
+								if (brk.enabled)
+									ImGui::Text("%02X:%04X", brk.hitPointer.bank, brk.hitPointer.address);
+								else
+									ImGui::TextUnformatted("--:----");
+								ImGui::PopStyleColor();
+							}
+
+							ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+							ImGui::TableSetColumnIndex(3); ImGui::TextUnformatted(brk.enabled ? "true" : "false");
+							ImGui::PopStyleColor();
+
+							ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+							ImGui::TableSetColumnIndex(4); ImGui::Text("%d", brk.hitCount);
+							ImGui::PopStyleColor();
+						}
+						ImGui::PopID();
+					}
+
+					ImGui::EndTable();
+				}
 
 				ImGui::EndTabItem();
 			}
@@ -4997,6 +5084,7 @@ int Debugger::Breakpoint::compare(const Breakpoint &other) const {
 	// `id` doesn't count.
 	// `bank` doesn't count.
 	// `address` doesn't count.
+	// `hitCount` doesn't count.
 
 	return 0;
 }

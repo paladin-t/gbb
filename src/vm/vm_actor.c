@@ -388,8 +388,8 @@ void vm_def_actor(SCRIPT_CTX * THIS, UINT8 src) OLDCALL BANKED {
 }
 
 void vm_get_actor_prop(SCRIPT_CTX * THIS) OLDCALL BANKED {
-    actor_t * actor       = (actor_t *)*(--THIS->stack_ptr);
-    const UINT8 p         = (UINT8)*(--THIS->stack_ptr);
+    actor_t * actor = (actor_t *)*(--THIS->stack_ptr);
+    const UINT8 p   = (UINT8)*(--THIS->stack_ptr);
     if (!actor->instantiated) {
         *(THIS->stack_ptr++) = 0;
 

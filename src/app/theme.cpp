@@ -962,15 +962,18 @@ bool Theme::open(class Renderer* rnd) {
 	windowEmulator_CodeDebugger_Asm("ASM");
 	windowEmulator_CodeDebugger_Basic("BASIC");
 	windowEmulator_CodeDebugger_Breakpoints("Breakpoints");
-	windowEmulator_CodeDebugger_DeviceMemory("Device memory");
+	windowEmulator_CodeDebugger_Device("Device");
 	windowEmulator_CodeDebugger_Disassembling("Disassembling...");
 	windowEmulator_CodeDebugger_DisassembyHeadInfo("ROM     Bytes    Mnemonic");
 	windowEmulator_CodeDebugger_Empty("Empty");
+	windowEmulator_CodeDebugger_Enabled("Enabled");
 	windowEmulator_CodeDebugger_Field("Field");
 	windowEmulator_CodeDebugger_Heap("Heap");
+	windowEmulator_CodeDebugger_Hits("Hits");
 	windowEmulator_CodeDebugger_ID("ID");
 	windowEmulator_CodeDebugger_Inspector("Inspector");
-	windowEmulator_CodeDebugger_KernelMemory("Kernel memory");
+	windowEmulator_CodeDebugger_Location("Location");
+	windowEmulator_CodeDebugger_Kernel("Kernel");
 	windowEmulator_CodeDebugger_Objects("Objects");
 	windowEmulator_CodeDebugger_Order("Order");
 	windowEmulator_CodeDebugger_Projectiles("Projectiles");
@@ -1392,11 +1395,15 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_CodeDebugger_ClearBreakpoints("Clear breakpoints");
 	tooltipEmulator_CodeDebugger_DisableBreakpoints("Disable breakpoints");
 	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
+	tooltipEmulator_CodeDebugger_FromCode("From code");
+	tooltipEmulator_CodeDebugger_FromRom("From ROM");
+	tooltipEmulator_CodeDebugger_HardwareRegistersAndMemoryBus("Hardware registers and memory bus");
 	tooltipEmulator_CodeDebugger_Pause("Pause");
 	tooltipEmulator_CodeDebugger_PauseInBasic("Pause in BASIC");
 	tooltipEmulator_CodeDebugger_Resume("Resume");
 	tooltipEmulator_CodeDebugger_StepAsm("Step ASM (" GBBASIC_MODIFIER_KEY_NAME "+F10)");
 	tooltipEmulator_CodeDebugger_StepBasic("Step BASIC (F10)");
+	tooltipEmulator_CodeDebugger_VmHeapThreadsAndObjects("VM heap, threads, and objects");
 	tooltipEmulator_NormalSpeed("Normal speed (" GBBASIC_MODIFIER_KEY_NAME "+/" ")");
 	tooltipEmulator_StatusNote(
 		"Cartridge flag   : {0}\n"

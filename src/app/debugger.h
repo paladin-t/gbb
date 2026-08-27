@@ -47,6 +47,7 @@ public:
 		int id = -1;
 		FarPtr hitPointer;
 		FarPtr vmPointer;
+		mutable unsigned hitCount = 0;
 
 		Breakpoint();
 		Breakpoint(int pg, int ln);

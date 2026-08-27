@@ -2226,7 +2226,7 @@ void Workspace::disableBreakpoints(void) {
 				const bool enabled = (bool)lst->at(j + 1);
 				(void)enabled;
 				editor->post(Editable::SET_BREAKPOINT, line, true, false);
-				codeDebugger()->setBreakpoint(i, line + 1, false); // 1-based.
+				codeDebugger()->removeBreakpoint(i, line + 1); // 1-based.
 			}
 		}
 	}
@@ -2297,7 +2297,10 @@ class Debugger* Workspace::initializeCodeDebugger(class Window* wnd, class Rende
 			for (int j = 0; j < m; j += 2) {
 				const Variant::Int line = (Variant::Int)lst->at(j);
 				const bool enabled = (bool)lst->at(j + 1);
-				codeDebugger()->setBreakpoint(i, line + 1, enabled); // 1-based.
+				if (enabled)
+					codeDebugger()->setBreakpoint(i, line + 1, true); // 1-based.
+				else
+					codeDebugger()->removeBreakpoint(i, line + 1); // 1-based.
 			}
 		}
 
@@ -5997,8 +6000,12 @@ void Workspace::toggleBreakpoint(int page, int ln) {
 		editor->post(Editable::SET_BREAKPOINT, (Variant::Int)ln, brk);
 	}
 
-	if (codeDebugger())
-		codeDebugger()->setBreakpoint(page, ln + 1, brk); // 1-based.
+	if (codeDebugger()) {
+		if (brk)
+			codeDebugger()->setBreakpoint(page, ln + 1, true); // 1-based.
+		else
+			codeDebugger()->removeBreakpoint(page, ln + 1); // 1-based.
+	}
 }
 
 void Workspace::upgrade(
