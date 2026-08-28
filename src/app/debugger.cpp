@@ -3486,7 +3486,7 @@ private:
 
 		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Sortable |
 			ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
-		if (ImGui::BeginTable("##Actors", 4, flags, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
+		if (ImGui::BeginTable("##Actors", 3, flags, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
 			const float width0 = ImGui::GetFontSize() * 2.0f;
 			const float width = ImGui::GetFontSize() * 3.0f;
 			const ImU32 col = _theme->style()->debuggerHeadColor;
@@ -3925,7 +3925,7 @@ private:
 
 		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
 			ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
-		if (ImGui::BeginTable("##Triggers", 4, flags, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
+		if (ImGui::BeginTable("##Triggers", 3, flags, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
 			const float width0 = ImGui::GetFontSize() * 2.0f;
 			const float width = ImGui::GetFontSize() * 3.0f;
 			const ImU32 col = _theme->style()->debuggerHeadColor;
@@ -4036,7 +4036,7 @@ private:
 
 		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
 			ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
-		if (ImGui::BeginTable("##Scene", 4, flags, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
+		if (ImGui::BeginTable("##Scene", 3, flags, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
 			const float width0 = ImGui::GetFontSize() * 2.0f;
 			const float width = ImGui::GetFontSize() * 5.0f;
 			const ImU32 col = _theme->style()->debuggerHeadColor;
@@ -4650,7 +4650,7 @@ private:
 
 		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Sortable |
 			ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
-		if (ImGui::BeginTable("##Prtls", 4, flags, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
+		if (ImGui::BeginTable("##Prtls", 3, flags, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
 			const float width0 = ImGui::GetFontSize() * 2.0f;
 			const float width = ImGui::GetFontSize() * 3.0f;
 			const ImU32 col = _theme->style()->debuggerHeadColor;
