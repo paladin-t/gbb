@@ -552,6 +552,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_CannotSaveSramState("Cannot save SRAM state.");
 	dialogPrompt_CannotSaveToReadonlyLocations("Cannot save to readonly locations.");
 	dialogPrompt_CannotUseThisImage("Cannot use this image");
+	dialogPrompt_CannotWriteToReadonlyMemory("Cannot write to readonly memory");
 	dialogPrompt_Checking("Checking...");
 	dialogPrompt_ClearedProjects("Cleared projects");
 	dialogPrompt_ClickToEdit("Click to edit");
@@ -1398,6 +1399,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltipEmulator_CodeDebugger_Address("Address");
 	tooltipEmulator_CodeDebugger_Bank("Bank");
 	tooltipEmulator_CodeDebugger_ClearBreakpoints("Clear breakpoints");
+	tooltipEmulator_CodeDebugger_ClickToEdit("Click to edit");
 	tooltipEmulator_CodeDebugger_DisableBreakpoints("Disable breakpoints");
 	tooltipEmulator_CodeDebugger_EnableBreakpoints("Enable breakpoints");
 	tooltipEmulator_CodeDebugger_FromCode("From code");

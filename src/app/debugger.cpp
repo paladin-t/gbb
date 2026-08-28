@@ -16,6 +16,7 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "../../lib/imgui/imgui_internal.h"
 #include "../../lib/jpath/jpath.hpp"
+#include <SDL.h>
 
 /*
 ** {===========================================================================
@@ -477,21 +478,19 @@ private:
 		SortingRule actorSortingRule;
 		SortingRule projectileSortingRule;
 		int ramView = 1;
-		int bankIndex = -1;
-		std::string bankText;
-		int vramIndex = -1;
-		std::string vramText;
-		int wramIndex = -1;
-		std::string wramText;
-		std::string echoText;
-		char newBreakpointBankBuf[3];
-		char newBreakpointAddressBuf[5];
 
 		Options() {
-			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
-			memset(newBreakpointBankBuf, 'F', 2);
-			memset(newBreakpointAddressBuf, 0, sizeof(newBreakpointAddressBuf));
-			memset(newBreakpointAddressBuf, 'F', 4);
+		}
+
+		void clear(void) {
+			startY = 0;
+			safeHeight = 0;
+			disassemblerView = 0;
+			heapSortingRule = SortingRule();
+			threadSortingRule = SortingRule();
+			actorSortingRule = SortingRule();
+			projectileSortingRule = SortingRule();
+			ramView = 1;
 		}
 	} _options;
 	Window* _window = nullptr; // Foreign.
@@ -533,6 +532,53 @@ private:
 	int _activeCodePage = -1;
 	bool _inspecting = false;
 	// States.
+	struct Buffers {
+		int bankIndex = -1;
+		std::string bankText;
+		int vramIndex = -1;
+		std::string vramText;
+		int wramIndex = -1;
+		std::string wramText;
+		std::string echoText;
+		char newBreakpointBankBuf[3];
+		char newBreakpointAddressBuf[5];
+		int editingMemoryAddress = -1;
+		char editingMemoryBuf[3];
+		float editingMemoryCellWidth = 0.0f;
+		bool editingMemoryActivated = false;
+
+		Buffers() {
+			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
+			memset(newBreakpointBankBuf, 'F', 2);
+			memset(newBreakpointAddressBuf, 0, sizeof(newBreakpointAddressBuf));
+			memset(newBreakpointAddressBuf, 'F', 4);
+
+			memset(editingMemoryBuf, 0, sizeof(editingMemoryBuf));
+		}
+
+		void clear(void) {
+			bankIndex = -1;
+			bankText.clear();
+			vramIndex = -1;
+			vramText.clear();
+			wramIndex = -1;
+			wramText.clear();
+			echoText.clear();
+			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
+			memset(newBreakpointAddressBuf, 0, sizeof(newBreakpointAddressBuf));
+			editingMemoryAddress = -1;
+			memset(editingMemoryBuf, 0, sizeof(editingMemoryBuf));
+			editingMemoryCellWidth = 0.0f;
+			editingMemoryActivated = false;
+		}
+
+		void reset(void) {
+			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
+			memset(newBreakpointBankBuf, 'F', 2);
+			memset(newBreakpointAddressBuf, 0, sizeof(newBreakpointAddressBuf));
+			memset(newBreakpointAddressBuf, 'F', 4);
+		}
+	} _buffers;
 	Snapshot _snapshot;
 	Semaphore _mnemonicsIsBeingGenerated;
 	GBBASIC::Disassembler::Mnemonic::Queue _mnemonics;
@@ -590,6 +636,7 @@ public:
 		_activeCodePage = -1;
 		_inspecting = false;
 		_snapshot.reset();
+		_buffers.clear();
 		_mnemonicsIsBeingGenerated.wait();
 		_mnemonics.clear();
 		_latestDisassembledMnemonicsAddress = FarPtr();
@@ -615,6 +662,8 @@ public:
 		_workspace = nullptr;
 		_theme = nullptr;
 		_device = nullptr;
+
+		_options.clear();
 
 		_opened = false;
 
@@ -1043,19 +1092,19 @@ private:
 			FarPtr pc;
 			if (!probeCurrentProgramCounter(pc))
 				pc.bank = 1;
-			if (_options.bankIndex != pc.bank) {
-				_options.bankIndex = pc.bank;
-				const std::string n = Text::toHex(_options.bankIndex, 2, '0', true);
-				if (_options.bankIndex <= 0x0f)
-					_options.bankText = "ROM" + n;
+			if (_buffers.bankIndex != pc.bank) {
+				_buffers.bankIndex = pc.bank;
+				const std::string n = Text::toHex(_buffers.bankIndex, 2, '0', true);
+				if (_buffers.bankIndex <= 0x0f)
+					_buffers.bankText = "ROM" + n;
 				else
-					_options.bankText = "RO" + n + "H";
+					_buffers.bankText = "RO" + n + "H";
 			}
 
-			if (_options.bankIndex == 0)
+			if (_buffers.bankIndex == 0)
 				return "ROM+ ";
 
-			return _options.bankText.c_str();
+			return _buffers.bankText.c_str();
 		}
 		if (addr <= 0x9fff) {
 			detail = "8KB VRAM";
@@ -1064,12 +1113,12 @@ private:
 			if (!_device->readRam(0xff4f, &vramIdx))
 				vramIdx = 0;
 			vramIdx &= 0b00000001;
-			if (_options.vramIndex != vramIdx) {
-				_options.vramIndex = vramIdx;
-				_options.vramText = "VRAM" + Text::toString(_options.vramIndex);
+			if (_buffers.vramIndex != vramIdx) {
+				_buffers.vramIndex = vramIdx;
+				_buffers.vramText = "VRAM" + Text::toString(_buffers.vramIndex);
 			}
 
-			return _options.vramText.c_str();
+			return _buffers.vramText.c_str();
 		}
 		if (addr <= 0xbfff) {
 			detail = "8KB SRAM";
@@ -1090,21 +1139,21 @@ private:
 			wramIdx &= 0b00000111;
 			if (wramIdx == 0)
 				wramIdx = 1;
-			if (_options.wramIndex != wramIdx) {
-				_options.wramIndex = wramIdx;
-				_options.wramText = "WRAM" + Text::toString(_options.wramIndex);
+			if (_buffers.wramIndex != wramIdx) {
+				_buffers.wramIndex = wramIdx;
+				_buffers.wramText = "WRAM" + Text::toString(_buffers.wramIndex);
 			}
 
-			return _options.wramText.c_str();
+			return _buffers.wramText.c_str();
 		}
 		if (addr <= 0xfdff) {
 			readonly = true;
 			prohibited = true;
 
 			const int echoAddr = addr - 0xe000 + 0xc000;
-			_options.echoText = "Echo RAM (" + Text::toHex(echoAddr, 4, '0', true) + ")";
+			_buffers.echoText = "Echo RAM (" + Text::toHex(echoAddr, 4, '0', true) + ")";
 
-			detail = _options.echoText.c_str();
+			detail = _buffers.echoText.c_str();
 
 			return "ECHO ";
 		}
@@ -2560,7 +2609,7 @@ private:
 									ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
 									ImGui::TableSetColumnIndex(2);
 									if (brk.enabled && !(brk.hitPointer.bank == -1 && brk.hitPointer.address == -1))
-										ImGui::Text("Pg %d, Ln %d (%02X:%04X)", brk.page, brk.row, brk.hitPointer.bank, brk.hitPointer.address);
+										ImGui::Text("Pg %d, Ln %d (%02hhX:%04hX)", brk.page, brk.row, brk.hitPointer.bank, brk.hitPointer.address);
 									else
 										ImGui::Text("Pg %d, Ln %d (--:----)", brk.page, brk.row);
 									ImGui::PopStyleColor();
@@ -2568,7 +2617,7 @@ private:
 									ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
 									ImGui::TableSetColumnIndex(2);
 									if (brk.enabled && !(brk.hitPointer.bank == -1 && brk.hitPointer.address == -1))
-										ImGui::Text("%02X:%04X", brk.hitPointer.bank, brk.hitPointer.address);
+										ImGui::Text("%02hhX:%04hX", brk.hitPointer.bank, brk.hitPointer.address);
 									else
 										ImGui::TextUnformatted("--:----");
 									ImGui::PopStyleColor();
@@ -2640,7 +2689,7 @@ private:
 
 				const float width = ImGui::GetContentRegionAvail().x;
 				ImGui::SetNextItemWidth(32);
-				if (ImGui::InputText("##B", _options.newBreakpointBankBuf, sizeof(_options.newBreakpointBankBuf), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AutoSelectAll)) {
+				if (ImGui::InputText("##B", _buffers.newBreakpointBankBuf, sizeof(_buffers.newBreakpointBankBuf), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AutoSelectAll)) {
 					// Do nothing.
 				}
 				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
@@ -2652,7 +2701,7 @@ private:
 				ImGui::TextUnformatted(":");
 				ImGui::SameLine();
 				ImGui::SetNextItemWidth(width - 58.0f);
-				if (ImGui::InputText("##A", _options.newBreakpointAddressBuf, sizeof(_options.newBreakpointAddressBuf), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AutoSelectAll)) {
+				if (ImGui::InputText("##A", _buffers.newBreakpointAddressBuf, sizeof(_buffers.newBreakpointAddressBuf), ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AutoSelectAll)) {
 					// Do nothing.
 				}
 				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
@@ -2662,8 +2711,8 @@ private:
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("+", ImVec2(19, 0))) {
-					const std::string bankStr = std::string("0x") + _options.newBreakpointBankBuf;
-					const std::string addrStr = std::string("0x") + _options.newBreakpointAddressBuf;
+					const std::string bankStr = std::string("0x") + _buffers.newBreakpointBankBuf;
+					const std::string addrStr = std::string("0x") + _buffers.newBreakpointAddressBuf;
 					int bank = 0;
 					int addr = 0;
 					if (Text::fromString(bankStr, bank) && Text::fromString(addrStr, addr)) {
@@ -2693,10 +2742,7 @@ private:
 
 								refreshBreakpoints();
 
-								memset(_options.newBreakpointBankBuf, 0, sizeof(_options.newBreakpointBankBuf));
-								memset(_options.newBreakpointBankBuf, 'F', 2);
-								memset(_options.newBreakpointAddressBuf, 0, sizeof(_options.newBreakpointAddressBuf));
-								memset(_options.newBreakpointAddressBuf, 'F', 4);
+								_buffers.reset();
 
 								_workspace->bubble(_theme->dialogPrompt_AddedBreakpoint(), nullptr);
 							} else {
@@ -5083,6 +5129,58 @@ private:
 		ImGui::PopStyleColor();
 	}
 	void ram(void) {
+		auto editCell = [this] (int addr, UInt8 byte) -> bool {
+			if (_workspace->popupBox() || ImGui::HasPopup())
+				return false;
+
+			_buffers.editingMemoryActivated = false;
+			_buffers.editingMemoryAddress = addr;
+			memset(_buffers.editingMemoryBuf, 0, sizeof(_buffers.editingMemoryBuf));
+
+			const std::string txt = Text::toHex(byte, 2, '0', true);
+			size_t n = txt.length();
+			if (n >= sizeof(_buffers.editingMemoryBuf))
+				n = sizeof(_buffers.editingMemoryBuf) - 1;
+			memcpy(_buffers.editingMemoryBuf, txt.c_str(), n);
+			_buffers.editingMemoryBuf[n] = '\0';
+
+			return true;
+		};
+		auto commitCell = [this] (bool &invalid) -> bool {
+			invalid = false;
+
+			const int addr = _buffers.editingMemoryAddress;
+
+			_buffers.editingMemoryActivated = false;
+			_buffers.editingMemoryAddress = -1;
+
+			const char* desc = nullptr;
+			bool readonly = false;
+			bool prohibited = false;
+			getAddressDescription((UInt16)addr, desc, readonly, prohibited);
+			if (readonly)
+				return false;
+
+			std::string txt = std::string("0x") + _buffers.editingMemoryBuf;
+			int byte = 0;
+			if (!Text::fromString(txt, byte)) {
+				invalid = true;
+
+				return false;
+			}
+
+			if (byte < std::numeric_limits<UInt8>::min() || byte > std::numeric_limits<UInt8>::max()) {
+				invalid = true;
+
+				return false;
+			}
+
+			if (!_device->writeRam((UInt16)addr, (UInt8)byte))
+				return false;
+
+			return true;
+		};
+
 		ImGuiIO &io = ImGui::GetIO();
 		ImGuiStyle &style = ImGui::GetStyle();
 		ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -5104,6 +5202,8 @@ private:
 		if (startIndex > 0) 
 			ImGui::Dummy(ImVec2(0.0f, startIndex * lineHeight));
 
+		const Editing::Shortcut enter(SDL_SCANCODE_RETURN);
+		bool entered = false;
 		const bool incMode = _options.ramView == 0;
 		for (int i = startIndex; i < endIndex; ++i) {
 			const int address = incMode ?
@@ -5130,14 +5230,68 @@ private:
 			ImGui::SameLine();
 			ImGui::PopStyleColor();
 
+			const ImVec4 txtCol = ImGui::GetStyleColorVec4(ImGuiCol_Text);
 			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-			ImGui::Text("%02X   ", byte);
+			const ImVec2 rectMin(ImGui::GetCursorScreenPos().x - style.CellPadding.x, ImGui::GetCursorScreenPos().y - style.CellPadding.y);
+			const ImVec2 rectMax(ImGui::GetCursorScreenPos().x + _buffers.editingMemoryCellWidth + style.CellPadding.x, ImGui::GetCursorScreenPos().y + ImGui::GetTextLineHeight() + style.CellPadding.y);
+			const bool hovered = ImGui::IsMouseHoveringRect(rectMin, rectMax - ImVec2(4, 0));
+			if (_buffers.editingMemoryAddress == address) {
+				ImGui::SetNextItemWidth(_buffers.editingMemoryCellWidth);
+				const float x = ImGui::GetCursorScreenPos().x;
+				const float y = ImGui::GetCursorScreenPos().y;
+				ImGui::SetCursorScreenPos(ImVec2(x, y));
+				if (!_buffers.editingMemoryActivated) {
+					ImGui::SetKeyboardFocusHere(0);
+					_buffers.editingMemoryActivated = true;
+				}
+				ImGui::PushStyleColor(ImGuiCol_Text, txtCol);
+				{
+					// Edit content.
+					bool invalid = false;
+					if (ImGui::InputText("##Ed", _buffers.editingMemoryBuf, sizeof(_buffers.editingMemoryBuf), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
+						if (enter.pressed() && !entered) {
+							entered = true;
+							if (!commitCell(invalid))
+								_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
+						} else {
+							if (!commitCell(invalid))
+								_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
+						}
+					} else if (_buffers.editingMemoryActivated && ImGui::IsItemDeactivated()) {
+						if (!commitCell(invalid))
+							_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
+					}
+				}
+				ImGui::PopStyleColor();
+			} else {
+				if (_buffers.editingMemoryCellWidth == 0.0f) {
+					const float posX = ImGui::GetCursorPosX();
+					ImGui::Text("%02X  ", byte);
+					ImGui::SameLine();
+					_buffers.editingMemoryCellWidth = ImGui::GetCursorPosX() - posX;
+					ImGui::NewLine();
+				} else {
+					ImGui::Text("%02X  ", byte);
+				}
+				if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+					editCell(address, byte);
+				}
+				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
+					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+					ImGui::PushStyleColor(ImGuiCol_Text, txtCol);
+
+					ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_ClickToEdit());
+
+					ImGui::PopStyleColor();
+				}
+			}
 			ImGui::SameLine();
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
 			ImGui::Text(
-				"%s %s",
+				" %s %s",
 				desc,
 				prohibited ? "" :
 				readonly ? "R" :
