@@ -422,6 +422,7 @@ bool Theme::open(class Renderer* rnd) {
 	menu_MoveRight("Move Right");
 	menu_MoveUp("Move Up");
 	menu_New("New");
+	menu_ObjectBounds("Object Bounds");
 	menu_OnscreenDebug("Onscreen Debug");
 	menu_OnscreenGamepad("Onscreen Gamepad");
 	menu_Music("Music");
@@ -1159,6 +1160,7 @@ bool Theme::open(class Renderer* rnd) {
 	tooltip_OverrideThreaded("Override; threaded");
 	tooltip_Pause("Pause");
 	tooltip_PreviewAnchorPoint("Preview anchor point");
+	tooltip_PreviewObjectBounds("Preview object bounds");
 	tooltip_PreviewPaletteBitsForColoredOnly("Preview palette bits (for colored only)");
 	tooltip_Refreshing("Refreshing...");
 	tooltip_Reset("Reset");

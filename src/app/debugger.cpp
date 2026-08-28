@@ -41,6 +41,13 @@
 #	define DEBUGGER_PROJECTILE_MAX_ANIMATIONS 4
 #endif /* DEBUGGER_PROJECTILE_MAX_ANIMATIONS */
 
+#ifndef DEBUGGER_MUL8
+#	define DEBUGGER_MUL8(A) ((A) << 3)
+#endif /* DEBUGGER_MUL8 */
+#ifndef DEBUGGER_POSITION_TO_SCREEN
+#	define DEBUGGER_POSITION_TO_SCREEN(A) ((A) >> 4)
+#endif /* DEBUGGER_POSITION_TO_SCREEN */
+
 #ifndef DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT
 #	define DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT DateTime::fromSeconds(0.333333);
 #endif /* DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT */
@@ -428,6 +435,56 @@ private:
 		}
 	};
 
+	typedef std::deque<Highlight> Highlights;
+
+	struct Buffers {
+		int bankIndex = -1;
+		std::string bankText;
+		int vramIndex = -1;
+		std::string vramText;
+		int wramIndex = -1;
+		std::string wramText;
+		std::string echoText;
+		char newBreakpointBankBuf[3];
+		char newBreakpointAddressBuf[5];
+		int editingMemoryAddress = -1;
+		char editingMemoryBuf[3];
+		float editingMemoryCellWidth = 0.0f;
+		bool editingMemoryActivated = false;
+
+		Buffers() {
+			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
+			memset(newBreakpointBankBuf, 'F', 2);
+			memset(newBreakpointAddressBuf, 0, sizeof(newBreakpointAddressBuf));
+			memset(newBreakpointAddressBuf, 'F', 4);
+
+			memset(editingMemoryBuf, 0, sizeof(editingMemoryBuf));
+		}
+
+		void clear(void) {
+			bankIndex = -1;
+			bankText.clear();
+			vramIndex = -1;
+			vramText.clear();
+			wramIndex = -1;
+			wramText.clear();
+			echoText.clear();
+			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
+			memset(newBreakpointAddressBuf, 0, sizeof(newBreakpointAddressBuf));
+			editingMemoryAddress = -1;
+			memset(editingMemoryBuf, 0, sizeof(editingMemoryBuf));
+			editingMemoryCellWidth = 0.0f;
+			editingMemoryActivated = false;
+		}
+
+		void reset(void) {
+			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
+			memset(newBreakpointBankBuf, 'F', 2);
+			memset(newBreakpointAddressBuf, 0, sizeof(newBreakpointAddressBuf));
+			memset(newBreakpointAddressBuf, 'F', 4);
+		}
+	};
+
 	struct Snapshot {
 		VM::HeapAllocation::Array heap;
 		VM::SCRIPT_CTX::Array threads; // Active only.
@@ -531,54 +588,10 @@ private:
 	bool _bringProgramCounterCursorToFront = false;
 	int _activeCodePage = -1;
 	bool _inspecting = false;
+	// Highlights.
+	Highlights _highlights;
 	// States.
-	struct Buffers {
-		int bankIndex = -1;
-		std::string bankText;
-		int vramIndex = -1;
-		std::string vramText;
-		int wramIndex = -1;
-		std::string wramText;
-		std::string echoText;
-		char newBreakpointBankBuf[3];
-		char newBreakpointAddressBuf[5];
-		int editingMemoryAddress = -1;
-		char editingMemoryBuf[3];
-		float editingMemoryCellWidth = 0.0f;
-		bool editingMemoryActivated = false;
-
-		Buffers() {
-			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
-			memset(newBreakpointBankBuf, 'F', 2);
-			memset(newBreakpointAddressBuf, 0, sizeof(newBreakpointAddressBuf));
-			memset(newBreakpointAddressBuf, 'F', 4);
-
-			memset(editingMemoryBuf, 0, sizeof(editingMemoryBuf));
-		}
-
-		void clear(void) {
-			bankIndex = -1;
-			bankText.clear();
-			vramIndex = -1;
-			vramText.clear();
-			wramIndex = -1;
-			wramText.clear();
-			echoText.clear();
-			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
-			memset(newBreakpointAddressBuf, 0, sizeof(newBreakpointAddressBuf));
-			editingMemoryAddress = -1;
-			memset(editingMemoryBuf, 0, sizeof(editingMemoryBuf));
-			editingMemoryCellWidth = 0.0f;
-			editingMemoryActivated = false;
-		}
-
-		void reset(void) {
-			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
-			memset(newBreakpointBankBuf, 'F', 2);
-			memset(newBreakpointAddressBuf, 0, sizeof(newBreakpointAddressBuf));
-			memset(newBreakpointAddressBuf, 'F', 4);
-		}
-	} _buffers;
+	Buffers _buffers;
 	Snapshot _snapshot;
 	Semaphore _mnemonicsIsBeingGenerated;
 	GBBASIC::Disassembler::Mnemonic::Queue _mnemonics;
@@ -635,8 +648,9 @@ public:
 		_bringProgramCounterCursorToFront = false;
 		_activeCodePage = -1;
 		_inspecting = false;
-		_snapshot.reset();
+		_highlights.clear();
 		_buffers.clear();
+		_snapshot.reset();
 		_mnemonicsIsBeingGenerated.wait();
 		_mnemonics.clear();
 		_latestDisassembledMnemonicsAddress = FarPtr();
@@ -674,7 +688,23 @@ public:
 		return _options.safeHeight;
 	}
 
-	virtual void update(bool visible, bool showTitle) override {
+	virtual int highlightCount(void) const override {
+		return (int)_highlights.size();
+	}
+	virtual bool getHighlight(int index, Highlight* highlight) const override {
+		if (highlight)
+			*highlight = Highlight();
+
+		if (index < 0 || index >= (int)_highlights.size())
+			return false;
+
+		if (highlight)
+			*highlight = _highlights[index];
+
+		return true;
+	}
+
+	virtual void update(bool visible, bool showTitle, bool showObjBounds) override {
 		debug(visible);
 
 		if (!visible)
@@ -682,29 +712,38 @@ public:
 
 		ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetColorU32(ImGuiCol_TableRowBgAlt));
 
+		Snapshot* snapshot = nullptr;
 		begin(showTitle);
 		if (inspecting()) {
 			paused();
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
-			kernelMemory();
+			snapshot = kernelMemory();
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
 			deviceMemory();
+
+			if (!snapshot)
+				snapshot = touchSnapshot();
+			bounds(snapshot, showObjBounds);
 		} else {
 			running();
 #if !defined GBBASIC_OS_HTML
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
-			kernelMemory();
+			snapshot = kernelMemory();
 			ImGui::NewLine(1);
 			ImGui::Separator();
 
 			deviceMemory();
 #endif /* GBBASIC_OS_HTML */
+
+			if (!snapshot)
+				snapshot = touchSnapshot();
+			bounds(snapshot, showObjBounds);
 		}
 		end();
 
@@ -2313,10 +2352,10 @@ private:
 
 		code(regSize);
 	}
-	void kernelMemory(void) {
+	Snapshot* kernelMemory(void) {
 		Snapshot* snapshot = touchSnapshot();
 		if (!snapshot)
-			return;
+			return nullptr;
 
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -2336,12 +2375,14 @@ private:
 			ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_VmHeapThreadsAndObjects());
 		}
 		if (!open)
-			return;
+			return snapshot;
 		ImGui::NewLine(1);
 
 		variables(snapshot);
 		threads(snapshot);
 		objects(snapshot);
+
+		return snapshot;
 	}
 	void deviceMemory(void) {
 		ImGuiStyle &style = ImGui::GetStyle();
@@ -3371,6 +3412,73 @@ private:
 			ImGui::EndTabBar();
 		}
 	}
+	void bounds(Snapshot* snapshot, bool showObjBounds) {
+		if (!showObjBounds) {
+			if (!_highlights.empty())
+				_highlights.clear();
+
+			return;
+		}
+
+		_highlights.clear();
+
+		if (!snapshot)
+			return;
+
+		const Int16 cameraX = snapshot->sceneData.camera_x;
+		const Int16 cameraY = snapshot->sceneData.camera_y;
+
+		for (int i = 0; i < (int)snapshot->actors.size(); ++i) {
+			const VM::actor_t::Ref &ref = snapshot->actors[i];
+			const VM::actor_t &actorObj = ref.data;
+
+			int x = DEBUGGER_POSITION_TO_SCREEN(actorObj.position.x) + actorObj.bounds.left;
+			int y = DEBUGGER_POSITION_TO_SCREEN(actorObj.position.y) + actorObj.bounds.top;
+			x -= cameraX;
+			y -= cameraY;
+			const int w = actorObj.bounds.width();
+			const int h = actorObj.bounds.height();
+			const Highlight highlight(
+				Math::Recti::byXYWH(x, y, w, h),
+				Math::Vec4f(1, 0, 0, 0.75f)
+			);
+			_highlights.push_back(highlight);
+		}
+
+		for (int i = 0; i < (int)snapshot->triggers.size(); ++i) {
+			const VM::trigger_t::Ref &ref = snapshot->triggers[i];
+			const VM::trigger_t &triggerObj = ref.data;
+
+			int x = DEBUGGER_MUL8(triggerObj.x);
+			int y = DEBUGGER_MUL8(triggerObj.y);
+			x -= cameraX;
+			y -= cameraY;
+			const int w = DEBUGGER_MUL8(triggerObj.width);
+			const int h = DEBUGGER_MUL8(triggerObj.height);
+			const Highlight highlight(
+				Math::Recti::byXYWH(x, y, w, h),
+				Math::Vec4f(0, 1, 0, 0.75f)
+			);
+			_highlights.push_back(highlight);
+		}
+
+		for (int i = 0; i < (int)snapshot->projectiles.size(); ++i) {
+			const VM::projectile_t::Ref &ref = snapshot->projectiles[i];
+			const VM::projectile_t &projectileObj = ref.data;
+
+			int x = DEBUGGER_POSITION_TO_SCREEN(projectileObj.position.x) + projectileObj.def.bounds.left;
+			int y = DEBUGGER_POSITION_TO_SCREEN(projectileObj.position.y) + projectileObj.def.bounds.top;
+			x -= cameraX;
+			y -= cameraY;
+			const int w = projectileObj.def.bounds.width();
+			const int h = projectileObj.def.bounds.height();
+			const Highlight highlight(
+				Math::Recti::byXYWH(x, y, w, h),
+				Math::Vec4f(0, 0, 1, 0.75f)
+			);
+			_highlights.push_back(highlight);
+		}
+	}
 	void actors(const Snapshot* snapshot) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
@@ -3421,6 +3529,7 @@ private:
 					ImGui::PopStyleColor();
 				}
 				ImGui::PopID();
+
 				++j;
 			}
 
@@ -3809,7 +3918,7 @@ private:
 			ImGui::TreePop();
 		}
 	}
-	void triggers(const Snapshot* snapshot) const {
+	void triggers(const Snapshot* snapshot) {
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
@@ -3849,6 +3958,7 @@ private:
 					ImGui::PopStyleColor();
 				}
 				ImGui::PopID();
+
 				++j;
 			}
 
@@ -4583,6 +4693,7 @@ private:
 					ImGui::PopStyleColor();
 				}
 				ImGui::PopID();
+
 				++j;
 			}
 
@@ -5401,6 +5512,15 @@ int Debugger::Breakpoint::compare(const Breakpoint &other) const {
 	// `hitCount` doesn't count.
 
 	return 0;
+}
+
+Debugger::Highlight::Highlight() {
+}
+
+Debugger::Highlight::Highlight(const Math::Recti &a, const Math::Vec4f &col) :
+	area(a),
+	color(col)
+{
 }
 
 Debugger* Debugger::create(void) {

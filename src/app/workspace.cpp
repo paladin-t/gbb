@@ -585,8 +585,6 @@ bool Workspace::open(Window* wnd, Renderer* rnd, const char* font, unsigned fps,
 	bringCodeDebuggerToFront(false);
 
 	vramDebugger(nullptr);
-	vramDebuggerPreviewPaletteBits(true);
-	vramDebuggerShowGrids(true);
 	isVramDebuggerActive(true);
 
 	debuggerPreviousOuterWidth(0.0f);
@@ -7041,7 +7039,10 @@ bool Workspace::loadConfig(Window*, Renderer*, const rapidjson::Document &doc) {
 	Jpath::get(doc, settings().debugShowAstEnabled, "debug", "show_ast", "enabled");
 	Jpath::get(doc, settings().debugOnscreenShellEnabled, "debug", "onscreen_shell", "enabled");
 	Jpath::get(doc, settings().debugCodeInspectorEnabled, "debug", "code_inspector", "enabled");
+	Jpath::get(doc, settings().debugCodeShowObjectBounds, "debug", "code_inspector", "show_object_bounds");
 	Jpath::get(doc, settings().debugVramInspectorEnabled, "debug", "vram_inspector", "enabled");
+	Jpath::get(doc, settings().debugVramPreviewPaletteBits, "debug", "vram_inspector", "preview_palette_bits");
+	Jpath::get(doc, settings().debugVramShowGrids, "debug", "vram_inspector", "show_grids");
 	Jpath::get(doc, settings().debugLogEnabled, "debug", "log", "enabled");
 	if (!Jpath::get(doc, settings().debugLogPath, "debug", "log", "path")) {
 		const std::string writableDir = Path::writableDirectory();
@@ -7144,7 +7145,10 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 	Jpath::set(doc, doc, settings().debugShowAstEnabled, "debug", "show_ast", "enabled");
 	Jpath::set(doc, doc, settings().debugOnscreenShellEnabled, "debug", "onscreen_shell", "enabled");
 	Jpath::set(doc, doc, settings().debugCodeInspectorEnabled, "debug", "code_inspector", "enabled");
+	Jpath::set(doc, doc, settings().debugCodeShowObjectBounds, "debug", "code_inspector", "show_object_bounds");
 	Jpath::set(doc, doc, settings().debugVramInspectorEnabled, "debug", "vram_inspector", "enabled");
+	Jpath::set(doc, doc, settings().debugVramPreviewPaletteBits, "debug", "vram_inspector", "preview_palette_bits");
+	Jpath::set(doc, doc, settings().debugVramShowGrids, "debug", "vram_inspector", "show_grids");
 	Jpath::set(doc, doc, settings().debugLogEnabled, "debug", "log", "enabled");
 	Jpath::set(doc, doc, settings().debugLogPath, "debug", "log", "path");
 
@@ -12724,8 +12728,8 @@ void Workspace::emulator(Window* wnd, Renderer* rnd, float marginTop, float marg
 			settings().canvasIntegerScale, settings().canvasFixRatio,
 			settings().inputOnscreenGamepadEnabled, settings().inputOnscreenGamepadSwapAB, settings().inputOnscreenGamepadScale, settings().inputOnscreenGamepadPadding,
 			settings().debugOnscreenShellEnabled,
-			codeDebugger(), settings().debugCodeInspectorEnabled, bringCodeDebuggerToFront(),
-			vramDebugger(), settings().debugVramInspectorEnabled, vramDebuggerPreviewPaletteBits(), vramDebuggerShowGrids(), isVramDebuggerActive(),
+			codeDebugger(), settings().debugCodeInspectorEnabled, settings().debugCodeShowObjectBounds, bringCodeDebuggerToFront(),
+			vramDebugger(), settings().debugVramInspectorEnabled, settings().debugVramPreviewPaletteBits, settings().debugVramShowGrids, isVramDebuggerActive(),
 			debuggerPreviousOuterWidth(), debuggerWidth(), debuggerHeight(), debuggerResizing(), debuggerResetting(),
 			canvasCursorMode(),
 			!!popupBox(),

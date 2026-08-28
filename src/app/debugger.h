@@ -10,6 +10,7 @@
 #define __DEBUGGER_H__
 
 #include "../gbbasic.h"
+#include "../utils/mathematics.h"
 #include <vector>
 
 /*
@@ -58,13 +59,27 @@ public:
 		int compare(const Breakpoint &other) const;
 	};
 
+	struct Highlight {
+		Math::Recti area;
+		Math::Vec4f color;
+
+		Highlight();
+		Highlight(const Math::Recti &a, const Math::Vec4f &col);
+	};
+
 public:
 	virtual bool open(class Window* wnd, class Renderer* rnd, class Workspace* ws, class Theme* theme, class Device* device) = 0;
 	virtual bool close(void) = 0;
 
 	virtual int safeHeight(void) const = 0;
 
-	virtual void update(bool visible, bool showTitle) = 0;
+	virtual int highlightCount(void) const = 0;
+	/**
+	 * @param[out] highlight
+	 */
+	virtual bool getHighlight(int index, Highlight* highlight /* nullable */) const = 0;
+
+	virtual void update(bool visible, bool showTitle, bool showObjBounds) = 0;
 
 	virtual void start(void) = 0;
 	virtual void stop(void) = 0;

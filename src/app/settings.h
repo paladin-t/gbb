@@ -64,7 +64,10 @@ struct Settings {
 	bool debugShowAstEnabled = false;
 	bool debugOnscreenShellEnabled = true;
 	bool debugCodeInspectorEnabled = true;
+	bool debugCodeShowObjectBounds = true;
 	bool debugVramInspectorEnabled = true;
+	bool debugVramPreviewPaletteBits = true;
+	bool debugVramShowGrids = true;
 	bool debugLogEnabled = false;
 	std::string debugLogPath;
 

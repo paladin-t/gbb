@@ -10,6 +10,7 @@
 #define __VRAM_DEBUGGER_H__
 
 #include "../gbbasic.h"
+#include "../utils/mathematics.h"
 
 /*
 ** {===========================================================================
@@ -18,6 +19,15 @@
 
 class VramDebugger {
 public:
+	struct Highlight {
+		Math::Recti area;
+		Math::Vec4f color;
+
+		Highlight();
+		Highlight(const Math::Recti &a, const Math::Vec4f &col);
+	};
+
+public:
 	virtual bool open(class Window* wnd, class Renderer* rnd, class Workspace* ws, class Theme* theme, class Device* device) = 0;
 	virtual bool close(void) = 0;
 
@@ -25,9 +35,9 @@ public:
 
 	virtual int highlightCount(void) const = 0;
 	/**
-	 * @param[out] area
+	 * @param[out] highlight
 	 */
-	virtual bool getHighlight(int index, Math::Recti* area /* nullable */) const = 0;
+	virtual bool getHighlight(int index, Highlight* highlight /* nullable */) const = 0;
 
 	virtual void update(
 		bool previewPaletteBits, bool showGrids,

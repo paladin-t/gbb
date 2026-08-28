@@ -74,7 +74,10 @@ Settings &Settings::operator = (const Settings &other) {
 	debugShowAstEnabled = other.debugShowAstEnabled;
 	debugOnscreenShellEnabled = other.debugOnscreenShellEnabled;
 	debugCodeInspectorEnabled = other.debugCodeInspectorEnabled;
+	debugCodeShowObjectBounds = other.debugCodeShowObjectBounds;
 	debugVramInspectorEnabled = other.debugVramInspectorEnabled;
+	debugVramPreviewPaletteBits = other.debugVramPreviewPaletteBits;
+	debugVramShowGrids = other.debugVramShowGrids;
 	debugLogEnabled = other.debugLogEnabled;
 	debugLogPath = other.debugLogPath;
 
@@ -145,7 +148,10 @@ bool Settings::operator != (const Settings &other) const {
 	if (debugShowAstEnabled != other.debugShowAstEnabled ||
 		debugOnscreenShellEnabled != other.debugOnscreenShellEnabled ||
 		debugCodeInspectorEnabled != other.debugCodeInspectorEnabled ||
+		debugCodeShowObjectBounds != other.debugCodeShowObjectBounds ||
 		debugVramInspectorEnabled != other.debugVramInspectorEnabled ||
+		debugVramPreviewPaletteBits != other.debugVramPreviewPaletteBits ||
+		debugVramShowGrids != other.debugVramShowGrids ||
 		debugLogEnabled != other.debugLogEnabled ||
 		debugLogPath != other.debugLogPath
 	) {

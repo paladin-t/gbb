@@ -509,7 +509,7 @@ private:
 
 	struct {
 		bool highlighted = false;
-		Math::Recti area;
+		Highlight highlight;
 	} _inGameHighlight;
 
 public:
@@ -570,17 +570,17 @@ public:
 
 		return 0;
 	}
-	virtual bool getHighlight(int index, Math::Recti* area) const override {
-		if (area)
-			*area = Math::Recti();
+	virtual bool getHighlight(int index, Highlight* highlight) const override {
+		if (highlight)
+			*highlight = Highlight();
 
 		if (!_inGameHighlight.highlighted)
 			return false;
 		if (index != 0)
 			return false;
 
-		if (area)
-			*area = _inGameHighlight.area;
+		if (highlight)
+			*highlight = _inGameHighlight.highlight;
 
 		return true;
 	}
@@ -1689,7 +1689,10 @@ private:
 			if (y_ >= SCREEN_HEIGHT)
 				y_ -= 255;
 			_inGameHighlight.highlighted = true;
-			_inGameHighlight.area = Math::Recti::byXYWH(x_, y_, GBBASIC_TILE_SIZE, _is8x16Obj ? GBBASIC_TILE_SIZE * 2 : GBBASIC_TILE_SIZE);
+			_inGameHighlight.highlight = Highlight(
+				Math::Recti::byXYWH(x_, y_, GBBASIC_TILE_SIZE, _is8x16Obj ? GBBASIC_TILE_SIZE * 2 : GBBASIC_TILE_SIZE),
+				Math::Vec4f(1, 0, 0, 0.75f)
+			);
 		}
 	}
 	void palettes(void) {
@@ -1907,6 +1910,15 @@ private:
 		ImGui::TextUnformatted(winTxt);
 	}
 };
+
+VramDebugger::Highlight::Highlight() {
+}
+
+VramDebugger::Highlight::Highlight(const Math::Recti &a, const Math::Vec4f &col) :
+	area(a),
+	color(col)
+{
+}
 
 VramDebugger* VramDebugger::create(void) {
 	VramDebuggerImpl* result = new VramDebuggerImpl();

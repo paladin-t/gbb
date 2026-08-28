@@ -77,6 +77,7 @@ struct Context {
 	bool* onscreenDebugEnabled = nullptr;
 	Debugger* debugger = nullptr;
 	bool* codeDebugEnabled = nullptr;
+	bool* codeDebuggerShowObjectBounds = nullptr;
 	bool* bringCodeDebuggerToFront = nullptr;
 	VramDebugger* vramDebugger = nullptr;
 	bool* vramDebugEnabled = nullptr;
@@ -119,7 +120,7 @@ struct Context {
 		bool integerScale_, bool fixRatio_,
 		bool* onscreenGamepadEnabled_, bool onscreenGamepadSwapAB_, float onscreenGamepadScale_, const Math::Vec2<float> onscreenGamepadPadding_,
 		bool* onscreenDebugEnabled_,
-		Debugger* debugger_, bool* codeDebugEnabled_, bool* bringCodeDebuggerToFront_,
+		Debugger* debugger_, bool* codeDebugEnabled_, bool* codeDebuggerShowObjectBounds_, bool* bringCodeDebuggerToFront_,
 		VramDebugger* vramDebugger_, bool* vramDebugEnabled_, bool* vramDebuggerPreviewPaletteBits_, bool* vramDebuggerShowGrids_, bool* isVramDebuggerActive_,
 		float* debuggerPreviousOuterWidth_, float* debuggerWidth_, float* debuggerHeight_,  bool* debuggerResizing_, bool* debuggerResetting_,
 		Device::CursorTypes cursor_,
@@ -137,7 +138,7 @@ struct Context {
 		integerScale(integerScale_), fixRatio(fixRatio_),
 		onscreenGamepadEnabled(onscreenGamepadEnabled_), onscreenGamepadSwapAB(onscreenGamepadSwapAB_), onscreenGamepadScale(onscreenGamepadScale_), onscreenGamepadPadding(onscreenGamepadPadding_),
 		onscreenDebugEnabled(onscreenDebugEnabled_),
-		debugger(debugger_), codeDebugEnabled(codeDebugEnabled_), bringCodeDebuggerToFront(bringCodeDebuggerToFront_),
+		debugger(debugger_), codeDebugEnabled(codeDebugEnabled_), codeDebuggerShowObjectBounds(codeDebuggerShowObjectBounds_), bringCodeDebuggerToFront(bringCodeDebuggerToFront_),
 		vramDebugger(vramDebugger_), vramDebugEnabled(vramDebugEnabled_), vramDebuggerPreviewPaletteBits(vramDebuggerPreviewPaletteBits_), vramDebuggerShowGrids(vramDebuggerShowGrids_), isVramDebuggerActive(isVramDebuggerActive_),
 		debuggerPreviousOuterWidth(debuggerPreviousOuterWidth_), debuggerWidth(debuggerWidth_), debuggerHeight(debuggerHeight_),  debuggerResizing(debuggerResizing_), debuggerResetting(debuggerResetting_),
 		cursor(cursor_),
@@ -480,7 +481,7 @@ struct Context {
 
 				ImGui::BeginChild("#CDbg", ImVec2(size.x, size.y - 19.0f), true, flags);
 				{
-					debugger->update(true, !tabOpened);
+					debugger->update(true, !tabOpened, *codeDebuggerShowObjectBounds);
 				}
 				ImGui::EndChild();
 
@@ -491,12 +492,12 @@ struct Context {
 				if (wasVramDebuggerActive && *debuggerWidth > EMULATOR_VRAM_DEBUGGER_MAX_WIDTH)
 					*debuggerWidth = 0;
 
-				debugger->update(false, !tabOpened);
+				debugger->update(false, !tabOpened, *codeDebuggerShowObjectBounds);
 			}
 		} else {
 			ImGui::BeginChild("#CDbg", size, true, flags);
 			{
-				debugger->update(true, !tabOpened);
+				debugger->update(true, !tabOpened, *codeDebuggerShowObjectBounds);
 			}
 			ImGui::EndChild();
 		}
@@ -897,6 +898,18 @@ static void menu(const Context &context) {
 					ImGui::MenuItem(context.theme->menu_CodeDebugger(), nullptr, context.codeDebugEnabled);
 					ImGui::EndDisabled();
 				}
+				if (context.canShowCodeDebugger && *context.codeDebugEnabled) {
+					ImGui::MenuItem(context.theme->menu_ObjectBounds(), nullptr, context.codeDebuggerShowObjectBounds);
+					if (ImGui::IsItemHovered()) {
+						VariableGuard<decltype(style.WindowPadding)> guardWindowPadding(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+						ImGui::SetTooltip(context.theme->tooltip_PreviewObjectBounds());
+					}
+				} else {
+					ImGui::BeginDisabled();
+					ImGui::MenuItem(context.theme->menu_ObjectBounds(), nullptr, context.codeDebuggerShowObjectBounds);
+					ImGui::EndDisabled();
+				}
 			}
 
 			if (!!context.vramDebugger) {
@@ -940,7 +953,7 @@ void emulator(
 	bool integerScale, bool fixRatio,
 	bool &onscreenGamepadEnabled, bool onscreenGamepadSwapAB, float onscreenGamepadScale, const Math::Vec2<float> &onscreenGamepadPadding,
 	bool &onscreenDebugEnabled,
-	class Debugger* debugger, bool &codeDebugEnabled, bool &bringCodeDebuggerToFront,
+	class Debugger* debugger, bool &codeDebugEnabled, bool &codeDebuggerShowObjectBounds, bool &bringCodeDebuggerToFront,
 	class VramDebugger* vramDebugger, bool &vramDebugEnabled, bool &vramDebuggerPreviewPaletteBits, bool &vramDebuggerShowGrids, bool &isVramDebuggerActive,
 	float &debuggerPreviousOuterWidth, float &debuggerWidth, float &debuggerHeight, bool &debuggerResizing, bool &debuggerResetting,
 	Device::CursorTypes cursor,
@@ -964,7 +977,7 @@ void emulator(
 		integerScale, fixRatio,
 		&onscreenGamepadEnabled, onscreenGamepadSwapAB, onscreenGamepadScale, onscreenGamepadPadding,
 		&onscreenDebugEnabled,
-		debugger, &codeDebugEnabled, &bringCodeDebuggerToFront,
+		debugger, &codeDebugEnabled, &codeDebuggerShowObjectBounds, &bringCodeDebuggerToFront,
 		vramDebugger, &vramDebugEnabled, &vramDebuggerPreviewPaletteBits, &vramDebuggerShowGrids, &isVramDebuggerActive,
 		&debuggerPreviousOuterWidth, &debuggerWidth, &debuggerHeight, &debuggerResizing, &debuggerResetting,
 		cursor,
@@ -1008,24 +1021,45 @@ void emulator(
 			ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0.0f)
 		);
 
-		// Render highlight area from the VRAM debugger.
-		if (vramDbg) {
+		// Render highlight area from the code and VRAM debuggers.
+		if (codeDbg && !*context.isVramDebuggerActive) {
+			const int n = debugger->highlightCount();
+			if (n > 0) {
+				ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+				ImGui::PushClipRect(curPos, curPos + context.dstSize, true);
+				for (int i = 0; i < n; ++i) {
+					Debugger::Highlight highlight;
+					if (!debugger->getHighlight(i, &highlight))
+						continue;
+
+					const Math::Vec2f start(highlight.area.xMin() * context.scale.x, highlight.area.yMin() * context.scale.y);
+					const Math::Vec2f end((highlight.area.xMax() + 1) * context.scale.x, (highlight.area.yMax() + 1) * context.scale.y);
+					drawList->AddRect(
+						curPos + ImVec2((float)start.x, (float)start.y),
+						curPos + ImVec2((float)end.x, (float)end.y),
+						ImGui::GetColorU32(ImVec4((float)highlight.color.x, (float)highlight.color.y, (float)highlight.color.z, (float)highlight.color.w))
+					);
+				}
+				ImGui::PopClipRect();
+			}
+		} else if (vramDbg && *context.isVramDebuggerActive) {
 			const int n = vramDebugger->highlightCount();
 			if (n > 0) {
 				ImDrawList* drawList = ImGui::GetWindowDrawList();
 
 				ImGui::PushClipRect(curPos, curPos + context.dstSize, true);
 				for (int i = 0; i < n; ++i) {
-					Math::Recti area;
-					if (!vramDebugger->getHighlight(i, &area))
+					VramDebugger::Highlight highlight;
+					if (!vramDebugger->getHighlight(i, &highlight))
 						continue;
 
-					const Math::Vec2f start(area.xMin() * context.scale.x, area.yMin() * context.scale.y);
-					const Math::Vec2f end((area.xMax() + 1) * context.scale.x, (area.yMax() + 1) * context.scale.y);
+					const Math::Vec2f start(highlight.area.xMin() * context.scale.x, highlight.area.yMin() * context.scale.y);
+					const Math::Vec2f end((highlight.area.xMax() + 1) * context.scale.x, (highlight.area.yMax() + 1) * context.scale.y);
 					drawList->AddRect(
 						curPos + ImVec2((float)start.x, (float)start.y),
 						curPos + ImVec2((float)end.x, (float)end.y),
-						ImGui::GetColorU32(ImVec4(1, 0, 0, 0.75f))
+						ImGui::GetColorU32(ImVec4((float)highlight.color.x, (float)highlight.color.y, (float)highlight.color.z, (float)highlight.color.w))
 					);
 				}
 				ImGui::PopClipRect();
