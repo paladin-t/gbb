@@ -70,6 +70,7 @@ Settings &Settings::operator = (const Settings &other) {
 	mainCaseSensitive = other.mainCaseSensitive;
 	mainMatchWholeWords = other.mainMatchWholeWords;
 	mainGlobalSearch = other.mainGlobalSearch;
+	mainCorrectYZForShortcuts = other.mainCorrectYZForShortcuts;
 
 	debugShowAstEnabled = other.debugShowAstEnabled;
 	debugOnscreenShellEnabled = other.debugOnscreenShellEnabled;
@@ -140,7 +141,8 @@ bool Settings::operator != (const Settings &other) const {
 		mainShowWhiteSpaces != other.mainShowWhiteSpaces ||
 		mainCaseSensitive != other.mainCaseSensitive ||
 		mainMatchWholeWords != other.mainMatchWholeWords ||
-		mainGlobalSearch != other.mainGlobalSearch
+		mainGlobalSearch != other.mainGlobalSearch ||
+		mainCorrectYZForShortcuts != other.mainCorrectYZForShortcuts
 	) {
 		return true;
 	}

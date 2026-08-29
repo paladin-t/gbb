@@ -3605,7 +3605,7 @@ private:
 
 		const bool  del          = ImGui::IsKeyPressed(SDL_SCANCODE_DELETE);
 		const bool  backspace    = ImGui::IsKeyPressed(SDL_SCANCODE_BACKSPACE);
-		const bool  z            = ImGui::IsKeyPressed(SDL_SCANCODE_Z);
+		bool        z            = ImGui::IsKeyPressed(SDL_SCANCODE_Z);
 		const bool  s            = ImGui::IsKeyPressed(SDL_SCANCODE_S);
 		const bool  x            = ImGui::IsKeyPressed(SDL_SCANCODE_X);
 		const bool  d            = ImGui::IsKeyPressed(SDL_SCANCODE_D);
@@ -3626,7 +3626,7 @@ private:
 		const bool _5            = ImGui::IsKeyPressed(SDL_SCANCODE_5);
 		const bool  t            = ImGui::IsKeyPressed(SDL_SCANCODE_T);
 		const bool _6            = ImGui::IsKeyPressed(SDL_SCANCODE_6);
-		const bool  y            = ImGui::IsKeyPressed(SDL_SCANCODE_Y);
+		bool        y            = ImGui::IsKeyPressed(SDL_SCANCODE_Y);
 		const bool _7            = ImGui::IsKeyPressed(SDL_SCANCODE_7);
 		const bool  u            = ImGui::IsKeyPressed(SDL_SCANCODE_U);
 		const bool  i            = ImGui::IsKeyPressed(SDL_SCANCODE_I);

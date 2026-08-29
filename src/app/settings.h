@@ -60,6 +60,7 @@ struct Settings {
 	bool mainCaseSensitive = false;
 	bool mainMatchWholeWords = false;
 	bool mainGlobalSearch = false;
+	bool mainCorrectYZForShortcuts = false;
 
 	bool debugShowAstEnabled = false;
 	bool debugOnscreenShellEnabled = true;

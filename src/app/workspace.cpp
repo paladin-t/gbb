@@ -7035,6 +7035,7 @@ bool Workspace::loadConfig(Window*, Renderer*, const rapidjson::Document &doc) {
 	Jpath::get(doc, settings().mainCaseSensitive, "main", "case_sensitive");
 	Jpath::get(doc, settings().mainMatchWholeWords, "main", "match_whole_words");
 	Jpath::get(doc, settings().mainGlobalSearch, "main", "global_search");
+	Jpath::get(doc, settings().mainCorrectYZForShortcuts, "main", "correct_yz_for_shortcuts");
 
 	Jpath::get(doc, settings().debugShowAstEnabled, "debug", "show_ast", "enabled");
 	Jpath::get(doc, settings().debugOnscreenShellEnabled, "debug", "onscreen_shell", "enabled");
@@ -7141,6 +7142,7 @@ bool Workspace::saveConfig(Window*, Renderer*, rapidjson::Document &doc) {
 	Jpath::set(doc, doc, settings().mainCaseSensitive, "main", "case_sensitive");
 	Jpath::set(doc, doc, settings().mainMatchWholeWords, "main", "match_whole_words");
 	Jpath::set(doc, doc, settings().mainGlobalSearch, "main", "global_search");
+	Jpath::set(doc, doc, settings().mainCorrectYZForShortcuts, "main", "correct_yz_for_shortcuts");
 
 	Jpath::set(doc, doc, settings().debugShowAstEnabled, "debug", "show_ast", "enabled");
 	Jpath::set(doc, doc, settings().debugOnscreenShellEnabled, "debug", "onscreen_shell", "enabled");
@@ -7882,8 +7884,8 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 	const bool v          = ImGui::IsKeyPressed(SDL_SCANCODE_V);
 	const bool w          = ImGui::IsKeyPressed(SDL_SCANCODE_W);
 	const bool x          = ImGui::IsKeyPressed(SDL_SCANCODE_X);
-	const bool y          = ImGui::IsKeyPressed(SDL_SCANCODE_Y);
-	const bool z          = ImGui::IsKeyPressed(SDL_SCANCODE_Z);
+	bool       y          = ImGui::IsKeyPressed(SDL_SCANCODE_Y);
+	bool       z          = ImGui::IsKeyPressed(SDL_SCANCODE_Z);
 
 	const bool backspace  = ImGui::IsKeyPressed(SDL_SCANCODE_BACKSPACE);
 	const bool grave      = ImGui::IsKeyPressed(SDL_SCANCODE_GRAVE);      /* ` */
@@ -7909,6 +7911,9 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 #if defined GBBASIC_OS_WIN || defined GBBASIC_OS_MAC || defined GBBASIC_OS_LINUX
 	const bool prtSc      = ImGui::IsKeyPressed(SDL_SCANCODE_PRINTSCREEN);
 #endif /* Platform macro. */
+
+	if (_settings.mainCorrectYZForShortcuts)
+		std::swap(y, z);
 
 	// Get project states.
 	bool opened = false;

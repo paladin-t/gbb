@@ -5163,6 +5163,16 @@ void PreferencesPopupBox::update(Workspace*) {
 				}
 				PopID();
 
+				PushID("#Shrt");
+				{
+					TextUnformatted(_theme->windowPreferences_Main_Shortcuts());
+
+					Checkbox(_theme->windowPreferences_Main_CorrectYZMapping(), &_settingsShadow.mainCorrectYZForShortcuts);
+
+					Separator();
+				}
+				PopID();
+
 				PushID("#Cnsl");
 				{
 					TextUnformatted(_theme->windowPreferences_Main_Console());
