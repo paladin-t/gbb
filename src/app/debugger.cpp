@@ -590,6 +590,7 @@ private:
 	bool _inspecting = false;
 	// Highlights.
 	Highlights _highlights;
+	FarPtr _activeHighlight;
 	// States.
 	Buffers _buffers;
 	Snapshot _snapshot;
@@ -649,6 +650,7 @@ public:
 		_activeCodePage = -1;
 		_inspecting = false;
 		_highlights.clear();
+		_activeHighlight = FarPtr();
 		_buffers.clear();
 		_snapshot.reset();
 		_mnemonicsIsBeingGenerated.wait();
@@ -3420,7 +3422,9 @@ private:
 			return;
 		}
 
+		const FarPtr activeHighlight = _activeHighlight;
 		_highlights.clear();
+		_activeHighlight = FarPtr();
 
 		if (!snapshot)
 			return;
@@ -3430,51 +3434,69 @@ private:
 
 		for (int i = 0; i < (int)snapshot->actors.size(); ++i) {
 			const VM::actor_t::Ref &ref = snapshot->actors[i];
-			const VM::actor_t &actorObj = ref.data;
+			const VM::actor_t &obj = ref.data;
 
-			int x = DEBUGGER_POSITION_TO_SCREEN(actorObj.position.x) + actorObj.bounds.left;
-			int y = DEBUGGER_POSITION_TO_SCREEN(actorObj.position.y) + actorObj.bounds.top;
+			int x = DEBUGGER_POSITION_TO_SCREEN(obj.position.x) + obj.bounds.left;
+			int y = DEBUGGER_POSITION_TO_SCREEN(obj.position.y) + obj.bounds.top;
 			x -= cameraX;
 			y -= cameraY;
-			const int w = actorObj.bounds.width();
-			const int h = actorObj.bounds.height();
+			const int w = obj.bounds.width();
+			const int h = obj.bounds.height();
+			Math::Vec4f col(1, 0, 0, 0.75f);
+			if (activeHighlight.equals(ref.pointer.bank, ref.pointer.address)) {
+				const double t = ImGui::GetTime();
+				const bool b = std::fmod(t, 1.0) < 0.5;
+				col = b ? Math::Vec4f(1, 1, 1, 0.75f) : Math::Vec4f(0, 0, 0, 0.75f);
+			}
 			const Highlight highlight(
 				Math::Recti::byXYWH(x, y, w, h),
-				Math::Vec4f(1, 0, 0, 0.75f)
+				col
 			);
 			_highlights.push_back(highlight);
 		}
 
 		for (int i = 0; i < (int)snapshot->triggers.size(); ++i) {
 			const VM::trigger_t::Ref &ref = snapshot->triggers[i];
-			const VM::trigger_t &triggerObj = ref.data;
+			const VM::trigger_t &obj = ref.data;
 
-			int x = DEBUGGER_MUL8(triggerObj.x);
-			int y = DEBUGGER_MUL8(triggerObj.y);
+			int x = DEBUGGER_MUL8(obj.x);
+			int y = DEBUGGER_MUL8(obj.y);
 			x -= cameraX;
 			y -= cameraY;
-			const int w = DEBUGGER_MUL8(triggerObj.width);
-			const int h = DEBUGGER_MUL8(triggerObj.height);
+			const int w = DEBUGGER_MUL8(obj.width);
+			const int h = DEBUGGER_MUL8(obj.height);
+			Math::Vec4f col(0, 1, 0, 0.75f);
+			if (activeHighlight.equals(ref.pointer.bank, ref.pointer.address)) {
+				const double t = ImGui::GetTime();
+				const bool b = std::fmod(t, 1.0) < 0.5;
+				col = b ? Math::Vec4f(1, 1, 1, 0.75f) : Math::Vec4f(0, 0, 0, 0.75f);
+			}
 			const Highlight highlight(
 				Math::Recti::byXYWH(x, y, w, h),
-				Math::Vec4f(0, 1, 0, 0.75f)
+				col
 			);
 			_highlights.push_back(highlight);
 		}
 
 		for (int i = 0; i < (int)snapshot->projectiles.size(); ++i) {
 			const VM::projectile_t::Ref &ref = snapshot->projectiles[i];
-			const VM::projectile_t &projectileObj = ref.data;
+			const VM::projectile_t &obj = ref.data;
 
-			int x = DEBUGGER_POSITION_TO_SCREEN(projectileObj.position.x) + projectileObj.def.bounds.left;
-			int y = DEBUGGER_POSITION_TO_SCREEN(projectileObj.position.y) + projectileObj.def.bounds.top;
+			int x = DEBUGGER_POSITION_TO_SCREEN(obj.position.x) + obj.def.bounds.left;
+			int y = DEBUGGER_POSITION_TO_SCREEN(obj.position.y) + obj.def.bounds.top;
 			x -= cameraX;
 			y -= cameraY;
-			const int w = projectileObj.def.bounds.width();
-			const int h = projectileObj.def.bounds.height();
+			const int w = obj.def.bounds.width();
+			const int h = obj.def.bounds.height();
+			Math::Vec4f col(0, 0, 1, 0.75f);
+			if (activeHighlight.equals(ref.pointer.bank, ref.pointer.address)) {
+				const double t = ImGui::GetTime();
+				const bool b = std::fmod(t, 1.0) < 0.5;
+				col = b ? Math::Vec4f(1, 1, 1, 0.75f) : Math::Vec4f(0, 0, 0, 0.75f);
+			}
 			const Highlight highlight(
 				Math::Recti::byXYWH(x, y, w, h),
-				Math::Vec4f(0, 0, 1, 0.75f)
+				col
 			);
 			_highlights.push_back(highlight);
 		}
@@ -3483,6 +3505,10 @@ private:
 		ImGuiStyle &style = ImGui::GetStyle();
 
 		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
+
+		const ImVec2 curPos = ImGui::GetCursorScreenPos();
+		const ImVec2 availSz = ImGui::GetContentRegionAvail();
+		const ImVec2 mousePos = ImGui::GetMousePos();
 
 		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Sortable |
 			ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
@@ -3511,7 +3537,13 @@ private:
 			for (const VM::actor_t::Ref &ref : snapshot->actors) {
 				const int ord = ref.order;
 				const UInt16 address = (UInt16)ref.pointer.address;
-				const VM::actor_t &actorObj = ref.data;
+				const VM::actor_t &obj = ref.data;
+
+				const float lineHeight = ImGui::GetTextLineHeightWithSpacing() + style.FramePadding.y * 2 + 1;
+				const ImVec2 rectMin = ImVec2(curPos.x + 1, ImGui::GetCursorScreenPos().y + 3);
+				const ImVec2 rectMax = rectMin + ImVec2(availSz.x - 3, lineHeight + 2);
+				const ImRect rect(rectMin, rectMax);
+				const bool hovered = rect.Contains(mousePos);
 
 				ImGui::TableNextRow();
 				ImGui::PushID(j);
@@ -3525,10 +3557,20 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-					ImGui::TableSetColumnIndex(2); actor(snapshot, actorObj, j, 1);
+					ImGui::TableSetColumnIndex(2); actor(snapshot, obj, j, 1);
 					ImGui::PopStyleColor();
 				}
 				ImGui::PopID();
+
+				if (hovered) {
+					_activeHighlight = ref.pointer;
+
+#if defined GBBASIC_DEBUG
+					ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+					drawList->AddRect(rectMin, rectMax, ImGui::GetColorU32(ImGuiCol_NavHighlight));
+#endif /* GBBASIC_DEBUG */
+				}
 
 				++j;
 			}
@@ -3923,6 +3965,10 @@ private:
 
 		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
+		const ImVec2 curPos = ImGui::GetCursorScreenPos();
+		const ImVec2 availSz = ImGui::GetContentRegionAvail();
+		const ImVec2 mousePos = ImGui::GetMousePos();
+
 		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
 			ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
 		if (ImGui::BeginTable("##Triggers", 3, flags, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
@@ -3940,7 +3986,13 @@ private:
 			for (const VM::trigger_t::Ref &ref : snapshot->triggers) {
 				const int ord = ref.order;
 				const UInt16 address = (UInt16)ref.pointer.address;
-				const VM::trigger_t &triggerObj = ref.data;
+				const VM::trigger_t &obj = ref.data;
+
+				const float lineHeight = ImGui::GetTextLineHeightWithSpacing() + style.FramePadding.y * 2 + 1;
+				const ImVec2 rectMin = ImVec2(curPos.x + 1, ImGui::GetCursorScreenPos().y + 3);
+				const ImVec2 rectMax = rectMin + ImVec2(availSz.x - 3, lineHeight + 2);
+				const ImRect rect(rectMin, rectMax);
+				const bool hovered = rect.Contains(mousePos);
 
 				ImGui::TableNextRow();
 				ImGui::PushID(j);
@@ -3954,10 +4006,20 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-					ImGui::TableSetColumnIndex(2); trigger(snapshot, triggerObj);
+					ImGui::TableSetColumnIndex(2); trigger(snapshot, obj);
 					ImGui::PopStyleColor();
 				}
 				ImGui::PopID();
+
+				if (hovered) {
+					_activeHighlight = ref.pointer;
+
+#if defined GBBASIC_DEBUG
+					ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+					drawList->AddRect(rectMin, rectMax, ImGui::GetColorU32(ImGuiCol_NavHighlight));
+#endif /* GBBASIC_DEBUG */
+				}
 
 				++j;
 			}
@@ -4648,6 +4710,10 @@ private:
 
 		VariableGuard<decltype(style.FramePadding)> guardFramePadding(&style.FramePadding, style.FramePadding, ImVec2());
 
+		const ImVec2 curPos = ImGui::GetCursorScreenPos();
+		const ImVec2 availSz = ImGui::GetContentRegionAvail();
+		const ImVec2 mousePos = ImGui::GetMousePos();
+
 		const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Sortable |
 			ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
 		if (ImGui::BeginTable("##Prtls", 3, flags, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
@@ -4675,7 +4741,13 @@ private:
 			for (const VM::projectile_t::Ref &ref : snapshot->projectiles) {
 				const int ord = ref.order;
 				const UInt16 address = (UInt16)ref.pointer.address;
-				const VM::projectile_t &projectileObj = ref.data;
+				const VM::projectile_t &obj = ref.data;
+
+				const float lineHeight = ImGui::GetTextLineHeightWithSpacing() + style.FramePadding.y * 2 + 1;
+				const ImVec2 rectMin = ImVec2(curPos.x + 1, ImGui::GetCursorScreenPos().y + 3);
+				const ImVec2 rectMax = rectMin + ImVec2(availSz.x - 3, lineHeight + 2);
+				const ImRect rect(rectMin, rectMax);
+				const bool hovered = rect.Contains(mousePos);
 
 				ImGui::TableNextRow();
 				ImGui::PushID(j);
@@ -4689,10 +4761,20 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-					ImGui::TableSetColumnIndex(2); projectile(snapshot, projectileObj, j, 1);
+					ImGui::TableSetColumnIndex(2); projectile(snapshot, obj, j, 1);
 					ImGui::PopStyleColor();
 				}
 				ImGui::PopID();
+
+				if (hovered) {
+					_activeHighlight = ref.pointer;
+
+#if defined GBBASIC_DEBUG
+					ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+					drawList->AddRect(rectMin, rectMax, ImGui::GetColorU32(ImGuiCol_NavHighlight));
+#endif /* GBBASIC_DEBUG */
+				}
 
 				++j;
 			}
