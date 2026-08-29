@@ -2618,11 +2618,12 @@ private:
 						ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit;
 					if (ImGui::BeginTable("##Brks", 4, flags_, ImVec2(ImGui::GetContentRegionAvail().x - 1, 0))) {
 						const float width0 = ImGui::GetFontSize() * 2.0f;
+						const float width1 = ImGui::GetFontSize() * 5.0f;
 						const float width = ImGui::GetFontSize() * 5.0f;
 						const ImU32 col = _theme->style()->debuggerHeadColor;
 						ImGui::PushStyleColor(ImGuiCol_Text, col);
 						ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Order(), ImGuiTableColumnFlags_WidthFixed, width0);
-						ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Type(), ImGuiTableColumnFlags_WidthFixed, width0);
+						ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Type(), ImGuiTableColumnFlags_WidthFixed, width1);
 						ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Location(), ImGuiTableColumnFlags_WidthStretch);
 						ImGui::TableSetupColumn(_theme->windowEmulator_CodeDebugger_Hits(), ImGuiTableColumnFlags_WidthFixed, width0);
 						ImGui::TableHeadersRow();
@@ -2759,40 +2760,44 @@ private:
 					int bank = 0;
 					int addr = 0;
 					if (Text::fromString(bankStr, bank) && Text::fromString(addrStr, addr)) {
-						Breakpoint breakpoint(-1, -1, true);
-						breakpoint.type = Categories::ASM;
-						breakpoint.hitPointer = FarPtr(bank, addr);
-
-						Breakpoint::Array::const_iterator it = std::find_if(
-							_breakpoints.begin(), _breakpoints.end(),
-							[breakpoint] (const Breakpoint &brk) -> bool {
-								if (brk.type != Categories::ASM)
-									return false;
-								if (!(brk.page == -1 && brk.row == -1))
-									return false;
-								if (!brk.hitPointer.equals(breakpoint.hitPointer.bank, breakpoint.hitPointer.address))
-									return false;
-
-								return true;
-							}
-						);
-						if (it == _breakpoints.end()) {
-							int id = -1;
-							if (installBreakpoint(id, (UInt8)breakpoint.hitPointer.bank, (UInt16)breakpoint.hitPointer.address)) {
-								breakpoint.id = id;
-
-								_breakpoints.push_back(breakpoint); // Add a new breakpoint.
-
-								refreshBreakpoints();
-
-								_buffers.reset();
-
-								_workspace->bubble(_theme->dialogPrompt_AddedBreakpoint(), nullptr);
-							} else {
-								_workspace->bubble(_theme->dialogPrompt_InvalidBreakpoint(), nullptr);
-							}
+						if (_vmStepPointer.equals(bank, addr)) {
+							_workspace->bubble(_theme->dialogPrompt_CannotSetThisBreakpoint(), nullptr);
 						} else {
-							_workspace->bubble(_theme->dialogPrompt_AlreadyExists(), nullptr);
+							Breakpoint breakpoint(-1, -1, true);
+							breakpoint.type = Categories::ASM;
+							breakpoint.hitPointer = FarPtr(bank, addr);
+
+							Breakpoint::Array::const_iterator it = std::find_if(
+								_breakpoints.begin(), _breakpoints.end(),
+								[breakpoint] (const Breakpoint &brk) -> bool {
+									if (brk.type != Categories::ASM)
+										return false;
+									if (!(brk.page == -1 && brk.row == -1))
+										return false;
+									if (!brk.hitPointer.equals(breakpoint.hitPointer.bank, breakpoint.hitPointer.address))
+										return false;
+
+									return true;
+								}
+							);
+							if (it == _breakpoints.end()) {
+								int id = -1;
+								if (installBreakpoint(id, (UInt8)breakpoint.hitPointer.bank, (UInt16)breakpoint.hitPointer.address)) {
+									breakpoint.id = id;
+
+									_breakpoints.push_back(breakpoint); // Add a new breakpoint.
+
+									refreshBreakpoints();
+
+									_buffers.reset();
+
+									_workspace->bubble(_theme->dialogPrompt_AddedBreakpoint(), nullptr);
+								} else {
+									_workspace->bubble(_theme->dialogPrompt_InvalidBreakpoint(), nullptr);
+								}
+							} else {
+								_workspace->bubble(_theme->dialogPrompt_AlreadyExists(), nullptr);
+							}
 						}
 					}
 				}

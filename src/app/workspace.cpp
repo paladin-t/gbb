@@ -8290,11 +8290,9 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 				if (recentProjectSelectedIndex() >= 0 && recentProjectSelectedIndex() < (int)projects().size()) {
 					const Project::Ptr &prj = projects()[recentProjectSelectedIndex()];
 					delay(
-						std::bind(
-							[wnd, rnd, this, prj] (void) -> void {
-								showProjectProperty(wnd, rnd, prj.get(), false);
-							}
-						),
+						[wnd, rnd, this, prj] (void) -> void {
+							showProjectProperty(wnd, rnd, prj.get(), false);
+						},
 						"SHOW PROJECT PROPERTY"
 					);
 				}

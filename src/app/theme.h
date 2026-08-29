@@ -351,6 +351,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotSaveProjectSeeTheConsoleForDetails)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotSaveSramState)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotSaveToReadonlyLocations)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotSetThisBreakpoint)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotUseThisImage)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotWriteToReadonlyMemory)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_Checking)

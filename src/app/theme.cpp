@@ -552,6 +552,7 @@ bool Theme::open(class Renderer* rnd) {
 	);
 	dialogPrompt_CannotSaveSramState("Cannot save SRAM state.");
 	dialogPrompt_CannotSaveToReadonlyLocations("Cannot save to readonly locations.");
+	dialogPrompt_CannotSetThisBreakpoint("Cannot set this breakpoint");
 	dialogPrompt_CannotUseThisImage("Cannot use this image");
 	dialogPrompt_CannotWriteToReadonlyMemory("Cannot write to readonly memory");
 	dialogPrompt_Checking("Checking...");
