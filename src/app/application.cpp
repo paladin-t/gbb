@@ -249,6 +249,7 @@ private:
 		ImVec2 mousePosition;
 		bool mouseCanUseGlobalState = true;
 
+		bool correctKeyMappings = true;
 		bool imeCompositing = false;
 	};
 
@@ -511,6 +512,10 @@ public:
 
 		bool forceWritable = false;
 		applicationGetArgValue(_options, WORKSPACE_OPTION_APPLICATION_FORCE_WRITABLE_KEY, forceWritable, true);
+
+		bool correctKeyMappings = true;
+		applicationGetArgValue(_options, WORKSPACE_OPTION_APPLICATION_SHORTCUT_CORRECTION_KEY, correctKeyMappings, true);
+		_context.correctKeyMappings = correctKeyMappings;
 
 		std::string font;
 		applicationGetArgValue(
@@ -1021,6 +1026,32 @@ private:
 			case SDL_KEYUP: {
 					const SDL_Keymod mod = SDL_GetModState();
 					int key = evt.key.keysym.scancode;
+					if (_context.correctKeyMappings) {
+						// Y <-> Z swap.
+						if (evt.key.keysym.scancode == SDL_SCANCODE_Y && evt.key.keysym.sym == SDLK_z) {
+							key = SDL_SCANCODE_Z;
+						} else if (evt.key.keysym.scancode == SDL_SCANCODE_Z && evt.key.keysym.sym == SDLK_y) {
+							key = SDL_SCANCODE_Y;
+						}
+						// A <-> Q swap.
+						else if (evt.key.keysym.scancode == SDL_SCANCODE_A && evt.key.keysym.sym == SDLK_q) {
+							key = SDL_SCANCODE_Q;
+						} else if (evt.key.keysym.scancode == SDL_SCANCODE_Q && evt.key.keysym.sym == SDLK_a) {
+							key = SDL_SCANCODE_A;
+						}
+						// W <-> Z swap.
+						else if (evt.key.keysym.scancode == SDL_SCANCODE_W && evt.key.keysym.sym == SDLK_z) {
+							key = SDL_SCANCODE_Z;
+						} else if (evt.key.keysym.scancode == SDL_SCANCODE_Z && evt.key.keysym.sym == SDLK_w) {
+							key = SDL_SCANCODE_W;
+						}
+						// M <-> ;(,) swap.
+						else if (evt.key.keysym.scancode == SDL_SCANCODE_M && evt.key.keysym.sym == SDLK_COMMA) {
+							key = SDL_SCANCODE_COMMA;
+						} else if (evt.key.keysym.scancode == SDL_SCANCODE_SEMICOLON && evt.key.keysym.sym == SDLK_m) {
+							key = SDL_SCANCODE_M;
+						}
+					}
 #if defined GBBASIC_OS_WIN || defined GBBASIC_OS_LINUX
 					if (key == SDL_SCANCODE_KP_ENTER) {
 						key = SDL_SCANCODE_RETURN;

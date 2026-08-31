@@ -868,10 +868,8 @@ bool Theme::open(class Renderer* rnd) {
 	windowPreferences_Main_CodeEditor("Code editor:");
 	windowPreferences_Main_ColumnIndicator("Comlmn indicator");
 	windowPreferences_Main_Console("Console:");
-	windowPreferences_Main_CorrectYZMapping("Correct Y/Z mapping");
 	windowPreferences_Main_IndentWith("     Indent with");
 	windowPreferences_Main_None("None");
-	windowPreferences_Main_Shortcuts("Shortcuts:");
 	windowPreferences_Main_ShowProjectPathAtTitleBar("Show project path at title bar");
 	windowPreferences_Main_ShowWhiteSpaces("Show white spaces");
 	windowPreferences_Main_Tab2SpacesWide("Tab (2 spaces wide)");
