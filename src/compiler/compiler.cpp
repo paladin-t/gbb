@@ -1444,6 +1444,10 @@ const RomLocation* SymbolTable::fuzzy(const std::string &key, std::string &gotKe
 	return nullptr;
 }
 
+const SymbolTable::Dictionary &SymbolTable::dictionary(void) const {
+	return _dictionary;
+}
+
 TracePoint::TracePoint() {
 }
 
@@ -38220,7 +38224,7 @@ private:
 						THROW_PARSER_ERROR(throwInvalidSyntax(r));
 
 					id->data(idName);
-				} else if(stackNRef) {
+				} else if (stackNRef) {
 					if (let) THROW_PARSER_ERROR(throwIdHasBeenAlreadyDeclared(r, id->caseSensitiveText()));
 					id
 						->type(Token::Types::OPERATOR)

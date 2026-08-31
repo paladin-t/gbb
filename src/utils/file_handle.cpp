@@ -509,7 +509,7 @@ public:
 #if defined GBBASIC_OS_WIN
 		_commit(_fileno(_file));
 #elif defined GBBASIC_OS_MAC
-		fcntl(fileno(_file), F_FULLFSYNC);;
+		fcntl(fileno(_file), F_FULLFSYNC);
 #elif defined GBBASIC_OS_LINUX
 		fsync(fileno(_file));
 #endif /* Platform macro. */

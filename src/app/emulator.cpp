@@ -1038,7 +1038,10 @@ void emulator(
 					drawList->AddRect(
 						curPos + ImVec2((float)start.x, (float)start.y),
 						curPos + ImVec2((float)end.x, (float)end.y),
-						ImGui::GetColorU32(ImVec4((float)highlight.color.x, (float)highlight.color.y, (float)highlight.color.z, (float)highlight.color.w))
+						ImGui::GetColorU32(ImVec4((float)highlight.color.x, (float)highlight.color.y, (float)highlight.color.z, (float)highlight.color.w)),
+						0.0f,
+						ImDrawFlags_None,
+						2.0f
 					);
 				}
 				ImGui::PopClipRect();
@@ -1059,7 +1062,10 @@ void emulator(
 					drawList->AddRect(
 						curPos + ImVec2((float)start.x, (float)start.y),
 						curPos + ImVec2((float)end.x, (float)end.y),
-						ImGui::GetColorU32(ImVec4((float)highlight.color.x, (float)highlight.color.y, (float)highlight.color.z, (float)highlight.color.w))
+						ImGui::GetColorU32(ImVec4((float)highlight.color.x, (float)highlight.color.y, (float)highlight.color.z, (float)highlight.color.w)),
+						0.0f,
+						ImDrawFlags_None,
+						2.0f
 					);
 				}
 				ImGui::PopClipRect();

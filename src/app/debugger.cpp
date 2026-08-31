@@ -422,6 +422,16 @@ private:
 	};
 	typedef std::map<SourceRef, int> SourceRefToTracePointDictionary;
 
+	struct RomLocationToSymbolCompare {
+		bool operator() (const GBBASIC::RomLocation &l, const GBBASIC::RomLocation &r) const {
+			if (l.bank != r.bank)
+				return l.bank < r.bank;
+
+			return l.address < r.address;
+		}
+	};
+	typedef std::map<GBBASIC::RomLocation, std::string, RomLocationToSymbolCompare> RomLocationToSymbolDictionary;
+
 	struct RuntimeConfig {
 		int heapSize = 0; // In words.
 		int stackSize = 0; // In words.
@@ -560,24 +570,25 @@ private:
 
 	// Basic.
 	bool _started = false;
-	const GBBASIC::Program::Compiled* _compiled = nullptr;    // Foreign.
+	const GBBASIC::Program::Compiled* _compiled = nullptr;      // Foreign.
 	// Config.
-	RuntimeConfig _runtimeConfig;                             // From kernel config.
-	FarPtr _currentBankPointer;                               // Stores the address of symbol `_current_bank`.
-	FarPtr _vmStepPointer;                                    // Stores the address of symbol `VM_STEP`.
-	mutable SourceRefToTracePointDictionary _srcToTracePoint; // Reversed mapping from trace points.
+	RuntimeConfig _runtimeConfig;                               // From kernel config.
+	FarPtr _currentBankPointer;                                 // Stores the address of symbol `_current_bank`.
+	FarPtr _vmStepPointer;                                      // Stores the address of symbol `VM_STEP`.
+	mutable SourceRefToTracePointDictionary _srcToTracePoint;   // Reversed mapping from trace points.
+	mutable RomLocationToSymbolDictionary _romLocationToSymbol; // Reversed mapping from symbols.
 	// Breakpoints.
 	Breakpoint::Array _breakpoints;
-	long long _breakTimeout = 0;                              // Timeout to prevent infinite waiting when all threads are dead.
+	long long _breakTimeout = 0;                                // Timeout to prevent infinite waiting when all threads are dead.
 	// Stepping.
-	Breakpoint _breakAtNextStep = Breakpoint(-1, -1, false);  // Enabled when a user operated to move a step forward.
-	FarPtr _ignoreForBreakingAtNextStep;                      // The address to be ignored when stepping.
-	FarPtr _latestStepInstructionAddress;                     // The latest CPU instruction address when operating to step.
-	FarPtr _latestVmStepInstructionAddress;                   // The latest VM instruction address when operating to step.
+	Breakpoint _breakAtNextStep = Breakpoint(-1, -1, false);    // Enabled when a user operated to move a step forward.
+	FarPtr _ignoreForBreakingAtNextStep;                        // The address to be ignored when stepping.
+	FarPtr _latestStepInstructionAddress;                       // The latest CPU instruction address when operating to step.
+	FarPtr _latestVmStepInstructionAddress;                     // The latest VM instruction address when operating to step.
 	// `VM_STEP` breakpoint.
-	bool _breakAtNextStepInstalledForBasic = false;           // Whether the `VM_STEP` breakpoint has been installed.
-	int _vmStepBreakpointRefCount = 0;                        // The count of installed `VM_STEP` breakpoints.
-	int _vmStepBreakpointId = -1;                             // The ID of installed `VM_STEP` breakpoints.
+	bool _breakAtNextStepInstalledForBasic = false;             // Whether the `VM_STEP` breakpoint has been installed.
+	int _vmStepBreakpointRefCount = 0;                          // The count of installed `VM_STEP` breakpoints.
+	int _vmStepBreakpointId = -1;                               // The ID of installed `VM_STEP` breakpoints.
 
 	/**< Inspecting. */
 
@@ -663,6 +674,7 @@ public:
 		_currentBankPointer = FarPtr();
 		_vmStepPointer = FarPtr();
 		_srcToTracePoint.clear();
+		_romLocationToSymbol.clear();
 		_breakpoints.clear();
 		_breakTimeout = 0;
 		_breakAtNextStep = Breakpoint(-1, -1, false);
@@ -826,6 +838,7 @@ public:
 		_currentBankPointer = FarPtr();
 		_vmStepPointer = FarPtr();
 		_srcToTracePoint.clear();
+		_romLocationToSymbol.clear();
 		_breakpoints.clear();
 		_breakTimeout = 0;
 		_breakAtNextStep = Breakpoint(-1, -1, false);
@@ -1305,6 +1318,28 @@ private:
 		out.address = romLocation->address;
 
 		return true;
+	}
+	const std::string* getSymbolNameByRomLocation(int bank, int address) const {
+		const GBBASIC::SymbolTable* symbols = compiledSymbols();
+		if (!symbols)
+			return nullptr;
+
+		if (_romLocationToSymbol.empty()) {
+			const GBBASIC::SymbolTable::Dictionary &dict = symbols->dictionary();
+			for (const GBBASIC::SymbolTable::Dictionary::value_type kv : dict)
+				_romLocationToSymbol[kv.second] = kv.first;
+		}
+
+		const GBBASIC::RomLocation key(bank, address);
+		RomLocationToSymbolDictionary::const_iterator it = _romLocationToSymbol.find(key);
+		if (it == _romLocationToSymbol.end())
+			return nullptr;
+
+		const std::string &sym = it->second;
+		if (sym.empty())
+			return nullptr;
+
+		return &sym;
 	}
 	const GBBASIC::TracePoint* getTracePointBySourceLocation(int page, int ln) const {
 		const GBBASIC::TracePoint::Array* tracePoints = compiledTracePoints();
@@ -3189,12 +3224,32 @@ private:
 		const ImU32 minCol = _theme->style()->debuggerMinorColor;
 
 		if (ImGui::TreeNode("{...}")) {
+			const GBBASIC::TracePoint* tp = (threadCtx.bank == 0 && threadCtx.PC == 0) ?
+				nullptr :
+				getTracePointByRomLocation(threadCtx.bank, threadCtx.PC, GBBASIC::RomLocation::Types::BASIC);
+
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("PC=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-			ImGui::Text("%04X", threadCtx.PC);
+			ImGui::Text("%04hX", threadCtx.PC);
+			if (tp) {
+				const GBBASIC::TextLocation &inCode = tp->inCode;
+				if (inCode.page >= 0) {
+					if (!inCode.label.empty()) {
+						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+						ImGui::SameLine();
+						ImGui::Text(" (#%d:%s)", inCode.page, inCode.label.c_str());
+						ImGui::PopStyleColor();
+					} else if (inCode.row != -1) {
+						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+						ImGui::SameLine();
+						ImGui::Text(" (#%d:%d)", inCode.page, inCode.row);
+						ImGui::PopStyleColor();
+					}
+				}
+			}
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
@@ -3202,7 +3257,7 @@ private:
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-			ImGui::Text("%d", threadCtx.bank);
+			ImGui::Text("%hu", threadCtx.bank);
 			ImGui::PopStyleColor();
 
 			if (threadCtx.next == (VM::SCRIPT_CTX::Ptr)NULL) {
@@ -3336,12 +3391,22 @@ private:
 			ImGui::Text("%d", threadCtx.lock_count);
 			ImGui::PopStyleColor();
 
+			const std::string* sym = (threadCtx.update_fn_bank == 0 && threadCtx.update_fn == 0) ?
+				nullptr :
+				getSymbolNameByRomLocation(threadCtx.update_fn_bank, threadCtx.update_fn);
+
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Fn=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-			ImGui::Text("%04X", threadCtx.update_fn);
+			ImGui::Text("%04hX", threadCtx.update_fn);
+			if (sym && !sym->empty()) {
+				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+				ImGui::SameLine();
+				ImGui::Text(" (%s)", sym->c_str());
+				ImGui::PopStyleColor();
+			}
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
@@ -3349,7 +3414,7 @@ private:
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-			ImGui::Text("%d", threadCtx.update_fn_bank);
+			ImGui::Text("%hu", threadCtx.update_fn_bank);
 			ImGui::PopStyleColor();
 
 			ImGui::TreePop();
@@ -3828,20 +3893,40 @@ private:
 				}
 			}
 
+			const GBBASIC::TracePoint* tp = (actor_.behave_handler_bank == 0 && actor_.behave_handler_address == 0) ?
+				nullptr :
+				getTracePointByRomLocation(actor_.behave_handler_bank, actor_.behave_handler_address, GBBASIC::RomLocation::Types::BASIC);
+
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Behave Fn bank=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-			ImGui::Text("%02X", actor_.behave_handler_bank);
+			ImGui::Text("%hu", actor_.behave_handler_bank);
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Behave Fn address=");
+			ImGui::TextUnformatted("Behave Fn=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
 			ImGui::Text("%04hX", actor_.behave_handler_address);
+			if (tp) {
+				const GBBASIC::TextLocation &inCode = tp->inCode;
+				if (inCode.page >= 0) {
+					if (!inCode.label.empty()) {
+						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+						ImGui::SameLine();
+						ImGui::Text(" (#%d:%s)", inCode.page, inCode.label.c_str());
+						ImGui::PopStyleColor();
+					} else if (inCode.row != -1) {
+						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+						ImGui::SameLine();
+						ImGui::Text(" (#%d:%d)", inCode.page, inCode.row);
+						ImGui::PopStyleColor();
+					}
+				}
+			}
 			ImGui::PopStyleColor();
 
 			if (actor_.hit_thread_id == 0) {
@@ -3885,20 +3970,40 @@ private:
 				}
 			}
 
+			tp = (actor_.hit_handler_bank == 0 && actor_.hit_handler_address == 0) ?
+				nullptr :
+				getTracePointByRomLocation(actor_.hit_handler_bank, actor_.hit_handler_address, GBBASIC::RomLocation::Types::BASIC);
+
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Hit Fn bank=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-			ImGui::Text("%02X", actor_.hit_handler_bank);
+			ImGui::Text("%hu", actor_.hit_handler_bank);
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Hit Fn address=");
+			ImGui::TextUnformatted("Hit Fn=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
 			ImGui::Text("%04hX", actor_.hit_handler_address);
+			if (tp) {
+				const GBBASIC::TextLocation &inCode = tp->inCode;
+				if (inCode.page >= 0) {
+					if (!inCode.label.empty()) {
+						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+						ImGui::SameLine();
+						ImGui::Text(" (#%d:%s)", inCode.page, inCode.label.c_str());
+						ImGui::PopStyleColor();
+					} else if (inCode.row != -1) {
+						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+						ImGui::SameLine();
+						ImGui::Text(" (#%d:%d)", inCode.page, inCode.row);
+						ImGui::PopStyleColor();
+					}
+				}
+			}
 			ImGui::PopStyleColor();
 
 			if (actor_.next == (VM::actor_t::Ptr)NULL) {
@@ -4077,6 +4182,10 @@ private:
 			ImGui::Text("%02X", trigger_.hit_handler_flags);
 			ImGui::PopStyleColor();
 
+			const GBBASIC::TracePoint* tp = (trigger_.hit_handler_bank == 0 && trigger_.hit_handler_address == 0) ?
+				nullptr :
+				getTracePointByRomLocation(trigger_.hit_handler_bank, trigger_.hit_handler_address, GBBASIC::RomLocation::Types::BASIC);
+
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Hit Fn bank=");
 			ImGui::PopStyleColor();
@@ -4086,11 +4195,27 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
-			ImGui::TextUnformatted("Hit Fn address=");
+			ImGui::TextUnformatted("Hit Fn=");
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
-			ImGui::Text("%04X", trigger_.hit_handler_address);
+			ImGui::Text("%04hX", trigger_.hit_handler_address);
+			if (tp) {
+				const GBBASIC::TextLocation &inCode = tp->inCode;
+				if (inCode.page >= 0) {
+					if (!inCode.label.empty()) {
+						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+						ImGui::SameLine();
+						ImGui::Text(" (#%d:%s)", inCode.page, inCode.label.c_str());
+						ImGui::PopStyleColor();
+					} else if (inCode.row != -1) {
+						ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+						ImGui::SameLine();
+						ImGui::Text(" (#%d:%d)", inCode.page, inCode.row);
+						ImGui::PopStyleColor();
+					}
+				}
+			}
 			ImGui::PopStyleColor();
 
 			ImGui::TreePop();

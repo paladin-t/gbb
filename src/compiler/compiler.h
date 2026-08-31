@@ -375,7 +375,7 @@ struct RamLocation {
  * @brief Symbol table.
  */
 struct SymbolTable {
-private:
+public:
 	typedef std::map<std::string, RomLocation> Dictionary;
 
 private:
@@ -392,6 +392,7 @@ public:
 	int merge(const SymbolTable &other);
 	const RomLocation* find(const std::string &key) const;
 	const RomLocation* fuzzy(const std::string &key, std::string &gotKey) const;
+	const Dictionary &dictionary(void) const;
 };
 
 /**
