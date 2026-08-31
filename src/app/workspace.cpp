@@ -2171,6 +2171,9 @@ bool Workspace::breakpointHit(void) {
 	if (!codeDebugger())
 		return false;
 
+	if (!settings().debugCodeInspectorEnabled)
+		settings().debugCodeInspectorEnabled = true;
+
 	return codeDebugger()->breakpointHit();
 }
 
