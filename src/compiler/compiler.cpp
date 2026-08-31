@@ -4488,7 +4488,7 @@ public:
 		typedef std::map<SourceLocation, RomLocation> Dictionary;
 
 	public:
-		typedef std::vector<std::pair<SourceLocation, RomLocation> > Array;
+		typedef std::vector<std::pair<const SourceLocation* const, const RomLocation* const> > Array;
 
 	private:
 		// Stores "line number" to "ROM address" mapping.
@@ -4507,7 +4507,7 @@ public:
 				const SourceLocation &srcLoc = kv.first;
 				const RomLocation &dstLoc = kv.second;
 				if (srcLoc.label == key)
-					result.push_back(std::make_pair(srcLoc, dstLoc));
+					result.push_back(std::make_pair(&srcLoc, &dstLoc));
 			}
 
 			return result;
@@ -5505,8 +5505,8 @@ public:
 		if (romLocations.size() > 1) { // Ambiguous.
 			Text::Array options;
 			for (const RomAllocator::Array::value_type &romLoc : romLocations) {
-				if (target_.page == -1 && target.page == romLoc.first.page) {
-					romLocation = &romLoc.second; // Nearest.
+				if (target_.page == -1 && target.page == romLoc.first->page) {
+					romLocation = romLoc.second; // Nearest.
 					GBBASIC_ASSERT(romLocation && "Impossible.");
 
 					*out = romLocation;
@@ -5514,19 +5514,19 @@ public:
 					return;
 				}
 
-				const std::string opt = romLoc.first.toString();
+				const std::string opt = romLoc.first->toString();
 				options.push_back(opt);
 			}
 			THROW_AMBIGUOUS_PROGRAM_POINT(onError, options);
 		}
 
 		const RomAllocator::Array::value_type &_1stRomLoc = romLocations.front();
-		const SourceLocation &_1stSrcLoc = _1stRomLoc.first;
+		const SourceLocation &_1stSrcLoc = *_1stRomLoc.first;
 		if (!(target_.page == -1 || (target_.page == _1stSrcLoc.page))) {
 			THROW_INVALID_PROGRAM_POINT(onError);
 		}
 
-		romLocation = ctx.find(_1stRomLoc.first); // Unique.
+		romLocation = ctx.find(*_1stRomLoc.first); // Unique.
 		GBBASIC_ASSERT(romLocation && "Impossible.");
 
 		*out = romLocation;
