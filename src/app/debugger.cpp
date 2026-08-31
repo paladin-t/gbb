@@ -448,6 +448,16 @@ private:
 	typedef std::deque<Highlight> Highlights;
 
 	struct Buffers {
+		enum class RegisterIndices : int {
+			NONE = -1,
+			AF = 1,
+			BC,
+			DE,
+			HL,
+			SP,
+			PC
+		};
+
 		int bankIndex = -1;
 		std::string bankText;
 		int vramIndex = -1;
@@ -461,6 +471,10 @@ private:
 		char editingMemoryBuf[3];
 		float editingMemoryCellWidth = 0.0f;
 		bool editingMemoryActivated = false;
+		int editingRegisterIndex = (int)RegisterIndices::NONE;
+		char editingRegisterBuf[5];
+		float editingRegisterCellWidth = 0.0f;
+		bool editingRegisterActivated = false;
 
 		Buffers() {
 			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
@@ -469,6 +483,8 @@ private:
 			memset(newBreakpointAddressBuf, 'F', 4);
 
 			memset(editingMemoryBuf, 0, sizeof(editingMemoryBuf));
+
+			memset(editingRegisterBuf, 0, sizeof(editingRegisterBuf));
 		}
 
 		void clear(void) {
@@ -485,6 +501,10 @@ private:
 			memset(editingMemoryBuf, 0, sizeof(editingMemoryBuf));
 			editingMemoryCellWidth = 0.0f;
 			editingMemoryActivated = false;
+			editingRegisterIndex = (int)RegisterIndices::NONE;
+			memset(editingRegisterBuf, 0, sizeof(editingRegisterBuf));
+			editingRegisterCellWidth = 0.0f;
+			editingRegisterActivated = false;
 		}
 
 		void reset(void) {
@@ -5301,8 +5321,135 @@ private:
 	}
 
 	void registers(void) {
+		auto editCell = [this] (int addr, UInt16 word) -> bool {
+			if (_workspace->popupBox() || ImGui::HasPopup())
+				return false;
+
+			_buffers.editingRegisterActivated = false;
+			_buffers.editingRegisterIndex = addr;
+			memset(_buffers.editingRegisterBuf, 0, sizeof(_buffers.editingRegisterBuf));
+
+			const std::string txt = Text::toHex(word, 4, '0', true);
+			size_t n = txt.length();
+			if (n >= sizeof(_buffers.editingRegisterBuf))
+				n = sizeof(_buffers.editingRegisterBuf) - 1;
+			memcpy(_buffers.editingRegisterBuf, txt.c_str(), n);
+			_buffers.editingRegisterBuf[n] = '\0';
+
+			return true;
+		};
+		auto commitCell = [this] (bool &invalid) -> bool {
+			invalid = false;
+
+			const int addr = _buffers.editingRegisterIndex;
+
+			_buffers.editingRegisterActivated = false;
+			_buffers.editingRegisterIndex = (int)Buffers::RegisterIndices::NONE;
+
+			std::string txt = std::string("0x") + _buffers.editingRegisterBuf;
+			int word = 0;
+			if (!Text::fromString(txt, word)) {
+				invalid = true;
+
+				return false;
+			}
+
+			if (word < std::numeric_limits<UInt16>::min() || word > std::numeric_limits<UInt16>::max()) {
+				invalid = true;
+
+				return false;
+			}
+
+			Device::Registers regs = _device->readRegisters();
+			switch ((Buffers::RegisterIndices)addr) {
+			case Buffers::RegisterIndices::AF:
+				regs.A   = (UInt8)(word >> 8);
+				regs.F.Z = ((word >> 7) & 1) == 1;
+				regs.F.N = ((word >> 6) & 1) == 1;
+				regs.F.H = ((word >> 5) & 1) == 1;
+				regs.F.C = ((word >> 4) & 1) == 1;
+
+				break;
+			case Buffers::RegisterIndices::BC: regs.BC = (UInt16)word; break;
+			case Buffers::RegisterIndices::DE: regs.DE = (UInt16)word; break;
+			case Buffers::RegisterIndices::HL: regs.HL = (UInt16)word; break;
+			case Buffers::RegisterIndices::SP: regs.SP = (UInt16)word; break;
+			case Buffers::RegisterIndices::PC: regs.PC = (UInt16)word; break;
+			default:
+				return false;
+			}
+
+			_device->writeRegisters(regs);
+
+			return true;
+		};
+
+		ImGuiStyle &style = ImGui::GetStyle();
+
 		ImVec2 pos = ImGui::GetCursorPos();
 		pos.x += ImGui::GetContentRegionAvail().x * 0.5f;
+
+		const ImVec4 txtCol = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+
+		const Editing::Shortcut enter(SDL_SCANCODE_RETURN);
+		bool entered = false;
+
+		auto cellEditor = [&] (Buffers::RegisterIndices idx, UInt16 word) -> void {
+			const ImVec2 rectMin(ImGui::GetCursorScreenPos().x - style.CellPadding.x, ImGui::GetCursorScreenPos().y - style.CellPadding.y);
+			const ImVec2 rectMax(ImGui::GetCursorScreenPos().x + _buffers.editingRegisterCellWidth + style.CellPadding.x, ImGui::GetCursorScreenPos().y + ImGui::GetTextLineHeight() + style.CellPadding.y);
+			const bool hovered = ImGui::IsMouseHoveringRect(rectMin, rectMax - ImVec2(4, 0));
+			if (_buffers.editingRegisterIndex == (int)idx) {
+				ImGui::SetNextItemWidth(_buffers.editingRegisterCellWidth);
+				const float x = ImGui::GetCursorScreenPos().x;
+				const float y = ImGui::GetCursorScreenPos().y;
+				ImGui::SetCursorScreenPos(ImVec2(x, y));
+				if (!_buffers.editingRegisterActivated) {
+					ImGui::SetKeyboardFocusHere(0);
+					_buffers.editingRegisterActivated = true;
+				}
+				ImGui::PushStyleColor(ImGuiCol_Text, txtCol);
+				{
+					// Edit content.
+					bool invalid = false;
+					if (ImGui::InputText("##Ed", _buffers.editingRegisterBuf, sizeof(_buffers.editingRegisterBuf), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
+						if (enter.pressed() && !entered) {
+							entered = true;
+							if (!commitCell(invalid))
+								_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
+						} else {
+							if (!commitCell(invalid))
+								_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
+						}
+					} else if (_buffers.editingRegisterActivated && ImGui::IsItemDeactivated()) {
+						if (!commitCell(invalid))
+							_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
+					}
+				}
+				ImGui::PopStyleColor();
+			} else {
+				if (_buffers.editingRegisterCellWidth == 0.0f) {
+					const float posX = ImGui::GetCursorPosX();
+					ImGui::Text("%04X", word);
+					ImGui::SameLine();
+					_buffers.editingRegisterCellWidth = ImGui::GetCursorPosX() - posX;
+					ImGui::NewLine();
+				} else {
+					ImGui::Text("%04X", word);
+				}
+				if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+					editCell((int)idx, word);
+				}
+				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
+					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
+
+					ImGui::PushStyleColor(ImGuiCol_Text, txtCol);
+
+					ImGui::SetTooltip(_theme->tooltipEmulator_CodeDebugger_ClickToEdit());
+
+					ImGui::PopStyleColor();
+				}
+			}
+		};
 
 		const Device::Registers regs = _device->readRegisters();
 
@@ -5322,7 +5469,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		ImGui::Text("%04X", AF);
+		cellEditor(Buffers::RegisterIndices::AF, AF);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5330,7 +5477,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		ImGui::Text("%04X", BC);
+		cellEditor(Buffers::RegisterIndices::BC, BC);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5338,7 +5485,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		ImGui::Text("%04X", DE);
+		cellEditor(Buffers::RegisterIndices::DE, DE);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5346,7 +5493,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		ImGui::Text("%04X", HL);
+		cellEditor(Buffers::RegisterIndices::HL, HL);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5354,7 +5501,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		ImGui::Text("%04X", SP);
+		cellEditor(Buffers::RegisterIndices::SP, SP);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5362,7 +5509,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		ImGui::Text("%04X", PC);
+		cellEditor(Buffers::RegisterIndices::PC, PC);
 		ImGui::PopStyleColor();
 
 		UInt8 LCDC = 0;
