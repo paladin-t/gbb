@@ -970,6 +970,7 @@ public:
 		}
 
 		if (!_breakAtNextStep.enabled) {
+			_device->breakAtNextBasicInstruction();
 			_breakAtNextStep.enabled = true;
 			_breakAtNextStep.type = Categories::BASIC;
 
@@ -1030,8 +1031,10 @@ public:
 					if (_ignoreForBreakingAtNextStep.equals(ctxBank, ctxPc)) {
 						_ignoreForBreakingAtNextStep = FarPtr();
 
-						if (hitCount == 0)
+						if (hitCount == 0) {
+							_device->breakAtNextBasicInstruction();
 							_breakAtNextStep.enabled = true;
+						}
 
 						return hitCount > 0;
 					}
@@ -1069,8 +1072,10 @@ public:
 						}
 					}
 
-					if (hitCount == 0)
+					if (hitCount == 0) {
+						_device->breakAtNextBasicInstruction();
 						_breakAtNextStep.enabled = true;
+					}
 
 					return hitCount > 0;
 				}
@@ -1078,8 +1083,9 @@ public:
 				if (_ignoreForBreakingAtNextStep.equals(pc.bank, pc.address)) {
 					_ignoreForBreakingAtNextStep = FarPtr();
 
-					if (hitCount == 0)
+					if (hitCount == 0) {
 						_breakAtNextStep.enabled = true;
+					}
 
 					return hitCount > 0;
 				}
@@ -1250,64 +1256,64 @@ private:
 			return "OAM  ";
 		}
 		if (addr >= 0xfea0 && addr <= 0xfeff) {
-			if      (addr == 0xfea0) detail = "Ext. EXTF";
-			else if (addr == 0xfea1) detail = "Ext. PLTF";
-			else if (addr == 0xfea2) detail = "Ext. LOCF";
-			else if (addr == 0xfea3) detail = "Ext. Reserved";
-			else if (addr == 0xfea4) detail = "Ext. TCHX";
-			else if (addr == 0xfea5) detail = "Ext. TCHY";
-			else if (addr == 0xfea6) detail = "Ext. TCHF";
-			else if (addr == 0xfea7) detail = "Ext. Reserved";
-			else if (addr == 0xfea8) detail = "Ext. KEYM";
-			else if (addr == 0xfea9) detail = "Ext. KEYC";
+			if      (addr == 0xfea0)                   detail = "Ext. EXTF";
+			else if (addr == 0xfea1)                   detail = "Ext. PLTF";
+			else if (addr == 0xfea2)                   detail = "Ext. LOCF";
+			else if (addr == 0xfea3)                   detail = "Ext. Reserved";
+			else if (addr == 0xfea4)                   detail = "Ext. TCHX";
+			else if (addr == 0xfea5)                   detail = "Ext. TCHY";
+			else if (addr == 0xfea6)                   detail = "Ext. TCHF";
+			else if (addr == 0xfea7)                   detail = "Ext. Reserved";
+			else if (addr == 0xfea8)                   detail = "Ext. KEYM";
+			else if (addr == 0xfea9)                   detail = "Ext. KEYC";
 			else if (addr >= 0xfeaa && addr <= 0xfeab) detail = "Ext. Reserved";
-			else if (addr == 0xfeac) detail = "Ext. STMF";
-			else if (addr == 0xfead) detail = "Ext. STMB";
-			else if (addr == 0xfeae) detail = "Ext. Reserved";
-			else if (addr == 0xfeaf) detail = "Ext. TRSF";
+			else if (addr == 0xfeac)                   detail = "Ext. STMF";
+			else if (addr == 0xfead)                   detail = "Ext. STMB";
+			else if (addr == 0xfeae)                   detail = "Ext. Reserved";
+			else if (addr == 0xfeaf)                   detail = "Ext. TRSF";
 			else if (addr >= 0xfeb0 && addr <= 0xfeef) detail = "Ext. TRSC";
-			else if (addr <= 0xfeff) detail = "Ext. Reserved"; // 0xFEF0 - 0xFEFF
+			else if (addr <= 0xfeff)                   detail = "Ext. Reserved"; // 0xFEF0 - 0xFEFF
 
 			return "EXT. ";
 		}
 		if (addr <= 0xff7f) {
-			if      (addr == 0xff00) detail = "Joypad input";
-			else if (addr <= 0xff02) detail = "Serial transfer"; // FF01 - FF02
-			else if (addr <= 0xff07) detail = "Timer and div."; // FF04 - FF07
-			else if (addr == 0xff0f) detail = "Interrupts";
-			else if (addr <= 0xff26) detail = "Audio"; // FF10 - FF26
-			else if (addr <= 0xff3f) detail = "Wave pattern"; // FF30 - FF3F
+			if      (addr == 0xff00)                   detail = "Joypad input";
+			else if (addr <= 0xff02)                   detail = "Serial transfer"; // FF01 - FF02
+			else if (addr <= 0xff07)                   detail = "Timer and div."; // FF04 - FF07
+			else if (addr == 0xff0f)                   detail = "Interrupts";
+			else if (addr <= 0xff26)                   detail = "Audio"; // FF10 - FF26
+			else if (addr <= 0xff3f)                   detail = "Wave pattern"; // FF30 - FF3F
 
-			else if (addr == 0xff40) detail = "LCDC";
-			else if (addr == 0xff41) detail = "STAT";
-			else if (addr == 0xff42) detail = "SCY";
-			else if (addr == 0xff43) detail = "SCX";
-			else if (addr == 0xff44) detail = "LY";
-			else if (addr == 0xff45) detail = "LYC";
-			else if (addr == 0xff46) detail = "DMA";
-			else if (addr == 0xff47) detail = "BGP";
-			else if (addr == 0xff48) detail = "OBP0";
-			else if (addr == 0xff49) detail = "OBP1";
-			else if (addr == 0xff4a) detail = "WY";
-			else if (addr == 0xff4b) detail = "WX";
-			else if (addr == 0xff4c) detail = "KEY0/SYS";
-			else if (addr == 0xff4d) detail = "KEY1/SPD";
-			else if (addr == 0xff4f) detail = "VBK";
-			else if (addr == 0xff50) detail = "Boot ROM ctrl.";
-			else if (addr == 0xff51) detail = "HDMA1";
-			else if (addr == 0xff52) detail = "HDMA2";
-			else if (addr == 0xff53) detail = "HDMA3";
-			else if (addr == 0xff54) detail = "HDMA4";
-			else if (addr == 0xff55) detail = "HDMA5";
-			else if (addr == 0xff56) detail = "IR port";
-			else if (addr == 0xff68) detail = "BCPS/BGPI";
-			else if (addr == 0xff69) detail = "BCPD/BGPD";
-			else if (addr == 0xff6a) detail = "OCPS/OBPI";
-			else if (addr == 0xff6b) detail = "OCPD/OBPD";
-			else if (addr == 0xff6c) detail = "OPRI";
-			else if (addr == 0xff70) detail = "SVBK/WBK";
+			else if (addr == 0xff40)                   detail = "LCDC";
+			else if (addr == 0xff41)                   detail = "STAT";
+			else if (addr == 0xff42)                   detail = "SCY";
+			else if (addr == 0xff43)                   detail = "SCX";
+			else if (addr == 0xff44)                   detail = "LY";
+			else if (addr == 0xff45)                   detail = "LYC";
+			else if (addr == 0xff46)                   detail = "DMA";
+			else if (addr == 0xff47)                   detail = "BGP";
+			else if (addr == 0xff48)                   detail = "OBP0";
+			else if (addr == 0xff49)                   detail = "OBP1";
+			else if (addr == 0xff4a)                   detail = "WY";
+			else if (addr == 0xff4b)                   detail = "WX";
+			else if (addr == 0xff4c)                   detail = "KEY0/SYS";
+			else if (addr == 0xff4d)                   detail = "KEY1/SPD";
+			else if (addr == 0xff4f)                   detail = "VBK";
+			else if (addr == 0xff50)                   detail = "Boot ROM ctrl.";
+			else if (addr == 0xff51)                   detail = "HDMA1";
+			else if (addr == 0xff52)                   detail = "HDMA2";
+			else if (addr == 0xff53)                   detail = "HDMA3";
+			else if (addr == 0xff54)                   detail = "HDMA4";
+			else if (addr == 0xff55)                   detail = "HDMA5";
+			else if (addr == 0xff56)                   detail = "IR port";
+			else if (addr == 0xff68)                   detail = "BCPS/BGPI";
+			else if (addr == 0xff69)                   detail = "BCPD/BGPD";
+			else if (addr == 0xff6a)                   detail = "OCPS/OBPI";
+			else if (addr == 0xff6b)                   detail = "OCPD/OBPD";
+			else if (addr == 0xff6c)                   detail = "OPRI";
+			else if (addr == 0xff70)                   detail = "SVBK/WBK";
 
-			else                     detail = "I/O registers";
+			else                                       detail = "I/O registers";
 
 			return "I/O  ";
 		}

@@ -690,6 +690,10 @@ void DeviceBinjgb::breakAtNextInstruction(void) {
 	_breakAtNextInstruction = true;
 }
 
+void DeviceBinjgb::breakAtNextBasicInstruction(void) {
+	_breakAtNextBasicInstruction = true;
+}
+
 void DeviceBinjgb::calculateBasicBreakpointMask(int stepAddr, ProgramCounterGetter pc, BreakpointEnumerator en) {
 	_basicStepBreakpointAddress = (UInt16)stepAddr;
 
@@ -1788,6 +1792,12 @@ void DeviceBinjgb::updateAudio(
 }
 
 bool DeviceBinjgb::breakpointShouldHit(void) const {
+	if (_breakAtNextBasicInstruction) {
+		_breakAtNextBasicInstruction = false;
+
+		return true;
+	}
+
 	if (_basicStepBreakpointAddress == 0)
 		return true;
 

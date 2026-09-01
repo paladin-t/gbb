@@ -315,6 +315,7 @@ public:
 	virtual void clearBreakpoints(void) = 0;
 	virtual void setBreakpointEnabled(int idx, bool enabled) = 0;
 	virtual void breakAtNextInstruction(void) = 0;
+	virtual void breakAtNextBasicInstruction(void) = 0;
 	virtual void calculateBasicBreakpointMask(int stepAddr, ProgramCounterGetter pc, BreakpointEnumerator en) = 0;
 
 	/**< VRAM debugging operations. */

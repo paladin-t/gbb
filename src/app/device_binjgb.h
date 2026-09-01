@@ -44,6 +44,7 @@ private:
 	Emulator* _emulator = nullptr;
 	bool _emulatorPaused = false;
 	bool _breakAtNextInstruction = false;
+	mutable bool _breakAtNextBasicInstruction = false;
 	UInt16 _basicStepBreakpointAddress = 0;
 	ProgramCounterGetter _basicBreakpointProgramCounterGetter = nullptr;
 	UInt16 _basicBreakpointMask[2];
@@ -135,6 +136,7 @@ public:
 	virtual void clearBreakpoints(void) override;
 	virtual void setBreakpointEnabled(int idx, bool enabled) override;
 	virtual void breakAtNextInstruction(void) override;
+	virtual void breakAtNextBasicInstruction(void) override;
 	virtual void calculateBasicBreakpointMask(int stepAddr, ProgramCounterGetter pc, BreakpointEnumerator en) override;
 
 	virtual TileSourceTypes getTileSourceType(void) const override;
