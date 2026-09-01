@@ -670,6 +670,8 @@ public:
 		if (!_opened)
 			return true;
 
+		refreshBasicBreakpointMask(-1);
+
 		_device->clearBreakpoints();
 
 		_workspace->join();
@@ -832,10 +834,14 @@ public:
 
 			installBreakpoint(breakpoint);
 		}
+
+		refreshBasicBreakpointMask(_vmStepPointer.address);
 	}
 	virtual void stop(void) override {
 		if (!_started)
 			return;
+
+		refreshBasicBreakpointMask(-1);
 
 		if (_device)
 			_device->clearBreakpoints();
@@ -894,6 +900,8 @@ public:
 		_device->clearBreakpoints();
 
 		_breakpoints.clear();
+
+		refreshBasicBreakpointMask(-1);
 	}
 	virtual void setBreakpoint(int page, int ln, bool brk) override {
 		const Breakpoint breakpoint(page, ln, brk);
@@ -917,6 +925,8 @@ public:
 					installBreakpoint(*pointer);
 				else
 					uninstallBreakpoint(*pointer);
+
+				refreshBasicBreakpointMask(_vmStepPointer.address);
 			}
 		}
 	}
@@ -924,8 +934,11 @@ public:
 		const Breakpoint breakpoint(page, ln);
 		Breakpoint::Array::iterator it = std::lower_bound(_breakpoints.begin(), _breakpoints.end(), breakpoint);
 		if (it != _breakpoints.end() && !(breakpoint < *it)) {
-			if (it->enabled)
+			if (it->enabled) {
 				uninstallBreakpoint(*it);
+
+				refreshBasicBreakpointMask(_vmStepPointer.address);
+			}
 
 			_breakpoints.erase(it);
 		}
@@ -2017,6 +2030,47 @@ private:
 				breakpoint.type = Categories::ASM;
 		}
 	}
+	void refreshBasicBreakpointMask(int vmStepPointerAddress) {
+		if (!_device || vmStepPointerAddress == -1) {
+			_device->calculateBasicBreakpointMask(0, nullptr, nullptr);
+
+			return;
+		}
+
+		int i = 0;
+		_device->calculateBasicBreakpointMask(
+			vmStepPointerAddress,
+			[&] (const Device::Registers &regs, int &bank, int &address) -> bool {
+				UInt16 ctxPc = 0;
+				UInt8 ctxBank = 0;
+				const UInt16 currCtx = regs.DE; // `DE` is the pointer to the current `VM::SCRIPT_CTX`.
+				if (!probeThreadProgramCounter(currCtx, ctxBank, ctxPc))
+					return false;
+
+				bank = ctxBank;
+				address = ctxPc;
+
+				return true;
+			},
+			[&] (int &bank, int &addr) -> bool {
+				for (; i < (int)_breakpoints.size(); ++i) {
+					const Breakpoint &breakpoint = _breakpoints[i];
+					if (breakpoint.type != Categories::BASIC)
+						continue;
+					if (breakpoint.vmPointer.invalid())
+						continue;
+
+					bank = breakpoint.vmPointer.bank;
+					addr = breakpoint.vmPointer.address;
+					++i;
+
+					return true;
+				}
+
+				return false;
+			}
+		);
+	}
 	bool installBreakpoint(int &id, UInt8 bank, UInt16 address) {
 		const Bytes::Ptr rom = compiledBytes();
 		if (!rom)
@@ -2762,8 +2816,11 @@ private:
 									}
 								);
 								if (it != _breakpoints.end()) {
-									if (it->enabled)
+									if (it->enabled) {
 										uninstallBreakpoint(*it);
+
+										refreshBasicBreakpointMask(_vmStepPointer.address);
+									}
 
 									_breakpoints.erase(it);
 								}
@@ -2843,6 +2900,8 @@ private:
 									_breakpoints.push_back(breakpoint); // Add a new breakpoint.
 
 									refreshBreakpoints();
+
+									refreshBasicBreakpointMask(_vmStepPointer.address);
 
 									_buffers.reset();
 

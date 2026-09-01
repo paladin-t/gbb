@@ -44,6 +44,9 @@ private:
 	Emulator* _emulator = nullptr;
 	bool _emulatorPaused = false;
 	bool _breakAtNextInstruction = false;
+	UInt16 _basicStepBreakpointAddress = 0;
+	ProgramCounterGetter _basicBreakpointProgramCounterGetter = nullptr;
+	UInt16 _basicBreakpointMask[2];
 	double _rtcTicks = 0;
 	Bytes::Ptr _streamingBuffer = nullptr;
 	RGBA _sgbBorderVideoBuffer[SGB_SCREEN_WIDTH * SGB_SCREEN_HEIGHT];
@@ -132,6 +135,7 @@ public:
 	virtual void clearBreakpoints(void) override;
 	virtual void setBreakpointEnabled(int idx, bool enabled) override;
 	virtual void breakAtNextInstruction(void) override;
+	virtual void calculateBasicBreakpointMask(int stepAddr, ProgramCounterGetter pc, BreakpointEnumerator en) override;
 
 	virtual TileSourceTypes getTileSourceType(void) const override;
 	virtual MapSourceTypes getMapSourceType(LayerTypes layer) const override;
@@ -205,6 +209,8 @@ private:
 		double delta,
 		AudioHandler handleAudio
 	);
+
+	bool breakpointShouldHit(void) const;
 
 	bool processStreaming(class Window* wnd, class Renderer* rnd);
 	bool processShellCommand(class Window* wnd, class Renderer* rnd);

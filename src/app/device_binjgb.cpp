@@ -289,6 +289,8 @@ DeviceBinjgb::DeviceBinjgb(Protocol* dbgListener)
 	_classicPalette[2] = Colour::byRGBA8888(DEVICE_CLASSIC_PALETTE_2);
 	_classicPalette[3] = Colour::byRGBA8888(DEVICE_CLASSIC_PALETTE_3);
 
+	memset(_basicBreakpointMask, 0, sizeof(_basicBreakpointMask));
+
 	SDL_AudioSpec wantSpec;
 	memset(&wantSpec, 0, sizeof(SDL_AudioSpec));
 	wantSpec.freq     = DEVICE_BINJGB_AUDIO_SPEC_FREQUENCE;
@@ -686,6 +688,24 @@ void DeviceBinjgb::setBreakpointEnabled(int idx, bool enabled) {
 
 void DeviceBinjgb::breakAtNextInstruction(void) {
 	_breakAtNextInstruction = true;
+}
+
+void DeviceBinjgb::calculateBasicBreakpointMask(int stepAddr, ProgramCounterGetter pc, BreakpointEnumerator en) {
+	_basicStepBreakpointAddress = (UInt16)stepAddr;
+
+	_basicBreakpointProgramCounterGetter = pc;
+
+	_basicBreakpointMask[0] = 0xffff;
+	_basicBreakpointMask[1] = 0xffff;
+
+	if (en) {
+		int bank = 0;
+		int addr = 0;
+		while (en(bank, addr)) {
+			_basicBreakpointMask[0] &= ~addr;
+			_basicBreakpointMask[1] &= addr;
+		}
+	}
 }
 
 Device::TileSourceTypes DeviceBinjgb::getTileSourceType(void) const {
@@ -1251,10 +1271,16 @@ bool DeviceBinjgb::update(
 	}
 	do {
 		// Tick.
-		if (_breakAtNextInstruction)
+		if (_breakAtNextInstruction) {
 			event = emulator_step(_emulator); // Tick one instruction.
-		else
+		} else {
 			event = emulator_run_until(_emulator, untilTicks); // Tick for the specific interval.
+
+			if (event & EMULATOR_EVENT_BREAKPOINT) {
+				if (!breakpointShouldHit())
+					event &= ~EMULATOR_EVENT_BREAKPOINT;
+			}
+		}
 
 		// Update the video system.
 		if (event & EMULATOR_EVENT_NEW_FRAME) {
@@ -1759,6 +1785,26 @@ void DeviceBinjgb::updateAudio(
 			}
 		}
 	}
+}
+
+bool DeviceBinjgb::breakpointShouldHit(void) const {
+	if (_basicStepBreakpointAddress == 0)
+		return true;
+
+	const Registers regs = readRegisters();
+	if (regs.PC != _basicStepBreakpointAddress) // Is not a BASIC breakpoint, hits.
+		return true;
+
+	int bank = 0;
+	int pc = 0;
+	if (!_basicBreakpointProgramCounterGetter(regs, bank, pc))
+		return false;
+
+	const bool ret =
+		(pc & _basicBreakpointMask[0]) == 0 &&
+		(pc & _basicBreakpointMask[1]) == _basicBreakpointMask[1];
+
+	return ret;
 }
 
 bool DeviceBinjgb::processStreaming(class Window* wnd, class Renderer* rnd) {

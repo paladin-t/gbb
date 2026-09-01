@@ -154,6 +154,10 @@ public:
 		Breakpoint(UInt8 b, UInt16 addr);
 	};
 
+	typedef std::function<bool(int & /* bank */, int & /* address */)> BreakpointEnumerator;
+
+	typedef std::function<bool(const Registers &, int & /* bank */, int & /* address */)> ProgramCounterGetter;
+
 	/**< VRAM debugging structures. */
 
 	enum class Colors {
@@ -311,6 +315,7 @@ public:
 	virtual void clearBreakpoints(void) = 0;
 	virtual void setBreakpointEnabled(int idx, bool enabled) = 0;
 	virtual void breakAtNextInstruction(void) = 0;
+	virtual void calculateBasicBreakpointMask(int stepAddr, ProgramCounterGetter pc, BreakpointEnumerator en) = 0;
 
 	/**< VRAM debugging operations. */
 
