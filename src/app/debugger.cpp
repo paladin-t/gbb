@@ -5386,7 +5386,7 @@ private:
 	}
 
 	void registers(void) {
-		auto editCell = [this] (int addr, UInt16 word) -> bool {
+		auto editWord = [this] (int addr, UInt16 word) -> bool {
 			if (_workspace->popupBox() || ImGui::HasPopup())
 				return false;
 
@@ -5403,7 +5403,7 @@ private:
 
 			return true;
 		};
-		auto commitCell = [this] (bool &invalid) -> bool {
+		auto commitWord = [this] (bool &invalid) -> bool {
 			invalid = false;
 
 			const int addr = _buffers.editingRegisterIndex;
@@ -5459,7 +5459,7 @@ private:
 		const Editing::Shortcut enter(SDL_SCANCODE_RETURN);
 		bool entered = false;
 
-		auto cellEditor = [&] (Buffers::RegisterIndices idx, UInt16 word) -> void {
+		auto wordEditor = [&] (Buffers::RegisterIndices idx, UInt16 word) -> void {
 			const ImVec2 rectMin(ImGui::GetCursorScreenPos().x - style.CellPadding.x, ImGui::GetCursorScreenPos().y - style.CellPadding.y);
 			const ImVec2 rectMax(ImGui::GetCursorScreenPos().x + _buffers.editingRegisterCellWidth + style.CellPadding.x, ImGui::GetCursorScreenPos().y + ImGui::GetTextLineHeight() + style.CellPadding.y);
 			const bool hovered = ImGui::IsMouseHoveringRect(rectMin, rectMax - ImVec2(4, 0));
@@ -5479,14 +5479,14 @@ private:
 					if (ImGui::InputText("##Ed", _buffers.editingRegisterBuf, sizeof(_buffers.editingRegisterBuf), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
 						if (enter.pressed() && !entered) {
 							entered = true;
-							if (!commitCell(invalid))
+							if (!commitWord(invalid))
 								_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
 						} else {
-							if (!commitCell(invalid))
+							if (!commitWord(invalid))
 								_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
 						}
 					} else if (_buffers.editingRegisterActivated && ImGui::IsItemDeactivated()) {
-						if (!commitCell(invalid))
+						if (!commitWord(invalid))
 							_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
 					}
 				}
@@ -5496,13 +5496,13 @@ private:
 					const float posX = ImGui::GetCursorPosX();
 					ImGui::Text("%04X", word);
 					ImGui::SameLine();
-					_buffers.editingRegisterCellWidth = ImGui::GetCursorPosX() - posX;
+					_buffers.editingRegisterCellWidth = (ImGui::GetCursorPosX() - posX) * (5.0f / 4);
 					ImGui::NewLine();
 				} else {
 					ImGui::Text("%04X", word);
 				}
 				if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-					editCell((int)idx, word);
+					editWord((int)idx, word);
 				}
 				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -5534,7 +5534,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		cellEditor(Buffers::RegisterIndices::AF, AF);
+		wordEditor(Buffers::RegisterIndices::AF, AF);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5542,7 +5542,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		cellEditor(Buffers::RegisterIndices::BC, BC);
+		wordEditor(Buffers::RegisterIndices::BC, BC);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5550,7 +5550,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		cellEditor(Buffers::RegisterIndices::DE, DE);
+		wordEditor(Buffers::RegisterIndices::DE, DE);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5558,7 +5558,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		cellEditor(Buffers::RegisterIndices::HL, HL);
+		wordEditor(Buffers::RegisterIndices::HL, HL);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5566,7 +5566,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		cellEditor(Buffers::RegisterIndices::SP, SP);
+		wordEditor(Buffers::RegisterIndices::SP, SP);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5574,7 +5574,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		cellEditor(Buffers::RegisterIndices::PC, PC);
+		wordEditor(Buffers::RegisterIndices::PC, PC);
 		ImGui::PopStyleColor();
 
 		UInt8 LCDC = 0;
@@ -5664,7 +5664,7 @@ private:
 		ImGui::PopStyleColor();
 	}
 	void ram(void) {
-		auto editCell = [this] (int addr, UInt8 byte) -> bool {
+		auto editByte = [this] (int addr, UInt8 byte) -> bool {
 			if (_workspace->popupBox() || ImGui::HasPopup())
 				return false;
 
@@ -5681,7 +5681,7 @@ private:
 
 			return true;
 		};
-		auto commitCell = [this] (bool &invalid) -> bool {
+		auto commitByte = [this] (bool &invalid) -> bool {
 			invalid = false;
 
 			const int addr = _buffers.editingMemoryAddress;
@@ -5786,14 +5786,14 @@ private:
 					if (ImGui::InputText("##Ed", _buffers.editingMemoryBuf, sizeof(_buffers.editingMemoryBuf), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
 						if (enter.pressed() && !entered) {
 							entered = true;
-							if (!commitCell(invalid))
+							if (!commitByte(invalid))
 								_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
 						} else {
-							if (!commitCell(invalid))
+							if (!commitByte(invalid))
 								_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
 						}
 					} else if (_buffers.editingMemoryActivated && ImGui::IsItemDeactivated()) {
-						if (!commitCell(invalid))
+						if (!commitByte(invalid))
 							_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
 					}
 				}
@@ -5809,7 +5809,7 @@ private:
 					ImGui::Text("%02X  ", byte);
 				}
 				if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-					editCell(address, byte);
+					editByte(address, byte);
 				}
 				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
