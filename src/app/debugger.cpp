@@ -5531,7 +5531,7 @@ private:
 				{
 					// Edit content.
 					bool invalid = false;
-					const size_t n = isCpuReg ? sizeof(_buffers.editingRegisterBuf) : Math::min(sizeof(_buffers.editingRegisterBuf), 3u);
+					const size_t n = isCpuReg ? sizeof(_buffers.editingRegisterBuf) : Math::min(sizeof(_buffers.editingRegisterBuf), (size_t)3);
 					if (ImGui::InputText("##Ed", _buffers.editingRegisterBuf, n, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
 						if (enter.pressed() && !entered) {
 							entered = true;
