@@ -450,12 +450,18 @@ private:
 	struct Buffers {
 		enum class RegisterIndices : int {
 			NONE = -1,
-			AF = 1,
+			AF = 0,
 			BC,
 			DE,
 			HL,
 			SP,
-			PC
+			PC,
+			LCDC,
+			STAT,
+			LY,
+			LYC,
+			IE,
+			IF
 		};
 
 		int bankIndex = -1;
@@ -5394,7 +5400,7 @@ private:
 	}
 
 	void registers(void) {
-		auto editCell = [this] (int addr, UInt16 word) -> bool {
+		auto editCell = [this] (int addr, UInt16 data) -> bool {
 			if (_workspace->popupBox() || ImGui::HasPopup())
 				return false;
 
@@ -5402,7 +5408,9 @@ private:
 			_buffers.editingRegisterIndex = addr;
 			memset(_buffers.editingRegisterBuf, 0, sizeof(_buffers.editingRegisterBuf));
 
-			const std::string txt = Text::toHex(word, 4, '0', true);
+			const bool isCpuReg = addr == (int)Buffers::RegisterIndices::AF || addr == (int)Buffers::RegisterIndices::BC || addr == (int)Buffers::RegisterIndices::DE || addr == (int)Buffers::RegisterIndices::HL || addr == (int)Buffers::RegisterIndices::SP || addr == (int)Buffers::RegisterIndices::PC;
+
+			const std::string txt = isCpuReg ? Text::toHex(data, 4, '0', true) : Text::toHex(data & 0x00ff, 2, '0', true);
 			size_t n = txt.length();
 			if (n >= sizeof(_buffers.editingRegisterBuf))
 				n = sizeof(_buffers.editingRegisterBuf) - 1;
@@ -5420,39 +5428,77 @@ private:
 			_buffers.editingRegisterIndex = (int)Buffers::RegisterIndices::NONE;
 
 			std::string txt = std::string("0x") + _buffers.editingRegisterBuf;
-			int word = 0;
-			if (!Text::fromString(txt, word)) {
+			int data = 0;
+			if (!Text::fromString(txt, data)) {
 				invalid = true;
 
 				return false;
 			}
 
-			if (word < std::numeric_limits<UInt16>::min() || word > std::numeric_limits<UInt16>::max()) {
-				invalid = true;
+			const bool isCpuReg = addr == (int)Buffers::RegisterIndices::AF || addr == (int)Buffers::RegisterIndices::BC || addr == (int)Buffers::RegisterIndices::DE || addr == (int)Buffers::RegisterIndices::HL || addr == (int)Buffers::RegisterIndices::SP || addr == (int)Buffers::RegisterIndices::PC;
+			if (isCpuReg) {
+				if (data < std::numeric_limits<UInt16>::min() || data > std::numeric_limits<UInt16>::max()) {
+					invalid = true;
 
-				return false;
+					return false;
+				}
+
+				Device::Registers regs = _device->readRegisters();
+				switch ((Buffers::RegisterIndices)addr) {
+				case Buffers::RegisterIndices::AF:
+					regs.A = (UInt8)(data >> 8);
+					regs.F.Z = ((data >> 7) & 1) == 1;
+					regs.F.N = ((data >> 6) & 1) == 1;
+					regs.F.H = ((data >> 5) & 1) == 1;
+					regs.F.C = ((data >> 4) & 1) == 1;
+
+					break;
+				case Buffers::RegisterIndices::BC: regs.BC = (UInt16)data; break;
+				case Buffers::RegisterIndices::DE: regs.DE = (UInt16)data; break;
+				case Buffers::RegisterIndices::HL: regs.HL = (UInt16)data; break;
+				case Buffers::RegisterIndices::SP: regs.SP = (UInt16)data; break;
+				case Buffers::RegisterIndices::PC: regs.PC = (UInt16)data; break;
+				default:
+					return false;
+				}
+
+				_device->writeRegisters(regs);
+			} else {
+				if (data < std::numeric_limits<UInt8>::min() || data > std::numeric_limits<UInt8>::max()) {
+					invalid = true;
+
+					return false;
+				}
+
+				switch ((Buffers::RegisterIndices)addr) {
+				case Buffers::RegisterIndices::LCDC:
+					_device->writeRam(0xff40, (UInt8)data);
+
+					break;
+				case Buffers::RegisterIndices::STAT:
+					_device->writeRam(0xff41, (UInt8)data);
+
+					break;
+				case Buffers::RegisterIndices::LY:
+					_device->writeRam(0xff44, (UInt8)data);
+
+					break;
+				case Buffers::RegisterIndices::LYC:
+					_device->writeRam(0xff45, (UInt8)data);
+
+					break;
+				case Buffers::RegisterIndices::IE:
+					_device->writeRam(0xffff, (UInt8)data);
+
+					break;
+				case Buffers::RegisterIndices::IF:
+					_device->writeRam(0xff0f, (UInt8)data);
+
+					break;
+				default:
+					return false;
+				}
 			}
-
-			Device::Registers regs = _device->readRegisters();
-			switch ((Buffers::RegisterIndices)addr) {
-			case Buffers::RegisterIndices::AF:
-				regs.A   = (UInt8)(word >> 8);
-				regs.F.Z = ((word >> 7) & 1) == 1;
-				regs.F.N = ((word >> 6) & 1) == 1;
-				regs.F.H = ((word >> 5) & 1) == 1;
-				regs.F.C = ((word >> 4) & 1) == 1;
-
-				break;
-			case Buffers::RegisterIndices::BC: regs.BC = (UInt16)word; break;
-			case Buffers::RegisterIndices::DE: regs.DE = (UInt16)word; break;
-			case Buffers::RegisterIndices::HL: regs.HL = (UInt16)word; break;
-			case Buffers::RegisterIndices::SP: regs.SP = (UInt16)word; break;
-			case Buffers::RegisterIndices::PC: regs.PC = (UInt16)word; break;
-			default:
-				return false;
-			}
-
-			_device->writeRegisters(regs);
 
 			return true;
 		};
@@ -5467,7 +5513,8 @@ private:
 		const Editing::Shortcut enter(SDL_SCANCODE_RETURN);
 		bool entered = false;
 
-		auto cellEditor = [&] (Buffers::RegisterIndices idx, UInt16 word) -> void {
+		auto cellEditor = [&] (Buffers::RegisterIndices idx, UInt16 data) -> void {
+			const bool isCpuReg = idx == Buffers::RegisterIndices::AF || idx == Buffers::RegisterIndices::BC || idx == Buffers::RegisterIndices::DE || idx == Buffers::RegisterIndices::HL || idx == Buffers::RegisterIndices::SP || idx == Buffers::RegisterIndices::PC;
 			const ImVec2 rectMin(ImGui::GetCursorScreenPos().x - style.CellPadding.x, ImGui::GetCursorScreenPos().y - style.CellPadding.y);
 			const ImVec2 rectMax(ImGui::GetCursorScreenPos().x + _buffers.editingRegisterCellWidth + style.CellPadding.x, ImGui::GetCursorScreenPos().y + ImGui::GetTextLineHeight() + style.CellPadding.y);
 			const bool hovered = ImGui::IsMouseHoveringRect(rectMin, rectMax - ImVec2(4, 0));
@@ -5484,7 +5531,8 @@ private:
 				{
 					// Edit content.
 					bool invalid = false;
-					if (ImGui::InputText("##Ed", _buffers.editingRegisterBuf, sizeof(_buffers.editingRegisterBuf), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
+					const size_t n = isCpuReg ? sizeof(_buffers.editingRegisterBuf) : Math::min(sizeof(_buffers.editingRegisterBuf), 3u);
+					if (ImGui::InputText("##Ed", _buffers.editingRegisterBuf, n, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
 						if (enter.pressed() && !entered) {
 							entered = true;
 							if (!commitCell(invalid))
@@ -5502,15 +5550,21 @@ private:
 			} else {
 				if (_buffers.editingRegisterCellWidth == 0.0f) {
 					const float posX = ImGui::GetCursorPosX();
-					ImGui::Text("%04X", word);
+					if (isCpuReg)
+						ImGui::Text("%04X", data);
+					else
+						ImGui::Text("%02X", data);
 					ImGui::SameLine();
 					_buffers.editingRegisterCellWidth = (ImGui::GetCursorPosX() - posX) * (5.0f / 4);
 					ImGui::NewLine();
 				} else {
-					ImGui::Text("%04X", word);
+					if (isCpuReg)
+						ImGui::Text("%04X", data);
+					else
+						ImGui::Text("%02X", data);
 				}
 				if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-					editCell((int)idx, word);
+					editCell((int)idx, data);
 				}
 				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -5608,7 +5662,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		ImGui::Text("%02X", LCDC);
+		cellEditor(Buffers::RegisterIndices::LCDC, LCDC);
 		ImGui::PopStyleColor();
 
 		pos.y = ImGui::GetCursorPosY();
@@ -5618,7 +5672,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		ImGui::Text("%02X", STAT);
+		cellEditor(Buffers::RegisterIndices::STAT, STAT);
 		ImGui::PopStyleColor();
 
 		pos.y = ImGui::GetCursorPosY();
@@ -5628,7 +5682,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		ImGui::Text("%02X", LY);
+		cellEditor(Buffers::RegisterIndices::LY, LY);
 		ImGui::PopStyleColor();
 
 		pos.y = ImGui::GetCursorPosY();
@@ -5638,7 +5692,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		ImGui::Text("%02X", LYC);
+		cellEditor(Buffers::RegisterIndices::LYC, LYC);
 		ImGui::PopStyleColor();
 
 		pos.y = ImGui::GetCursorPosY();
@@ -5648,7 +5702,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		ImGui::Text("%02X", IE);
+		cellEditor(Buffers::RegisterIndices::IE, IE);
 		ImGui::PopStyleColor();
 
 		pos.y = ImGui::GetCursorPosY();
@@ -5658,7 +5712,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		ImGui::Text("%02X", IF);
+		cellEditor(Buffers::RegisterIndices::IF, IF);
 		ImGui::PopStyleColor();
 
 		pos.y = ImGui::GetCursorPosY();
