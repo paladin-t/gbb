@@ -23,6 +23,13 @@
 ** Macros and constants
 */
 
+#ifndef DEBUGGER_MUL8
+#	define DEBUGGER_MUL8(A) ((A) << 3)
+#endif /* DEBUGGER_MUL8 */
+#ifndef DEBUGGER_POSITION_TO_SCREEN
+#	define DEBUGGER_POSITION_TO_SCREEN(A) ((A) >> 4)
+#endif /* DEBUGGER_POSITION_TO_SCREEN */
+
 #ifndef DEBUGGER_BANK_SIZE
 #	define DEBUGGER_BANK_SIZE 0x4000
 #endif /* DEBUGGER_BANK_SIZE */
@@ -40,13 +47,6 @@
 #ifndef DEBUGGER_PROJECTILE_MAX_ANIMATIONS
 #	define DEBUGGER_PROJECTILE_MAX_ANIMATIONS 4
 #endif /* DEBUGGER_PROJECTILE_MAX_ANIMATIONS */
-
-#ifndef DEBUGGER_MUL8
-#	define DEBUGGER_MUL8(A) ((A) << 3)
-#endif /* DEBUGGER_MUL8 */
-#ifndef DEBUGGER_POSITION_TO_SCREEN
-#	define DEBUGGER_POSITION_TO_SCREEN(A) ((A) >> 4)
-#endif /* DEBUGGER_POSITION_TO_SCREEN */
 
 #ifndef DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT
 #	define DEBUGGER_BREAK_AT_NEXT_STEP_TIMEOUT DateTime::fromSeconds(0.333333);
@@ -626,8 +626,9 @@ private:
 	Buffers _buffers;
 	Snapshot _snapshot;
 	Semaphore _mnemonicsIsBeingGenerated;
-	GBBASIC::Disassembler::Mnemonic::Queue _mnemonics;
+	FarPtr _tobeDisassembledMnemonicsAddress;
 	FarPtr _latestDisassembledMnemonicsAddress;
+	GBBASIC::Disassembler::Mnemonic::Queue _mnemonics;
 
 public:
 	DebuggerImpl() {
@@ -653,8 +654,9 @@ public:
 		_activeCodePage = -1;
 		_inspecting = false;
 		_snapshot.reset();
-		_mnemonics.clear();
+		_tobeDisassembledMnemonicsAddress = FarPtr();
 		_latestDisassembledMnemonicsAddress = FarPtr();
+		_mnemonics.clear();
 
 		_window = wnd;
 		_renderer = rnd;
@@ -687,8 +689,9 @@ public:
 		_buffers.clear();
 		_snapshot.reset();
 		_mnemonicsIsBeingGenerated.wait();
-		_mnemonics.clear();
+		_tobeDisassembledMnemonicsAddress = FarPtr();
 		_latestDisassembledMnemonicsAddress = FarPtr();
+		_mnemonics.clear();
 
 		_started = false;
 		_compiled = nullptr;
@@ -856,8 +859,9 @@ public:
 		_inspecting = false;
 		_snapshot.reset();
 		_mnemonicsIsBeingGenerated.wait();
-		_mnemonics.clear();
+		_tobeDisassembledMnemonicsAddress = FarPtr();
 		_latestDisassembledMnemonicsAddress = FarPtr();
+		_mnemonics.clear();
 
 		_compiled = nullptr;
 		_runtimeConfig = RuntimeConfig();
@@ -1436,12 +1440,8 @@ private:
 		const bool compactMode = _options.disassemblerView == 1;
 		if (compactMode && !_mnemonics.empty()) {
 			gotPc = probeCurrentProgramCounter(pc);
-			if (gotPc && _latestDisassembledMnemonicsAddress.bank != pc.bank) { // Bank changed.
-#if defined GBBASIC_OS_HTML
-				_mnemonicsIsBeingGenerated.wait();
-#endif /* GBBASIC_OS_HTML */
-				_mnemonicsIsBeingGenerated = Semaphore();
-				_mnemonics.clear(); // Invalidate.
+			if (gotPc && _tobeDisassembledMnemonicsAddress.bank != pc.bank) { // Bank changed.
+				_tobeDisassembledMnemonicsAddress = pc;
 			}
 
 			toRefreshPc = true;
@@ -1452,6 +1452,15 @@ private:
 				gotPc = probeCurrentProgramCounter(pc);
 
 			toRefreshPc = true;
+		}
+
+		if (!_tobeDisassembledMnemonicsAddress.invalid() && _tobeDisassembledMnemonicsAddress.bank != _latestDisassembledMnemonicsAddress.bank) {
+			if (!_mnemonicsIsBeingGenerated.working()) {
+				_latestDisassembledMnemonicsAddress = _tobeDisassembledMnemonicsAddress;
+				_mnemonics.clear(); // Invalidate.
+
+				toRefreshPc = true;
+			}
 		}
 
 		// Generate mnemonics if needed.
@@ -1551,12 +1560,11 @@ private:
 		return _mnemonics.empty() ? nullptr : &_mnemonics;
 	}
 	void unloadMnemonics(void) {
-#if defined GBBASIC_OS_HTML
 		_mnemonicsIsBeingGenerated.wait();
-#endif /* GBBASIC_OS_HTML */
 		_mnemonicsIsBeingGenerated = Semaphore();
-		_mnemonics.clear();
+		_tobeDisassembledMnemonicsAddress = FarPtr();
 		_latestDisassembledMnemonicsAddress = FarPtr();
+		_mnemonics.clear();
 	}
 
 	Snapshot* touchSnapshot(void) {
@@ -5386,7 +5394,7 @@ private:
 	}
 
 	void registers(void) {
-		auto editWord = [this] (int addr, UInt16 word) -> bool {
+		auto editCell = [this] (int addr, UInt16 word) -> bool {
 			if (_workspace->popupBox() || ImGui::HasPopup())
 				return false;
 
@@ -5403,7 +5411,7 @@ private:
 
 			return true;
 		};
-		auto commitWord = [this] (bool &invalid) -> bool {
+		auto commitCell = [this] (bool &invalid) -> bool {
 			invalid = false;
 
 			const int addr = _buffers.editingRegisterIndex;
@@ -5459,7 +5467,7 @@ private:
 		const Editing::Shortcut enter(SDL_SCANCODE_RETURN);
 		bool entered = false;
 
-		auto wordEditor = [&] (Buffers::RegisterIndices idx, UInt16 word) -> void {
+		auto cellEditor = [&] (Buffers::RegisterIndices idx, UInt16 word) -> void {
 			const ImVec2 rectMin(ImGui::GetCursorScreenPos().x - style.CellPadding.x, ImGui::GetCursorScreenPos().y - style.CellPadding.y);
 			const ImVec2 rectMax(ImGui::GetCursorScreenPos().x + _buffers.editingRegisterCellWidth + style.CellPadding.x, ImGui::GetCursorScreenPos().y + ImGui::GetTextLineHeight() + style.CellPadding.y);
 			const bool hovered = ImGui::IsMouseHoveringRect(rectMin, rectMax - ImVec2(4, 0));
@@ -5479,14 +5487,14 @@ private:
 					if (ImGui::InputText("##Ed", _buffers.editingRegisterBuf, sizeof(_buffers.editingRegisterBuf), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
 						if (enter.pressed() && !entered) {
 							entered = true;
-							if (!commitWord(invalid))
+							if (!commitCell(invalid))
 								_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
 						} else {
-							if (!commitWord(invalid))
+							if (!commitCell(invalid))
 								_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
 						}
 					} else if (_buffers.editingRegisterActivated && ImGui::IsItemDeactivated()) {
-						if (!commitWord(invalid))
+						if (!commitCell(invalid))
 							_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
 					}
 				}
@@ -5502,7 +5510,7 @@ private:
 					ImGui::Text("%04X", word);
 				}
 				if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-					editWord((int)idx, word);
+					editCell((int)idx, word);
 				}
 				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
@@ -5534,7 +5542,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		wordEditor(Buffers::RegisterIndices::AF, AF);
+		cellEditor(Buffers::RegisterIndices::AF, AF);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5542,7 +5550,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		wordEditor(Buffers::RegisterIndices::BC, BC);
+		cellEditor(Buffers::RegisterIndices::BC, BC);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5550,7 +5558,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		wordEditor(Buffers::RegisterIndices::DE, DE);
+		cellEditor(Buffers::RegisterIndices::DE, DE);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5558,7 +5566,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		wordEditor(Buffers::RegisterIndices::HL, HL);
+		cellEditor(Buffers::RegisterIndices::HL, HL);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5566,7 +5574,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		wordEditor(Buffers::RegisterIndices::SP, SP);
+		cellEditor(Buffers::RegisterIndices::SP, SP);
 		ImGui::PopStyleColor();
 
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
@@ -5574,7 +5582,7 @@ private:
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
 		ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-		wordEditor(Buffers::RegisterIndices::PC, PC);
+		cellEditor(Buffers::RegisterIndices::PC, PC);
 		ImGui::PopStyleColor();
 
 		UInt8 LCDC = 0;
@@ -5664,7 +5672,7 @@ private:
 		ImGui::PopStyleColor();
 	}
 	void ram(void) {
-		auto editByte = [this] (int addr, UInt8 byte) -> bool {
+		auto editCell = [this] (int addr, UInt8 byte) -> bool {
 			if (_workspace->popupBox() || ImGui::HasPopup())
 				return false;
 
@@ -5681,7 +5689,7 @@ private:
 
 			return true;
 		};
-		auto commitByte = [this] (bool &invalid) -> bool {
+		auto commitCell = [this] (bool &invalid) -> bool {
 			invalid = false;
 
 			const int addr = _buffers.editingMemoryAddress;
@@ -5786,14 +5794,14 @@ private:
 					if (ImGui::InputText("##Ed", _buffers.editingMemoryBuf, sizeof(_buffers.editingMemoryBuf), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
 						if (enter.pressed() && !entered) {
 							entered = true;
-							if (!commitByte(invalid))
+							if (!commitCell(invalid))
 								_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
 						} else {
-							if (!commitByte(invalid))
+							if (!commitCell(invalid))
 								_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
 						}
 					} else if (_buffers.editingMemoryActivated && ImGui::IsItemDeactivated()) {
-						if (!commitByte(invalid))
+						if (!commitCell(invalid))
 							_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
 					}
 				}
@@ -5809,7 +5817,7 @@ private:
 					ImGui::Text("%02X  ", byte);
 				}
 				if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-					editByte(address, byte);
+					editCell(address, byte);
 				}
 				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
 					VariableGuard<decltype(style.WindowPadding)> guardWindowPadding_(&style.WindowPadding, style.WindowPadding, ImVec2(WIDGETS_TOOLTIP_PADDING, WIDGETS_TOOLTIP_PADDING));
