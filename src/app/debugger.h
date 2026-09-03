@@ -90,6 +90,7 @@ public:
 	virtual void clearBreakpoints(void) = 0;
 	virtual void setBreakpoint(int page, int ln, bool brk) = 0;
 	virtual void removeBreakpoint(int page, int ln) = 0;
+	virtual void toggleBreakpoint(void) = 0;
 
 	virtual void step(bool toNextAsmInst) = 0;
 

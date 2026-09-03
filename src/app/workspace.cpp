@@ -8469,8 +8469,12 @@ void Workspace::shortcuts(Window* wnd, Renderer* rnd) {
 	// Debug operations.
 	if (opened) {
 		if (f9 && !modifier && !io.KeyShift && !io.KeyAlt) {
-			if (category() == Categories::CODE)
+			if (category() == Categories::CODE) {
 				toggleBreakpoint(currentAssetPage(), -1);
+			} else if (category() == Categories::EMULATOR) {
+				if (codeDebugger())
+					codeDebugger()->toggleBreakpoint();
+			}
 		}
 		if (f10 && !io.KeyShift && !io.KeyAlt) {
 			if (category() == Categories::EMULATOR) {

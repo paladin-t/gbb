@@ -606,6 +606,7 @@ private:
 	// Breakpoints.
 	Breakpoint::Array _breakpoints;
 	long long _breakTimeout = 0;                                // Timeout to prevent infinite waiting when all threads are dead.
+	bool _toToggleBreakpointHere = false;
 	// Stepping.
 	Breakpoint _breakAtNextStep = Breakpoint(-1, -1, false);    // Enabled when a user operated to move a step forward.
 	FarPtr _ignoreForBreakingAtNextStep;                        // The address to be ignored when stepping.
@@ -708,6 +709,7 @@ public:
 		_romLocationToSymbol.clear();
 		_breakpoints.clear();
 		_breakTimeout = 0;
+		_toToggleBreakpointHere = false;
 		_breakAtNextStep = Breakpoint(-1, -1, false);
 		_ignoreForBreakingAtNextStep = FarPtr();
 		_latestStepInstructionAddress = FarPtr();
@@ -877,6 +879,7 @@ public:
 		_romLocationToSymbol.clear();
 		_breakpoints.clear();
 		_breakTimeout = 0;
+		_toToggleBreakpointHere = false;
 		_breakAtNextStep = Breakpoint(-1, -1, false);
 		_ignoreForBreakingAtNextStep = FarPtr();
 		_latestStepInstructionAddress = FarPtr();
@@ -952,6 +955,9 @@ public:
 
 			_breakpoints.erase(it);
 		}
+	}
+	virtual void toggleBreakpoint(void) override {
+		_toToggleBreakpointHere = true;
 	}
 
 	virtual void step(bool toNextAsmInst) override {
@@ -2259,6 +2265,9 @@ private:
 	}
 	void end(void) {
 		_options.safeHeight = (int)(ImGui::GetCursorPosY() - _options.startY + 48);
+
+		if (_toToggleBreakpointHere)
+			_toToggleBreakpointHere = false;
 	}
 
 	void running(void) {
@@ -2622,6 +2631,12 @@ private:
 				EditorCode* editor = (EditorCode*)entry->editor;
 				if (!editor)
 					break;
+
+				if (_toToggleBreakpointHere) {
+					_toToggleBreakpointHere = false;
+
+					_workspace->toggleBreakpoint(_activeCodePage, -1);
+				}
 
 				if (_bringSourceCodeCursorToFront) {
 					_bringSourceCodeCursorToFront = false;
