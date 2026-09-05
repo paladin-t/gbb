@@ -477,10 +477,12 @@ private:
 		char editingMemoryBuf[3];
 		float editingMemoryCellWidth = 0.0f;
 		bool editingMemoryActivated = false;
+		bool editingMemoryChanged = false;
 		int editingRegisterIndex = (int)RegisterIndices::NONE;
 		char editingRegisterBuf[5];
 		float editingRegisterCellWidth = 0.0f;
 		bool editingRegisterActivated = false;
+		bool editingRegisterChanged = false;
 
 		Buffers() {
 			memset(newBreakpointBankBuf, 0, sizeof(newBreakpointBankBuf));
@@ -507,10 +509,12 @@ private:
 			memset(editingMemoryBuf, 0, sizeof(editingMemoryBuf));
 			editingMemoryCellWidth = 0.0f;
 			editingMemoryActivated = false;
+			editingMemoryChanged = false;
 			editingRegisterIndex = (int)RegisterIndices::NONE;
 			memset(editingRegisterBuf, 0, sizeof(editingRegisterBuf));
 			editingRegisterCellWidth = 0.0f;
 			editingRegisterActivated = false;
+			editingRegisterChanged = false;
 		}
 
 		void reset(void) {
@@ -5414,6 +5418,7 @@ private:
 				return false;
 
 			_buffers.editingRegisterActivated = false;
+			_buffers.editingRegisterChanged = false;
 			_buffers.editingRegisterIndex = addr;
 			memset(_buffers.editingRegisterBuf, 0, sizeof(_buffers.editingRegisterBuf));
 
@@ -5431,10 +5436,15 @@ private:
 		auto commitCell = [this] (bool &invalid) -> bool {
 			invalid = false;
 
+			const bool changed = _buffers.editingRegisterChanged;
 			const int addr = _buffers.editingRegisterIndex;
 
 			_buffers.editingRegisterActivated = false;
+			_buffers.editingRegisterChanged = false;
 			_buffers.editingRegisterIndex = (int)Buffers::RegisterIndices::NONE;
+
+			if (!changed)
+				return true;
 
 			std::string txt = std::string("0x") + _buffers.editingRegisterBuf;
 			int data = 0;
@@ -5541,7 +5551,19 @@ private:
 					// Edit content.
 					bool invalid = false;
 					const size_t n = isCpuReg ? sizeof(_buffers.editingRegisterBuf) : Math::min(sizeof(_buffers.editingRegisterBuf), (size_t)3);
-					if (ImGui::InputText("##Ed", _buffers.editingRegisterBuf, n, ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
+					const bool ret = ImGui::InputText(
+						"##Ed",
+						_buffers.editingRegisterBuf, n,
+						ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackEdit,
+						[] (ImGuiInputTextCallbackData* data) -> int {
+							Buffers* buffer = (Buffers*)data->UserData;
+							buffer->editingRegisterChanged = true;
+
+							return 0;
+						},
+						&_buffers
+					);
+					if (ret) {
 						if (enter.pressed() && !entered) {
 							entered = true;
 							if (!commitCell(invalid))
@@ -5573,6 +5595,11 @@ private:
 						ImGui::Text("%02X", data);
 				}
 				if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+					if (_buffers.editingRegisterActivated) {
+						bool invalid = false;
+						if (!commitCell(invalid))
+							_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
+					}
 					editCell((int)idx, data);
 				}
 				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
@@ -5740,6 +5767,7 @@ private:
 				return false;
 
 			_buffers.editingMemoryActivated = false;
+			_buffers.editingMemoryChanged = false;
 			_buffers.editingMemoryAddress = addr;
 			memset(_buffers.editingMemoryBuf, 0, sizeof(_buffers.editingMemoryBuf));
 
@@ -5755,10 +5783,15 @@ private:
 		auto commitCell = [this] (bool &invalid) -> bool {
 			invalid = false;
 
+			const bool changed = _buffers.editingMemoryChanged;
 			const int addr = _buffers.editingMemoryAddress;
 
 			_buffers.editingMemoryActivated = false;
+			_buffers.editingMemoryChanged = false;
 			_buffers.editingMemoryAddress = -1;
+
+			if (!changed)
+				return true;
 
 			const char* desc = nullptr;
 			bool readonly = false;
@@ -5854,7 +5887,19 @@ private:
 				{
 					// Edit content.
 					bool invalid = false;
-					if (ImGui::InputText("##Ed", _buffers.editingMemoryBuf, sizeof(_buffers.editingMemoryBuf), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue)) {
+					const bool ret = ImGui::InputText(
+						"##Ed",
+						_buffers.editingMemoryBuf, sizeof(_buffers.editingMemoryBuf),
+						ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackEdit,
+						[] (ImGuiInputTextCallbackData* data) -> int {
+							Buffers* buffer = (Buffers*)data->UserData;
+							buffer->editingMemoryChanged = true;
+
+							return 0;
+						},
+						&_buffers
+					);
+					if (ret) {
 						if (enter.pressed() && !entered) {
 							entered = true;
 							if (!commitCell(invalid))
@@ -5880,6 +5925,12 @@ private:
 					ImGui::Text("%02X  ", byte);
 				}
 				if (hovered && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+					if (_buffers.editingMemoryActivated) {
+						bool invalid = false;
+						if (!commitCell(invalid))
+							_workspace->bubble(invalid ? _theme->dialogPrompt_InvalidData() : _theme->dialogPrompt_CannotWriteToReadonlyMemory(), nullptr);
+					}
+
 					editCell(address, byte);
 				}
 				if (ImGui::IsItemHovered() && !_workspace->bubble()) {
