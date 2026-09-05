@@ -3015,66 +3015,60 @@ private:
 			}
 		}
 
-		int startIndex = (int)(scrollY / lineHeight);
-		int endIndex = startIndex + (int)std::ceil(panelHeight / lineHeight) + 1;
-		startIndex = Math::clamp(startIndex, 0, totalMnemonicCount);
-		endIndex = Math::clamp(endIndex, startIndex, totalMnemonicCount);
-		if (startIndex > 0) 
-			ImGui::Dummy(ImVec2(0.0f, startIndex * lineHeight));
+		ImGuiListClipper clipper;
+		clipper.Begin(totalMnemonicCount, lineHeight);
+		while (clipper.Step()) {
+			for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+				const GBBASIC::Disassembler::Mnemonic &mnemonic = (*mnemonics_)[i];
 
-		for (int i = startIndex; i < endIndex; ++i) {
-			const GBBASIC::Disassembler::Mnemonic &mnemonic = (*mnemonics_)[i];
+				bool indicate = false;
+				if (_latestDisassembledMnemonicsAddress.address < DEBUGGER_BANK_SIZE) {
+					indicate = 
+						0 == mnemonic.bank &&
+						_latestDisassembledMnemonicsAddress.address == mnemonic.address;
+				} else {
+					indicate = 
+						_latestDisassembledMnemonicsAddress.bank == mnemonic.bank &&
+						_latestDisassembledMnemonicsAddress.address == mnemonic.address;
+				}
+				if (indicate) {
+					const ImVec2 cursorStart = ImGui::GetCursorScreenPos() + ImVec2(1, 0);
+					const ImVec2 cursorEnd = cursorStart + ImVec2(ImGui::GetContentRegionAvail().x - scrollbarWidth - 1, lineHeight + 1);
+					drawList->AddRectFilled(cursorStart, cursorEnd, 0x40000000);
+					drawList->AddRect(cursorStart, cursorEnd, ImGui::GetColorU32(ImGuiCol_NavHighlight));
+				}
 
-			bool indicate = false;
-			if (_latestDisassembledMnemonicsAddress.address < DEBUGGER_BANK_SIZE) {
-				indicate = 
-					0 == mnemonic.bank &&
-					_latestDisassembledMnemonicsAddress.address == mnemonic.address;
-			} else {
-				indicate = 
-					_latestDisassembledMnemonicsAddress.bank == mnemonic.bank &&
-					_latestDisassembledMnemonicsAddress.address == mnemonic.address;
-			}
-			if (indicate) {
-				const ImVec2 cursorStart = ImGui::GetCursorScreenPos() + ImVec2(1, 0);
-				const ImVec2 cursorEnd = cursorStart + ImVec2(ImGui::GetContentRegionAvail().x - scrollbarWidth - 1, lineHeight + 1);
-				drawList->AddRectFilled(cursorStart, cursorEnd, 0x40000000);
-				drawList->AddRect(cursorStart, cursorEnd, ImGui::GetColorU32(ImGuiCol_NavHighlight));
-			}
-
-			ImGui::AlignTextToFramePadding();
-			ImGui::Dummy(ImVec2(1, 0));
-			ImGui::SameLine();
-			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerHeadColor);
-			ImGui::Text("%02X:%04X ", mnemonic.bank, mnemonic.address);
-			ImGui::SameLine();
-			ImGui::PopStyleColor();
-
-			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
-			if (mnemonic.bytes.count == 1)
-				ImGui::Text("%02X       ", mnemonic.bytes.data[0]);
-			else if (mnemonic.bytes.count == 2)
-				ImGui::Text("%02X %02X    ", mnemonic.bytes.data[0], mnemonic.bytes.data[1]);
-			else if (mnemonic.bytes.count == 3)
-				ImGui::Text("%02X %02X %02X ", mnemonic.bytes.data[0], mnemonic.bytes.data[1], mnemonic.bytes.data[2]);
-			else
-				ImGui::Text("         ");
-			ImGui::SameLine();
-			ImGui::PopStyleColor();
-
-			ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
-			ImGui::Text("%s ", mnemonic.opcode.c_str());
-			ImGui::PopStyleColor();
-			if (!mnemonic.operands.empty()) {
+				ImGui::AlignTextToFramePadding();
+				ImGui::Dummy(ImVec2(1, 0));
 				ImGui::SameLine();
-				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-				ImGui::Text("%s ", mnemonic.operands.c_str());
+				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerHeadColor);
+				ImGui::Text("%02X:%04X ", mnemonic.bank, mnemonic.address);
+				ImGui::SameLine();
 				ImGui::PopStyleColor();
+
+				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerInfoColor);
+				if (mnemonic.bytes.count == 1)
+					ImGui::Text("%02X       ", mnemonic.bytes.data[0]);
+				else if (mnemonic.bytes.count == 2)
+					ImGui::Text("%02X %02X    ", mnemonic.bytes.data[0], mnemonic.bytes.data[1]);
+				else if (mnemonic.bytes.count == 3)
+					ImGui::Text("%02X %02X %02X ", mnemonic.bytes.data[0], mnemonic.bytes.data[1], mnemonic.bytes.data[2]);
+				else
+					ImGui::Text("         ");
+				ImGui::SameLine();
+				ImGui::PopStyleColor();
+
+				ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMajorColor);
+				ImGui::Text("%s ", mnemonic.opcode.c_str());
+				ImGui::PopStyleColor();
+				if (!mnemonic.operands.empty()) {
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
+					ImGui::Text("%s ", mnemonic.operands.c_str());
+					ImGui::PopStyleColor();
+				}
 			}
 		}
-
-		if (endIndex < totalMnemonicCount)
-			ImGui::Dummy(ImVec2(0.0f, (totalMnemonicCount - endIndex) * lineHeight));
 
 		if (ImGui::IsWindowHovered()) {
 			const float wheel = io.MouseWheel;
