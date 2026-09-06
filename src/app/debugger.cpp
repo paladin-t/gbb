@@ -530,6 +530,7 @@ private:
 		VM::SCRIPT_CTX::Array threads; // Active only.
 		VM::ThreadStack::Array threadStacks; // Active only.
 		VM::actor_t::Array actors; // Active only.
+		UInt16 emoteActor = 0;
 		VM::projectile_def_t::Array projectileDefs;
 		VM::projectile_t::Array projectiles;
 		VM::trigger_t::Array triggers;
@@ -544,6 +545,7 @@ private:
 			threads.clear();
 			threadStacks.clear();
 			actors.clear();
+			emoteActor = 0;
 			projectileDefs.clear();
 			projectiles.clear();
 			triggers.clear();
@@ -1597,7 +1599,7 @@ private:
 				_snapshot.threadStacks.push_back(VM::ThreadStack::Ref(ref.order, stk, FarPtr(0, ref.data.base_addr)));
 		}
 
-		probeActors(_snapshot.actors);
+		probeActors(_snapshot.actors, _snapshot.emoteActor);
 
 		probeProjectileDefs(_snapshot.projectileDefs);
 		probeProjectiles(_snapshot.projectiles);
@@ -1827,7 +1829,7 @@ private:
 
 		return true;
 	}
-	bool probeActors(VM::actor_t::Array &out) const {
+	bool probeActors(VM::actor_t::Array &out, UInt16 &emoteActor) const {
 		out.clear();
 
 		FarPtr farPtr;
@@ -1836,6 +1838,13 @@ private:
 		UInt16 actorAddr = 0;
 		if (!_device->readRam((UInt16)farPtr.address, &actorAddr) || actorAddr == 0)
 			return false;
+
+		UInt16 emoteAddr = 0;
+		farPtr = FarPtr();
+		if (getFarPointerBySymbolName(COMPILER_EMOTE_ACTOR_ENTRY_NAME, farPtr)) {
+			if (_device->readRam((UInt16)farPtr.address, &emoteAddr))
+				emoteActor = emoteAddr;
+		}
 
 		int ord = 0;
 		do {
@@ -3739,7 +3748,7 @@ private:
 					ImGui::PopStyleColor();
 
 					ImGui::PushStyleColor(ImGuiCol_Text, _theme->style()->debuggerMinorColor);
-					ImGui::TableSetColumnIndex(2); actor(snapshot, obj, j, 1);
+					ImGui::TableSetColumnIndex(2); actor(snapshot, obj, j, 1, address == _snapshot.emoteActor);
 					ImGui::PopStyleColor();
 				}
 				ImGui::PopID();
@@ -3760,14 +3769,21 @@ private:
 			ImGui::EndTable();
 		}
 	}
-	void actor(const Snapshot* snapshot, const VM::actor_t &actor_, int /* index */, int level) const {
+	void actor(const Snapshot* snapshot, const VM::actor_t &actor_, int /* index */, int level, bool isEmote) const {
 		const VM::actor_t::Array &all = snapshot->actors;
 		const VM::SCRIPT_CTX::Array &threads = snapshot->threads;
 
 		const ImU32 majCol = _theme->style()->debuggerMajorColor;
 		const ImU32 minCol = _theme->style()->debuggerMinorColor;
+		const ImU32 infCol = _theme->style()->debuggerInfoColor;
 
 		if (ImGui::TreeNode("{...}")) {
+			if (isEmote) {
+				ImGui::PushStyleColor(ImGuiCol_Text, infCol);
+				ImGui::TextUnformatted("Is Emote");
+				ImGui::PopStyleColor();
+			}
+
 #if DEBUGGER_OBJECT_DETAIL_LEVEL == DEBUGGER_OBJECT_DETAIL_LEVEL_FULL
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Instantiated=");
@@ -3849,7 +3865,7 @@ private:
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushID("##Pos");
-			point(actor_.position);
+			point(actor_.position, true);
 			ImGui::PopID();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
@@ -4144,9 +4160,10 @@ private:
 					if (it != all.end()) {
 						ImGui::SameLine();
 
+						const UInt16 address = (UInt16)it->pointer.address;
 						const VM::actor_t &next = it->data;
 						const int idx = (int)(it - all.begin());
-						actor(snapshot, next, idx, level + 1);
+						actor(snapshot, next, idx, level + 1, true);//address == _snapshot.emoteActor);
 					}
 				} else {
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
@@ -4180,6 +4197,13 @@ private:
 #endif /* DEBUGGER_OBJECT_DETAIL_LEVEL */
 
 			ImGui::TreePop();
+		} else {
+			if (isEmote) {
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, infCol);
+				ImGui::TextUnformatted(" Emote");
+				ImGui::PopStyleColor();
+			}
 		}
 	}
 	void triggers(const Snapshot* snapshot) {
@@ -4252,6 +4276,7 @@ private:
 	void trigger(const Snapshot* /* snapshot */, const VM::trigger_t &trigger_) const {
 		const ImU32 majCol = _theme->style()->debuggerMajorColor;
 		const ImU32 minCol = _theme->style()->debuggerMinorColor;
+		const ImU32 infCol = _theme->style()->debuggerInfoColor;
 
 		if (ImGui::TreeNode("{...}")) {
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
@@ -4261,6 +4286,12 @@ private:
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
 			ImGui::Text("%d", trigger_.x);
 			ImGui::PopStyleColor();
+			{
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, infCol);
+				ImGui::Text(" %u", DEBUGGER_MUL8(trigger_.x));
+				ImGui::PopStyleColor();
+			}
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Y=");
@@ -4269,6 +4300,12 @@ private:
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
 			ImGui::Text("%d", trigger_.y);
 			ImGui::PopStyleColor();
+			{
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, infCol);
+				ImGui::Text(" %u", DEBUGGER_MUL8(trigger_.y));
+				ImGui::PopStyleColor();
+			}
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Width=");
@@ -4277,6 +4314,12 @@ private:
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
 			ImGui::Text("%d", trigger_.width);
 			ImGui::PopStyleColor();
+			{
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, infCol);
+				ImGui::Text(" %u", DEBUGGER_MUL8(trigger_.width));
+				ImGui::PopStyleColor();
+			}
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Height=");
@@ -4285,6 +4328,12 @@ private:
 			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
 			ImGui::Text("%d", trigger_.height);
 			ImGui::PopStyleColor();
+			{
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, infCol);
+				ImGui::Text(" %u", DEBUGGER_MUL8(trigger_.height));
+				ImGui::PopStyleColor();
+			}
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
 			ImGui::TextUnformatted("Hit Fn flags=");
@@ -5052,7 +5101,7 @@ private:
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
 			ImGui::PushID("##Pos");
-			point(projectile_.position);
+			point(projectile_.position, true);
 			ImGui::PopID();
 
 			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
@@ -5219,6 +5268,50 @@ private:
 			ImGui::PopStyleColor();
 
 			ImGui::TreePop();
+		}
+	}
+	void point(const upoint16_t &point, bool toScreen) const {
+		const ImU32 majCol = _theme->style()->debuggerMajorColor;
+		const ImU32 minCol = _theme->style()->debuggerMinorColor;
+		const ImU32 infCol = _theme->style()->debuggerInfoColor;
+
+		if (ImGui::TreeNode("##Pnt", "{X=%u,Y=%u}", point.x, point.y)) {
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("X=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%u", point.x);
+			ImGui::PopStyleColor();
+			if (toScreen) {
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, infCol);
+				ImGui::Text(" %u", DEBUGGER_POSITION_TO_SCREEN(point.x));
+				ImGui::PopStyleColor();
+			}
+
+			ImGui::PushStyleColor(ImGuiCol_Text, majCol);
+			ImGui::TextUnformatted("Y=");
+			ImGui::PopStyleColor();
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, minCol);
+			ImGui::Text("%u", point.y);
+			ImGui::PopStyleColor();
+			if (toScreen) {
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, infCol);
+				ImGui::Text(" %u", DEBUGGER_POSITION_TO_SCREEN(point.y));
+				ImGui::PopStyleColor();
+			}
+
+			ImGui::TreePop();
+		} else {
+			if (toScreen) {
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_Text, infCol);
+				ImGui::Text(" {X=%u,Y=%u}", DEBUGGER_POSITION_TO_SCREEN(point.x), DEBUGGER_POSITION_TO_SCREEN(point.y));
+				ImGui::PopStyleColor();
+			}
 		}
 	}
 	void point(const upoint16_t &point) const {
