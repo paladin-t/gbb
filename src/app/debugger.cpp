@@ -4163,7 +4163,7 @@ private:
 						const UInt16 address = (UInt16)it->pointer.address;
 						const VM::actor_t &next = it->data;
 						const int idx = (int)(it - all.begin());
-						actor(snapshot, next, idx, level + 1, true);//address == _snapshot.emoteActor);
+						actor(snapshot, next, idx, level + 1, address == _snapshot.emoteActor);
 					}
 				} else {
 					ImGui::PushStyleColor(ImGuiCol_Text, majCol);
