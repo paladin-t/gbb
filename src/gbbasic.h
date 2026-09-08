@@ -88,12 +88,16 @@
 #		elif defined TARGET_OS_MAC && TARGET_OS_MAC == 1
 #			if defined __x86_64__
 #				define GBBASIC_OS "MacOS [x86_64]"
+#				define GBBASIC_OS_MAC64
 #			elif defined __i386__
 #				define GBBASIC_OS "MacOS [x86]"
+#				define GBBASIC_OS_MAC32
 #			elif defined __aarch64__
 #				define GBBASIC_OS "MacOS [ARM64]"
+#				define GBBASIC_OS_MAC64
 #			elif defined __arm__
 #				define GBBASIC_OS "MacOS [ARM32]"
+#				define GBBASIC_OS_MAC32
 #			else
 #				define GBBASIC_OS "MacOS"
 #			endif
@@ -107,6 +111,7 @@
 #			if defined __RASPBERRYPI__
 #				if defined __aarch64__
 #					define GBBASIC_OS "Raspberry Pi [ARM64]"
+#					define GBBASIC_OS_LINUX64
 #				elif defined __arm__
 #					if __ARM_ARCH == 7
 #						define GBBASIC_OS "Raspberry Pi [ARMv7]"
@@ -115,21 +120,26 @@
 #					else
 #						define GBBASIC_OS "Raspberry Pi [ARM]"
 #					endif
+#					define GBBASIC_OS_LINUX32
 #				endif
 #				define GBBASIC_OS_RASPBERRYPI
 #			else
 #				if defined __aarch64__
 #					define GBBASIC_OS "Linux [ARM64]"
+#					define GBBASIC_OS_LINUX64
 #				elif defined __arm__
 #					define GBBASIC_OS "Linux [ARM32]"
+#					define GBBASIC_OS_LINUX32
 #				endif
 #			endif
 #		endif
 #		ifndef GBBASIC_OS
 #			if defined __x86_64__
 #				define GBBASIC_OS "Linux [x86_64]"
+#				define GBBASIC_OS_LINUX64
 #			elif defined __i386__
 #				define GBBASIC_OS "Linux [x86]"
+#				define GBBASIC_OS_LINUX32
 #			else
 #				define GBBASIC_OS "Linux"
 #			endif

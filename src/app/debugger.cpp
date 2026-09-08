@@ -656,14 +656,6 @@ public:
 		if (_opened)
 			return true;
 
-#if defined GBBASIC_OS_WIN32 || defined GBBASIC_OS_HTML || defined GBBASIC_OS_RASPBERRYPI
-		_options.disassemblerView = 1;
-#elif defined GBBASIC_OS_WIN || defined GBBASIC_OS_MAC || defined GBBASIC_OS_LINUX
-		_options.disassemblerView = 0;
-#else
-		_options.disassemblerView = 1;
-#endif /* Platform macro. */
-
 		_activeCodePage = -1;
 		_inspecting = false;
 		_snapshot.reset();
@@ -836,6 +828,22 @@ public:
 		_snapshot.projectileDefs.reserve(_runtimeConfig.projectileDefMaxCount);
 		_snapshot.projectiles.reserve(_runtimeConfig.projectileMaxCount);
 		_snapshot.triggers.reserve(_runtimeConfig.triggerMaxCount);
+
+#if defined GBBASIC_OS_WIN32 || defined GBBASIC_OS_MAC32 || defined GBBASIC_OS_LINUX32
+		_options.disassemblerView = 1; // 32-bit Windows/MacOS/Linux: compact mode.
+		const Bytes::Ptr rom = compiledBytes();
+		if (rom) {
+			const int banks = (int)(rom->count() / DEBUGGER_BANK_SIZE);
+			if (banks <= 32) // ROM is no larger than 512KB.
+				_options.disassemblerView = 0; // Prefer full mode.
+		}
+#elif defined GBBASIC_OS_WIN || defined GBBASIC_OS_MAC || defined GBBASIC_OS_LINUX
+		_options.disassemblerView = 0; // Mainstream Windows/MacOS/Linux: full mode.
+#elif defined GBBASIC_OS_RASPBERRYPI || defined GBBASIC_OS_HTML
+		_options.disassemblerView = 1; // RaspberryPi/HTML: compact mode.
+#else /* Platform macro. */
+		_options.disassemblerView = 1; // Others: compact mode.
+#endif /* Platform macro. */
 
 		// Resolve the ROM entries.
 		getFarPointerBySymbolName(COMPILER_FREE_CURRENT_BANK_ENTRY_NAME, _currentBankPointer);
