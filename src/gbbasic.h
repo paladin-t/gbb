@@ -111,16 +111,20 @@
 #			if defined __RASPBERRYPI__
 #				if defined __aarch64__
 #					define GBBASIC_OS "Raspberry Pi [ARM64]"
+#					define GBBASIC_OS_RASPBERRYPI64
 #					define GBBASIC_OS_LINUX64
 #				elif defined __arm__
 #					if __ARM_ARCH == 7
 #						define GBBASIC_OS "Raspberry Pi [ARMv7]"
+#						define GBBASIC_OS_RASPBERRYPI6432
+#						define GBBASIC_OS_LINUX32
 #					elif __ARM_ARCH == 6
 #						define GBBASIC_OS "Raspberry Pi [ARMv6]"
+#						define GBBASIC_OS_RASPBERRYPI6432
+#						define GBBASIC_OS_LINUX32
 #					else
 #						define GBBASIC_OS "Raspberry Pi [ARM]"
 #					endif
-#					define GBBASIC_OS_LINUX32
 #				endif
 #				define GBBASIC_OS_RASPBERRYPI
 #			else
