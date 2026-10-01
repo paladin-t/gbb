@@ -2200,6 +2200,13 @@ void Workspace::enableBreakpoints(void) {
 				(void)enabled;
 				editor->post(Editable::SET_BREAKPOINT, line, true, true);
 				codeDebugger()->setBreakpoint(i, line + 1, true); // 1-based.
+
+#if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
+				if (prj->minorCodeEditor()) {
+					if (i == prj->activeMinorCodeIndex())
+						prj->minorCodeEditor()->post(Editable::SET_BREAKPOINT, line, true, true);
+				}
+#endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 			}
 		}
 	}
@@ -2228,6 +2235,13 @@ void Workspace::disableBreakpoints(void) {
 				(void)enabled;
 				editor->post(Editable::SET_BREAKPOINT, line, true, false);
 				codeDebugger()->removeBreakpoint(i, line + 1); // 1-based.
+
+#if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
+				if (prj->minorCodeEditor()) {
+					if (i == prj->activeMinorCodeIndex())
+						prj->minorCodeEditor()->post(Editable::SET_BREAKPOINT, line, true, false);
+				}
+#endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 			}
 		}
 	}
@@ -5998,8 +6012,19 @@ void Workspace::toggleBreakpoint(int page, int ln) {
 		if (ln < 0)
 			ln = (int)(Variant::Int)editor->post(Editable::GET_CURSOR);
 		brk = !(bool)editor->post(Editable::GET_BREAKPOINT, (Variant::Int)ln);
-		editor->post(Editable::SET_BREAKPOINT, (Variant::Int)ln, brk);
+		editor->post(Editable::SET_BREAKPOINT, (Variant::Int)ln, brk, true);
 	}
+
+#if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
+	if (prj->minorCodeEditor()) {
+		if (page == prj->activeMinorCodeIndex()) {
+			if (ln < 0)
+				ln = (int)(Variant::Int)prj->minorCodeEditor()->post(Editable::GET_CURSOR);
+			brk = !(bool)prj->minorCodeEditor()->post(Editable::GET_BREAKPOINT, (Variant::Int)ln);
+			prj->minorCodeEditor()->post(Editable::SET_BREAKPOINT, (Variant::Int)ln, brk, true);
+		}
+	}
+#endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
 
 	if (codeDebugger()) {
 		if (brk)
