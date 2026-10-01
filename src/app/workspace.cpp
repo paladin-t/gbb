@@ -6049,7 +6049,6 @@ void Workspace::moveProgramPointer(int page, int ln) {
 		return;
 
 	Editable* editor = entry->editor;
-	bool brk = false;
 	if (editor) {
 		editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)ln);
 	}
