@@ -994,7 +994,9 @@ public:
 
 			_workspace->resume(_window, _renderer);
 
+#if !defined GBBASIC_OS_HTML
 			_workspace->skipFrame(2);
+#endif /* GBBASIC_OS_HTML */
 
 			return;
 		}
@@ -1014,7 +1016,9 @@ public:
 
 			_workspace->resume(_window, _renderer);
 
+#if !defined GBBASIC_OS_HTML
 			_workspace->skipFrame(5);
+#endif /* GBBASIC_OS_HTML */
 
 			VM::SCRIPT_CTX::Array threads;
 			probeThreads(threads);
