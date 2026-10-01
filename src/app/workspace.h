@@ -1045,6 +1045,8 @@ public:
 
 	void toggleBreakpoint(int page, int ln);
 
+	void moveProgramPointer(int page, int ln);
+
 	/**
 	 * @brief Upgrades project.
 	 */

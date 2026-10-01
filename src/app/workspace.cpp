@@ -6034,6 +6034,35 @@ void Workspace::toggleBreakpoint(int page, int ln) {
 	}
 }
 
+void Workspace::moveProgramPointer(int page, int ln) {
+	if (codeDebugger()) {
+		if (!codeDebugger()->moveProgramCounter(page, ln + 1)) // 1-based.
+			return;
+	}
+
+	const Project::Ptr &prj = currentProject();
+	if (!prj)
+		return;
+
+	CodeAssets::Entry* entry = prj->getCode(page);
+	if (!entry)
+		return;
+
+	Editable* editor = entry->editor;
+	bool brk = false;
+	if (editor) {
+		editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)ln);
+	}
+
+#if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
+	if (prj->minorCodeEditor()) {
+		if (page == prj->activeMinorCodeIndex()) {
+			prj->minorCodeEditor()->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)ln);
+		}
+	}
+#endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
+}
+
 void Workspace::upgrade(
 	Window* wnd, Renderer* rnd,
 	const Text::Dictionary &arguments

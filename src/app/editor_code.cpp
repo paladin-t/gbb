@@ -354,6 +354,8 @@ public:
 
 		SetHeadClickedHandler(std::bind(&EditorCodeImpl::headClicked, this, ws, std::placeholders::_1, std::placeholders::_2));
 
+		SetProgramPointerMovedHandler(std::bind(&EditorCodeImpl::programPointerMoved, this, ws, std::placeholders::_1, std::placeholders::_2));
+
 		_tools.search = std::bind(&EditorCodeImpl::searchGlobally, this, wnd, rnd, ws);
 
 		fprintf(stdout, "Code editor opened: #%d.\n", _index);
@@ -374,6 +376,8 @@ public:
 		SetModifiedHandler(nullptr);
 
 		SetHeadClickedHandler(nullptr);
+
+		SetProgramPointerMovedHandler(nullptr);
 
 		_project = nullptr;
 		_index = -1;
@@ -1682,13 +1686,14 @@ private:
 			++ws->activities().wroteCodeLines;
 	}
 	void headClicked(Workspace* ws, int ln, bool doubleClicked) {
-		(void)ws;
-
 		if (!doubleClicked) {
-			if (ln >= 0 && ln < GetTotalLines()) {
+			if (ln >= 0 && ln < GetTotalLines())
 				ws->toggleBreakpoint(_index, ln);
-			}
 		}
+	}
+	void programPointerMoved(Workspace* ws, int /* ln */, int newLn) {
+		if (newLn >= 0 && newLn < GetTotalLines())
+			ws->moveProgramPointer(_index, newLn);
 	}
 
 	void searchGlobally(Window* wnd, Renderer* rnd, Workspace* ws) const {

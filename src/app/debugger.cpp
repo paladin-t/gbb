@@ -974,6 +974,34 @@ public:
 		_toToggleBreakpointHere = true;
 	}
 
+	virtual bool moveProgramCounter(int page, int ln) override {
+		if (!_device->paused())
+			return false;
+
+		const GBBASIC::TracePoint* tp = getTracePointBySourceLocation(page, ln);
+		if (!tp)
+			return false;
+
+		const Device::Registers regs = _device->readRegisters();
+		const UInt16 currCtx = regs.DE; // `DE` is the pointer to the current `VM::SCRIPT_CTX`.
+
+		const UInt8 ctxBank = (UInt8)tp->inRom.bank;
+		const UInt16 ctxPc = (UInt16)tp->inRom.address;
+
+		constexpr const int pcOffset = GBBASIC_OFFSETOF(VM::SCRIPT_CTX, PC);
+		constexpr const int bankOffset = GBBASIC_OFFSETOF(VM::SCRIPT_CTX, bank);
+		const int ctxPcAddress = currCtx + pcOffset;
+		const int ctxBankAddress = currCtx + bankOffset;
+		if (!_device->writeRam((UInt16)ctxPcAddress, ctxPc))
+			return false;
+		if (!_device->writeRam((UInt16)ctxBankAddress, ctxBank))
+			return false;
+
+		_latestVmStepInstructionAddress = FarPtr(ctxBank, ctxPc);
+
+		return true;
+	}
+
 	virtual void step(bool toNextAsmInst) override {
 		if (!toNextAsmInst && !(isCompiledFromSource()))
 			return;

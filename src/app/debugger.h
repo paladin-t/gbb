@@ -92,6 +92,8 @@ public:
 	virtual void removeBreakpoint(int page, int ln) = 0;
 	virtual void toggleBreakpoint(void) = 0;
 
+	virtual bool moveProgramCounter(int page, int ln) = 0;
+
 	virtual void step(bool toNextAsmInst) = 0;
 
 	virtual bool breakpointHit(void) = 0;
