@@ -63,12 +63,12 @@ inline Types getType(const rapidjson::Value &obj) {
 		return NIL;
 	if (obj.IsBool())
 		return BOOLEAN;
-	if (obj.IsNumber())
-		return NUMBER;
 	if (obj.IsInt() || obj.IsUint() || obj.IsInt64() || obj.IsUint64())
 		return INT;
 	if (obj.IsDouble())
 		return REAL;
+	if (obj.IsNumber())
+		return NUMBER;
 	if (obj.IsString())
 		return STRING;
 	if (obj.IsArray())
@@ -257,6 +257,18 @@ inline bool read(const rapidjson::Value &obj, const rapidjson::Value* &ret, int 
 
 	return true;
 }
+inline bool read(const rapidjson::Value &obj, const rapidjson::Value* &ret, size_t node) {
+	if (ret)
+		ret = nullptr;
+	if (!obj.IsArray())
+		return false;
+	if ((rapidjson::SizeType)node >= obj.Size())
+		return false;
+
+	ret = &obj[(rapidjson::SizeType)node];
+
+	return true;
+}
 inline bool read(const rapidjson::Value &obj, const rapidjson::Value* &ret, const char* node) {
 	if (ret)
 		ret = nullptr;
@@ -293,6 +305,18 @@ inline bool read(rapidjson::Value &obj, rapidjson::Value* &ret, int node) {
 		return false;
 
 	ret = &obj[node];
+
+	return true;
+}
+inline bool read(rapidjson::Value &obj, rapidjson::Value* &ret, size_t node) {
+	if (ret)
+		ret = nullptr;
+	if (!obj.IsArray())
+		return false;
+	if ((rapidjson::SizeType)node >= obj.Size())
+		return false;
+
+	ret = &obj[(rapidjson::SizeType)node];
 
 	return true;
 }
@@ -338,6 +362,19 @@ inline bool write(rapidjson::Document &doc, rapidjson::Value &obj, rapidjson::Va
 
 	return true;
 }
+inline bool write(rapidjson::Document &doc, rapidjson::Value &obj, rapidjson::Value* &ret, size_t node) {
+	ret = nullptr;
+	if (!obj.IsArray())
+		obj.SetArray();
+	while ((rapidjson::SizeType)node >= obj.Size()) {
+		rapidjson::Value val;
+		val.SetNull();
+		obj.PushBack(val, doc.GetAllocator());
+	}
+	ret = &obj[(rapidjson::SizeType)node];
+
+	return true;
+}
 inline bool write(rapidjson::Document &doc, rapidjson::Value &obj, rapidjson::Value* &ret, const char* node) {
 	ret = nullptr;
 	if (!node)
@@ -369,6 +406,63 @@ template<typename Car, typename ...Cdr> bool write(rapidjson::Document &doc, rap
 		return false;
 
 	return true;
+}
+
+inline int remove(rapidjson::Value &obj, const char* last) {
+	if (!obj.IsObject())
+		return 0;
+
+	if (!obj.HasMember(last))
+		return 0;
+
+	obj.RemoveMember(last);
+
+	return 1;
+}
+inline int remove(rapidjson::Value &obj, int last) {
+	if (!obj.IsArray())
+		return 0;
+
+	if (last < 0 || last >= (int)obj.Capacity())
+		return 0;
+
+	obj.Erase(obj.Begin() + last);
+
+	return 1;
+}
+template<typename ...Path> int remove(rapidjson::Value &obj, const char* last, Path ...path) {
+	rapidjson::Value* tmp = nullptr;
+	if (!read(obj, tmp, path ...))
+		return 0;
+	if (!tmp)
+		return 0;
+
+	if (!tmp->IsObject())
+		return 0;
+
+	if (!tmp->HasMember(last))
+		return 0;
+
+	tmp->RemoveMember(last);
+
+	return 1;
+}
+template<typename ...Path> int remove(rapidjson::Value &obj, int last, Path ...path) {
+	rapidjson::Value* tmp = nullptr;
+	if (!read(obj, tmp, path ...))
+		return 0;
+	if (!tmp)
+		return 0;
+
+	if (!tmp->IsArray())
+		return 0;
+
+	if (last < 0 || last >= (int)tmp->Capacity())
+		return 0;
+
+	tmp->Erase(tmp->Begin() + last);
+
+	return 1;
 }
 
 inline Types typeOf(const rapidjson::Value &obj) {
