@@ -979,8 +979,11 @@ public:
 			return false;
 
 		const GBBASIC::TracePoint* tp = getTracePointBySourceLocation(page, ln);
-		if (!tp)
+		if (!tp) {
+			_workspace->bubble(_theme->dialogPrompt_CannotMoveProgramCounterThere(), nullptr);
+
 			return false;
+		}
 
 		const Device::Registers regs = _device->readRegisters();
 		const UInt16 currCtx = regs.DE; // `DE` is the pointer to the current `VM::SCRIPT_CTX`.

@@ -354,6 +354,8 @@ public:
 
 		SetHeadClickedHandler(std::bind(&EditorCodeImpl::headClicked, this, ws, std::placeholders::_1, std::placeholders::_2));
 
+		SetProgramPointerMovingHandler(std::bind(&EditorCodeImpl::movingProgramPointer, this, ws, std::placeholders::_1, std::placeholders::_2));
+
 		SetProgramPointerMovedHandler(std::bind(&EditorCodeImpl::programPointerMoved, this, ws, std::placeholders::_1, std::placeholders::_2));
 
 		_tools.search = std::bind(&EditorCodeImpl::searchGlobally, this, wnd, rnd, ws);
@@ -376,6 +378,8 @@ public:
 		SetModifiedHandler(nullptr);
 
 		SetHeadClickedHandler(nullptr);
+
+		SetProgramPointerMovingHandler(nullptr);
 
 		SetProgramPointerMovedHandler(nullptr);
 
@@ -1691,9 +1695,13 @@ private:
 				ws->toggleBreakpoint(_index, ln);
 		}
 	}
-	void programPointerMoved(Workspace* ws, int /* ln */, int newLn) {
+	void movingProgramPointer(Workspace* ws, int ln, int newLn) {
 		if (newLn >= 0 && newLn < GetTotalLines())
-			ws->moveProgramPointer(_index, newLn);
+			ws->movingProgramPointer(_index, ln, newLn);
+	}
+	void programPointerMoved(Workspace* ws, int ln, int newLn) {
+		if (newLn >= 0 && newLn < GetTotalLines())
+			ws->programPointerMoved(_index, ln, newLn);
 	}
 
 	void searchGlobally(Window* wnd, Renderer* rnd, Workspace* ws) const {

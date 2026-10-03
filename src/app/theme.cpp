@@ -538,6 +538,7 @@ bool Theme::open(class Renderer* rnd) {
 	dialogPrompt_CannotFindAnyKernel("Cannot find any kernel.");
 	dialogPrompt_CannotFindValidKernel("Cannot find valid kernel.");
 	dialogPrompt_CannotModifyTheBuiltinAssetPage("Cannot change the builtin asset page.");
+	dialogPrompt_CannotMoveProgramCounterThere("Cannot move program counter there.");
 	dialogPrompt_CannotOpenFile("Cannot open file");
 	dialogPrompt_CannotOpenProject("Cannot open project.");
 	dialogPrompt_CannotRemoveProject("Cannot remove project.");

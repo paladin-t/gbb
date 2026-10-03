@@ -6034,10 +6034,35 @@ void Workspace::toggleBreakpoint(int page, int ln) {
 	}
 }
 
-void Workspace::moveProgramPointer(int page, int ln) {
+void Workspace::movingProgramPointer(int page, int /* ln */, int newLn) {
+	const Project::Ptr &prj = currentProject();
+	if (!prj)
+		return;
+
+	CodeAssets::Entry* entry = prj->getCode(page);
+	if (!entry)
+		return;
+
+	Editable* editor = entry->editor;
+	if (editor) {
+		editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)newLn);
+	}
+
+#if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
+	if (prj->minorCodeEditor()) {
+		if (page == prj->activeMinorCodeIndex()) {
+			prj->minorCodeEditor()->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)newLn);
+		}
+	}
+#endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */
+}
+
+void Workspace::programPointerMoved(int page, int ln, int newLn) {
+	int target = ln;
 	if (codeDebugger()) {
-		if (!codeDebugger()->moveProgramCounter(page, ln + 1)) // 1-based.
-			return;
+		target = newLn;
+		if (!codeDebugger()->moveProgramCounter(page, target + 1)) // 1-based.
+			target = ln;
 	}
 
 	const Project::Ptr &prj = currentProject();
@@ -6050,13 +6075,13 @@ void Workspace::moveProgramPointer(int page, int ln) {
 
 	Editable* editor = entry->editor;
 	if (editor) {
-		editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)ln);
+		editor->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)target);
 	}
 
 #if GBBASIC_EDITOR_CODE_SPLIT_ENABLED
 	if (prj->minorCodeEditor()) {
 		if (page == prj->activeMinorCodeIndex()) {
-			prj->minorCodeEditor()->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)ln);
+			prj->minorCodeEditor()->post(Editable::SET_PROGRAM_POINTER, (Variant::Int)target);
 		}
 	}
 #endif /* GBBASIC_EDITOR_CODE_SPLIT_ENABLED */

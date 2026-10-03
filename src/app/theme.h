@@ -340,6 +340,7 @@ public:
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotFindAnyKernel)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotFindValidKernel)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotModifyTheBuiltinAssetPage)
+	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotMoveProgramCounterThere)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotOpenFile)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotOpenProject)
 	GBBASIC_PROPERTY_READONLY(std::string, dialogPrompt_CannotRemoveProject)
